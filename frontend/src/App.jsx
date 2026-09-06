@@ -61,6 +61,44 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
     setIsTrackingOpen(true);
   };
 
+  // Sync PDP opening with URL Hash and history for native mobile back navigation
+  const openPdp = (slug) => {
+    setActivePdpSlug(slug);
+    if (window.location.hash !== `#product-${slug}`) {
+      window.history.pushState({ pdp: slug }, '', `#product-${slug}`);
+    }
+  };
+
+  const closePdp = () => {
+    setActivePdpSlug(null);
+    if (window.history.state?.pdp) {
+      window.history.back();
+    } else if (window.location.hash.startsWith('#product-')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#product-')) {
+        const slug = hash.replace('#product-', '');
+        setActivePdpSlug(slug);
+      } else {
+        setActivePdpSlug(null);
+      }
+    };
+
+    // On mount check if URL already has a product hash
+    if (window.location.hash && window.location.hash.startsWith('#product-')) {
+      const slug = window.location.hash.replace('#product-', '');
+      setActivePdpSlug(slug);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
 
   // Cart actions from context
   const {
@@ -520,7 +558,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           <div id="jhumka-boxes" className="scroll-mt-28">
             <JhumkaBoxHeroSection
               products={jhumkaBoxes}
-              onOpenPdp={(slug) => setActivePdpSlug(slug)}
+              onOpenPdp={(slug) => openPdp(slug)}
               onOpenCheckout={() => setIsCheckoutOpen(true)}
             />
           </div>
@@ -666,7 +704,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onQuickView={(p) => setActivePdpSlug(p.slug)}
+                  onQuickView={(p) => openPdp(p.slug)}
                   onAddToCart={(p) => addToCart(p, null, 1, true)}
                 />
               ))}
@@ -694,7 +732,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {activePdpSlug && (
         <ProductDetailModal
           productSlug={activePdpSlug}
-          onClose={() => setActivePdpSlug(null)}
+          onClose={closePdp}
           onAddToCart={(product, variant) => {
             addToCart(product, variant, 1, true);
           }}
@@ -705,7 +743,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
       {/* Slide-out Wishlist Drawer */}
-      <WishlistDrawer onSelectProduct={(item) => setActivePdpSlug(item.slug)} />
+      <WishlistDrawer onSelectProduct={(item) => openPdp(item.slug)} />
 
       {/* Slide-out Mobile Navigation Drawer (Everlasting Style) */}
       <MobileSidebarDrawer
