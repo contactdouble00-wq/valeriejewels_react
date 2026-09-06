@@ -23,7 +23,7 @@ export default function AdminActivityLogView() {
   }, []);
 
   return (
-    <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 sm:p-8 space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
           <span className="text-[11px] font-caps tracking-widest uppercase text-brand-primary font-bold">

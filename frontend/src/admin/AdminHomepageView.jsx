@@ -214,7 +214,7 @@ export default function AdminHomepageView() {
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="p-6 sm:p-8 space-y-6 w-full">
       {/* Header Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-brand-border shadow-xs">
         <div>

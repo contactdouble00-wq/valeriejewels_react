@@ -46,7 +46,7 @@ export default function AdminCustomersView() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 sm:p-8 space-y-6 w-full">
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-brand-tertiary text-white px-4 py-2.5 rounded-xl shadow-luxury text-xs font-semibold">
           {toastMessage}

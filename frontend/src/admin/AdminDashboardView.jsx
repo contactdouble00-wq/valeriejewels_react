@@ -72,7 +72,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const { kpis, hero_jhumka_boxes = [], low_stock_alerts = [], recent_orders = [] } = data;
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 sm:p-8 space-y-8 w-full">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
