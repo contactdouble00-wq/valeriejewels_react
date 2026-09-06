@@ -23,8 +23,8 @@ export default {
         },
       },
       fontFamily: {
-        serif: ['"Cormorant Garamond"', '"Playfair Display"', 'Georgia', 'serif'],
-        display: ['"Marcellus"', '"Cormorant Garamond"', 'serif'],
+        serif: ['"Marcellus"', 'Georgia', 'serif'],
+        display: ['"Marcellus"', 'Georgia', 'serif'],
         caps: ['"Tenor Sans"', '"Plus Jakarta Sans"', 'sans-serif'],
         sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },

@@ -32,14 +32,9 @@
     overflow-x: hidden;
   }
 
-  h1, h2, h3, .font-editorial {
-    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-    letter-spacing: -0.015em;
-  }
-
-  .font-display {
-    font-family: 'Marcellus', 'Cormorant Garamond', Georgia, serif;
-    letter-spacing: 0.04em;
+  h1, h2, h3, .font-editorial, .font-display {
+    font-family: 'Marcellus', Georgia, serif;
+    letter-spacing: 0.01em;
   }
 
   .font-caps {
