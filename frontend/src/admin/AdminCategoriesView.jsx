@@ -108,6 +108,33 @@ export default function AdminCategoriesView({ currentUser }) {
     }
   };
 
+  const [togglingId, setTogglingId] = useState(null);
+
+  const handleToggleActive = async (cat) => {
+    const currentActive = Number(cat.is_active) === 1 ? 1 : 0;
+    const newActive = currentActive === 1 ? 0 : 1;
+
+    // Optimistic UI update
+    setCategories((prev) =>
+      prev.map((c) => (c.id === cat.id ? { ...c, is_active: newActive } : c))
+    );
+    setTogglingId(cat.id);
+
+    try {
+      await adminApi.toggleCategoryActive(cat.id, newActive);
+      showToast(`"${cat.name}" is now ${newActive === 1 ? 'visible on storefront' : 'hidden from storefront'}`);
+      notifyCategoryChange();
+    } catch (err) {
+      // Rollback on error
+      setCategories((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, is_active: currentActive } : c))
+      );
+      showToast(err.message || 'Failed to update visibility');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   // Auto-generate slug from name
   const handleNameChange = (name) => {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -160,7 +187,7 @@ export default function AdminCategoriesView({ currentUser }) {
                 <th className="py-3.5 px-4">URL Slug</th>
                 <th className="py-3.5 px-4">Description</th>
                 <th className="py-3.5 px-4">Products</th>
-                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4">Storefront Display</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -218,14 +245,24 @@ export default function AdminCategoriesView({ currentUser }) {
                       </td>
 
                       <td className="py-3 px-4">
-                        {Number(cat.is_active) === 1 ? (
-                          <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-700">
-                            <Check className="w-3 h-3" />
-                            <span>Active</span>
+                        <label className="inline-flex items-center space-x-2 cursor-pointer select-none group py-1">
+                          <input
+                            type="checkbox"
+                            checked={Number(cat.is_active) === 1}
+                            onChange={() => handleToggleActive(cat)}
+                            disabled={togglingId === cat.id}
+                            className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-brand-primary transition-all disabled:opacity-50"
+                          />
+                          <span
+                            className={`text-[11px] font-semibold transition-colors ${
+                              Number(cat.is_active) === 1
+                                ? 'text-emerald-700 font-bold'
+                                : 'text-gray-400 font-medium'
+                            }`}
+                          >
+                            {Number(cat.is_active) === 1 ? 'Show on Storefront' : 'Hidden'}
                           </span>
-                        ) : (
-                          <span className="text-[10px] text-brand-muted">Inactive</span>
-                        )}
+                        </label>
                       </td>
 
                       <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
@@ -339,33 +376,34 @@ export default function AdminCategoriesView({ currentUser }) {
                 />
               </div>
 
-              {/* Display Order + Active Toggle */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Display Order</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingCat.display_order || 1}
-                    onChange={(e) =>
-                      setEditingCat((prev) => ({ ...prev, display_order: parseInt(e.target.value, 10) }))
-                    }
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Status</label>
-                  <select
-                    value={editingCat.is_active ?? 1}
-                    onChange={(e) =>
-                      setEditingCat((prev) => ({ ...prev, is_active: parseInt(e.target.value, 10) }))
-                    }
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
-                  >
-                    <option value={1}>Active</option>
-                    <option value={0}>Hidden</option>
-                  </select>
-                </div>
+              {/* Display Order */}
+              <div className="space-y-1">
+                <label className="font-semibold text-brand-tertiary">Display Order</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editingCat.display_order || 1}
+                  onChange={(e) =>
+                    setEditingCat((prev) => ({ ...prev, display_order: parseInt(e.target.value, 10) }))
+                  }
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
+                />
+              </div>
+
+              {/* Show on Storefront Checkbox */}
+              <div className="flex items-center space-x-3 p-3.5 bg-[#FAF8FC] border border-brand-border rounded-xl">
+                <input
+                  type="checkbox"
+                  id="cat-is-active-check"
+                  checked={Number(editingCat.is_active ?? 1) === 1}
+                  onChange={(e) =>
+                    setEditingCat((prev) => ({ ...prev, is_active: e.target.checked ? 1 : 0 }))
+                  }
+                  className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-brand-primary"
+                />
+                <label htmlFor="cat-is-active-check" className="cursor-pointer text-xs font-semibold text-brand-tertiary select-none">
+                  Show on Storefront (Header, Navigation & Catalog)
+                </label>
               </div>
 
               {/* Actions */}

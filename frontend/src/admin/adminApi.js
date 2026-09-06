@@ -205,6 +205,14 @@ export const adminApi = {
     return res.data;
   },
 
+  async toggleCategoryActive(categoryId, isActive) {
+    const res = await request('/admin/categories.php?action=toggle_active', {
+      method: 'POST',
+      body: JSON.stringify({ id: categoryId, is_active: isActive !== undefined ? (isActive ? 1 : 0) : undefined }),
+    });
+    return res.data;
+  },
+
   // 2FA
   async requestAdminOtp(email, password) {
     const res = await request('/auth/admin_2fa.php?action=send_otp', {

@@ -138,6 +138,34 @@ if ($action === 'reorder') {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST?action=toggle_active — Toggle or set is_active status (show/hide on storefront)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'toggle_active') {
+    if ($adminUser['role'] !== 'admin' && $adminUser['role'] !== 'staff') {
+        ApiResponse::error('Permission denied', 403);
+    }
+
+    $id = (int)($input['id'] ?? ($_GET['id'] ?? 0));
+    if ($id <= 0) {
+        ApiResponse::error('Category ID required', 422);
+    }
+
+    if (isset($input['is_active'])) {
+        $isActive = (int)$input['is_active'];
+    } else {
+        $current = (int)$pdo->query("SELECT is_active FROM categories WHERE id = $id")->fetchColumn();
+        $isActive = $current ? 0 : 1;
+    }
+
+    $stmt = $pdo->prepare("UPDATE categories SET is_active = :active WHERE id = :id");
+    $stmt->execute([':active' => $isActive, ':id' => $id]);
+
+    AdminAuth::logActivity($adminUser['id'], 'toggle_category_active', 'category', $id, ['is_active' => $isActive]);
+
+    ApiResponse::success(['id' => $id, 'is_active' => $isActive], 'Category visibility updated');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DELETE — Delete category (admin only, blocks if products assigned)
 // ─────────────────────────────────────────────────────────────────────────────
 if ($method === 'DELETE') {

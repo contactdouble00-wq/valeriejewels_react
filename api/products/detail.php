@@ -30,7 +30,7 @@ try {
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
             JOIN categories c ON p.category_id = c.id
-            WHERE p.slug = :slug AND p.is_active = 1
+            WHERE p.slug = :slug AND p.is_active = 1 AND c.is_active = 1
             LIMIT 1
         ");
         $stmt->execute([':slug' => $slug]);
@@ -43,7 +43,7 @@ try {
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
             JOIN categories c ON p.category_id = c.id
-            WHERE p.id = :id AND p.is_active = 1
+            WHERE p.id = :id AND p.is_active = 1 AND c.is_active = 1
             LIMIT 1
         ");
         $stmt->execute([':id' => $id]);

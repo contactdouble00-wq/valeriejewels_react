@@ -132,11 +132,10 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
     };
   }, []);
 
-  // Gracefully fallback selectedCategory to 'all' if active category was deleted or renamed in admin
+  // Gracefully fallback selectedCategory to 'all' if active category was deleted, renamed, or disabled
   useEffect(() => {
     if (
       selectedCategory !== 'all' &&
-      selectedCategory !== 'jhumka-boxes' &&
       categories.length > 0 &&
       !categories.some((c) => c.slug === selectedCategory)
     ) {
@@ -328,18 +327,20 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <nav className="hidden lg:block border-t border-brand-border/60 bg-[#FAF7FC]/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-center space-x-6 xl:space-x-8 h-10 text-[11px] font-caps tracking-[0.14em] uppercase text-brand-tertiary/80 whitespace-nowrap">
-              {/* Highlighted Featured Pill matching Everlasting */}
-              <a
-                href="#jhumka-boxes"
-                onClick={() => setSelectedCategory('jhumka-boxes')}
-                className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${
-                  selectedCategory === 'jhumka-boxes'
-                    ? 'bg-brand-primary text-white font-bold shadow-xs'
-                    : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
-                }`}
-              >
-                <span>✨ 4 Jhumka Boxes</span>
-              </a>
+              {/* Highlighted Featured Pill matching Everlasting (only if category is active) */}
+              {categories.some((cat) => cat.slug === 'jhumka-boxes') && (
+                <a
+                  href="#jhumka-boxes"
+                  onClick={() => setSelectedCategory('jhumka-boxes')}
+                  className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${
+                    selectedCategory === 'jhumka-boxes'
+                      ? 'bg-brand-primary text-white font-bold shadow-xs'
+                      : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
+                  }`}
+                >
+                  <span>✨ 4 Jhumka Boxes</span>
+                </a>
+              )}
 
               <a
                 href="#catalog"
@@ -417,14 +418,16 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         {/* Mobile Slide Drawer (Inspired by Everlasting) */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-brand-border bg-white px-6 py-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
-            <a
-              href="#jhumka-boxes"
-              onClick={() => { setSelectedCategory('jhumka-boxes'); setMobileMenuOpen(false); }}
-              className="flex items-center justify-between text-xs font-caps tracking-[0.2em] uppercase py-2.5 text-brand-primary font-bold border-b border-brand-border/40"
-            >
-              <span>✨ 4 Jhumka Boxes</span>
-              <span className="px-2 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-bold tracking-normal">BESTSELLER</span>
-            </a>
+            {categories.some((c) => c.slug === 'jhumka-boxes') && (
+              <a
+                href="#jhumka-boxes"
+                onClick={() => { setSelectedCategory('jhumka-boxes'); setMobileMenuOpen(false); }}
+                className="flex items-center justify-between text-xs font-caps tracking-[0.2em] uppercase py-2.5 text-brand-primary font-bold border-b border-brand-border/40"
+              >
+                <span>✨ 4 Jhumka Boxes</span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-bold tracking-normal">BESTSELLER</span>
+              </a>
+            )}
             <a
               href="#catalog"
               onClick={() => { setSelectedCategory('all'); setMobileMenuOpen(false); }}
@@ -538,14 +541,16 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           </div>
         </section>
 
-        {/* Ad Campaign Hero Section: The 4 Signature Jhumka Boxes */}
-        <div id="jhumka-boxes" className="scroll-mt-28">
-          <JhumkaBoxHeroSection
-            products={jhumkaBoxes.length > 0 ? jhumkaBoxes : products}
-            onOpenPdp={(slug) => setActivePdpSlug(slug)}
-            onOpenCheckout={() => setIsCheckoutOpen(true)}
-          />
-        </div>
+        {/* Ad Campaign Hero Section: The 4 Signature Jhumka Boxes (only if category is active and has products) */}
+        {categories.some((c) => c.slug === 'jhumka-boxes') && jhumkaBoxes.length > 0 && (
+          <div id="jhumka-boxes" className="scroll-mt-28">
+            <JhumkaBoxHeroSection
+              products={jhumkaBoxes}
+              onOpenPdp={(slug) => setActivePdpSlug(slug)}
+              onOpenCheckout={() => setIsCheckoutOpen(true)}
+            />
+          </div>
+        )}
 
         {/* Live System Telemetry Strip (Toggleable from Admin) */}
         {content?.telemetryBanner?.enabled && (
