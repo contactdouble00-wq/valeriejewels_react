@@ -83,6 +83,13 @@ class Database {
             // Always ensure default admin account exists
             self::seedAdminUser($pdo);
 
+            // Ensure pairs_count column exists in products table
+            try {
+                $pdo->exec("ALTER TABLE `products` ADD COLUMN `pairs_count` INT UNSIGNED DEFAULT NULL AFTER `stock_quantity`");
+            } catch (Throwable $e) {
+                // Column already exists or already migrated
+            }
+
             // Ensure site_settings table exists
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS `site_settings` (
@@ -152,6 +159,7 @@ class Database {
                     cost_price REAL,
                     sku TEXT NOT NULL UNIQUE,
                     stock_quantity INTEGER NOT NULL DEFAULT 0,
+                    pairs_count INTEGER DEFAULT NULL,
                     is_anti_tarnish INTEGER NOT NULL DEFAULT 1,
                     material TEXT NOT NULL DEFAULT '18K Gold Plated Stainless Steel',
                     is_bestseller INTEGER NOT NULL DEFAULT 0,
@@ -182,6 +190,12 @@ class Database {
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             ");
+
+            try {
+                $pdo->exec("ALTER TABLE products ADD COLUMN pairs_count INTEGER DEFAULT NULL");
+            } catch (Throwable $e) {
+                // Column already exists
+            }
 
             self::seedAdminUser($pdo);
             self::seedDefaultSiteSettings($pdo);

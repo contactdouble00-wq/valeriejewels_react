@@ -100,9 +100,10 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
         {jhumkaBoxes.slice(0, 4).map((box, idx) => {
           const wishlisted = isInWishlist(box.id);
           const discount = Math.round(((Number(box.mrp) - Number(box.price)) / Number(box.mrp)) * 100);
-          const pairsMatch = box.name.match(/(\d+)\s*Pair/i);
-          const pairsNumber = pairsMatch ? Number(pairsMatch[1]) : 6;
-          const pairsCount = `${pairsNumber} Pairs Inside`;
+          const pairsMatch = box.name?.match(/(\d+)\s*Pair/i);
+          const pairsNumber = Number(box.pairs_count) || (pairsMatch ? Number(pairsMatch[1]) : 6);
+          const pairsSuffix = jHero.pairsBadgeSuffix || 'Pairs Inside';
+          const pairsCount = `${pairsNumber} ${pairsSuffix}`;
           const pricePerPair = Math.round(Number(box.price) / pairsNumber);
 
           return (

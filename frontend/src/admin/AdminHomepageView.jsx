@@ -45,6 +45,7 @@ const FACTORY_DEFAULTS = {
     pill1: '5–6 Curated Pairs Per Box',
     pill2: 'Zero Earache • Featherlight',
     pill3: 'Save up to 50% vs Single Pairs',
+    pairsBadgeSuffix: 'Pairs Inside',
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
@@ -718,6 +719,34 @@ export default function AdminHomepageView() {
                   onChange={(e) => updateNested('jhumkaHero', 'pill3', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
+              </div>
+
+              {/* Pairs Badge Label Customization */}
+              <div className="sm:col-span-2 p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Pairs Badge Label Format</span>
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-semibold bg-amber-100 px-2 py-0.5 rounded">
+                    Storefront Card Badge
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-amber-900 font-medium">Badge Suffix (after pairs count)</label>
+                    <input
+                      type="text"
+                      value={formData.jhumkaHero.pairsBadgeSuffix || 'Pairs Inside'}
+                      onChange={(e) => updateNested('jhumkaHero', 'pairsBadgeSuffix', e.target.value)}
+                      placeholder="e.g. Pairs Inside, Curated Pairs"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs focus:outline-none focus:border-amber-500 font-semibold text-brand-tertiary"
+                    />
+                  </div>
+                  <div className="text-[11px] text-amber-800 leading-snug self-center bg-white/60 p-2.5 rounded-lg border border-amber-200/60">
+                    Renders as <strong>"6 {formData.jhumkaHero.pairsBadgeSuffix || 'Pairs Inside'}"</strong>. You can customize the exact count of pairs (e.g. 5 or 6 pairs) for each individual box under <strong>Products Control</strong>.
+                  </div>
+                </div>
               </div>
             </div>
           </div>

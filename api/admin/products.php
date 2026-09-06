@@ -322,9 +322,11 @@ if ($method === 'POST') {
         $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name)) . '-' . rand(100, 999);
     }
 
+    $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
+
     $stmt = $pdo->prepare("
-        INSERT INTO products (category_id, name, slug, short_description, description, mrp, price, cost_price, sku, stock_quantity, is_anti_tarnish, material, is_bestseller, video_url, is_active, meta_title, meta_description)
-        VALUES (:cat, :name, :slug, :short_desc, :desc, :mrp, :price, :cost, :sku, :stock, :anti, :mat, :best, :vid, :active, :meta_t, :meta_d)
+        INSERT INTO products (category_id, name, slug, short_description, description, mrp, price, cost_price, sku, stock_quantity, pairs_count, is_anti_tarnish, material, is_bestseller, video_url, is_active, meta_title, meta_description)
+        VALUES (:cat, :name, :slug, :short_desc, :desc, :mrp, :price, :cost, :sku, :stock, :pairs, :anti, :mat, :best, :vid, :active, :meta_t, :meta_d)
     ");
     $stmt->execute([
         ':cat'        => $categoryId,
@@ -337,6 +339,7 @@ if ($method === 'POST') {
         ':cost'       => (float)($input['cost_price'] ?? 0),
         ':sku'        => $sku,
         ':stock'      => $stock,
+        ':pairs'      => $pairsCount,
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => $input['material'] ?? 'Stainless Steel / 18K Gold PVD',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
@@ -387,6 +390,8 @@ if ($method === 'PUT') {
         ApiResponse::error('Permission Denied: Staff accounts cannot modify product pricing or MRP.', 403);
     }
 
+    $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
+
     $stmt = $pdo->prepare("
         UPDATE products SET
             name = :name,
@@ -398,6 +403,7 @@ if ($method === 'PUT') {
             cost_price = :cost,
             sku = :sku,
             stock_quantity = :stock,
+            pairs_count = :pairs,
             is_anti_tarnish = :anti,
             material = :mat,
             is_bestseller = :best,
@@ -419,6 +425,7 @@ if ($method === 'PUT') {
         ':cost'       => (float)($input['cost_price'] ?? 0),
         ':sku'        => $input['sku'] ?? '',
         ':stock'      => (int)($input['stock_quantity'] ?? 0),
+        ':pairs'      => $pairsCount,
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => $input['material'] ?? '',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,

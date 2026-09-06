@@ -387,6 +387,7 @@ export default function AdminProductsView({ currentUser }) {
                 name: '', sku: '', price: '', mrp: '', cost_price: '',
                 category_id: categories[0]?.id || 1,
                 stock_quantity: 50, is_anti_tarnish: 1,
+                pairs_count: 6,
                 material: '18K Gold Plated Stainless Steel',
                 is_bestseller: 0, short_description: '', description: '',
                 slug: '', meta_title: '', meta_description: '', images: [],
@@ -553,10 +554,15 @@ export default function AdminProductsView({ currentUser }) {
 
                       <td className="py-3 px-4 space-y-1">
                         {isJhumkaBox && (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            <Flame className="w-2.5 h-2.5 text-amber-600" />
-                            <span>Ad Hero Box</span>
-                          </span>
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              <Flame className="w-2.5 h-2.5 text-amber-600" />
+                              <span>Ad Hero Box</span>
+                            </span>
+                            <div className="text-[10px] font-bold text-brand-primary">
+                              {p.pairs_count || (p.name.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside
+                            </div>
+                          </div>
                         )}
                         <div>
                           {Number(p.is_bestseller) === 1 ? (
@@ -663,14 +669,14 @@ export default function AdminProductsView({ currentUser }) {
                 </div>
               </div>
 
-              {/* Row 2: Category, Stock, Material */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
+              {/* Row 2: Category, Stock, Pairs Count, Material */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="space-y-1 sm:col-span-1">
                   <label className="font-semibold text-brand-tertiary">Category</label>
                   <select
                     value={editingProduct.category_id || categories[0]?.id || 1}
                     onChange={(e) => setEditingProduct({ ...editingProduct, category_id: parseInt(e.target.value, 10) })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs"
                   >
                     {categories.length > 0 ? (
                       categories.map((cat) => (
@@ -702,15 +708,63 @@ export default function AdminProductsView({ currentUser }) {
                 </div>
 
                 <div className="space-y-1">
+                  <label className="font-semibold text-brand-tertiary flex items-center justify-between">
+                    <span>Pairs Inside</span>
+                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1 rounded">Boxes</span>
+                  </label>
+                  <input
+                    type="number" min="1" max="50"
+                    value={editingProduct.pairs_count ?? ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                    placeholder="e.g. 6 (or 5)"
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
                   <label className="font-semibold text-brand-tertiary">Material</label>
                   <input
                     type="text"
                     value={editingProduct.material || ''}
                     onChange={(e) => setEditingProduct({ ...editingProduct, material: e.target.value })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs"
                   />
                 </div>
               </div>
+
+              {/* Jhumka Box Hero Showcase Dedicated Configuration Banner */}
+              {(editingProduct.category_id === 6 ||
+                categories.find((c) => c.id === editingProduct.category_id)?.slug === 'jhumka-boxes' ||
+                editingProduct.name?.toLowerCase().includes('jhumka') ||
+                editingProduct.sku?.startsWith('VJ-JHM')) && (
+                <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+                  <div className="space-y-0.5">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                      <Flame className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 font-light">
+                      Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Automatic per-pair value calculation: <strong className="font-semibold">₹{editingProduct.price ? Math.round(Number(editingProduct.price) / (Number(editingProduct.pairs_count) || Number(editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1]) || 6)) : 0}/pair</strong>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <label className="text-[11px] font-semibold text-amber-900">Pairs inside box:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={editingProduct.pairs_count ?? (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)}
+                      onChange={(e) =>
+                        setEditingProduct({
+                          ...editingProduct,
+                          pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10),
+                        })
+                      }
+                      className="w-16 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-amber-900 shadow-2xs focus:outline-none focus:border-amber-600"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Row 3: Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

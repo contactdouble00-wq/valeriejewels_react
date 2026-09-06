@@ -75,6 +75,7 @@ CREATE TABLE `products` (
     `cost_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Internal cost for margin reporting',
     `sku` VARCHAR(80) NOT NULL UNIQUE,
     `stock_quantity` INT NOT NULL DEFAULT 0,
+    `pairs_count` INT UNSIGNED DEFAULT NULL COMMENT 'Curated set / jhumka box: number of pairs included',
     `is_anti_tarnish` TINYINT(1) NOT NULL DEFAULT 1,
     `material` VARCHAR(150) NOT NULL DEFAULT '18K Gold Plated Stainless Steel (Anti-Tarnish)',
     `is_bestseller` TINYINT(1) NOT NULL DEFAULT 0,

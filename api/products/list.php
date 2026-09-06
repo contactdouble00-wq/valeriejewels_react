@@ -97,6 +97,7 @@ try {
             p.price,
             p.sku,
             p.stock_quantity,
+            p.pairs_count,
             p.is_anti_tarnish,
             p.material,
             p.is_bestseller,
@@ -125,6 +126,21 @@ try {
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
     $products = $stmt->fetchAll();
+
+    foreach ($products as &$prod) {
+        if (empty($prod['pairs_count'])) {
+            if (preg_match('/(\d+)\s*Pair/i', $prod['name'] . ' ' . ($prod['short_description'] ?? ''), $m)) {
+                $prod['pairs_count'] = (int)$m[1];
+            } else if (($prod['category_slug'] ?? '') === 'jhumka-boxes' || str_contains(strtolower($prod['name']), 'jhumka')) {
+                $prod['pairs_count'] = 6;
+            } else {
+                $prod['pairs_count'] = null;
+            }
+        } else {
+            $prod['pairs_count'] = (int)$prod['pairs_count'];
+        }
+    }
+    unset($prod);
 
     $meta = [
         'page'        => $page,
