@@ -29,6 +29,7 @@ import FaqSection from './components/FaqSection';
 import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
 import WishlistToast from './components/WishlistToast';
+import MobileSidebarDrawer from './components/MobileSidebarDrawer';
 import AuthModal from './components/AuthModal';
 import CheckoutModal from './components/CheckoutModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
@@ -222,11 +223,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             {/* Mobile Left: Hamburger Menu */}
             <div className="flex lg:hidden items-center w-12 shrink-0">
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => setMobileMenuOpen(true)}
                 className="p-2 -ml-2 text-brand-tertiary hover:text-brand-primary transition-colors focus:outline-none"
-                aria-label="Toggle navigation menu"
+                aria-label="Open navigation menu"
               >
-                {mobileMenuOpen ? <X className="w-5 h-5 stroke-[1.75]" /> : <Menu className="w-5 h-5 stroke-[1.75]" />}
+                <Menu className="w-5 h-5 stroke-[1.75]" />
               </button>
             </div>
 
@@ -446,90 +447,6 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           </div>
         )}
 
-        {/* Mobile Slide Drawer (Inspired by Everlasting) */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-brand-border bg-white px-6 py-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
-            {categories.some((c) => c.slug === 'jhumka-boxes') && (
-              <a
-                href="#jhumka-boxes"
-                onClick={() => { setSelectedCategory('jhumka-boxes'); setMobileMenuOpen(false); }}
-                className="flex items-center justify-between text-xs font-caps tracking-[0.2em] uppercase py-2.5 text-brand-primary font-bold border-b border-brand-border/40"
-              >
-                <span>✨ 4 Jhumka Boxes</span>
-                <span className="px-2 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-bold tracking-normal">BESTSELLER</span>
-              </a>
-            )}
-            <a
-              href="#catalog"
-              onClick={() => { setSelectedCategory('all'); setMobileMenuOpen(false); }}
-              className="block text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary"
-            >
-              All Jewelry
-            </a>
-            {categories
-              .filter((c) => c.slug !== 'jhumka-boxes')
-              .map((c) => (
-                <a
-                  key={c.id}
-                  href="#catalog"
-                  onClick={() => { setSelectedCategory(c.slug); setMobileMenuOpen(false); }}
-                  className="block text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary"
-                >
-                  {c.name}
-                </a>
-              ))}
-            <a
-              href="#combos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-primary font-bold"
-            >
-              Combo Duos
-            </a>
-
-            {/* Mobile Wishlist Action */}
-            <div className="pt-2 border-t border-brand-border/50">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  openWishlist();
-                }}
-                className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
-              >
-                <div className="flex items-center space-x-2">
-                  <span>Wishlist</span>
-                  {wishlistCount > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-brand-primary text-white">
-                      {wishlistCount}
-                    </span>
-                  )}
-                </div>
-                <Heart className={`w-4 h-4 ${wishlistCount > 0 ? 'text-brand-primary fill-brand-primary' : 'text-brand-primary'}`} />
-              </button>
-            </div>
-
-            {/* Mobile Tracking Action */}
-            <div>
-              <button
-                onClick={() => { openTracking(); setMobileMenuOpen(false); }}
-                className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
-              >
-                <span>Track Order (Shiprocket)</span>
-                <Truck className="w-4 h-4 text-brand-primary" />
-              </button>
-            </div>
-
-            {/* Mobile Account Action */}
-            <div className="pt-2 border-t border-brand-border">
-              <button
-                onClick={() => { openAuthModal('login'); setMobileMenuOpen(false); }}
-                className="w-full text-left text-xs font-caps tracking-[0.18em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
-              >
-                <span>{isAuthenticated ? `Account (${user.name})` : 'Sign In / Account (Optional)'}</span>
-                <User className="w-4 h-4 text-brand-primary" />
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Main Container */}
@@ -789,6 +706,25 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
       {/* Slide-out Wishlist Drawer */}
       <WishlistDrawer onSelectProduct={(item) => setActivePdpSlug(item.slug)} />
+
+      {/* Slide-out Mobile Navigation Drawer (Everlasting Style) */}
+      <MobileSidebarDrawer
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(slug) => {
+          setSelectedCategory(slug);
+          const catalogEl = document.getElementById('catalog');
+          if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+        }}
+        openWishlist={openWishlist}
+        wishlistCount={wishlistCount}
+        openTracking={openTracking}
+        openAuthModal={openAuthModal}
+        isAuthenticated={isAuthenticated}
+        user={user}
+      />
 
       {/* Wishlist Toast Notification */}
       <WishlistToast />
