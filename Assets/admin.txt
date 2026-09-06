@@ -1,1 +1,30 @@
-Open http://localhost:5173/#admin → login with admin@valeriejewels.com / admin123
+=====================================================
+VALERIE JEWELS — ADMIN ACCESS CREDENTIALS
+=====================================================
+
+1. ACCESS ROUTE
+   Live URL:  https://shop.valeriejewels.in/vj-manage-x1126
+   Local URL: http://localhost:5173/#vj-manage-x1126
+   (Note: The old '/admin' route has been disabled and returns 404)
+
+-----------------------------------------------------
+LAYER 1: HTTP BASIC AUTH (Server Gate on Hostinger)
+-----------------------------------------------------
+Prompted by the browser before the admin panel bundle can download:
+   Username: vjadmin
+   Password: ValerieSecure2026!
+
+   * Hashed in frontend/public/.htpasswd:
+     vjadmin:$2y$10$sUvGAjUFpd7u4Ix22stJNejYWGAnfzK.H2Ll//MEMQF4V8XoHf45i
+
+-----------------------------------------------------
+LAYER 2: ADMIN PORTAL LOGIN (Inside React / Backend)
+-----------------------------------------------------
+Entered in the Valerie Jewels Admin login screen:
+   Email:    admin@valeriejewels.com
+   Password: Admin@Valerie2026!
+
+   * Security Note: 5 consecutive failed login attempts will lock out
+     the account / IP for 15 minutes (HTTP 429 Too Many Requests).
+   * Session lifetime is 30 minutes.
+=====================================================
