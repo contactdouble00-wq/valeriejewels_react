@@ -16,11 +16,12 @@ function handleCors(): void {
         'http://localhost:3000',
         'https://valeriejewels.in',
         'https://www.valeriejewels.in',
+        'https://shop.valeriejewels.in',
     ];
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
     $originAllowed = false;
-    if (in_array($origin, $allowedOrigins, true)) {
+    if (in_array($origin, $allowedOrigins, true) || preg_match('/^https:\/\/([a-z0-9-]+\.)?valeriejewels\.in$/i', $origin)) {
         header("Access-Control-Allow-Origin: {$origin}");
         header("Vary: Origin");
         $originAllowed = true;

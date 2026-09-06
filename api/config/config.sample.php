@@ -36,6 +36,7 @@ return [
             'http://localhost:3000',
             'https://valeriejewels.in',
             'https://www.valeriejewels.in',
+            'https://shop.valeriejewels.in',
         ],
         'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],

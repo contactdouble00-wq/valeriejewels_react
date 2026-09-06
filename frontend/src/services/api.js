@@ -2,7 +2,23 @@
  * VALERIE JEWELS — API Client Service
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+function getApiBaseUrl() {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (!isLocal) {
+      const envUrl = import.meta.env.VITE_API_BASE_URL;
+      if (envUrl && envUrl.startsWith('https://')) {
+        return envUrl.replace(/\/+$/, '');
+      }
+      return '/api';
+    }
+  }
+  const rawUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  return rawUrl.replace(/\/+$/, '');
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Helper to handle fetch responses safely

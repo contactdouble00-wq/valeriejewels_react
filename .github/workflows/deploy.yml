@@ -24,7 +24,7 @@ jobs:
       - name: Deploy Frontend Build to shop root
         uses: burnett01/rsync-deployments@6.0.0
         with:
-          switches: -avzr --delete
+          switches: -avzr --delete --exclude=api
           path: frontend/dist/
           remote_path: /home/u513962642/domains/valeriejewels.in/public_html/shop/
           remote_host: ${{ secrets.SSH_HOST }}
@@ -35,7 +35,7 @@ jobs:
       - name: Deploy PHP API folder
         uses: burnett01/rsync-deployments@6.0.0
         with:
-          switches: -avzr --delete
+          switches: -avzr --delete --exclude=.env --exclude=config/config.local.php
           path: api/
           remote_path: /home/u513962642/domains/valeriejewels.in/public_html/shop/api/
           remote_host: ${{ secrets.SSH_HOST }}
