@@ -500,14 +500,14 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
           {/* Desktop-Only Creatively Faded Hero Photograph */}
           {Boolean(content?.heroBanner?.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
-            <div className="hidden md:block absolute top-0 right-0 w-[58%] lg:w-[54%] xl:w-[50%] h-full pointer-events-none select-none overflow-hidden z-0">
+            <div className="hidden md:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
               <img
                 src={content?.heroBanner?.rightImageUrl || '/hero-jewelry-model.jpg'}
                 alt="Valerie Everyday Luxury Jewelry"
                 className="w-full h-full object-cover object-[center_15%]"
                 style={{
-                  maskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
-                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
+                  maskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
                 }}
                 loading="eager"
               />

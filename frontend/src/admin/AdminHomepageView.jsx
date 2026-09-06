@@ -403,14 +403,14 @@ export default function AdminHomepageView() {
               <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
                 {/* Desktop Faded Photograph Preview */}
                 {Boolean(formData.heroBanner.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
-                  <div className="hidden sm:block absolute top-0 right-0 w-[58%] lg:w-[54%] xl:w-[50%] h-full pointer-events-none select-none overflow-hidden z-0">
+                  <div className="hidden sm:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
                     <img
                       src={formData.heroBanner.rightImageUrl || '/hero-jewelry-model.jpg'}
                       alt="Hero Preview"
                       className="w-full h-full object-cover object-[center_15%]"
                       style={{
-                        maskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
-                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
+                        maskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
                       }}
                     />
                   </div>
