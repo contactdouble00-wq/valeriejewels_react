@@ -49,6 +49,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
   const [selectedSort, setSelectedSort] = useState('popular');
   const [productsLoading, setProductsLoading] = useState(true);
   const [activePdpSlug, setActivePdpSlug] = useState(null);
+  const [activePdpProduct, setActivePdpProduct] = useState(null);
   const [apiHealth, setApiHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -62,8 +63,9 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
   };
 
   // Sync PDP opening with URL Hash and history for native mobile back navigation
-  const openPdp = (slug) => {
+  const openPdp = (slug, productObj = null) => {
     setActivePdpSlug(slug);
+    setActivePdpProduct(productObj);
     if (window.location.hash !== `#product-${slug}`) {
       window.history.pushState({ pdp: slug }, '', `#product-${slug}`);
     }
@@ -71,6 +73,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
   const closePdp = () => {
     setActivePdpSlug(null);
+    setActivePdpProduct(null);
     if (window.history.state?.pdp) {
       window.history.back();
     } else if (window.location.hash.startsWith('#product-')) {
@@ -558,7 +561,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           <div id="jhumka-boxes" className="scroll-mt-28">
             <JhumkaBoxHeroSection
               products={jhumkaBoxes}
-              onOpenPdp={(slug) => openPdp(slug)}
+              onOpenPdp={(slug, box) => openPdp(slug, box)}
               onOpenCheckout={() => setIsCheckoutOpen(true)}
             />
           </div>
@@ -704,7 +707,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onQuickView={(p) => openPdp(p.slug)}
+                  onQuickView={(p) => openPdp(p.slug, p)}
                   onAddToCart={(p) => addToCart(p, null, 1, true)}
                 />
               ))}
@@ -732,6 +735,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {activePdpSlug && (
         <ProductDetailModal
           productSlug={activePdpSlug}
+          initialProduct={activePdpProduct}
           onClose={closePdp}
           onAddToCart={(product, variant) => {
             addToCart(product, variant, 1, true);
@@ -743,7 +747,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
       {/* Slide-out Wishlist Drawer */}
-      <WishlistDrawer onSelectProduct={(item) => openPdp(item.slug)} />
+      <WishlistDrawer onSelectProduct={(item) => openPdp(item.slug, item)} />
 
       {/* Slide-out Mobile Navigation Drawer (Everlasting Style) */}
       <MobileSidebarDrawer
@@ -784,22 +788,24 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         initialOrderNumber={activeTrackingOrderNumber}
       />
 
-      {/* Mobile Sticky CTA Bar */}
-      <div className="sm:hidden sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-brand-border px-4 py-3 text-brand-tertiary flex items-center justify-between shadow-2xl">
-        <div>
-          <span className="text-[10px] font-caps uppercase tracking-wider text-brand-primary block font-semibold">Shopping Bag</span>
-          <span className="text-base font-bold text-brand-tertiary">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'} • ₹{Math.round(grandTotal).toLocaleString('en-IN')}
-          </span>
+      {/* Mobile Sticky CTA Bar (hidden when full-screen PDP is active to avoid overlapping bars) */}
+      {!activePdpSlug && (
+        <div className="sm:hidden sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-brand-border px-4 py-3 text-brand-tertiary flex items-center justify-between shadow-2xl">
+          <div>
+            <span className="text-[10px] font-caps uppercase tracking-wider text-brand-primary block font-semibold">Shopping Bag</span>
+            <span className="text-base font-bold text-brand-tertiary">
+              {itemCount} {itemCount === 1 ? 'item' : 'items'} • ₹{Math.round(grandTotal).toLocaleString('en-IN')}
+            </span>
+          </div>
+          <button
+            onClick={openCart}
+            className="px-5 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-caps tracking-widest uppercase font-bold shadow-sm hover:bg-brand-primary-hover active:scale-95 transition-all flex items-center space-x-1.5"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>View Bag</span>
+          </button>
         </div>
-        <button
-          onClick={openCart}
-          className="px-5 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-caps tracking-widest uppercase font-bold shadow-sm hover:bg-brand-primary-hover active:scale-95 transition-all flex items-center space-x-1.5"
-        >
-          <ShoppingBag className="w-3.5 h-3.5" />
-          <span>View Bag</span>
-        </button>
-      </div>
+      )}
 
       {/* Global Luxury Footer */}
       <footer className="bg-white border-t border-brand-border mt-16 py-12">

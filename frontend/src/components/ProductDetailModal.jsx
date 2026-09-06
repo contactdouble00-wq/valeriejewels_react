@@ -10,41 +10,71 @@ import {
   Heart,
   ChevronRight,
   Share2,
-  ArrowLeft,
-  Flame,
-  Award,
-  Lock,
-  Copy
+  ArrowLeft
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
 
-export default function ProductDetailModal({ productSlug, onClose, onAddToCart }) {
+export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  // Find synchronous fallback from seed catalog to prevent empty screen or loading jump
+  const fallbackProduct = initialProduct || SEED_PRODUCTS.find((p) => p.slug === productSlug) || null;
+
+  const [product, setProduct] = useState(fallbackProduct);
+  const [loading, setLoading] = useState(!fallbackProduct);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(fallbackProduct?.variants?.[0] || null);
   const [addedNotice, setAddedNotice] = useState(false);
   const [copiedNotice, setCopiedNotice] = useState(false);
 
   const wishlisted = isInWishlist(product?.id);
 
+  // Sync state when productSlug changes or when initialProduct is passed
+  useEffect(() => {
+    if (initialProduct) {
+      setProduct(initialProduct);
+      if (initialProduct.variants && initialProduct.variants.length > 0) {
+        setSelectedVariant(initialProduct.variants[0]);
+      }
+      setLoading(false);
+    } else {
+      const found = SEED_PRODUCTS.find((p) => p.slug === productSlug);
+      if (found) {
+        setProduct(found);
+        if (found.variants && found.variants.length > 0) {
+          setSelectedVariant(found.variants[0]);
+        }
+        setLoading(false);
+      }
+    }
+  }, [productSlug, initialProduct]);
+
+  // Fetch full details from API in the background
   useEffect(() => {
     let isMounted = true;
     async function loadDetail() {
-      setLoading(true);
+      if (!fallbackProduct) {
+        setLoading(true);
+      }
       try {
         const data = await apiService.getProductDetail(productSlug);
-        if (isMounted) {
+        if (isMounted && data) {
           setProduct(data);
           if (data.variants && data.variants.length > 0) {
-            setSelectedVariant(data.variants[0]);
+            setSelectedVariant((prev) => {
+              if (prev) {
+                const match = data.variants.find((v) => v.id === prev.id);
+                return match || data.variants[0];
+              }
+              return data.variants[0];
+            });
           }
         }
       } catch (err) {
-        if (isMounted) setError(err.message);
+        if (isMounted && !fallbackProduct) setError(err.message);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -98,7 +128,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
           url: shareUrl,
         });
       } catch {
-        // User cancelled or share failed silently
+        // Silent cancel
       }
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl);
@@ -125,15 +155,15 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
     <>
       {/* ========================================================================= */}
       {/* 1. MOBILE FULL-SCREEN PDP EXPERIENCE (< md screens)                      */}
-      {/* Utilizes 100% of the screen with sticky top/bottom bars & native app feel */}
+      {/* 3-tier architecture: Pinned Header, Momentum Scroll Body, Pinned Footer   */}
       {/* ========================================================================= */}
-      <div className="md:hidden fixed inset-0 z-50 bg-white overflow-y-auto flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
         
         {/* Sticky Mobile Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-brand-border px-3 h-14 flex items-center justify-between">
+        <header className="shrink-0 h-14 bg-white/95 backdrop-blur-md border-b border-brand-border px-4 flex items-center justify-between z-20">
           <button
             onClick={onClose}
-            className="flex items-center space-x-1 py-2 px-2 -ml-1 text-brand-tertiary hover:text-brand-primary active:scale-95 transition-all"
+            className="flex items-center space-x-1.5 py-2 px-2 -ml-2 text-brand-tertiary hover:text-brand-primary active:scale-95 transition-all"
             aria-label="Back to catalog"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2]" />
@@ -144,11 +174,11 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
           <img
             src="/valerie.png"
             alt="VALERIÉ"
-            className="h-4.5 w-auto object-contain"
+            className="h-6 w-auto object-contain"
           />
 
-          {/* Action Cluster (Share + Wishlist + Close) */}
-          <div className="flex items-center space-x-1">
+          {/* Action Cluster (Share + Wishlist) */}
+          <div className="flex items-center space-x-1 -mr-1">
             <button
               onClick={handleShare}
               className="p-2 text-brand-tertiary hover:text-brand-primary active:scale-90 transition-all rounded-full"
@@ -158,7 +188,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
               <Share2 className="w-4 h-4 stroke-[1.8]" />
             </button>
             <button
-              onClick={() => toggleWishlist(product)}
+              onClick={() => product && toggleWishlist(product)}
               className={`p-2 rounded-full transition-all active:scale-90 ${
                 wishlisted ? 'text-rose-500' : 'text-brand-tertiary hover:text-brand-primary'
               }`}
@@ -170,12 +200,13 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
           </div>
         </header>
 
-        {loading ? (
+        {/* Scrollable Body Content */}
+        {loading && !product ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-12">
-            <div className="w-10 h-10 border-3 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin"></div>
+            <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
             <p className="text-xs font-caps uppercase tracking-wider text-brand-muted">Loading Piece Details...</p>
           </div>
-        ) : error ? (
+        ) : error && !product ? (
           <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-4">
             <p className="text-sm text-red-600 font-semibold">{error}</p>
             <button
@@ -185,13 +216,13 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
               Return to Catalog
             </button>
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col pb-28">
+        ) : product ? (
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             
             {/* Edge-to-Edge Hero Image Stage */}
             <div className="relative w-full aspect-square bg-[#FAF7FC] overflow-hidden">
               <img
-                src={images[selectedImage]?.image_url}
+                src={images[selectedImage]?.image_url || product.primary_image}
                 alt={images[selectedImage]?.alt_text || product.name}
                 className="w-full h-full object-cover object-center transition-all duration-300"
               />
@@ -218,7 +249,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
 
               {/* Photo Indicator Dot Pills */}
               {images.length > 1 && (
-                <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-mono font-medium tracking-wider">
+                <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono font-medium tracking-wider">
                   {selectedImage + 1} / {images.length}
                 </div>
               )}
@@ -244,7 +275,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
             )}
 
             {/* Product Body Information */}
-            <div className="px-4 py-5 space-y-5">
+            <div className="px-4 py-5 space-y-5 pb-6">
               
               {/* Category & Rating */}
               <div className="flex items-center justify-between">
@@ -303,7 +334,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                           onClick={() => setSelectedVariant(v)}
                           className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
                             isSelected
-                              ? 'border-brand-primary bg-brand-primary-light text-brand-primary font-bold shadow-2xs'
+                              ? 'border-brand-primary bg-brand-primary-light text-brand-primary font-bold shadow-sm'
                               : 'border-brand-border bg-white text-brand-tertiary hover:border-brand-primary/40'
                           }`}
                         >
@@ -342,7 +373,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                 <p>{product.description || product.short_description}</p>
               </div>
 
-              {/* 3 Value & Reassurance Pillars */}
+              {/* Value & Reassurance Pillars */}
               <div className="grid grid-cols-1 gap-2 pt-2 border-t border-brand-border/70 text-xs">
                 <div className="flex items-center space-x-2.5 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
                   <Truck className="w-4 h-4 text-brand-primary shrink-0" />
@@ -371,11 +402,11 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
             )}
 
           </div>
-        )}
+        ) : null}
 
-        {/* Mobile Sticky Bottom CTA Conversion Bar */}
-        {!loading && !error && product && (
-          <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 flex items-center gap-2.5 shadow-2xl safe-area-pb">
+        {/* Mobile Pinned Bottom CTA Bar */}
+        {product && (
+          <div className="shrink-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 flex items-center gap-2.5 shadow-lg z-20">
             <button
               onClick={() => toggleWishlist(product)}
               className={`p-3 rounded-xl border transition-all shrink-0 ${
@@ -414,7 +445,10 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
       {/* 2. DESKTOP FLOATING POPUP MODAL (>= md screens)                           */}
       {/* Centered luxury modal popup with backdrop blur as requested by the user   */}
       {/* ========================================================================= */}
-      <div className="hidden md:flex fixed inset-0 z-50 overflow-y-auto bg-brand-tertiary/60 backdrop-blur-sm items-center justify-center p-6 animate-in fade-in duration-200">
+      <div 
+        onClick={onClose}
+        className="hidden md:flex fixed inset-0 z-50 overflow-y-auto bg-brand-tertiary/60 backdrop-blur-sm items-center justify-center p-6 animate-fade-in"
+      >
         <div
           onClick={(e) => e.stopPropagation()}
           className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-brand-border flex flex-col max-h-[90vh]"
@@ -422,25 +456,25 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
           {/* Modal Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/80 hover:bg-brand-surface text-brand-tertiary hover:text-brand-primary transition-colors border border-brand-border shadow-sm"
+            className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-white/90 hover:bg-brand-surface text-brand-tertiary hover:text-brand-primary transition-all border border-brand-border shadow-sm hover:scale-105"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 stroke-[1.8]" />
           </button>
 
-          {loading ? (
+          {loading && !product ? (
             <div className="p-16 flex flex-col items-center justify-center space-y-4">
-              <div className="w-10 h-10 border-3 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin"></div>
+              <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
               <p className="text-xs font-caps uppercase tracking-wider text-brand-muted">Loading Jewelry Details...</p>
             </div>
-          ) : error ? (
+          ) : error && !product ? (
             <div className="p-12 text-center space-y-3">
               <p className="text-sm text-red-600 font-semibold">{error}</p>
               <button onClick={onClose} className="px-4 py-2 bg-brand-primary text-white text-xs rounded-xl">
                 Close Window
               </button>
             </div>
-          ) : (
+          ) : product ? (
             <div className="overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-12">
               
               {/* Left Column: Gallery */}
@@ -449,7 +483,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                   {/* Main Selected Image */}
                   <div className="relative aspect-square rounded-2xl overflow-hidden bg-white shadow-sm border border-brand-border flex items-center justify-center">
                     <img
-                      src={images[selectedImage]?.image_url}
+                      src={images[selectedImage]?.image_url || product.primary_image}
                       alt={images[selectedImage]?.alt_text || product.name}
                       className="w-full h-full object-cover object-center transition-all duration-300"
                     />
@@ -503,8 +537,8 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
               <div className="md:col-span-6 p-6 sm:p-8 flex flex-col justify-between space-y-6">
                 <div className="space-y-4">
                   
-                  {/* Category & Ratings */}
-                  <div className="flex items-center justify-between">
+                  {/* Category & Ratings (with pr-12 to prevent overlap with top-right X button) */}
+                  <div className="flex items-center justify-between pr-12">
                     <span className="text-xs font-caps uppercase tracking-[0.2em] text-brand-primary font-bold">
                       {product.category_name}
                     </span>
@@ -513,7 +547,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                         <Star key={i} className="w-3.5 h-3.5 fill-current" />
                       ))}
                       <span className="text-xs text-brand-muted ml-1 font-medium">
-                        ({product.rating_summary?.reviews_count || 5} reviews)
+                        ({product.rating_summary?.reviews_count || 120} reviews)
                       </span>
                     </div>
                   </div>
@@ -549,7 +583,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                       Material Specification
                     </span>
                     <p className="text-xs text-brand-tertiary font-medium">
-                      {product.material}
+                      {product.material || '18K Gold Plated 316L Stainless Steel'}
                     </p>
                     <p className="text-[11px] text-brand-muted font-light">
                       Safe for water, perfume, and daily wear without discoloration.
@@ -625,7 +659,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
               </div>
 
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </>
