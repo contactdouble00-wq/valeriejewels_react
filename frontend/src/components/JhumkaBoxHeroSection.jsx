@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy } from 'lucide-react';
+import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSiteContent } from '../context/SiteContentContext';
+import { useWishlist } from '../context/WishlistContext';
 
 export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenCheckout }) {
   const { addToCart } = useCart();
   const { content } = useSiteContent();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [copiedCode, setCopiedCode] = useState(false);
   const jHero = content?.jhumkaHero || {};
 
@@ -96,6 +98,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
       {/* The 4 Jhumka Boxes Showcase Grid: 2 columns on Mobile, 4 columns on Desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 relative z-10">
         {jhumkaBoxes.slice(0, 4).map((box, idx) => {
+          const wishlisted = isInWishlist(box.id);
           const discount = Math.round(((Number(box.mrp) - Number(box.price)) / Number(box.mrp)) * 100);
           const pairsMatch = box.name.match(/(\d+)\s*Pair/i);
           const pairsNumber = pairsMatch ? Number(pairsMatch[1]) : 6;
@@ -117,14 +120,29 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold bg-white/95 text-brand-primary border border-brand-primary/20 shadow-xs backdrop-blur-xs">
                   {pairsCount}
                 </span>
+                {discount > 0 && (
+                  <span className="bg-rose-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+                    -{discount}%
+                  </span>
+                )}
               </div>
 
-              {/* Discount Ribbon */}
-              {discount > 0 && (
-                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 bg-gradient-to-r from-rose-500 to-red-600 text-white text-[8.5px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs pointer-events-none">
-                  -{discount}%
-                </div>
-              )}
+              {/* Floating Wishlist Heart Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleWishlist(box);
+                }}
+                aria-label={wishlisted ? "Remove from saved pieces" : "Save to wishlist"}
+                title={wishlisted ? "Saved" : "Add to wishlist"}
+                className={`absolute top-2 right-2 sm:top-3 sm:right-3 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${
+                  wishlisted
+                    ? 'bg-white text-rose-500 shadow-md scale-105'
+                    : 'bg-white/85 backdrop-blur-sm text-brand-tertiary/70 hover:text-rose-500 hover:bg-white hover:scale-110 shadow-sm'
+                }`}
+              >
+                <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
+              </button>
 
               {/* Box Image */}
               <div

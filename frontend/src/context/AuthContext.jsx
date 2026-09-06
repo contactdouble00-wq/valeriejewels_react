@@ -4,7 +4,7 @@ import { apiService } from '../services/api';
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'valerie_auth_token_v1';
-const USER_KEY  = 'valerie_auth_user_v1';
+const USER_KEY = 'valerie_auth_user_v1';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => {

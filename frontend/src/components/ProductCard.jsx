@@ -1,7 +1,11 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Sparkles, ShieldCheck } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Sparkles, ShieldCheck, Heart } from 'lucide-react';
+import { useWishlist } from '../context/WishlistContext';
 
 export default function ProductCard({ product, onQuickView, onAddToCart }) {
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const wishlisted = isInWishlist(product?.id);
+
   const {
     name,
     mrp,
@@ -31,24 +35,40 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
           {/* Badges Overlay */}
           <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 z-10">
+            {discount_percentage > 0 && (
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold bg-emerald-100 text-emerald-800 shadow-sm w-fit">
+                {discount_percentage}% OFF
+              </span>
+            )}
             {Boolean(is_bestseller) && (
-              <span className="px-1.5 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm">
+              <span className="px-1.5 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
                 Best Seller
               </span>
             )}
             {Boolean(is_anti_tarnish) && (
-              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1">
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1 w-fit">
                 <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-brand-primary" />
                 Anti-Tarnish
               </span>
             )}
           </div>
 
-          {discount_percentage > 0 && (
-            <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold bg-emerald-100 text-emerald-800 shadow-sm">
-              {discount_percentage}% OFF
-            </span>
-          )}
+          {/* Floating Wishlist Heart Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWishlist(product);
+            }}
+            aria-label={wishlisted ? "Remove from saved pieces" : "Save to wishlist"}
+            title={wishlisted ? "Saved" : "Add to wishlist"}
+            className={`absolute top-2 right-2 sm:top-3 sm:right-3 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${
+              wishlisted
+                ? 'bg-white text-rose-500 shadow-md scale-105'
+                : 'bg-white/85 backdrop-blur-sm text-brand-tertiary/70 hover:text-rose-500 hover:bg-white hover:scale-110 shadow-sm'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
+          </button>
 
           {/* Quick View Hover Button (Desktop only, mobile taps open directly) */}
           <div className="hidden sm:flex absolute inset-0 bg-brand-tertiary/10 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center p-4">

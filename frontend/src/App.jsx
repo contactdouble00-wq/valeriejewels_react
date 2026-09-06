@@ -20,12 +20,15 @@ import { apiService } from './services/api';
 import { CartProvider, useCart } from './context/CartContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider, useSiteContent } from './context/SiteContentContext';
+import { WishlistProvider, useWishlist } from './context/WishlistContext';
 import ProductCard from './components/ProductCard';
 import ProductDetailModal from './components/ProductDetailModal';
 import BundleSection from './components/BundleSection';
 import TrustStrip from './components/TrustStrip';
 import FaqSection from './components/FaqSection';
 import CartDrawer from './components/CartDrawer';
+import WishlistDrawer from './components/WishlistDrawer';
+import WishlistToast from './components/WishlistToast';
 import AuthModal from './components/AuthModal';
 import CheckoutModal from './components/CheckoutModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
@@ -76,6 +79,12 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
   // Dynamic Site Content from context
   const { content } = useSiteContent();
+
+  // Wishlist actions from context
+  const {
+    openWishlist,
+    wishlistCount
+  } = useWishlist();
 
   const reloadData = async () => {
     try {
@@ -238,7 +247,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               </a>
             </div>
 
-            {/* Actions Cluster (Mobile: Search | Bag; Desktop: Search | Wishlist | Track | Account | Bag) */}
+            {/* Actions Cluster (Mobile: Search | Wishlist | Bag; Desktop: Search | Wishlist | Track | Account | Bag) */}
             <div className="flex items-center justify-end shrink-0 min-w-[48px] lg:min-w-[220px]">
               
               {/* Search Button */}
@@ -252,17 +261,39 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 <span className="hidden lg:inline text-[11px] font-caps uppercase tracking-wider text-brand-tertiary/80 hover:text-brand-primary">Search</span>
               </button>
 
+              {/* Mobile Wishlist Button */}
+              <button
+                onClick={openWishlist}
+                className="flex lg:hidden p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center justify-center"
+                aria-label={`Wishlist (${wishlistCount})`}
+                title="Wishlist"
+              >
+                <Heart className={`w-4.5 h-4.5 stroke-[1.6] transition-colors ${wishlistCount > 0 ? 'fill-brand-primary text-brand-primary' : ''}`} />
+                {wishlistCount > 0 && (
+                  <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-brand-primary text-white text-[8px] font-bold flex items-center justify-center shadow-xs">
+                    {wishlistCount}
+                  </span>
+                )}
+              </button>
+
               {/* Vertical divider */}
-              <span className="h-3.5 w-px bg-brand-border mx-1" />
+              <span className="hidden lg:block h-3.5 w-px bg-brand-border mx-1" />
 
               {/* Desktop Wishlist */}
               <button
-                className="hidden lg:flex p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center justify-center"
-                aria-label="Wishlist"
-                title="Wishlist"
+                onClick={openWishlist}
+                className="hidden lg:flex p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center justify-center group"
+                aria-label={`Wishlist (${wishlistCount})`}
+                title={`Saved Pieces (${wishlistCount})`}
               >
-                <Heart className="w-4 h-4 stroke-[1.6]" />
-                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-primary rounded-full"></span>
+                <Heart className={`w-4 h-4 stroke-[1.6] transition-colors ${wishlistCount > 0 ? 'fill-brand-primary text-brand-primary' : 'group-hover:text-brand-primary'}`} />
+                {wishlistCount > 0 ? (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-primary text-white text-[9px] font-bold flex items-center justify-center shadow-xs">
+                    {wishlistCount}
+                  </span>
+                ) : (
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-primary/40 rounded-full group-hover:bg-brand-primary transition-colors"></span>
+                )}
               </button>
 
               {/* Vertical divider */}
@@ -458,11 +489,21 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             {/* Mobile Wishlist Action */}
             <div className="pt-2 border-t border-brand-border/50">
               <button
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openWishlist();
+                }}
                 className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
               >
-                <span>Wishlist</span>
-                <Heart className="w-4 h-4 text-brand-primary" />
+                <div className="flex items-center space-x-2">
+                  <span>Wishlist</span>
+                  {wishlistCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-brand-primary text-white">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </div>
+                <Heart className={`w-4 h-4 ${wishlistCount > 0 ? 'text-brand-primary fill-brand-primary' : 'text-brand-primary'}`} />
               </button>
             </div>
 
@@ -746,6 +787,12 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {/* Slide-out Cart Drawer */}
       <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
 
+      {/* Slide-out Wishlist Drawer */}
+      <WishlistDrawer onSelectProduct={(item) => setActivePdpSlug(item.slug)} />
+
+      {/* Wishlist Toast Notification */}
+      <WishlistToast />
+
       {/* Fastrr 1-Click Checkout Modal */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
@@ -805,6 +852,12 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               >
                 Track Order
               </a>
+              <button
+                onClick={(e) => { e.preventDefault(); openWishlist(); }}
+                className="hover:text-brand-primary transition-colors cursor-pointer font-medium text-brand-tertiary"
+              >
+                Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
+              </button>
             </div>
           </div>
 
@@ -932,14 +985,16 @@ export default function App() {
     <SiteContentProvider>
       <AuthProvider>
         <CartProvider>
-          <StorefrontContent
-            initialCategory={initialCategory}
-            initialSearchQuery={initialSearchQuery}
-            onOpenAdmin={() => {
-              window.location.hash = '#vj-manage-x1126';
-              setCurrentRoute('admin');
-            }}
-          />
+          <WishlistProvider>
+            <StorefrontContent
+              initialCategory={initialCategory}
+              initialSearchQuery={initialSearchQuery}
+              onOpenAdmin={() => {
+                window.location.hash = '#vj-manage-x1126';
+                setCurrentRoute('admin');
+              }}
+            />
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </SiteContentProvider>

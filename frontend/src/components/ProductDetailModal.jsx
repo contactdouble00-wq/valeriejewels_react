@@ -12,14 +12,18 @@ import {
   Share2
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useWishlist } from '../context/WishlistContext';
 
 export default function ProductDetailModal({ productSlug, onClose, onAddToCart }) {
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [addedNotice, setAddedNotice] = useState(false);
+
+  const wishlisted = isInWishlist(product?.id);
 
   useEffect(() => {
     let isMounted = true;
@@ -237,22 +241,37 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
 
               {/* Action Buttons */}
               <div className="pt-4 border-t border-brand-border space-y-3">
-                <button
-                  onClick={handleAdd}
-                  className="w-full py-3 px-6 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2"
-                >
-                  {addedNotice ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-300" />
-                      <span>Added to Bag!</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="w-4 h-4" />
-                      <span>Add to Bag • ₹{Math.round(activePrice).toLocaleString('en-IN')}</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={handleAdd}
+                    className="flex-1 py-3 px-6 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2"
+                  >
+                    {addedNotice ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-300" />
+                        <span>Added to Bag!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4" />
+                        <span>Add to Bag • ₹{Math.round(activePrice).toLocaleString('en-IN')}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => toggleWishlist(product)}
+                    aria-label={wishlisted ? "Remove from saved pieces" : "Save to wishlist"}
+                    title={wishlisted ? "In Wishlist" : "Save to Wishlist"}
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+                      wishlisted
+                        ? 'border-rose-200 bg-rose-50 text-rose-500 shadow-sm scale-105'
+                        : 'border-brand-border hover:border-brand-primary text-brand-tertiary/80 hover:text-rose-500 bg-white'
+                    }`}
+                  >
+                    <Heart className={`w-5 h-5 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.75]'}`} />
+                  </button>
+                </div>
               </div>
 
             </div>
