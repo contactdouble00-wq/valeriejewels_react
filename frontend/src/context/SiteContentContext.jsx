@@ -17,6 +17,7 @@ const DEFAULT_SITE_CONTENT = {
     primaryBtnLink: '#jhumka-boxes',
     secondaryBtnText: 'All Everyday Jewelry',
     secondaryBtnLink: '#catalog',
+    rightImageUrl: '/hero-jewelry-model.jpg',
   },
   jhumkaHero: {
     badgeText: '#1 Ad Bestseller Collection • 12,000+ Delivered',

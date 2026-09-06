@@ -498,6 +498,23 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <section className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
+          {/* Desktop-Only Creatively Faded Hero Photograph */}
+          {Boolean(content?.heroBanner?.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
+            <div className="hidden md:block absolute top-0 right-0 w-1/2 lg:w-[48%] xl:w-[46%] h-full pointer-events-none select-none overflow-hidden z-0">
+              <img
+                src={content?.heroBanner?.rightImageUrl || '/hero-jewelry-model.jpg'}
+                alt="Valerie Everyday Luxury Jewelry"
+                className="w-full h-full object-cover object-[center_20%] lg:object-[center_15%]"
+                style={{
+                  maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                }}
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7FD] via-transparent to-transparent opacity-60 pointer-events-none" />
+            </div>
+          )}
+
           <div className="relative z-10 max-w-2xl space-y-5">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[11px] font-caps uppercase tracking-[0.18em]">
               <Sparkles className="w-3 h-3 text-brand-primary" />

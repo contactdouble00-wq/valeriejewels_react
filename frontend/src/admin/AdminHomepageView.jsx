@@ -12,7 +12,10 @@ import {
   ShieldCheck,
   Truck,
   ArrowRight,
-  Droplet
+  Droplet,
+  UploadCloud,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -32,6 +35,7 @@ const FACTORY_DEFAULTS = {
     primaryBtnLink: '#jhumka-boxes',
     secondaryBtnText: 'All Everyday Jewelry',
     secondaryBtnLink: '#catalog',
+    rightImageUrl: '/hero-jewelry-model.jpg',
   },
   jhumkaHero: {
     badgeText: '#1 Ad Bestseller Collection • 12,000+ Delivered',
@@ -86,6 +90,7 @@ export default function AdminHomepageView() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
   const [activeSection, setActiveSection] = useState('ribbon');
+  const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -135,6 +140,30 @@ export default function AdminHomepageView() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleHeroPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHeroPhoto(true);
+    try {
+      const res = await adminApi.uploadMedia(file);
+      if (res && res.url) {
+        updateNested('heroBanner', 'rightImageUrl', res.url);
+        setFeedback({
+          type: 'success',
+          message: 'Hero photograph uploaded! Click "Save Live Changes" to publish.',
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Failed to upload photo.',
+      });
+    } finally {
+      setUploadingHeroPhoto(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -369,28 +398,46 @@ export default function AdminHomepageView() {
             {/* Live Preview Card */}
             <div className="space-y-2">
               <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
-                Live Storefront Preview:
+                Live Storefront Preview (Desktop):
               </span>
-              <div className="p-6 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
-                <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] font-caps uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-brand-primary" />
-                  <span>{formData.heroBanner.badgeText}</span>
-                </div>
-                <h4 className="text-2xl font-editorial font-bold text-brand-tertiary leading-snug">
-                  {formData.heroBanner.headline} <br />
-                  <span className="italic font-normal text-brand-primary">{formData.heroBanner.accentText}</span>
-                </h4>
-                <p className="text-xs text-brand-muted font-light max-w-lg leading-relaxed">
-                  {formData.heroBanner.subtitle}
-                </p>
-                <div className="flex items-center gap-3 pt-2">
-                  <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5">
-                    <span>{formData.heroBanner.primaryBtnText}</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </span>
-                  <span className="px-4 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-[11px] font-caps uppercase font-semibold">
-                    {formData.heroBanner.secondaryBtnText}
-                  </span>
+              <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
+                {/* Desktop Faded Photograph Preview */}
+                {Boolean(formData.heroBanner.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
+                  <div className="hidden sm:block absolute top-0 right-0 w-1/2 h-full pointer-events-none select-none overflow-hidden z-0">
+                    <img
+                      src={formData.heroBanner.rightImageUrl || '/hero-jewelry-model.jpg'}
+                      alt="Hero Preview"
+                      className="w-full h-full object-cover object-[center_15%]"
+                      style={{
+                        maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7FD] via-transparent to-transparent opacity-60 pointer-events-none" />
+                  </div>
+                )}
+
+                <div className="relative z-10 space-y-3">
+                  <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] font-caps uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-brand-primary" />
+                    <span>{formData.heroBanner.badgeText}</span>
+                  </div>
+                  <h4 className="text-2xl font-editorial font-bold text-brand-tertiary leading-snug">
+                    {formData.heroBanner.headline} <br />
+                    <span className="italic font-normal text-brand-primary">{formData.heroBanner.accentText}</span>
+                  </h4>
+                  <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed">
+                    {formData.heroBanner.subtitle}
+                  </p>
+                  <div className="flex items-center gap-3 pt-2">
+                    <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5">
+                      <span>{formData.heroBanner.primaryBtnText}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </span>
+                    <span className="px-4 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-[11px] font-caps uppercase font-semibold">
+                      {formData.heroBanner.secondaryBtnText}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -497,6 +544,81 @@ export default function AdminHomepageView() {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                   placeholder="#catalog"
                 />
+              </div>
+
+              {/* Hero Photograph Upload & Controls (Desktop) */}
+              <div className="sm:col-span-2 p-4 rounded-xl border border-brand-primary/20 bg-brand-primary-light/30 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h5 className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                      <ImageIcon className="w-4 h-4 text-brand-primary" />
+                      <span>Hero Right Photograph (Desktop View)</span>
+                    </h5>
+                    <p className="text-[11px] text-brand-muted mt-0.5">
+                      Fades creatively from left (0% opacity) into the white card background. Visible specifically on desktop view.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className={`cursor-pointer px-3.5 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-caps tracking-wider uppercase font-bold hover:bg-brand-primary-hover transition-colors flex items-center space-x-1.5 shadow-sm ${uploadingHeroPhoto ? 'opacity-70 pointer-events-none' : ''}`}>
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      <span>{uploadingHeroPhoto ? 'Uploading...' : 'Upload Photo'}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleHeroPhotoUpload}
+                        disabled={uploadingHeroPhoto}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => updateNested('heroBanner', 'rightImageUrl', '/hero-jewelry-model.jpg')}
+                      className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary text-xs font-caps tracking-wider uppercase font-semibold hover:border-brand-primary transition-colors"
+                      title="Reset to default luxury model photograph"
+                    >
+                      Default Photo
+                    </button>
+                    {formData.heroBanner.rightImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => updateNested('heroBanner', 'rightImageUrl', '')}
+                        className="p-1.5 rounded-lg border border-brand-border bg-white text-brand-muted hover:text-red-600 hover:border-red-300 transition-colors"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  {/* Thumbnail */}
+                  <div className="w-16 h-16 rounded-lg border border-brand-border bg-white overflow-hidden flex-shrink-0 relative shadow-inner">
+                    {formData.heroBanner.rightImageUrl ? (
+                      <img
+                        src={formData.heroBanner.rightImageUrl}
+                        alt="Hero Preview Thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-brand-muted text-[10px] text-center px-1">
+                        No Photo
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">
+                      Image URL or Uploaded Path
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.rightImageUrl || ''}
+                      onChange={(e) => updateNested('heroBanner', 'rightImageUrl', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white font-mono"
+                      placeholder="e.g. /hero-jewelry-model.jpg or https://..."
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

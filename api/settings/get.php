@@ -20,6 +20,9 @@ try {
     if ($raw) {
         $data = json_decode($raw, true);
         if (is_array($data)) {
+            if (isset($data['heroBanner']) && is_array($data['heroBanner']) && !isset($data['heroBanner']['rightImageUrl'])) {
+                $data['heroBanner']['rightImageUrl'] = '/hero-jewelry-model.jpg';
+            }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
             exit;
         }
@@ -42,6 +45,7 @@ try {
             'primaryBtnLink'  => '#jhumka-boxes',
             'secondaryBtnText'=> 'All Everyday Jewelry',
             'secondaryBtnLink'=> '#catalog',
+            'rightImageUrl'   => '/hero-jewelry-model.jpg',
         ],
         'jhumkaHero' => [
             'badgeText'  => '#1 Ad Bestseller Collection • 12,000+ Delivered',
