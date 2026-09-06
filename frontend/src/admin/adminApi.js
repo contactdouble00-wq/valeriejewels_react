@@ -75,9 +75,15 @@ export const adminApi = {
     return res.data;
   },
 
-  logout() {
-    localStorage.removeItem('valerie_admin_token');
-    localStorage.removeItem('valerie_admin_user');
+  async logout() {
+    try {
+      await request('/auth/logout.php', { method: 'POST' });
+    } catch (e) {
+      // Proceed with client-side cleanup
+    } finally {
+      localStorage.removeItem('valerie_admin_token');
+      localStorage.removeItem('valerie_admin_user');
+    }
   },
 
   getCurrentUser() {

@@ -7,11 +7,14 @@
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/utils/mailer.php';
+require_once dirname(__DIR__) . '/utils/admin_auth.php';
 require_once dirname(__DIR__) . '/shipping/shiprocket.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
-
 handleCors();
+
+// Require admin or staff privileges to advance shipment statuses
+$adminUser = AdminAuth::authenticate(['admin', 'staff']);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ApiResponse::error('Method not allowed. Use POST.', 405);

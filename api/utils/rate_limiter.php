@@ -119,6 +119,63 @@ class RateLimiter
     }
 
     /**
+     * Check if a rate limit key is currently locked out without incrementing hits.
+     * Returns remaining seconds if locked, or null if allowed.
+     */
+    public static function getLockRemaining(string $action, int $maxAttempts = 5): ?int
+    {
+        try {
+            $pdo = Database::getConnection();
+            self::ensureTableExists($pdo);
+            $ip = self::getClientIp();
+            $key = $action . ':' . $ip;
+
+            $stmt = $pdo->prepare("SELECT hits, TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS remaining_seconds FROM rate_limits WHERE rate_key = ? AND expires_at > NOW() LIMIT 1");
+            $stmt->execute([$key]);
+            $record = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($record && (int)$record['hits'] >= $maxAttempts) {
+                return max(1, (int)$record['remaining_seconds']);
+            }
+        } catch (Throwable $e) {
+            error_log('RateLimiter getLockRemaining Error: ' . $e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Record a failed attempt for an action.
+     * Returns updated total hit count.
+     */
+    public static function recordFailedAttempt(string $action, int $decaySeconds = 900): int
+    {
+        try {
+            $pdo = Database::getConnection();
+            self::ensureTableExists($pdo);
+            $ip = self::getClientIp();
+            $key = $action . ':' . $ip;
+
+            $fetchStmt = $pdo->prepare("SELECT id, hits FROM rate_limits WHERE rate_key = ? AND expires_at > NOW() LIMIT 1");
+            $fetchStmt->execute([$key]);
+            $record = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($record) {
+                $hits = (int)$record['hits'] + 1;
+                $updateStmt = $pdo->prepare("UPDATE rate_limits SET hits = ?, expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id = ?");
+                $updateStmt->execute([$hits, $decaySeconds, $record['id']]);
+                return $hits;
+            } else {
+                $insertStmt = $pdo->prepare("INSERT INTO rate_limits (rate_key, hits, expires_at) VALUES (?, 1, DATE_ADD(NOW(), INTERVAL ? SECOND))");
+                $insertStmt->execute([$key, $decaySeconds]);
+                return 1;
+            }
+        } catch (Throwable $e) {
+            error_log('RateLimiter recordFailedAttempt Error: ' . $e->getMessage());
+            return 1;
+        }
+    }
+
+    /**
      * Ensure rate_limits table exists in MySQL.
      */
     private static function ensureTableExists(PDO $pdo): void

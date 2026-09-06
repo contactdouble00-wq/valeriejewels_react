@@ -30,6 +30,15 @@ if (empty($email) || empty($password)) {
     ApiResponse::error('Please provide both email and password', 422);
 }
 
+// Enforce admin brute-force lockout check (5 failed attempts within 15 minutes)
+if ($isAdminPortal) {
+    $lockRemaining = RateLimiter::getLockRemaining('admin_login_lock', 5);
+    if ($lockRemaining) {
+        $minutes = ceil($lockRemaining / 60);
+        ApiResponse::error("Account temporarily locked due to repeated failed login attempts. Please wait {$minutes} minute(s) before trying again.", 429);
+    }
+}
+
 try {
     $pdo = Database::getConnection();
 
@@ -44,12 +53,26 @@ try {
     $user = $stmt->fetch();
 
     if (!$user || !password_verify($password, $user['password_hash'])) {
+        if ($isAdminPortal) {
+            $failedHits = RateLimiter::recordFailedAttempt('admin_login_lock', 900);
+            $remaining = max(0, 5 - $failedHits);
+            if ($remaining === 0) {
+                ApiResponse::error('Too many failed attempts. Account temporarily locked for 15 minutes to prevent unauthorized access.', 429);
+            }
+            ApiResponse::error("Invalid admin credentials. ({$remaining} attempt(s) remaining before 15-minute lockout)", 401);
+        }
         ApiResponse::error('Invalid email or password credentials', 401);
     }
 
     // Role verification for Admin Portal logins
     if ($isAdminPortal && !in_array($user['role'], ['admin', 'staff'], true)) {
+        RateLimiter::recordFailedAttempt('admin_login_lock', 900);
         ApiResponse::error('Access denied. Administrator privileges required.', 403);
+    }
+
+    // Reset failed attempt counter upon successful login
+    if ($isAdminPortal) {
+        RateLimiter::clear('admin_login_lock');
     }
 
     // Load config for JWT secret
@@ -60,17 +83,19 @@ try {
 
     $jwtSecret = $config['jwt']['secret'] ?? 'valerie_default_secret_key_2026';
     
-    // Shorter token lifetime for admin sessions (24 hours) vs customers (7 days)
-    $expiresIn = in_array($user['role'], ['admin', 'staff'], true) ? 86400 : (86400 * 7);
+    // Strict 30-minute session lifetime for admin (1800s) vs customers (7 days)
+    $expiresIn = in_array($user['role'], ['admin', 'staff'], true) ? 1800 : (86400 * 7);
 
     $now = time();
     $payload = [
-        'sub'   => (int)$user['id'],
-        'name'  => $user['name'],
-        'email' => $user['email'],
-        'role'  => $user['role'],
-        'iat'   => $now,
-        'exp'   => $now + $expiresIn,
+        'sub'           => (int)$user['id'],
+        'name'          => $user['name'],
+        'email'         => $user['email'],
+        'role'          => $user['role'],
+        'iat'           => $now,
+        'exp'           => $now + $expiresIn,
+        'jti'           => bin2hex(random_bytes(16)),
+        'last_activity' => $now,
     ];
 
     $token = JWT::encode($payload, $jwtSecret);

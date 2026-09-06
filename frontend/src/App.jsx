@@ -29,8 +29,9 @@ import AuthModal from './components/AuthModal';
 import CheckoutModal from './components/CheckoutModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
-import AdminPortal from './admin/AdminPortal';
 import NotFoundPage from './components/NotFoundPage';
+
+const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
 function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '' }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -676,13 +677,6 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               >
                 Track Order
               </a>
-              <a
-                href="#admin"
-                onClick={(e) => { e.preventDefault(); if (onOpenAdmin) onOpenAdmin(); else window.location.hash = '#admin'; }}
-                className="hover:text-brand-primary transition-colors cursor-pointer font-semibold text-brand-primary"
-              >
-                Admin Portal
-              </a>
             </div>
           </div>
 
@@ -722,8 +716,8 @@ export default function App() {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
     const hash = window.location.hash;
 
-    // 1. Admin route
-    if (rawPath.startsWith('/admin') || hash.startsWith('#admin')) {
+    // 1. Secret Admin Route (/vj-manage-x1126 or #vj-manage-x1126)
+    if (rawPath.startsWith('/vj-manage-x1126') || hash.startsWith('#vj-manage-x1126')) {
       return 'admin';
     }
 
@@ -732,7 +726,7 @@ export default function App() {
       return '404';
     }
 
-    // 3. Known valid routes in this Single Page Application
+    // 3. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
     const validPaths = ['/', '', '/shop', '/index.html'];
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
@@ -759,15 +753,26 @@ export default function App() {
 
   if (currentRoute === 'admin') {
     return (
-      <AdminPortal
-        onReturnToStore={() => {
-          window.location.hash = '';
-          if (window.location.pathname.startsWith('/admin')) {
-            window.history.pushState(null, '', '/');
-          }
-          setCurrentRoute('store');
-        }}
-      />
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
+            <div className="flex flex-col items-center space-y-3">
+              <div className="w-8 h-8 border-2 border-[#8366B0] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs uppercase tracking-widest text-[#A19DAA]">Loading Management Portal...</p>
+            </div>
+          </div>
+        }
+      >
+        <AdminPortal
+          onReturnToStore={() => {
+            window.location.hash = '';
+            if (window.location.pathname.startsWith('/vj-manage-x1126')) {
+              window.history.pushState(null, '', '/');
+            }
+            setCurrentRoute('store');
+          }}
+        />
+      </React.Suspense>
     );
   }
 
@@ -802,7 +807,7 @@ export default function App() {
           initialCategory={initialCategory}
           initialSearchQuery={initialSearchQuery}
           onOpenAdmin={() => {
-            window.location.hash = '#admin';
+            window.location.hash = '#vj-manage-x1126';
             setCurrentRoute('admin');
           }}
         />

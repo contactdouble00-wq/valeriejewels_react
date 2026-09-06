@@ -36,6 +36,20 @@ class AdminAuth {
         }
 
         $jwtToken = trim($matches[1]);
+        $tokenHash = hash('sha256', $jwtToken);
+
+        $pdo = Database::getConnection();
+
+        // 1. Check server-side session revocation / token blacklist
+        try {
+            $blStmt = $pdo->prepare("SELECT 1 FROM token_blacklist WHERE token_hash = ? AND expires_at > ? LIMIT 1");
+            $blStmt->execute([$tokenHash, time()]);
+            if ($blStmt->fetchColumn()) {
+                ApiResponse::error('Session has been terminated or logged out. Please log in again.', 401);
+            }
+        } catch (Throwable $e) {
+            // Proceed if table not created yet
+        }
 
         $configFile = dirname(__DIR__) . '/config/config.php';
         $config = file_exists($configFile)
@@ -50,15 +64,25 @@ class AdminAuth {
             ApiResponse::error('Invalid or expired authentication session: ' . $e->getMessage(), 401);
         }
 
-        $role = $payload['role'] ?? 'customer';
+        // 2. Verify active account existence & live role in database
+        $userId = (int)($payload['sub'] ?? 0);
+        $userCheckStmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1");
+        $userCheckStmt->execute([$userId]);
+        $activeUser = $userCheckStmt->fetch();
+
+        if (!$activeUser) {
+            ApiResponse::error('User account no longer exists', 401);
+        }
+
+        $role = $activeUser['role'] ?? ($payload['role'] ?? 'customer');
         if (!in_array($role, $allowedRoles, true)) {
             ApiResponse::error("Access denied. Required privileges: " . implode(', ', $allowedRoles) . ". Your role: {$role}", 403);
         }
 
         return [
-            'id'    => (int)($payload['sub'] ?? 0),
-            'name'  => $payload['name'] ?? 'Admin',
-            'email' => $payload['email'] ?? '',
+            'id'    => (int)$activeUser['id'],
+            'name'  => $activeUser['name'],
+            'email' => $activeUser['email'],
             'role'  => $role,
         ];
     }

@@ -1,7 +1,27 @@
 # ==============================================================================
-# VALERIE JEWELS — SPA & 404 Routing Configuration for Apache / Hostinger
+# VALERIE JEWELS — SPA Routing & Hardened Security Gate
 # ==============================================================================
 
+# Protect sensitive server files (.htaccess, .htpasswd, .env)
+<FilesMatch "^\.ht">
+  Require all denied
+</FilesMatch>
+
+# ------------------------------------------------------------------------------
+# Layer 4: Server-Level HTTP Basic Auth for Secret Admin Path (/vj-manage-x1126)
+# Requires valid server credentials BEFORE the page or admin JS is served.
+# Public shop routes, catalog, checkout, and /api remain fully accessible.
+# ------------------------------------------------------------------------------
+<If "%{REQUEST_URI} =~ m#^/(shop/)?vj-manage-x1126#">
+  AuthType Basic
+  AuthName "Valerie Jewels Management Access"
+  AuthUserFile /home/u513962642/domains/valeriejewels.in/public_html/shop/.htpasswd
+  Require valid-user
+</If>
+
+# ------------------------------------------------------------------------------
+# SPA Routing & API Pass-Through
+# ------------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
@@ -15,11 +35,11 @@
   RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
   RewriteRule ^ - [L]
 
-  # Route all other requests (including 404 URLs) to index.html for client-side rendering
+  # Route all other requests (including SPA 404s and /vj-manage-x1126) to index.html
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# Optional security and caching headers for static frontend assets
+# Caching headers for static production assets
 <IfModule mod_headers.c>
   <FilesMatch "\.(html|htm)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
