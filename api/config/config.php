@@ -40,7 +40,39 @@ foreach ($envPaths as $envFile) {
     }
 }
 
-// 2. Check for optional uncommitted local override: config.local.php
+// 2. Auto-detect Hostinger WordPress database credentials if DB_DATABASE is not explicitly set
+if (empty(getenv('DB_DATABASE')) && empty($_ENV['DB_DATABASE'])) {
+    $wpPaths = [
+        dirname(dirname(dirname(__DIR__))) . '/wp-config.php',
+        '/home/u513962642/domains/valeriejewels.in/public_html/wp-config.php',
+        dirname(dirname(__DIR__)) . '/wp-config.php',
+        (isset($_SERVER['DOCUMENT_ROOT']) ? dirname($_SERVER['DOCUMENT_ROOT']) . '/wp-config.php' : ''),
+        ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/wp-config.php',
+    ];
+
+    foreach ($wpPaths as $wpFile) {
+        if (!empty($wpFile) && file_exists($wpFile) && is_readable($wpFile)) {
+            $wpContent = @file_get_contents($wpFile);
+            if ($wpContent) {
+                if (preg_match("/define\s*\(\s*['\"]DB_NAME['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $wpContent, $m)) {
+                    $config['db']['database'] = trim($m[1]);
+                }
+                if (preg_match("/define\s*\(\s*['\"]DB_USER['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $wpContent, $m)) {
+                    $config['db']['username'] = trim($m[1]);
+                }
+                if (preg_match("/define\s*\(\s*['\"]DB_PASSWORD['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $wpContent, $m)) {
+                    $config['db']['password'] = trim($m[1]);
+                }
+                if (preg_match("/define\s*\(\s*['\"]DB_HOST['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $wpContent, $m)) {
+                    $config['db']['host'] = trim($m[1]);
+                }
+                break;
+            }
+        }
+    }
+}
+
+// 3. Check for optional uncommitted local override: config.local.php
 $localConfigFile = __DIR__ . '/config.local.php';
 if (file_exists($localConfigFile) && is_readable($localConfigFile)) {
     $localConfig = require $localConfigFile;
