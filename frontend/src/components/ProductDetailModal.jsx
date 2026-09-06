@@ -167,7 +167,7 @@ export default function ProductDetailModal({ productSlug, onClose, onAddToCart }
                 </div>
 
                 {/* Title */}
-                <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-brand-tertiary leading-tight">
+                <h2 className="font-sans text-xl sm:text-2xl font-bold text-brand-tertiary leading-snug">
                   {product.name}
                 </h2>
 

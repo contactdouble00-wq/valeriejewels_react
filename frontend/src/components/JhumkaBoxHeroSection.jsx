@@ -168,7 +168,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   </div>
                   <h3
                     onClick={() => onOpenPdp && onOpenPdp(box.slug)}
-                    className="font-editorial text-xs sm:text-base lg:text-lg font-bold text-brand-tertiary line-clamp-2 hover:text-brand-primary cursor-pointer leading-tight sm:leading-snug"
+                    className="font-sans text-xs sm:text-[14.5px] font-semibold text-brand-tertiary line-clamp-2 hover:text-brand-primary cursor-pointer leading-snug"
                     title={box.name}
                   >
                     {box.name}
@@ -182,7 +182,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <div className="space-y-2 sm:space-y-3 pt-1.5 sm:pt-2 border-t border-brand-border/60">
                   <div className="flex flex-wrap items-baseline justify-between sm:justify-start gap-1 sm:gap-2">
                     <div className="flex items-baseline space-x-1 sm:space-x-1.5">
-                      <span className="text-sm sm:text-lg font-editorial font-bold text-brand-tertiary">
+                      <span className="text-sm sm:text-lg font-bold text-brand-tertiary">
                         ₹{Number(box.price).toLocaleString('en-IN')}
                       </span>
                       <span className="text-[10px] sm:text-xs text-brand-muted line-through">

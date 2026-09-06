@@ -144,7 +144,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
                       <div className="flex items-start justify-between gap-1.5">
-                        <h4 className="font-editorial text-xs sm:text-sm font-bold text-brand-tertiary line-clamp-1" title={item.name}>
+                        <h4 className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary line-clamp-1" title={item.name}>
                           {item.name}
                         </h4>
                         <button

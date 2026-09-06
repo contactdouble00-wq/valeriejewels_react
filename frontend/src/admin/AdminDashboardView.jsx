@@ -233,7 +233,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-[10px] text-brand-muted font-mono">{box.sku}</div>
-                      <h4 className="text-xs font-editorial font-bold text-brand-tertiary truncate" title={box.name}>
+                      <h4 className="text-xs font-sans font-semibold text-brand-tertiary truncate" title={box.name}>
                         {box.name}
                       </h4>
                       <div className="text-xs font-semibold text-brand-primary mt-0.5">

@@ -78,7 +78,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           {/* Product Name */}
           <h3
             onClick={() => onQuickView(product)}
-            className="font-editorial text-xs sm:text-base font-bold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1"
+            className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug"
           >
             {name}
           </h3>

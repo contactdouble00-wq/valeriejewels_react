@@ -23,8 +23,8 @@ export default {
         },
       },
       fontFamily: {
-        serif: ['"Marcellus"', 'Georgia', 'serif'],
-        display: ['"Marcellus"', 'Georgia', 'serif'],
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
         caps: ['"Tenor Sans"', '"Plus Jakarta Sans"', 'sans-serif'],
         sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
