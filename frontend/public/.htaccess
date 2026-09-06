@@ -1,0 +1,30 @@
+# ==============================================================================
+# VALERIE JEWELS — SPA & 404 Routing Configuration for Apache / Hostinger
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Pass existing files and directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Pass API endpoints straight through to PHP API directory
+  RewriteCond %{REQUEST_URI} ^/api [NC,OR]
+  RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
+  RewriteRule ^ - [L]
+
+  # Route all other requests (including 404 URLs) to index.html for client-side rendering
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Optional security and caching headers for static frontend assets
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+</IfModule>

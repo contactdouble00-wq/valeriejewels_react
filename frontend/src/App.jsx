@@ -30,14 +30,16 @@ import CheckoutModal from './components/CheckoutModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
 import AdminPortal from './admin/AdminPortal';
+import NotFoundPage from './components/NotFoundPage';
 
-function StorefrontContent({ onOpenAdmin }) {
+function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '' }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [jhumkaBoxes, setJhumkaBoxes] = useState([]);
   const [bundles, setBundles] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [selectedSort, setSelectedSort] = useState('popular');
   const [productsLoading, setProductsLoading] = useState(true);
   const [activePdpSlug, setActivePdpSlug] = useState(null);
@@ -136,7 +138,16 @@ function StorefrontContent({ onOpenAdmin }) {
     }
   }, [categories, selectedCategory]);
 
-  // Fetch products on category / sort change
+  // Sync initialCategory & initialSearchQuery if passed from parent
+  useEffect(() => {
+    if (initialCategory) setSelectedCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialSearchQuery !== undefined) setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  // Fetch products on category / sort / search change
   useEffect(() => {
     let isMounted = true;
     async function loadProducts() {
@@ -145,6 +156,7 @@ function StorefrontContent({ onOpenAdmin }) {
         const data = await apiService.getProducts({
           category: selectedCategory,
           sort: selectedSort,
+          search: searchQuery,
         });
         if (isMounted) {
           setProducts(data.products || []);
@@ -158,7 +170,7 @@ function StorefrontContent({ onOpenAdmin }) {
     }
     loadProducts();
     return () => { isMounted = false; };
-  }, [selectedCategory, selectedSort]);
+  }, [selectedCategory, selectedSort, searchQuery]);
 
   const refreshHealth = async () => {
     setHealthLoading(true);
@@ -520,6 +532,22 @@ function StorefrontContent({ onOpenAdmin }) {
                 </button>
               ))}
             </div>
+
+            {searchQuery && (
+              <div className="flex items-center space-x-2 pt-1">
+                <span className="text-xs text-brand-muted font-light">Filtered by:</span>
+                <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-medium">
+                  <span>"{searchQuery}"</span>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="hover:text-brand-tertiary transition-colors ml-1 font-bold text-sm"
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Product Grid (2-column on mobile matching Glomo/Everlasting D2C best practice) */}
@@ -690,33 +718,78 @@ function StorefrontContent({ onOpenAdmin }) {
 }
 
 export default function App() {
-  const [isAdminRoute, setIsAdminRoute] = useState(
-    window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#admin')
-  );
+  const evaluateRoute = () => {
+    const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    const hash = window.location.hash;
+
+    // 1. Admin route
+    if (rawPath.startsWith('/admin') || hash.startsWith('#admin')) {
+      return 'admin';
+    }
+
+    // 2. Explicit 404 hash or trigger
+    if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
+      return '404';
+    }
+
+    // 3. Known valid routes in this Single Page Application
+    const validPaths = ['/', '', '/shop', '/index.html'];
+    if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
+      return '404';
+    }
+
+    return 'store';
+  };
+
+  const [currentRoute, setCurrentRoute] = useState(evaluateRoute);
+  const [initialCategory, setInitialCategory] = useState('all');
+  const [initialSearchQuery, setInitialSearchQuery] = useState('');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setIsAdminRoute(
-        window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#admin')
-      );
+    const handleRouteChange = () => {
+      setCurrentRoute(evaluateRoute());
     };
-    window.addEventListener('hashchange', handleHashChange);
-    window.addEventListener('popstate', handleHashChange);
+    window.addEventListener('hashchange', handleRouteChange);
+    window.addEventListener('popstate', handleRouteChange);
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-      window.removeEventListener('popstate', handleHashChange);
+      window.removeEventListener('hashchange', handleRouteChange);
+      window.removeEventListener('popstate', handleRouteChange);
     };
   }, []);
 
-  if (isAdminRoute) {
+  if (currentRoute === 'admin') {
     return (
       <AdminPortal
         onReturnToStore={() => {
-          setIsAdminRoute(false);
           window.location.hash = '';
           if (window.location.pathname.startsWith('/admin')) {
             window.history.pushState(null, '', '/');
           }
+          setCurrentRoute('store');
+        }}
+      />
+    );
+  }
+
+  if (currentRoute === '404') {
+    return (
+      <NotFoundPage
+        onNavigateHome={() => {
+          window.history.pushState(null, '', '/');
+          window.location.hash = '';
+          setCurrentRoute('store');
+        }}
+        onSelectCategory={(catSlug) => {
+          setInitialCategory(catSlug);
+          window.history.pushState(null, '', '/');
+          window.location.hash = '#catalog';
+          setCurrentRoute('store');
+        }}
+        onSearch={(query) => {
+          setInitialSearchQuery(query);
+          window.history.pushState(null, '', '/');
+          window.location.hash = '#catalog';
+          setCurrentRoute('store');
         }}
       />
     );
@@ -726,9 +799,11 @@ export default function App() {
     <AuthProvider>
       <CartProvider>
         <StorefrontContent
+          initialCategory={initialCategory}
+          initialSearchQuery={initialSearchQuery}
           onOpenAdmin={() => {
-            setIsAdminRoute(true);
             window.location.hash = '#admin';
+            setCurrentRoute('admin');
           }}
         />
       </CartProvider>
