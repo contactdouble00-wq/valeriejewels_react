@@ -39,9 +39,11 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
       <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-6 border-b border-brand-border/60 pb-4 sm:pb-6">
         <div className="space-y-2 sm:space-y-3 max-w-2xl">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary text-white text-[9.5px] sm:text-[11px] font-caps uppercase tracking-[0.14em] sm:tracking-[0.18em] shadow-sm">
+          <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary text-white text-[9.5px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.16em] shadow-sm">
             <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-gold animate-pulse shrink-0" />
-            <span className="font-bold truncate">{jHero.badgeText || '#1 Ad Bestseller Collection • 12,000+ Delivered'}</span>
+            <span className="font-bold whitespace-normal leading-tight text-left">
+              {jHero.badgeText || '#1 Ad Bestseller Collection • 12,000+ Delivered'}
+            </span>
           </div>
 
           {/* Heading */}
