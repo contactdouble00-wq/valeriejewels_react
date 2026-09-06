@@ -1,29 +1,37 @@
 import React from 'react';
-import { ShieldCheck, Droplet, Sparkles, Truck, RotateCcw, Award } from 'lucide-react';
+import { ShieldCheck, Droplet, Sparkles, Truck } from 'lucide-react';
+import { useSiteContent } from '../context/SiteContentContext';
+
+const DEFAULT_ICONS = [ShieldCheck, Droplet, Sparkles, Truck];
 
 export default function TrustStrip() {
-  const pillars = [
+  const { content } = useSiteContent();
+  const rawPillars = content?.trustStrip || [];
+
+  const defaultPillars = [
     {
-      icon: ShieldCheck,
       title: '100% Anti-Tarnish',
       desc: 'High-grade 18K PVD coating guaranteed not to fade or tarnish.',
     },
     {
-      icon: Droplet,
       title: 'Water & Sweat Proof',
       desc: 'Wear comfortably in the shower, gym, or pool with zero worry.',
     },
     {
-      icon: Sparkles,
       title: 'Hypoallergenic Skin-Safe',
       desc: 'Zero nickel, zero lead. Designed for the most sensitive skin.',
     },
     {
-      icon: Truck,
       title: 'Shiprocket Express',
       desc: 'Dispatched via premium couriers across 29,000+ Indian pincodes.',
     },
   ];
+
+  const pillars = defaultPillars.map((def, idx) => ({
+    icon: DEFAULT_ICONS[idx % DEFAULT_ICONS.length],
+    title: rawPillars[idx]?.title || def.title,
+    desc: rawPillars[idx]?.desc || def.desc,
+  }));
 
   return (
     <section className="bg-white rounded-2xl p-5 sm:p-8 border border-brand-border shadow-sm">

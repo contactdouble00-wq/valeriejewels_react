@@ -326,4 +326,28 @@ export const adminApi = {
     });
     return res.data;
   },
+
+  // Homepage Banners & Content Control
+  async getHomepageSettings() {
+    const res = await request('/settings/get.php');
+    return res.data;
+  },
+
+  async updateHomepageSettings(contentData) {
+    const res = await request('/settings/update.php', {
+      method: 'POST',
+      body: JSON.stringify(contentData),
+    });
+
+    // Notify storefront instances locally and across browser tabs
+    try {
+      localStorage.setItem('valerie_settings_updated', Date.now().toString());
+      localStorage.setItem('valerie_site_content_cache', JSON.stringify(res.data || contentData));
+      window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: res.data || contentData }));
+    } catch (e) {
+      console.warn('Sync broadcast warning:', e);
+    }
+
+    return res.data;
+  },
 };

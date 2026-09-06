@@ -1,9 +1,12 @@
 import React from 'react';
 import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useSiteContent } from '../context/SiteContentContext';
 
 export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenCheckout }) {
   const { addToCart } = useCart();
+  const { content } = useSiteContent();
+  const jHero = content?.jhumkaHero || {};
 
   // Filter for the 4 Jhumka Boxes
   const jhumkaBoxes = products.filter(
@@ -28,16 +31,16 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
         <div className="space-y-3 max-w-2xl">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-brand-primary text-white text-[11px] font-caps uppercase tracking-[0.18em] shadow-sm">
             <Flame className="w-3.5 h-3.5 text-brand-gold animate-pulse" />
-            <span className="font-bold">#1 Ad Bestseller Collection • 12,000+ Delivered</span>
+            <span className="font-bold">{jHero.badgeText || '#1 Ad Bestseller Collection • 12,000+ Delivered'}</span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-editorial font-bold text-brand-tertiary tracking-tight leading-tight">
-            The 4 Signature <br />
-            <span className="italic font-normal text-brand-primary">Jhumka Treasure Boxes</span>
+            {jHero.titleLine1 || 'The 4 Signature'} <br />
+            <span className="italic font-normal text-brand-primary">{jHero.titleLine2 || 'Jhumka Treasure Boxes'}</span>
           </h2>
 
           <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed">
-            Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.
+            {jHero.subtitle || 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.'}
           </p>
         </div>
 
@@ -45,15 +48,15 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
         <div className="flex flex-wrap sm:flex-col gap-2.5 text-xs text-brand-tertiary font-medium">
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <Gift className="w-4 h-4 text-brand-primary" />
-            <span>5–6 Curated Pairs Per Box</span>
+            <span>{jHero.pill1 || '5–6 Curated Pairs Per Box'}</span>
           </div>
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Zero Earache • Featherlight</span>
+            <span>{jHero.pill2 || 'Zero Earache • Featherlight'}</span>
           </div>
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <Sparkles className="w-4 h-4 text-brand-gold" />
-            <span>Save up to 50% vs Single Pairs</span>
+            <span>{jHero.pill3 || 'Save up to 50% vs Single Pairs'}</span>
           </div>
         </div>
       </div>

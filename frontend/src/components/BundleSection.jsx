@@ -1,7 +1,11 @@
 import React from 'react';
 import { Tag, Sparkles, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useSiteContent } from '../context/SiteContentContext';
 
 export default function BundleSection({ bundles = [], onSelectBundle }) {
+  const { content } = useSiteContent();
+  const cHead = content?.combosHeader || {};
+
   if (!bundles || bundles.length === 0) return null;
 
   return (
@@ -9,13 +13,13 @@ export default function BundleSection({ bundles = [], onSelectBundle }) {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <span className="text-xs font-caps uppercase tracking-[0.2em] text-brand-primary font-bold">
-            Curated Pairings
+            {cHead.eyebrow || 'Curated Pairings'}
           </span>
           <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-brand-tertiary mt-1">
-            Jewelry Combo Sets & Duos
+            {cHead.title || 'Jewelry Combo Sets & Duos'}
           </h2>
           <p className="text-sm text-brand-muted mt-1 font-light">
-            Expertly styled layered pairings with bundle-exclusive discounts up to 45%.
+            {cHead.subtitle || 'Expertly styled layered pairings with bundle-exclusive discounts up to 45%.'}
           </p>
         </div>
       </div>

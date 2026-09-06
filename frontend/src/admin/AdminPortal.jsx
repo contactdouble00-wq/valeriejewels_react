@@ -11,11 +11,13 @@ import {
   ShieldCheck,
   Flame,
   Menu,
-  X
+  X,
+  Sliders
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
 import AdminDashboardView from './AdminDashboardView';
+import AdminHomepageView from './AdminHomepageView';
 import AdminProductsView from './AdminProductsView';
 import AdminOrdersView from './AdminOrdersView';
 import AdminCustomersView from './AdminCustomersView';
@@ -51,6 +53,7 @@ export default function AdminPortal({ onReturnToStore }) {
 
   const navItems = [
     { id: 'dashboard', label: 'Executive Telemetry', icon: LayoutDashboard, badge: 'Ad Spotlight' },
+    { id: 'homepage', label: 'Homepage & Banners', icon: Sliders, badge: 'Live UI' },
     { id: 'products', label: 'Products & Stock', icon: Package },
     { id: 'categories', label: 'Category Manager', icon: Tag },
     { id: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag },
@@ -213,6 +216,8 @@ export default function AdminPortal({ onReturnToStore }) {
               }}
             />
           )}
+
+          {activeTab === 'homepage' && <AdminHomepageView />}
 
           {activeTab === 'products' && <AdminProductsView currentUser={currentUser} />}
 
