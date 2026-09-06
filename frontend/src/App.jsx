@@ -50,6 +50,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [activeTrackingOrderNumber, setActiveTrackingOrderNumber] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const openTracking = (orderNumber = '') => {
     setActiveTrackingOrderNumber(orderNumber);
@@ -194,9 +195,9 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
       {/* Top Editorial Ribbon */}
       {content?.topRibbon?.enabled !== false && (
-        <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[11px] font-medium py-2 px-4 text-center tracking-widest uppercase flex items-center justify-center space-x-2">
-          <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-          <span>
+        <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[10px] sm:text-[11px] font-medium py-1.5 sm:py-2 px-3 sm:px-4 text-center tracking-wider sm:tracking-widest uppercase flex items-center justify-center space-x-1.5 sm:space-x-2">
+          <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-primary shrink-0" />
+          <span className="truncate sm:overflow-visible">
             {content?.topRibbon?.text || 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE'}{' '}
             <span className="font-bold text-brand-primary">{content?.topRibbon?.highlightAmount || '₹999'}</span>{' '}
             {content?.topRibbon?.suffix || '• 18K GOLD PVD ANTI-TARNISH'}
@@ -204,33 +205,130 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         </div>
       )}
 
-      {/* Main Luxury Header */}
+      {/* Main Luxury Header (Two-tier on desktop, 3-column symmetrical on mobile inspired by Everlasting) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-brand-border">
+        {/* Tier 1: Main Brand & Action Cluster */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24 gap-4">
+          <div className="flex items-center justify-between h-14 sm:h-16 lg:h-16 relative">
 
-            {/* Left: Mobile Hamburger & Official Brand Logo */}
-            <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+            {/* Mobile Left: Hamburger Menu */}
+            <div className="flex lg:hidden items-center w-12 shrink-0">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 text-brand-tertiary hover:text-brand-primary transition-colors focus:outline-none"
-                aria-label="Toggle navigation"
+                className="p-2 -ml-2 text-brand-tertiary hover:text-brand-primary transition-colors focus:outline-none"
+                aria-label="Toggle navigation menu"
               >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileMenuOpen ? <X className="w-5 h-5 stroke-[1.75]" /> : <Menu className="w-5 h-5 stroke-[1.75]" />}
               </button>
+            </div>
 
-              <a href="#" className="flex items-center group py-1">
+            {/* Desktop Left: Luxury Promise / Tagline */}
+            <div className="hidden lg:flex items-center space-x-2 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[220px]">
+              <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+              <span className="font-caps tracking-[0.14em] uppercase text-[10.5px]">18K PVD Anti-Tarnish Luxury</span>
+            </div>
+
+            {/* Center: Brand Logo (Optimized & Balanced Proportions) */}
+            <div className="flex-1 lg:flex-initial flex items-center justify-center">
+              <a href="#" className="flex items-center justify-center group py-1">
                 <img
                   src="/valerie.png"
                   alt="VALERIÉ"
-                  className="h-7 sm:h-8 lg:h-9 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+                  className="h-[18px] sm:h-5 lg:h-6 xl:h-[26px] w-auto object-contain transition-transform group-hover:scale-[1.02]"
                 />
               </a>
             </div>
 
-            {/* Center: Desktop Category Navigation (Refined, Compact, Clean Luxury Font) */}
-            <nav className="hidden lg:flex items-center justify-center space-x-5 xl:space-x-7 text-[11px] font-caps tracking-[0.12em] uppercase text-brand-tertiary/80 whitespace-nowrap">
-              {/* Highlighted Featured Hero Pill matching reference */}
+            {/* Actions Cluster (Mobile: Search | Bag; Desktop: Search | Wishlist | Track | Account | Bag) */}
+            <div className="flex items-center justify-end shrink-0 min-w-[48px] lg:min-w-[220px]">
+              
+              {/* Search Button */}
+              <button
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className="p-2 text-brand-tertiary hover:text-brand-primary transition-colors flex items-center space-x-1.5"
+                aria-label="Search jewelry"
+                title="Search"
+              >
+                <Search className="w-4.5 h-4.5 lg:w-4 lg:h-4 stroke-[1.6]" />
+                <span className="hidden lg:inline text-[11px] font-caps uppercase tracking-wider text-brand-tertiary/80 hover:text-brand-primary">Search</span>
+              </button>
+
+              {/* Vertical divider */}
+              <span className="h-3.5 w-px bg-brand-border mx-1" />
+
+              {/* Desktop Wishlist */}
+              <button
+                className="hidden lg:flex p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center justify-center"
+                aria-label="Wishlist"
+                title="Wishlist"
+              >
+                <Heart className="w-4 h-4 stroke-[1.6]" />
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand-primary rounded-full"></span>
+              </button>
+
+              {/* Vertical divider */}
+              <span className="hidden lg:block h-3.5 w-px bg-brand-border mx-1" />
+
+              {/* Desktop Track Order */}
+              <button
+                onClick={() => openTracking()}
+                className="hidden lg:flex p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center space-x-1.5"
+                aria-label="Track Order"
+                title="Track Order (Shiprocket)"
+              >
+                <Truck className="w-4 h-4 stroke-[1.6]" />
+                <span className="hidden xl:inline text-[11px] font-caps uppercase tracking-wider text-brand-tertiary/80">Track</span>
+              </button>
+
+              {/* Vertical divider */}
+              <span className="hidden lg:block h-3.5 w-px bg-brand-border mx-1" />
+
+              {/* Desktop User Account Trigger */}
+              <button
+                onClick={() => openAuthModal('login')}
+                className="hidden lg:flex p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative items-center justify-center"
+                aria-label="Account"
+                title={isAuthenticated ? `Signed in as ${user.name}` : "Sign In / Account (Optional)"}
+              >
+                {isAuthenticated ? (
+                  <span className="w-6 h-6 rounded-full bg-brand-primary-light border border-brand-primary/40 text-brand-primary text-[11px] font-bold flex items-center justify-center shadow-2xs">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'V'}
+                  </span>
+                ) : (
+                  <User className="w-4 h-4 stroke-[1.6]" />
+                )}
+              </button>
+
+              {/* Vertical divider (desktop only) */}
+              <span className="hidden lg:block h-3.5 w-px bg-brand-border mx-1" />
+
+              {/* Shopping Bag / Cart (Always visible) */}
+              <button
+                onClick={openCart}
+                className="p-2 text-brand-tertiary hover:text-brand-primary transition-colors relative flex items-center"
+                aria-label="Open Cart"
+                title="Shopping Bag"
+              >
+                <ShoppingBag className="w-4.5 h-4.5 lg:w-4 lg:h-4 stroke-[1.6]" />
+                {itemCount > 0 ? (
+                  <span className="ml-1 text-[10px] sm:text-[11px] font-bold text-white bg-brand-primary rounded-full px-1.5 min-w-[17px] text-center leading-4 shadow-xs">
+                    {itemCount}
+                  </span>
+                ) : (
+                  <span className="hidden lg:inline ml-1 text-xs font-semibold text-brand-tertiary/60 font-mono">0</span>
+                )}
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+
+        {/* Tier 2: Desktop Centered Category Navigation Strip */}
+        <nav className="hidden lg:block border-t border-brand-border/60 bg-[#FAF7FC]/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center space-x-6 xl:space-x-8 h-10 text-[11px] font-caps tracking-[0.14em] uppercase text-brand-tertiary/80 whitespace-nowrap">
+              {/* Highlighted Featured Pill matching Everlasting */}
               <a
                 href="#jhumka-boxes"
                 onClick={() => setSelectedCategory('jhumka-boxes')}
@@ -274,70 +372,49 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               >
                 Combo Offers
               </a>
-            </nav>
+            </div>
+          </div>
+        </nav>
 
-            {/* Right: Quick Actions */}
-            <div className="flex items-center space-x-1 sm:space-x-3 text-brand-tertiary shrink-0">
+        {/* Search Input Bar (Dropdown toggle) */}
+        {isSearchOpen && (
+          <div className="border-t border-brand-border bg-white px-4 py-3 shadow-md animate-in slide-in-from-top-1 duration-200">
+            <div className="max-w-2xl mx-auto flex items-center space-x-3">
+              <Search className="w-4 h-4 text-brand-primary shrink-0" />
+              <input
+                type="text"
+                placeholder="Search jhumka boxes, necklaces, anti-tarnish jewelry..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const catalogEl = document.getElementById('catalog');
+                    if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                autoFocus
+                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none text-brand-tertiary placeholder:text-brand-tertiary/40"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-[10px] font-caps tracking-wider uppercase text-brand-tertiary/60 hover:text-brand-primary px-1.5 py-0.5"
+                >
+                  Clear
+                </button>
+              )}
               <button
-                className="min-h-[44px] min-w-[44px] p-2 hover:text-brand-primary transition-colors flex items-center justify-center"
-                aria-label="Search"
+                onClick={() => setIsSearchOpen(false)}
+                className="p-1 text-brand-tertiary/60 hover:text-brand-primary rounded-full hover:bg-brand-primary-light/50 transition-colors"
+                aria-label="Close search"
               >
-                <Search className="w-5 h-5 stroke-[1.5]" />
-              </button>
-
-              <button
-                className="min-h-[44px] min-w-[44px] p-2 hover:text-brand-primary transition-colors relative flex items-center justify-center"
-                aria-label="Wishlist"
-              >
-                <Heart className="w-5 h-5 stroke-[1.5]" />
-                <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-brand-primary rounded-full"></span>
-              </button>
-
-              {/* Order Tracking Button (Desktop only, mobile accesses via drawer) */}
-              <button
-                onClick={() => openTracking()}
-                className="hidden sm:flex min-h-[44px] min-w-[44px] p-2 hover:text-brand-primary transition-colors relative items-center justify-center"
-                aria-label="Track Order"
-                title="Track Order (Shiprocket)"
-              >
-                <Truck className="w-5 h-5 stroke-[1.5]" />
-              </button>
-
-              {/* User Account Trigger (Desktop only, mobile accesses via drawer) */}
-              <button
-                onClick={() => openAuthModal('login')}
-                className="hidden sm:flex min-h-[44px] min-w-[44px] p-2 hover:text-brand-primary transition-colors relative items-center justify-center"
-                aria-label="Account"
-                title={isAuthenticated ? `Signed in as ${user.name}` : "Sign In / Account (Optional)"}
-              >
-                {isAuthenticated ? (
-                  <span className="w-7 h-7 rounded-full bg-brand-primary-light border border-brand-primary/40 text-brand-primary text-xs font-bold flex items-center justify-center shadow-2xs">
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'V'}
-                  </span>
-                ) : (
-                  <User className="w-5 h-5 stroke-[1.5]" />
-                )}
-              </button>
-
-              {/* Shopping Bag / Cart */}
-              <button
-                onClick={openCart}
-                className="min-h-[44px] min-w-[44px] p-2 hover:text-brand-primary transition-colors relative flex items-center justify-center"
-                aria-label="Open Cart"
-              >
-                <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
-                {itemCount > 0 && (
-                  <span className="ml-1 text-[11px] font-bold text-white bg-brand-primary rounded-full px-1.5 py-0.2">
-                    {itemCount}
-                  </span>
-                )}
+                <X className="w-4 h-4" />
               </button>
             </div>
-
           </div>
-        </div>
+        )}
 
-        {/* Mobile Slide Drawer */}
+        {/* Mobile Slide Drawer (Inspired by Everlasting) */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-brand-border bg-white px-6 py-5 space-y-3 animate-in slide-in-from-top-2 duration-200 shadow-xl">
             <a
@@ -346,7 +423,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               className="flex items-center justify-between text-xs font-caps tracking-[0.2em] uppercase py-2.5 text-brand-primary font-bold border-b border-brand-border/40"
             >
               <span>✨ 4 Jhumka Boxes</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-bold tracking-normal">BESTSELLER</span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-bold tracking-normal">BESTSELLER</span>
             </a>
             <a
               href="#catalog"
@@ -375,18 +452,30 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               Combo Duos
             </a>
 
-            {/* Mobile Tracking Action */}
-            <button
-              onClick={() => { openTracking(); setMobileMenuOpen(false); }}
-              className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center space-x-2"
-            >
-              <Truck className="w-4 h-4 text-brand-primary" />
-              <span>Track Order (Shiprocket)</span>
-            </button>
+            {/* Mobile Wishlist Action */}
+            <div className="pt-2 border-t border-brand-border/50">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
+              >
+                <span>Wishlist</span>
+                <Heart className="w-4 h-4 text-brand-primary" />
+              </button>
+            </div>
 
+            {/* Mobile Tracking Action */}
+            <div>
+              <button
+                onClick={() => { openTracking(); setMobileMenuOpen(false); }}
+                className="w-full text-left text-xs font-caps tracking-[0.2em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
+              >
+                <span>Track Order (Shiprocket)</span>
+                <Truck className="w-4 h-4 text-brand-primary" />
+              </button>
+            </div>
 
             {/* Mobile Account Action */}
-            <div className="pt-3 border-t border-brand-border">
+            <div className="pt-2 border-t border-brand-border">
               <button
                 onClick={() => { openAuthModal('login'); setMobileMenuOpen(false); }}
                 className="w-full text-left text-xs font-caps tracking-[0.18em] uppercase py-2 text-brand-tertiary hover:text-brand-primary flex items-center justify-between"
