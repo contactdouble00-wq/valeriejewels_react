@@ -403,17 +403,16 @@ export default function AdminHomepageView() {
               <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
                 {/* Desktop Faded Photograph Preview */}
                 {Boolean(formData.heroBanner.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
-                  <div className="hidden sm:block absolute top-0 right-0 w-1/2 h-full pointer-events-none select-none overflow-hidden z-0">
+                  <div className="hidden sm:block absolute top-0 right-0 w-[58%] lg:w-[54%] xl:w-[50%] h-full pointer-events-none select-none overflow-hidden z-0">
                     <img
                       src={formData.heroBanner.rightImageUrl || '/hero-jewelry-model.jpg'}
                       alt="Hero Preview"
                       className="w-full h-full object-cover object-[center_15%]"
                       style={{
-                        maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
-                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                        maskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7FD] via-transparent to-transparent opacity-60 pointer-events-none" />
                   </div>
                 )}
 

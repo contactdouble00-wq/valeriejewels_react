@@ -500,18 +500,17 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
           {/* Desktop-Only Creatively Faded Hero Photograph */}
           {Boolean(content?.heroBanner?.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
-            <div className="hidden md:block absolute top-0 right-0 w-1/2 lg:w-[48%] xl:w-[46%] h-full pointer-events-none select-none overflow-hidden z-0">
+            <div className="hidden md:block absolute top-0 right-0 w-[58%] lg:w-[54%] xl:w-[50%] h-full pointer-events-none select-none overflow-hidden z-0">
               <img
                 src={content?.heroBanner?.rightImageUrl || '/hero-jewelry-model.jpg'}
                 alt="Valerie Everyday Luxury Jewelry"
-                className="w-full h-full object-cover object-[center_20%] lg:object-[center_15%]"
+                className="w-full h-full object-cover object-[center_15%]"
                 style={{
-                  maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
-                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 15%, rgba(0,0,0,0.65) 45%, black 85%)',
+                  maskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 10%, rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.32) 26%, rgba(0,0,0,0.75) 34%, #000 42%, #000 100%)',
                 }}
                 loading="eager"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7FD] via-transparent to-transparent opacity-60 pointer-events-none" />
             </div>
           )}
 
