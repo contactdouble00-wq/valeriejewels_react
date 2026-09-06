@@ -82,6 +82,21 @@ class Database {
 
             // Always ensure default admin account exists
             self::seedAdminUser($pdo);
+
+            // Auto-populate full catalog if products table is empty
+            $prodCount = (int)$pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
+            if ($prodCount === 0) {
+                $seedFile = dirname(__DIR__) . '/database/seed.php';
+                if (file_exists($seedFile)) {
+                    ob_start();
+                    try {
+                        require $seedFile;
+                    } catch (Throwable $se) {
+                        error_log('Auto-seed catalog failed: ' . $se->getMessage());
+                    }
+                    ob_end_clean();
+                }
+            }
         } catch (Throwable $e) {
             error_log('ensureTablesExist error: ' . $e->getMessage());
         }
