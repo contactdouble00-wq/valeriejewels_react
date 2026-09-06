@@ -1,0 +1,22 @@
+# Security: Disable execution of any scripts in the uploads directory
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Deny access to any executable or script files
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phps|pl|py|jsp|asp|sh|cgi|exe|cmd|bat)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Only permit safe media files to be served directly
+<FilesMatch "(?i)\.(jpg|jpeg|png|webp|gif|mp4|mov|webm|svg|ico)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

@@ -1,0 +1,20 @@
+# ==============================================================================
+# VALERIE JEWELS — API Security Configuration
+# Protects internal configuration files, database seeds, and logs
+# ==============================================================================
+
+# Disable directory browsing
+Options -Indexes
+
+# Protect sensitive backend configuration & database scripts
+<FilesMatch "(?i)(config.*\.php|schema\.sql|seed\.php|\.log|\.env|\.git|composer\..*)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security Headers for API JSON responses
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+</IfModule>
