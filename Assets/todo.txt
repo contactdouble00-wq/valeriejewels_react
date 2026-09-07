@@ -3,12 +3,3 @@ What to do in next siting
 2. Add cutomer reviews control using admin panel.
 3. fix footer.
 4. replace Combo set with Gift packaging section.
-
-
-
-
-
-
-
-
-

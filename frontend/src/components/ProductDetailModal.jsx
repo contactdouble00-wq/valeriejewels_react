@@ -9,6 +9,7 @@ import {
   Check,
   Heart,
   ChevronRight,
+  ChevronLeft,
   Share2,
   ArrowLeft
 } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   // Sync state when productSlug changes or when initialProduct is passed
   useEffect(() => {
+    setSelectedImage(0);
     if (initialProduct) {
       setProduct(initialProduct);
       if (initialProduct.variants && initialProduct.variants.length > 0) {
@@ -257,20 +259,31 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
             {/* Horizontal Thumbnail Selector Track */}
             {images.length > 1 && (
-              <div className="flex items-center gap-2.5 px-4 py-3 overflow-x-auto bg-brand-surface border-b border-brand-border/60">
-                {images.map((img, idx) => (
-                  <button
-                    key={img.id || idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                      selectedImage === idx
-                        ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-105'
-                        : 'border-brand-border opacity-70'
-                    }`}
-                  >
-                    <img src={img.image_url} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+              <div className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto no-scrollbar bg-brand-surface border-b border-brand-border/60">
+                {images.map((img, idx) => {
+                  const isSelected = selectedImage === idx;
+                  return (
+                    <button
+                      key={img.id || idx}
+                      type="button"
+                      onClick={() => setSelectedImage(idx)}
+                      className={`relative w-14 h-14 rounded-xl p-0.5 transition-all shrink-0 cursor-pointer bg-white outline-none focus:outline-none focus-visible:outline-none select-none ${
+                        isSelected
+                          ? 'border-2 border-brand-primary shadow-sm'
+                          : 'border border-brand-border/80 opacity-65 hover:opacity-100'
+                      }`}
+                      aria-label={`View image ${idx + 1}`}
+                    >
+                      <div className="w-full h-full rounded-[9px] overflow-hidden bg-brand-surface flex items-center justify-center">
+                        <img
+                          src={img.image_url}
+                          alt={img.alt_text || product.name}
+                          className="w-full h-full object-cover object-center pointer-events-none select-none"
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -571,8 +584,36 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   )}
                 </div>
 
+                {/* Prev / Next Nav Buttons */}
                 {images.length > 1 && (
-                  <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-mono font-medium tracking-wider">
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                      }}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-10"
+                      title="Previous photo"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="w-5 h-5 stroke-[2]" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                      }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-10"
+                      title="Next photo"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="w-5 h-5 stroke-[2]" />
+                    </button>
+                  </>
+                )}
+
+                {images.length > 1 && (
+                  <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-mono font-medium tracking-wider pointer-events-none">
                     {selectedImage + 1} / {images.length}
                   </div>
                 )}
@@ -580,20 +621,32 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
               {/* Thumbnails Row */}
               {images.length > 1 && (
-                <div className="w-full max-w-xl flex items-center justify-center gap-3 overflow-x-auto py-2">
-                  {images.map((img, idx) => (
-                    <button
-                      key={img.id || idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
-                        selectedImage === idx
-                          ? 'border-brand-primary ring-4 ring-brand-primary/15 scale-105 shadow-sm'
-                          : 'border-brand-border opacity-70 hover:opacity-100 hover:border-brand-primary/40'
-                      }`}
-                    >
-                      <img src={img.image_url} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                <div className="w-full max-w-xl flex flex-wrap items-center justify-center gap-3.5 py-3 px-2">
+                  {images.map((img, idx) => {
+                    const isSelected = selectedImage === idx;
+                    return (
+                      <button
+                        key={img.id || idx}
+                        type="button"
+                        onClick={() => setSelectedImage(idx)}
+                        className={`relative w-20 h-20 rounded-2xl p-1 transition-all shrink-0 cursor-pointer bg-white outline-none focus:outline-none focus-visible:outline-none select-none ${
+                          isSelected
+                            ? 'border-2 border-brand-primary ring-2 ring-brand-primary/20 shadow-md'
+                            : 'border border-brand-border/80 opacity-60 hover:opacity-100 hover:border-brand-primary/50'
+                        }`}
+                        title={`View image ${idx + 1}`}
+                        aria-label={`View image ${idx + 1}`}
+                      >
+                        <div className="w-full h-full rounded-xl overflow-hidden bg-brand-surface flex items-center justify-center">
+                          <img
+                            src={img.image_url}
+                            alt={img.alt_text || product.name}
+                            className="w-full h-full object-cover object-center pointer-events-none select-none"
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
