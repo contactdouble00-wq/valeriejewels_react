@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Sparkles, ShieldCheck, Heart } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Sparkles, Heart } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 
 export default function ProductCard({ product, onQuickView, onAddToCart }) {
@@ -43,12 +43,6 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             {Boolean(is_bestseller) && (
               <span className="px-1.5 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
                 Best Seller
-              </span>
-            )}
-            {Boolean(is_anti_tarnish) && (
-              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1 w-fit">
-                <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-brand-primary" />
-                Anti-Tarnish
               </span>
             )}
           </div>
