@@ -13,7 +13,8 @@ import {
   Gift,
   ArrowRight,
   FileText,
-  RotateCcw
+  RotateCcw,
+  HelpCircle
 } from 'lucide-react';
 
 export default function MobileSidebarDrawer({
@@ -29,6 +30,7 @@ export default function MobileSidebarDrawer({
   isAuthenticated = false,
   user = null,
   onOpenPolicy,
+  onOpenFaqs,
 }) {
   // Close on Escape key
   useEffect(() => {
@@ -322,6 +324,21 @@ export default function MobileSidebarDrawer({
                 <div className="flex items-center space-x-2.5">
                   <FileText className="w-3.5 h-3.5 text-brand-muted" />
                   <span>Terms &amp; Conditions</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
+              </button>
+
+              {/* FAQs */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenFaqs) onOpenFaqs();
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-medium text-brand-tertiary hover:bg-brand-surface hover:text-brand-primary flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Frequently Asked Questions</span>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
               </button>

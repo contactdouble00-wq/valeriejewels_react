@@ -34,6 +34,7 @@ async function handleResponse(response) {
 
 import { SEED_CATEGORIES, SEED_PRODUCTS, SEED_BUNDLES } from '../data/seedCatalog';
 import { DEFAULT_POLICIES } from '../data/defaultPolicies';
+import { DEFAULT_FAQS_DATA } from '../data/defaultFaqs';
 
 function filterSeedProducts(params = {}) {
   let list = [...SEED_PRODUCTS];
@@ -355,6 +356,22 @@ export const apiService = {
       console.warn('API getPolicies error, falling back to default policies:', err);
     }
     return DEFAULT_POLICIES;
+  },
+
+  /**
+   * Fetch FAQs with fallback
+   */
+  async getFaqs() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/faqs/get.php`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data) return result.data;
+      }
+    } catch (err) {
+      console.warn('API getFaqs error, falling back to default faqs:', err);
+    }
+    return DEFAULT_FAQS_DATA;
   },
 };
 

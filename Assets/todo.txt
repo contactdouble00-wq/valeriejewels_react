@@ -1,9 +1,9 @@
 What to do in next siting 
 
-1. Add Contact Us, About Us, Privacy Policy, FAQ's As seperate pages.
 2. Add cutomer reviews control using admin panel.
 3. fix footer.
 4. replace Combo set with Gift packaging section.
+
 
 
 

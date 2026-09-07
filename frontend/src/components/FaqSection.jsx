@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronDown, Truck, RefreshCw, CreditCard, Gift, Shield, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Truck, RefreshCw, CreditCard, Gift, Shield, Phone, Sparkles, HelpCircle } from 'lucide-react';
+import { apiService } from '../services/api';
 
 // ─── Exact FAQs sourced from https://valeriejewels.in/faqs/ ───────────────────
 export const VALERIE_FAQS = [
@@ -53,10 +54,53 @@ export const VALERIE_FAQS = [
   },
 ];
 
-export default function FaqSection({ limit = 5 }) {
+export default function FaqSection({ limit = 5, onOpenFaqs }) {
   const [openIndex, setOpenIndex] = useState(0);
+  const [faqsList, setFaqsList] = useState(VALERIE_FAQS);
 
-  const displayFaqs = limit ? VALERIE_FAQS.slice(0, limit) : VALERIE_FAQS;
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDynamicFaqs() {
+      try {
+        const data = await apiService.getFaqs();
+        if (isMounted && data && Array.isArray(data.faqs) && data.faqs.length > 0) {
+          const activeFaqs = data.faqs.filter((f) => f.isActive !== false);
+          if (activeFaqs.length > 0) {
+            setFaqsList(activeFaqs);
+          }
+        }
+      } catch (err) {
+        // preserve initial fallback list
+      }
+    }
+    loadDynamicFaqs();
+
+    const handleSync = (e) => {
+      if (e.detail && Array.isArray(e.detail.faqs)) {
+        const activeFaqs = e.detail.faqs.filter((f) => f.isActive !== false);
+        if (activeFaqs.length > 0) setFaqsList(activeFaqs);
+      }
+    };
+    window.addEventListener('valerie_faqs_updated', handleSync);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('valerie_faqs_updated', handleSync);
+    };
+  }, []);
+
+  const displayFaqs = limit ? faqsList.slice(0, limit) : faqsList;
+
+  const getFaqIcon = (faq) => {
+    if (faq.icon) return faq.icon;
+    const cat = faq.category?.toLowerCase() || '';
+    if (cat.includes('ship') || cat.includes('track')) return Truck;
+    if (cat.includes('pay') || cat.includes('order')) return CreditCard;
+    if (cat.includes('return') || cat.includes('refund')) return RefreshCw;
+    if (cat.includes('care') || cat.includes('qual')) return Shield;
+    if (cat.includes('gift') || cat.includes('pack')) return Gift;
+    if (cat.includes('support') || cat.includes('contact')) return Phone;
+    return Sparkles;
+  };
 
   return (
     <section className="space-y-6">
@@ -75,15 +119,15 @@ export default function FaqSection({ limit = 5 }) {
       <div className="max-w-3xl mx-auto space-y-3">
         {displayFaqs.map((faq, idx) => {
           const isOpen = openIndex === idx;
-          const Icon = faq.icon;
+          const Icon = getFaqIcon(faq);
           return (
             <div
-              key={idx}
+              key={faq.id || idx}
               className="luxury-card rounded-2xl overflow-hidden border border-brand-border bg-white transition-all"
             >
               <button
                 onClick={() => setOpenIndex(isOpen ? -1 : idx)}
-                className="w-full p-5 text-left flex items-center justify-between gap-4 focus:outline-none"
+                className="w-full p-5 text-left flex items-center justify-between gap-4 focus:outline-none cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="w-7 h-7 rounded-full bg-brand-primary/10 flex items-center justify-center shrink-0">
@@ -110,13 +154,19 @@ export default function FaqSection({ limit = 5 }) {
         })}
       </div>
 
-      {limit && VALERIE_FAQS.length > limit && (
+      {limit && faqsList.length > limit && (
         <div className="text-center pt-2">
           <a
             href="/faqs"
-            className="inline-flex items-center space-x-2 text-xs font-semibold text-brand-primary hover:underline"
+            onClick={(e) => {
+              if (onOpenFaqs) {
+                e.preventDefault();
+                onOpenFaqs();
+              }
+            }}
+            className="inline-flex items-center space-x-2 text-xs font-semibold text-brand-primary hover:underline cursor-pointer"
           >
-            <span>View all {VALERIE_FAQS.length} FAQs</span>
+            <span>View all {faqsList.length} FAQs</span>
             <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
           </a>
         </div>

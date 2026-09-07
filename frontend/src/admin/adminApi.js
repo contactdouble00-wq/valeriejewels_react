@@ -381,4 +381,27 @@ export const adminApi = {
 
     return res.data;
   },
+
+  // Frequently Asked Questions Management
+  async getFaqs() {
+    const res = await request('/faqs/get.php');
+    return res.data;
+  },
+
+  async updateFaqs(faqsData) {
+    const res = await request('/faqs/update.php', {
+      method: 'POST',
+      body: JSON.stringify(faqsData),
+    });
+
+    try {
+      localStorage.setItem('valerie_faqs_updated', Date.now().toString());
+      localStorage.setItem('valerie_faqs_cache', JSON.stringify(res.data || faqsData));
+      window.dispatchEvent(new CustomEvent('valerie_faqs_updated', { detail: res.data || faqsData }));
+    } catch (e) {
+      console.warn('Sync broadcast warning for faqs:', e);
+    }
+
+    return res.data;
+  },
 };

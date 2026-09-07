@@ -36,10 +36,11 @@ import OrderTrackingModal from './components/OrderTrackingModal';
 import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
 import NotFoundPage from './components/NotFoundPage';
 import PolicyPage from './components/PolicyPage';
+import FaqPage from './components/FaqPage';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
-function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '', onOpenPolicy }) {
+function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '', onOpenPolicy, onOpenFaqs }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -728,7 +729,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <TrustStrip />
 
         {/* Expandable FAQs Block */}
-        <FaqSection />
+        <FaqSection onOpenFaqs={onOpenFaqs} />
 
       </main>
 
@@ -768,6 +769,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         isAuthenticated={isAuthenticated}
         user={user}
         onOpenPolicy={onOpenPolicy}
+        onOpenFaqs={onOpenFaqs}
       />
 
       {/* Wishlist Toast Notification */}
@@ -851,7 +853,13 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               >
                 Terms of Service
               </a>
-              <a href="#faqs" className="hover:text-brand-primary transition-colors font-medium">FAQs</a>
+              <a
+                href="/faqs"
+                onClick={(e) => { e.preventDefault(); if (onOpenFaqs) onOpenFaqs(); }}
+                className="hover:text-brand-primary transition-colors font-medium cursor-pointer"
+              >
+                FAQs
+              </a>
               <a
                 href="#track-order"
                 onClick={(e) => { e.preventDefault(); openTracking(); }}
@@ -926,19 +934,25 @@ export default function App() {
       return 'policy-shipping';
     }
 
-    // 3. Explicit 404 hash or trigger
+    // 3. FAQs Route
+    if (rawPath === '/faqs' || rawPath === '/faq' || hash === '#faqs' || hash === '#faq' || hash === '#faqs-page') {
+      return 'faqs';
+    }
+
+    // 4. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
     }
 
-    // 4. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
+    // 5. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
     const validPaths = [
       '/', '', '/shop', '/index.html',
       '/shipping-policy', '/shipping',
       '/refund-policy', '/return-and-refund-policy', '/return-policy',
       '/privacy-policy',
       '/terms-and-conditions', '/terms',
-      '/policies'
+      '/policies',
+      '/faqs', '/faq'
     ];
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
@@ -1016,6 +1030,32 @@ export default function App() {
     );
   }
 
+  if (currentRoute === 'faqs') {
+    return (
+      <FaqPage
+        onReturnToStore={() => {
+          window.history.pushState(null, '', '/');
+          window.location.hash = '';
+          setCurrentRoute('store');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigatePolicy={(tab) => {
+          const slugMap = {
+            shipping: 'shipping-policy',
+            refund: 'refund-policy',
+            privacy: 'privacy-policy',
+            terms: 'terms-and-conditions',
+          };
+          const slug = slugMap[tab] || 'shipping-policy';
+          window.history.pushState(null, '', `/${slug}`);
+          window.location.hash = `#${slug}`;
+          setCurrentRoute(`policy-${tab}`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+    );
+  }
+
   if (currentRoute === '404') {
     return (
       <NotFoundPage
@@ -1063,6 +1103,12 @@ export default function App() {
                 window.history.pushState(null, '', `/${slug}`);
                 window.location.hash = `#${slug}`;
                 setCurrentRoute(`policy-${tab}`);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onOpenFaqs={() => {
+                window.history.pushState(null, '', '/faqs');
+                window.location.hash = '#faqs';
+                setCurrentRoute('faqs');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />

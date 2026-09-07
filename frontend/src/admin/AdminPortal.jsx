@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Sliders,
-  Scale
+  Scale,
+  HelpCircle
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -26,6 +27,7 @@ import AdminCouponsView from './AdminCouponsView';
 import AdminActivityLogView from './AdminActivityLogView';
 import AdminCategoriesView from './AdminCategoriesView';
 import AdminPoliciesView from './AdminPoliciesView';
+import AdminFaqsView from './AdminFaqsView';
 
 
 export default function AdminPortal({ onReturnToStore }) {
@@ -62,6 +64,7 @@ export default function AdminPortal({ onReturnToStore }) {
     { id: 'customers', label: 'Customers & RTO', icon: Users },
     { id: 'coupons', label: 'Promotions & Vouchers', icon: Tag },
     { id: 'policies', label: 'Legal & Policies', icon: Scale, badge: 'DPDP / Legal' },
+    { id: 'faqs', label: 'Customer FAQs', icon: HelpCircle, badge: 'Live FAQs' },
     { id: 'activity', label: 'Security Audit Trail', icon: FileText },
   ];
 
@@ -238,6 +241,8 @@ export default function AdminPortal({ onReturnToStore }) {
           {activeTab === 'coupons' && <AdminCouponsView currentUser={currentUser} />}
 
           {activeTab === 'policies' && <AdminPoliciesView currentUser={currentUser} />}
+
+          {activeTab === 'faqs' && <AdminFaqsView currentUser={currentUser} />}
 
           {activeTab === 'activity' && <AdminActivityLogView />}
         </main>
