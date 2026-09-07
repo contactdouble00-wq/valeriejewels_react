@@ -33,6 +33,7 @@ async function handleResponse(response) {
 }
 
 import { SEED_CATEGORIES, SEED_PRODUCTS, SEED_BUNDLES } from '../data/seedCatalog';
+import { DEFAULT_POLICIES } from '../data/defaultPolicies';
 
 function filterSeedProducts(params = {}) {
   let list = [...SEED_PRODUCTS];
@@ -338,6 +339,22 @@ export const apiService = {
       }),
     });
     return handleResponse(response);
+  },
+
+  /**
+   * Fetch legal policies (Shipping, Returns, Privacy, Terms) with fallback
+   */
+  async getPolicies() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/policies/get.php`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data) return result.data;
+      }
+    } catch (err) {
+      console.warn('API getPolicies error, falling back to default policies:', err);
+    }
+    return DEFAULT_POLICIES;
   },
 };
 

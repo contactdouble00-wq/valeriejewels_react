@@ -11,7 +11,9 @@ import {
   MessageCircle,
   Tag,
   Gift,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 
 export default function MobileSidebarDrawer({
@@ -26,6 +28,7 @@ export default function MobileSidebarDrawer({
   openAuthModal,
   isAuthenticated = false,
   user = null,
+  onOpenPolicy,
 }) {
   // Close on Escape key
   useEffect(() => {
@@ -257,6 +260,73 @@ export default function MobileSidebarDrawer({
               </button>
             </div>
 
+            {/* 4. Customer Policies & Legal Section */}
+            <div className="pt-3 border-t border-brand-border/70 space-y-1">
+              <div className="px-3 pb-1.5 text-[10.5px] font-caps uppercase tracking-wider text-brand-muted/80 font-bold">
+                Policies &amp; Legal
+              </div>
+
+              {/* Shipping & Delivery */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenPolicy) onOpenPolicy('shipping');
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-medium text-brand-tertiary hover:bg-brand-surface hover:text-brand-primary flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Truck className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Shipping &amp; Delivery</span>
+                </div>
+                <span className="text-[10px] text-brand-primary font-bold">5-7 Days</span>
+              </button>
+
+              {/* Returns & Refunds */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenPolicy) onOpenPolicy('refund');
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-medium text-brand-tertiary hover:bg-brand-surface hover:text-brand-primary flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Returns &amp; Refunds</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
+              </button>
+
+              {/* Privacy Policy */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenPolicy) onOpenPolicy('privacy');
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-medium text-brand-tertiary hover:bg-brand-surface hover:text-brand-primary flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <FileText className="w-3.5 h-3.5 text-brand-muted" />
+                  <span>Privacy Policy (DPDP)</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
+              </button>
+
+              {/* Terms of Service */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenPolicy) onOpenPolicy('terms');
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-medium text-brand-tertiary hover:bg-brand-surface hover:text-brand-primary flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <FileText className="w-3.5 h-3.5 text-brand-muted" />
+                  <span>Terms &amp; Conditions</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
+              </button>
+            </div>
+
           </div>
 
           {/* Bottom Footer: Reassurance & Direct WhatsApp Support (Like Everlasting) */}
@@ -280,7 +350,7 @@ export default function MobileSidebarDrawer({
               </div>
               <div className="flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Free Shipping &gt; ₹999</span>
+                <span>Free Delivery Across India</span>
               </div>
             </div>
           </div>

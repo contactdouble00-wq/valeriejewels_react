@@ -358,4 +358,27 @@ export const adminApi = {
 
     return res.data;
   },
+
+  // Legal Policies Management
+  async getPolicies() {
+    const res = await request('/policies/get.php');
+    return res.data;
+  },
+
+  async updatePolicies(policiesData) {
+    const res = await request('/policies/update.php', {
+      method: 'POST',
+      body: JSON.stringify(policiesData),
+    });
+
+    try {
+      localStorage.setItem('valerie_policies_updated', Date.now().toString());
+      localStorage.setItem('valerie_policies_cache', JSON.stringify(res.data || policiesData));
+      window.dispatchEvent(new CustomEvent('valerie_policies_updated', { detail: res.data || policiesData }));
+    } catch (e) {
+      console.warn('Sync broadcast warning for policies:', e);
+    }
+
+    return res.data;
+  },
 };

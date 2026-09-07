@@ -35,10 +35,11 @@ import CheckoutModal from './components/CheckoutModal';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
 import NotFoundPage from './components/NotFoundPage';
+import PolicyPage from './components/PolicyPage';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
-function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '' }) {
+function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '', onOpenPolicy }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -248,8 +249,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[10px] sm:text-[11px] font-medium py-1.5 sm:py-2 px-3 sm:px-4 text-center tracking-wider sm:tracking-widest uppercase flex items-center justify-center space-x-1.5 sm:space-x-2">
           <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-primary shrink-0" />
           <span className="truncate sm:overflow-visible">
-            {content?.topRibbon?.text || 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE'}{' '}
-            <span className="font-bold text-brand-primary">{content?.topRibbon?.highlightAmount || '₹999'}</span>{' '}
+            {content?.topRibbon?.text || 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS) • FREE ZIRCON NECKLACE ON PREPAID'}{' '}
+            <span className="font-bold text-brand-primary">{content?.topRibbon?.highlightAmount || '+ ₹50 OFF'}</span>{' '}
             {content?.topRibbon?.suffix || '• 18K GOLD PVD ANTI-TARNISH'}
           </span>
         </div>
@@ -766,6 +767,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         openAuthModal={openAuthModal}
         isAuthenticated={isAuthenticated}
         user={user}
+        onOpenPolicy={onOpenPolicy}
       />
 
       {/* Wishlist Toast Notification */}
@@ -821,9 +823,34 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             </div>
 
             <div className="flex flex-wrap justify-center gap-6 text-xs text-brand-muted font-light">
-              <a href="#" className="hover:text-brand-primary transition-colors">Privacy Policy (DPDP)</a>
-              <a href="#" className="hover:text-brand-primary transition-colors">Returns &amp; Refunds</a>
-              <a href="#" className="hover:text-brand-primary transition-colors">Terms of Service</a>
+              <a
+                href="/shipping-policy"
+                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('shipping'); }}
+                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
+              >
+                Shipping &amp; Delivery (5-7 Days)
+              </a>
+              <a
+                href="/refund-policy"
+                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('refund'); }}
+                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
+              >
+                Returns &amp; Refunds
+              </a>
+              <a
+                href="/privacy-policy"
+                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('privacy'); }}
+                className="hover:text-brand-primary transition-colors"
+              >
+                Privacy Policy (DPDP 2023)
+              </a>
+              <a
+                href="/terms-and-conditions"
+                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('terms'); }}
+                className="hover:text-brand-primary transition-colors"
+              >
+                Terms of Service
+              </a>
               <a href="#faqs" className="hover:text-brand-primary transition-colors font-medium">FAQs</a>
               <a
                 href="#track-order"
@@ -882,13 +909,37 @@ export default function App() {
       return 'admin';
     }
 
-    // 2. Explicit 404 hash or trigger
+    // 2. Legal Policy Routes
+    if (rawPath === '/shipping-policy' || rawPath === '/shipping' || hash === '#shipping-policy' || hash === '#shipping') {
+      return 'policy-shipping';
+    }
+    if (rawPath === '/refund-policy' || rawPath === '/return-and-refund-policy' || rawPath === '/return-policy' || hash === '#refund-policy' || hash === '#return-policy' || hash === '#refund') {
+      return 'policy-refund';
+    }
+    if (rawPath === '/privacy-policy' || hash === '#privacy-policy' || hash === '#privacy') {
+      return 'policy-privacy';
+    }
+    if (rawPath === '/terms-and-conditions' || rawPath === '/terms' || hash === '#terms-and-conditions' || hash === '#terms') {
+      return 'policy-terms';
+    }
+    if (rawPath === '/policies' || hash === '#policies') {
+      return 'policy-shipping';
+    }
+
+    // 3. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
     }
 
-    // 3. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
-    const validPaths = ['/', '', '/shop', '/index.html'];
+    // 4. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
+    const validPaths = [
+      '/', '', '/shop', '/index.html',
+      '/shipping-policy', '/shipping',
+      '/refund-policy', '/return-and-refund-policy', '/return-policy',
+      '/privacy-policy',
+      '/terms-and-conditions', '/terms',
+      '/policies'
+    ];
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
     }
@@ -937,6 +988,34 @@ export default function App() {
     );
   }
 
+  if (currentRoute.startsWith('policy-')) {
+    const policyTab = currentRoute.replace('policy-', '') || 'shipping';
+    return (
+      <PolicyPage
+        initialTab={policyTab}
+        onNavigateTab={(tab) => {
+          const slugMap = {
+            shipping: 'shipping-policy',
+            refund: 'refund-policy',
+            privacy: 'privacy-policy',
+            terms: 'terms-and-conditions',
+          };
+          const slug = slugMap[tab] || 'shipping-policy';
+          window.history.pushState(null, '', `/${slug}`);
+          window.location.hash = `#${slug}`;
+          setCurrentRoute(`policy-${tab}`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onReturnToStore={() => {
+          window.history.pushState(null, '', '/');
+          window.location.hash = '';
+          setCurrentRoute('store');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+    );
+  }
+
   if (currentRoute === '404') {
     return (
       <NotFoundPage
@@ -972,6 +1051,19 @@ export default function App() {
               onOpenAdmin={() => {
                 window.location.hash = '#vj-manage-x1126';
                 setCurrentRoute('admin');
+              }}
+              onOpenPolicy={(tab) => {
+                const slugMap = {
+                  shipping: 'shipping-policy',
+                  refund: 'refund-policy',
+                  privacy: 'privacy-policy',
+                  terms: 'terms-and-conditions',
+                };
+                const slug = slugMap[tab] || 'shipping-policy';
+                window.history.pushState(null, '', `/${slug}`);
+                window.location.hash = `#${slug}`;
+                setCurrentRoute(`policy-${tab}`);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />
           </WishlistProvider>

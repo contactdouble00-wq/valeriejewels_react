@@ -506,7 +506,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 <div className="pt-3 border-t border-brand-border flex items-center justify-between">
                   <div className="text-xs text-brand-muted flex items-center space-x-1.5">
                     <Truck className="w-3.5 h-3.5 text-brand-primary" />
-                    <span>Free Express Delivery above ₹999</span>
+                    <span>Free Delivery Across All India (5–7 Working Days)</span>
                   </div>
 
                   <button
@@ -598,11 +598,11 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                               </span>
                               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md flex items-center space-x-1">
                                 <Sparkles className="w-2.5 h-2.5" />
-                                <span>Save ₹50 Extra</span>
+                                <span>FREE Zircon Necklace + ₹50 Extra Off</span>
                               </span>
                             </div>
                             <p className="text-xs text-brand-muted font-light mt-0.5">
-                              Instant checkout via Google Pay, PhonePe, Paytm, Credit/Debit cards with extra ₹50 discount.
+                              Instant checkout via UPI/Cards. Complimentary Free Zircon Necklace gift included with ₹50 instant discount.
                             </p>
                           </div>
                         </div>
@@ -948,7 +948,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div>
                     <span className="font-bold block">Shiprocket Express Courier Dispatch</span>
                     <span className="text-[11px] text-purple-800/80 font-light">
-                      Estimated delivery in 3-5 business days. A tracking link has been sent to {placedOrder.customer_email || email}.
+                      Free delivery across all India within 5–7 working days. A tracking link has been sent to {placedOrder.customer_email || email}.
                     </span>
                   </div>
                 </div>
