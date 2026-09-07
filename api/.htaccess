@@ -1,15 +1,31 @@
 # ==============================================================================
-# VALERIE JEWELS — API Security Configuration
-# Protects internal configuration files, database seeds, and logs
+# VALERIE JEWELS - API Security Configuration
+# Compatible with Hostinger & LiteSpeed Web Server
 # ==============================================================================
+
+DirectoryIndex index.php
 
 # Disable directory browsing
 Options -Indexes
 
+# Ensure public web access to API endpoints across Apache & LiteSpeed
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order Allow,Deny
+    Allow from all
+</IfModule>
+
 # Protect sensitive backend configuration & database scripts
 <FilesMatch "(?i)(config.*\.php|schema\.sql|seed\.php|\.log|\.env|\.git|composer\..*)">
-    Order allow,deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Deny,Allow
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 # Security Headers for API JSON responses

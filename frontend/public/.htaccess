@@ -1,22 +1,29 @@
 # ==============================================================================
-# VALERIE JEWELS — Production Hostinger & LiteSpeed SPA Configuration
+# VALERIE JEWELS - Production Hostinger & LiteSpeed SPA Configuration
 # ==============================================================================
 
-# Directory Index default
 DirectoryIndex index.html index.php
 
-# Prevent directory indexing, follow symlinks
-Options -Indexes +FollowSymLinks
+# Disable directory browsing (Do NOT use +FollowSymLinks on Hostinger)
+Options -Indexes
 
-# Allow public web access to all assets and pages
+# Allow public web access to all assets and pages across Apache & LiteSpeed
 <IfModule mod_authz_core.c>
   Require all granted
 </IfModule>
+<IfModule !mod_authz_core.c>
+  Order Allow,Deny
+  Allow from all
+</IfModule>
 
-# Protect sensitive server files (.htaccess, .htpasswd, .env, .git)
-<FilesMatch "^\.ht|\.env|\.git">
+# Protect sensitive server files (.htaccess, .env, .git, etc.)
+<FilesMatch "(^\.ht|\.env|\.git)">
   <IfModule mod_authz_core.c>
     Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order Deny,Allow
+    Deny from all
   </IfModule>
 </FilesMatch>
 
@@ -27,17 +34,16 @@ Options -Indexes +FollowSymLinks
   RewriteEngine On
   RewriteBase /
 
-  # 1. Pass existing static files and directories straight through
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  # 2. Pass PHP API requests straight to the backend
+  # 1. Pass PHP API requests straight to the backend without rewriting to index.html
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
   RewriteRule ^ - [L]
 
-  # 3. Route all other requests to index.html for React SPA
+  # 2. Pass existing static files straight through
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # 3. Route all other requests (routes like /faqs, /shipping-policy, /shop, etc.) to index.html
   RewriteRule ^ index.html [L]
 </IfModule>
 
