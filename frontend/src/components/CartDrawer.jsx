@@ -52,7 +52,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
       {/* Dimmed Blur Backdrop */}
       <div
         onClick={closeCart}
-        className="absolute inset-0 bg-brand-tertiary/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
       />
 
       {/* Slide-out Drawer Panel (100% width on mobile, 440px on desktop) */}

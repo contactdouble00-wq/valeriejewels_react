@@ -75,7 +75,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
       {/* Backdrop */}
       <div
         onClick={closeWishlist}
-        className="absolute inset-0 bg-brand-tertiary/40 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">

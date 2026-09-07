@@ -79,7 +79,7 @@ export default function MobileSidebarDrawer({
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-brand-tertiary/60 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
       />
 
       {/* Slide-out Sidebar Drawer from Left */}
