@@ -494,7 +494,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 space-y-12 sm:space-y-16 pb-28 sm:pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-12 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
         {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
         {content?.mobileSlider?.enabled !== false && (

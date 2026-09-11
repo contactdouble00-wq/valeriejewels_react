@@ -544,8 +544,8 @@ export default function AdminHomepageView() {
               </div>
 
               {/* Centered Phone Mockup Frame */}
-              <div className="max-w-sm mx-auto bg-white p-3 rounded-2xl border-2 border-brand-primary/20 shadow-md">
-                <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 border border-brand-border">
+              <div className="max-w-xs mx-auto bg-white p-3 rounded-2xl border-2 border-brand-primary/20 shadow-md">
+                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border border-brand-border">
                   {/* First active slide preview */}
                   {(() => {
                     const activeSlides = (formData.mobileSlider?.slides || []).filter((s) => s.isActive !== false);
@@ -690,7 +690,7 @@ export default function AdminHomepageView() {
                         <label className="text-xs font-bold text-brand-tertiary block">
                           Poster Image
                         </label>
-                        <div className="relative aspect-[4/5] w-full max-w-[200px] rounded-xl overflow-hidden border border-brand-border bg-gray-50 group">
+                        <div className="relative aspect-square w-full max-w-[180px] rounded-xl overflow-hidden border border-brand-border bg-gray-50 group">
                           <img
                             src={slide.imageUrl}
                             alt={`Slide ${idx + 1}`}
@@ -805,7 +805,7 @@ export default function AdminHomepageView() {
 
                         <div className="p-3 rounded-lg bg-white/70 border border-brand-border/60 text-[11px] text-brand-muted flex items-center justify-between">
                           <span>
-                            Tip: For optimal resolution on high-DPI retina screens, upload 4:5 vertical portrait posters (e.g. 1080×1350px).
+                            Tip: For exact 1:1 Tanishq proportions on mobile, upload square posters (e.g. 1080×1080px).
                           </span>
                         </div>
                       </div>

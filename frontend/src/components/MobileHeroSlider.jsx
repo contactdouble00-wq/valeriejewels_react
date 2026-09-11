@@ -129,9 +129,9 @@ export default function MobileHeroSlider({
 
   return (
     <div className="w-full select-none">
-      {/* Poster Stage Container (Tanishq Style) */}
+      {/* Poster Stage Container (Tanishq Style - Exact 1:1 Aspect Ratio) */}
       <div
-        className="relative w-full aspect-[4/5] xs:aspect-[1/1] rounded-2xl overflow-hidden bg-[#FAF7FC] border border-brand-border shadow-xs group"
+        className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#FAF7FC] border border-brand-border shadow-xs group"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
