@@ -545,7 +545,7 @@ export default function AdminHomepageView() {
 
               {/* Centered Phone Mockup Frame */}
               <div className="max-w-xs mx-auto bg-white p-3 rounded-2xl border-2 border-brand-primary/20 shadow-md">
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border border-brand-border">
+                <div className="relative w-full aspect-square rounded-t-none rounded-b-xl overflow-hidden bg-gray-100 border border-brand-border">
                   {/* First active slide preview */}
                   {(() => {
                     const activeSlides = (formData.mobileSlider?.slides || []).filter((s) => s.isActive !== false);
@@ -690,7 +690,7 @@ export default function AdminHomepageView() {
                         <label className="text-xs font-bold text-brand-tertiary block">
                           Poster Image
                         </label>
-                        <div className="relative aspect-square w-full max-w-[180px] rounded-xl overflow-hidden border border-brand-border bg-gray-50 group">
+                        <div className="relative aspect-square w-full max-w-[180px] rounded-t-none rounded-b-xl overflow-hidden border border-brand-border bg-gray-50 group">
                           <img
                             src={slide.imageUrl}
                             alt={`Slide ${idx + 1}`}
