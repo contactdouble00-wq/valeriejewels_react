@@ -113,10 +113,12 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
             >
               {/* Badges on Image */}
               <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
-                  <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-white text-white" />
-                  <span>Box #{idx + 1}</span>
-                </span>
+                {Boolean(jHero.showBoxNumber) && (
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
+                    <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-white text-white" />
+                    <span>Box #{idx + 1}</span>
+                  </span>
+                )}
                 {/* Prominently visible pairs count badge on mobile and desktop */}
                 <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold bg-white/95 text-brand-primary border border-brand-primary/20 shadow-xs backdrop-blur-xs">
                   {pairsCount}
@@ -157,16 +159,18 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   loading="lazy"
                 />
 
-                {/* Mobile Trust & Per-Pair Value Overlay on Image */}
-                <div className="sm:hidden absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent p-1.5 pt-3 flex items-center justify-between text-white text-[8.5px]">
+                {/* Mobile Rating on Image */}
+                <div className="sm:hidden absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-1.5 pt-3 flex items-center justify-between text-white text-[8.5px]">
                   <span className="flex items-center space-x-0.5 text-amber-300 font-bold">
                     <Star className="w-2.5 h-2.5 fill-amber-300" />
                     <span>4.9</span>
                     <span className="text-white/80 font-normal">(1.2k)</span>
                   </span>
-                  <span className="text-white font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-[8px]">
-                    ₹{pricePerPair}/pair
-                  </span>
+                  {Boolean(jHero.showPricePerPair) && (
+                    <span className="text-white font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-[8px]">
+                      ₹{pricePerPair}/pair
+                    </span>
+                  )}
                 </div>
 
                 {/* Desktop hover overlay */}

@@ -744,7 +744,7 @@ export default function AdminProductsView({ currentUser }) {
                       <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
                     </div>
                     <p className="text-[11px] text-amber-800 font-light">
-                      Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Automatic per-pair value calculation: <strong className="font-semibold">₹{editingProduct.price ? Math.round(Number(editingProduct.price) / (Number(editingProduct.pairs_count) || Number(editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1]) || 6)) : 0}/pair</strong>
+                      Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Box # and per-pair badges are removed for clean visuals
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

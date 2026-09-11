@@ -95,6 +95,8 @@ const FACTORY_DEFAULTS = {
     pill2: 'Zero Earache • Featherlight',
     pill3: 'Save up to 50% vs Single Pairs',
     pairsBadgeSuffix: 'Pairs Inside',
+    showBoxNumber: false,
+    showPricePerPair: false,
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
@@ -1262,6 +1264,49 @@ export default function AdminHomepageView() {
                   <div className="text-[11px] text-amber-800 leading-snug self-center bg-white/60 p-2.5 rounded-lg border border-amber-200/60">
                     Renders as <strong>"6 {formData.jhumkaHero.pairsBadgeSuffix || 'Pairs Inside'}"</strong>. You can customize the exact count of pairs (e.g. 5 or 6 pairs) for each individual box under <strong>Products Control</strong>.
                   </div>
+                </div>
+              </div>
+
+              {/* Image Badges & Clutter Control */}
+              <div className="sm:col-span-2 p-4 rounded-xl bg-purple-50/70 border border-purple-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Jhumka Card On-Image Badges (Clutter Controls)</span>
+                  </span>
+                  <span className="text-[10px] text-purple-900 font-semibold bg-purple-100/80 px-2 py-0.5 rounded">
+                    Image Overlays
+                  </span>
+                </div>
+                <p className="text-[11px] text-purple-900/80 font-light leading-relaxed">
+                  Control which promotional badges overlay the jhumka box photographs. Keep badges unchecked to prevent image clutter and ensure photos look clean and high-end.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <label className="flex items-start space-x-2.5 p-3 rounded-lg bg-white border border-purple-200/60 cursor-pointer hover:border-brand-primary transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(formData.jhumkaHero.showBoxNumber)}
+                      onChange={(e) => updateNested('jhumkaHero', 'showBoxNumber', e.target.checked)}
+                      className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4 mt-0.5"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-brand-tertiary block">Show "Box #1 / #2" Badge</span>
+                      <span className="text-[10px] text-brand-muted font-light block">Shows the purple Box numbering pill on top-left of image</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start space-x-2.5 p-3 rounded-lg bg-white border border-purple-200/60 cursor-pointer hover:border-brand-primary transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(formData.jhumkaHero.showPricePerPair)}
+                      onChange={(e) => updateNested('jhumkaHero', 'showPricePerPair', e.target.checked)}
+                      className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4 mt-0.5"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-brand-tertiary block">Show "₹.../pair" Price Pill</span>
+                      <span className="text-[10px] text-brand-muted font-light block">Shows the calculated per-pair price pill on bottom-right of image</span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
