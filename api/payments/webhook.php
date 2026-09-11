@@ -99,7 +99,7 @@ try {
                 amount_paid_upfront = :paid_upfront,
                 amount_due_on_delivery = :due_on_delivery,
                 fastrr_risk_tier = COALESCE(:risk_tier, fastrr_risk_tier),
-                updated_at = NOW()
+                updated_at = :updated_at
             WHERE id = :id
         ";
         $updateStmt = $pdo->prepare($updateSql);
@@ -110,6 +110,7 @@ try {
             ':paid_upfront'     => $paidUpfront,
             ':due_on_delivery'  => $dueOnDelivery,
             ':risk_tier'        => $riskTier,
+            ':updated_at'       => date('Y-m-d H:i:s'),
             ':id'               => $order['id'],
         ]);
 
@@ -121,7 +122,6 @@ try {
         }
 
         ApiResponse::success([
-
             'order_id'               => $order['id'],
             'order_number'           => $order['order_number'],
             'payment_status'         => $newPaymentStatus,
@@ -132,14 +132,25 @@ try {
         ], 'Webhook processed: Order confirmed');
 
     } elseif ($event === 'payment.failed') {
-        $updateStmt = $pdo->prepare("UPDATE orders SET payment_status = 'failed', updated_at = NOW() WHERE id = ?");
-        $updateStmt->execute([$order['id']]);
+        $updateStmt = $pdo->prepare("UPDATE orders SET payment_status = 'failed', order_status = 'failed', updated_at = :updated_at WHERE id = :id");
+        $updateStmt->execute([
+            ':updated_at' => date('Y-m-d H:i:s'),
+            ':id'         => $order['id'],
+        ]);
+
+        $failureReason = $data['failure_reason'] ?? ($data['data']['failure_reason'] ?? 'Payment was interrupted or declined by bank');
+        try {
+            MailerService::sendOrderFailed((int)$order['id'], $failureReason);
+        } catch (Throwable $e) {
+            error_log('Mailer payment failed error: ' . $e->getMessage());
+        }
 
         ApiResponse::success([
             'order_id'       => $order['id'],
             'order_number'   => $order['order_number'],
             'payment_status' => 'failed',
-        ], 'Webhook processed: Payment failed noted');
+            'order_status'   => 'failed',
+        ], 'Webhook processed: Payment failed noted and customer notified');
     } else {
         ApiResponse::success(['event' => $event], 'Webhook received (unhandled event)');
     }

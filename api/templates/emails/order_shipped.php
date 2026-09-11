@@ -8,6 +8,7 @@
  * - $storeUrl (string): Base URL of the storefront
  */
 $storeUrl = $storeUrl ?? 'http://localhost:5173';
+$logoUrl = rtrim($storeUrl, '/') . '/valerie.png';
 $orderNumber = htmlspecialchars($order['order_number'] ?? '');
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
 $courierName = htmlspecialchars($order['courier_name'] ?: 'Bluedart Express');
@@ -36,13 +37,13 @@ $deliveryDate = !empty($order['estimated_delivery_date'])
         
         <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 20px; border: 1px solid #EBE4F3; overflow: hidden; box-shadow: 0 4px 20px rgba(131, 102, 176, 0.08);">
           
-          <!-- Header -->
+          <!-- Header with Logo on Top -->
           <tr>
-            <td align="center" style="padding: 35px 30px 25px 30px; border-bottom: 1px solid #F2ECF7; background: linear-gradient(180deg, #FAF7FC 0%, #FFFFFF 100%);">
-              <h1 style="margin: 0; font-family: 'Georgia', serif; font-size: 28px; letter-spacing: 4px; font-weight: 700; color: #8366B0; text-transform: uppercase;">
-                VALERIÉ
-              </h1>
-              <p style="margin: 4px 0 0 0; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #8F82A0; font-weight: 500;">
+            <td align="center" style="padding: 35px 30px 22px 30px; border-bottom: 1px solid #F2ECF7; background: linear-gradient(180deg, #FAF7FC 0%, #FFFFFF 100%);">
+              <a href="<?= htmlspecialchars($storeUrl) ?>" target="_blank" style="text-decoration: none; display: inline-block;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="VALERIÉ" height="28" style="height: 28px; width: auto; max-height: 28px; display: block; margin: 0 auto;" />
+              </a>
+              <p style="margin: 6px 0 0 0; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #8F82A0; font-weight: 500;">
                 Everyday Luxury Jewelry
               </p>
             </td>

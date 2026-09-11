@@ -14,7 +14,11 @@ import {
   Mail,
   MapPin,
   Flame,
-  X
+  X,
+  Send,
+  Clock,
+  Sparkles,
+  SendHorizontal
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -34,6 +38,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [shipAwb, setShipAwb] = useState('');
   const [shipCourier, setShipCourier] = useState('Bluedart Express Air');
+
+  // Email Dispatch Modal State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [targetEmailOrder, setTargetEmailOrder] = useState(null);
+  const [selectedEmailType, setSelectedEmailType] = useState('order_status_update');
+  const [emailCustomMessage, setEmailCustomMessage] = useState('');
+  const [emailReason, setEmailReason] = useState('');
+  const [emailTargetStatus, setEmailTargetStatus] = useState('shipped');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Cancel & Refund Dialog
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -89,18 +102,101 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
-  const handleStatusChange = async (newStatus) => {
+  const handleStatusChange = async (newStatus, customMsg = '') => {
     if (!selectedOrder) return;
     setUpdatingStatus(true);
     try {
-      await adminApi.updateOrderStatus(selectedOrder.id, newStatus, shipAwb, shipCourier);
-      showToast(`Order #${selectedOrder.order_number} marked ${newStatus}`);
+      await adminApi.updateOrderStatus(selectedOrder.id, newStatus, shipAwb, shipCourier, customMsg, true);
+      showToast(`Order #${selectedOrder.order_number} marked ${newStatus} & email sent`);
       await inspectOrder(selectedOrder.id);
       loadOrders();
     } catch (err) {
       showToast(err.message || 'Failed to update order status');
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const openEmailModal = (order) => {
+    setTargetEmailOrder(order);
+    setSelectedEmailType('order_status_update');
+    setEmailTargetStatus(order.order_status || 'confirmed');
+    setEmailCustomMessage('');
+    setEmailReason('');
+    setEmailModalOpen(true);
+  };
+
+  const handleSendCustomEmail = async (e) => {
+    e.preventDefault();
+    if (!targetEmailOrder) return;
+    setSendingEmail(true);
+    try {
+      await adminApi.sendCustomerEmail(
+        targetEmailOrder.id,
+        selectedEmailType,
+        emailCustomMessage,
+        emailReason,
+        emailTargetStatus
+      );
+      showToast(`Email dispatched to ${targetEmailOrder.customer_email}`);
+      setEmailModalOpen(false);
+      setEmailCustomMessage('');
+      setEmailReason('');
+      if (selectedOrder && selectedOrder.id === targetEmailOrder.id) {
+        await inspectOrder(selectedOrder.id);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to dispatch email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case 'delivered':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span>✓</span>
+            <span className="capitalize">Delivered</span>
+          </span>
+        );
+      case 'shipped':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            <span>✈</span>
+            <span className="capitalize">Shipped</span>
+          </span>
+        );
+      case 'on_hold':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+            <span>⏱</span>
+            <span>On Hold</span>
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            <span>✕</span>
+            <span>Failed</span>
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-300">
+            <span>—</span>
+            <span className="capitalize">Cancelled</span>
+          </span>
+        );
+      case 'confirmed':
+      default:
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+            <span>✦</span>
+            <span className="capitalize">{status || 'Confirmed'}</span>
+          </span>
+        );
     }
   };
 
@@ -168,6 +264,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <option value="confirmed">Confirmed</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
+              <option value="on_hold">On Hold</option>
+              <option value="failed">Payment Failed</option>
               <option value="cancelled">Cancelled</option>
             </select>
 
@@ -222,7 +320,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <th className="py-3.5 px-4">Payment Breakdown</th>
                 <th className="py-3.5 px-4">Fulfillment Status</th>
                 <th className="py-3.5 px-4">AWB Tracking</th>
-                <th className="py-3.5 px-4 text-right">Inspect</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border/60">
@@ -286,19 +384,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
                     {/* Fulfillment Status */}
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`capitalize px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          ord.order_status === 'delivered'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : ord.order_status === 'shipped'
-                            ? 'bg-blue-100 text-blue-800'
-                            : ord.order_status === 'cancelled'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {ord.order_status}
-                      </span>
+                      {renderStatusBadge(ord.order_status)}
                     </td>
 
                     {/* AWB Code */}
@@ -315,14 +401,24 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                       )}
                     </td>
 
-                    {/* Action */}
+                    {/* Actions */}
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => inspectOrder(ord.id)}
-                        className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs"
-                      >
-                        Inspect
-                      </button>
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <button
+                          onClick={() => openEmailModal(ord)}
+                          title="Send Branded Customer Email"
+                          className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs"
+                        >
+                          <SendHorizontal className="w-3 h-3" />
+                          <span className="hidden sm:inline">Email</span>
+                        </button>
+                        <button
+                          onClick={() => inspectOrder(ord.id)}
+                          className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs"
+                        >
+                          Inspect
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -484,11 +580,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
+                <div className="flex flex-wrap items-center gap-2 pt-2">
                   <button
                     onClick={() => handleStatusChange('shipped')}
                     disabled={updatingStatus}
-                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
                   >
                     <Truck className="w-3.5 h-3.5" />
                     <span>Mark Shipped & Send Tracking Email</span>
@@ -497,10 +593,27 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <button
                     onClick={() => handleStatusChange('delivered')}
                     disabled={updatingStatus}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
                     <span>Mark Delivered</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleStatusChange('on_hold')}
+                    disabled={updatingStatus}
+                    className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Mark On Hold</span>
+                  </button>
+
+                  <button
+                    onClick={() => openEmailModal(selectedOrder)}
+                    className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Custom Email to Customer</span>
                   </button>
                 </div>
               </div>
@@ -529,6 +642,158 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SEND CUSTOM LUXURY EMAIL MODAL */}
+      {/* ========================================================================= */}
+      {emailModalOpen && targetEmailOrder && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header with Branding */}
+            <div className="flex items-center justify-between pb-3 border-b border-brand-border">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold">
+                    Email Notification Dispatcher
+                  </span>
+                  <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                    Send Customer Email • #{targetEmailOrder.order_number}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="p-1.5 text-brand-muted hover:text-brand-tertiary rounded-xl hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Recipient Snapshot */}
+            <div className="bg-[#FAF8FC] rounded-2xl p-3.5 border border-brand-border/80 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Recipient:</span>
+                <div className="font-semibold text-brand-tertiary">{targetEmailOrder.customer_name}</div>
+                <div className="text-brand-primary font-mono text-[11px]">{targetEmailOrder.customer_email}</div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Order Value:</span>
+                <div className="font-bold text-brand-tertiary font-mono">₹{Number(targetEmailOrder.total_amount).toLocaleString('en-IN')}</div>
+                <div className="text-[10px] text-brand-muted capitalize">{targetEmailOrder.payment_type?.replace('_', ' ')}</div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSendCustomEmail} className="space-y-4 text-xs">
+              {/* Template Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                  Select Email Template *
+                </label>
+                <select
+                  value={selectedEmailType}
+                  onChange={(e) => setSelectedEmailType(e.target.value)}
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-medium"
+                >
+                  <option value="order_confirmation">✦ Order Confirmation / Successful (Full Recap + Gift Callout)</option>
+                  <option value="order_status_update">🚚 Status Update & Milestone (Live Badge + Live Tracking)</option>
+                  <option value="order_on_hold">⏱ Order Temporarily On Hold (Concierge Notice & WhatsApp)</option>
+                  <option value="order_failed">✕ Payment Incomplete / Failed (Reassurance & Retry Link)</option>
+                  <option value="order_shipped">✈️ Order Shipped (Air Express & AWB Tracking)</option>
+                  <option value="order_cancelled">🛑 Order Cancelled & Refund Notice</option>
+                </select>
+              </div>
+
+              {/* Status Milestone picker (if status update chosen) */}
+              {selectedEmailType === 'order_status_update' && (
+                <div className="space-y-1.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
+                  <label className="text-[10px] font-caps tracking-wider uppercase text-brand-primary font-bold">
+                    Target Milestone Milestone Badge
+                  </label>
+                  <select
+                    value={emailTargetStatus}
+                    onChange={(e) => setEmailTargetStatus(e.target.value)}
+                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                  >
+                    <option value="confirmed">Order Confirmed & Allocated</option>
+                    <option value="processing">In Handcrafting & Anti-Tarnish Prep</option>
+                    <option value="shipped">Dispatched & On The Way</option>
+                    <option value="out_for_delivery">Out for Delivery Today</option>
+                    <option value="delivered">Delivered with Care</option>
+                    <option value="on_hold">Temporarily On Hold</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Specific Reason (for On Hold or Failed) */}
+              {(selectedEmailType === 'order_on_hold' || selectedEmailType === 'order_failed') && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                    Reason / Context
+                  </label>
+                  <input
+                    type="text"
+                    value={emailReason}
+                    onChange={(e) => setEmailReason(e.target.value)}
+                    placeholder={
+                      selectedEmailType === 'order_on_hold'
+                        ? 'e.g. Pin code address confirmation required prior to dispatch'
+                        : 'e.g. Bank gateway connection interrupted during UPI authorization'
+                    }
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                  />
+                </div>
+              )}
+
+              {/* Personal Concierge Note (Optional for any email) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                    Personalized Concierge Note (Optional)
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Renders prominently in email</span>
+                </div>
+                <textarea
+                  rows={2}
+                  value={emailCustomMessage}
+                  onChange={(e) => setEmailCustomMessage(e.target.value)}
+                  placeholder="e.g. We have included an extra velvet pouch for your order as our special gift. Enjoy your jewelry!"
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                ></textarea>
+              </div>
+
+              {/* Luxury Guarantee Checklist */}
+              <div className="p-3 bg-[#FAF8FC] rounded-2xl border border-brand-border/60 text-[11px] text-brand-muted space-y-1">
+                <div className="flex items-center space-x-1.5 text-brand-tertiary font-medium">
+                  <span>✨</span>
+                  <span><strong>Luxury Theme Assured:</strong> Includes Valerie Jewels top logo, brand colors, itemized items table, and delivery notes.</span>
+                </div>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-brand-border/60">
+                <button
+                  type="button"
+                  onClick={() => setEmailModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingEmail}
+                  className="px-5 py-2 rounded-xl bg-brand-primary hover:bg-brand-secondary text-white text-xs font-semibold flex items-center space-x-1.5 shadow-luxury transition-all disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{sendingEmail ? 'Dispatching...' : 'Send Luxury Email Now'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

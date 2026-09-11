@@ -189,6 +189,68 @@ class Database {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS email_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_id INTEGER NOT NULL,
+                    email_type TEXT NOT NULL,
+                    recipient_email TEXT NOT NULL,
+                    recipient_name TEXT,
+                    subject TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    error_message TEXT,
+                    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS order_tracking_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_id INTEGER NOT NULL,
+                    status_milestone TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    location TEXT,
+                    courier_partner TEXT,
+                    awb_code TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_number TEXT NOT NULL UNIQUE,
+                    customer_name TEXT NOT NULL,
+                    customer_email TEXT NOT NULL,
+                    customer_phone TEXT NOT NULL,
+                    shipping_address_line1 TEXT NOT NULL,
+                    shipping_address_line2 TEXT,
+                    city TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    pincode TEXT NOT NULL,
+                    payment_type TEXT NOT NULL DEFAULT 'cod',
+                    payment_status TEXT NOT NULL DEFAULT 'pending',
+                    order_status TEXT NOT NULL DEFAULT 'pending',
+                    subtotal REAL NOT NULL DEFAULT 0.0,
+                    discount_amount REAL NOT NULL DEFAULT 0.0,
+                    shipping_fee REAL NOT NULL DEFAULT 0.0,
+                    total_amount REAL NOT NULL DEFAULT 0.0,
+                    amount_paid_upfront REAL NOT NULL DEFAULT 0.0,
+                    amount_due_on_delivery REAL NOT NULL DEFAULT 0.0,
+                    shiprocket_awb TEXT,
+                    courier_name TEXT,
+                    tracking_url TEXT,
+                    estimated_delivery_date TEXT,
+                    cancellation_reason TEXT,
+                    refund_amount REAL DEFAULT 0.0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS order_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_id INTEGER NOT NULL,
+                    product_id INTEGER DEFAULT NULL,
+                    product_name TEXT NOT NULL,
+                    variant_title TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    unit_price REAL NOT NULL DEFAULT 0.0,
+                    total_price REAL NOT NULL DEFAULT 0.0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
             ");
 
             try {

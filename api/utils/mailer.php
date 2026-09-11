@@ -33,24 +33,26 @@ class MailerService
     }
 
     /**
-     * Core sending engine with idempotency check
+     * Core sending engine with idempotency check and force override
      */
-    public static function send(int $orderId, string $emailType, string $toEmail, string $toName, string $subject, string $htmlBody): array
+    public static function send(int $orderId, string $emailType, string $toEmail, string $toName, string $subject, string $htmlBody, bool $force = false): array
     {
         $pdo = Database::getConnection();
 
-        // 1. IDEMPOTENCY CHECK: Ensure this email type has NOT already been sent for this order
-        $checkStmt = $pdo->prepare("SELECT id, status, sent_at FROM email_logs WHERE order_id = ? AND email_type = ? LIMIT 1");
-        $checkStmt->execute([$orderId, $emailType]);
-        $existing = $checkStmt->fetch();
+        // 1. IDEMPOTENCY CHECK: Ensure this email type has NOT already been sent for this order (unless forced)
+        if (!$force) {
+            $checkStmt = $pdo->prepare("SELECT id, status, sent_at FROM email_logs WHERE order_id = ? AND email_type = ? LIMIT 1");
+            $checkStmt->execute([$orderId, $emailType]);
+            $existing = $checkStmt->fetch();
 
-        if ($existing) {
-            return [
-                'success'   => true,
-                'status'    => 'skipped',
-                'message'   => "Email of type '{$emailType}' already sent for order #{$orderId} on {$existing['sent_at']}",
-                'log_id'    => (int)$existing['id'],
-            ];
+            if ($existing) {
+                return [
+                    'success'   => true,
+                    'status'    => 'skipped',
+                    'message'   => "Email of type '{$emailType}' already sent for order #{$orderId} on {$existing['sent_at']}",
+                    'log_id'    => (int)$existing['id'],
+                ];
+            }
         }
 
         $status = 'simulated';
@@ -83,7 +85,7 @@ class MailerService
                 INSERT INTO email_logs (
                     order_id, email_type, recipient_email, recipient_name, subject, status, error_message, sent_at
                 ) VALUES (
-                    :order_id, :type, :email, :name, :subject, :status, :error, NOW()
+                    :order_id, :type, :email, :name, :subject, :status, :error, :sent_at
                 )
             ");
             $insStmt->execute([
@@ -94,6 +96,7 @@ class MailerService
                 ':subject'  => $subject,
                 ':status'   => $status,
                 ':error'    => $errorMessage,
+                ':sent_at'  => date('Y-m-d H:i:s'),
             ]);
             $logId = (int)$pdo->lastInsertId();
         } catch (Throwable $e) {
@@ -112,9 +115,9 @@ class MailerService
     }
 
     /**
-     * Send Order Confirmation Email
+     * Send Order Confirmation / Successful Email
      */
-    public static function sendOrderConfirmation(int $orderId): array
+    public static function sendOrderConfirmation(int $orderId, bool $force = false): array
     {
         $pdo = Database::getConnection();
 
@@ -143,14 +146,126 @@ class MailerService
             $order['customer_email'],
             $order['customer_name'],
             $subject,
-            $htmlBody
+            $htmlBody,
+            $force
+        );
+    }
+
+    /**
+     * Send Order Failed / Payment Incomplete Email
+     */
+    public static function sendOrderFailed(int $orderId, ?string $reason = null, bool $force = false): array
+    {
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) throw new Exception("Order #{$orderId} not found");
+
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$orderId]);
+        $items = $itemStmt->fetchAll();
+
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+
+        ob_start();
+        require dirname(__DIR__) . '/templates/emails/order_failed.php';
+        $htmlBody = ob_get_clean();
+
+        $subject = "Payment Incomplete for {$order['order_number']} — Your Pieces Are Safe — Valerie Jewels";
+
+        return self::send(
+            $orderId,
+            'order_failed',
+            $order['customer_email'],
+            $order['customer_name'],
+            $subject,
+            $htmlBody,
+            $force
+        );
+    }
+
+    /**
+     * Send Order On Hold Email
+     */
+    public static function sendOrderOnHold(int $orderId, ?string $reason = null, bool $force = false): array
+    {
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) throw new Exception("Order #{$orderId} not found");
+
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$orderId]);
+        $items = $itemStmt->fetchAll();
+
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+
+        ob_start();
+        require dirname(__DIR__) . '/templates/emails/order_on_hold.php';
+        $htmlBody = ob_get_clean();
+
+        $subject = "Order {$order['order_number']} Temporarily On Hold — Valerie Jewels Concierge";
+
+        return self::send(
+            $orderId,
+            'order_on_hold',
+            $order['customer_email'],
+            $order['customer_name'],
+            $subject,
+            $htmlBody,
+            $force
+        );
+    }
+
+    /**
+     * Send Order Status Update / Milestone Email
+     */
+    public static function sendStatusUpdate(int $orderId, string $status, ?string $customMessage = null, bool $force = false): array
+    {
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) throw new Exception("Order #{$orderId} not found");
+
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$orderId]);
+        $items = $itemStmt->fetchAll();
+
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+
+        ob_start();
+        require dirname(__DIR__) . '/templates/emails/order_status_update.php';
+        $htmlBody = ob_get_clean();
+
+        $statusTitle = ucwords(str_replace('_', ' ', $status));
+        $subject = "Order Status Update: {$statusTitle} ({$order['order_number']}) — Valerie Jewels";
+
+        $emailType = 'status_update_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $status);
+
+        return self::send(
+            $orderId,
+            $emailType,
+            $order['customer_email'],
+            $order['customer_name'],
+            $subject,
+            $htmlBody,
+            $force
         );
     }
 
     /**
      * Send Order Shipped Email
      */
-    public static function sendOrderShipped(int $orderId): array
+    public static function sendOrderShipped(int $orderId, bool $force = false): array
     {
         $pdo = Database::getConnection();
 
@@ -170,7 +285,7 @@ class MailerService
         require dirname(__DIR__) . '/templates/emails/order_shipped.php';
         $htmlBody = ob_get_clean();
 
-        $awb = $order['shiprocket_awb'] ? " (AWB: {$order['shiprocket_awb']})" : '';
+        $awb = !empty($order['shiprocket_awb']) ? " (AWB: {$order['shiprocket_awb']})" : '';
         $subject = "Your Piece Has Shipped: {$order['order_number']}{$awb} — Valerie Jewels";
 
         return self::send(
@@ -179,14 +294,15 @@ class MailerService
             $order['customer_email'],
             $order['customer_name'],
             $subject,
-            $htmlBody
+            $htmlBody,
+            $force
         );
     }
 
     /**
      * Send Order Cancelled & Refund Email
      */
-    public static function sendOrderCancelled(int $orderId): array
+    public static function sendOrderCancelled(int $orderId, bool $force = false): array
     {
         $pdo = Database::getConnection();
 
@@ -210,7 +326,8 @@ class MailerService
             $order['customer_email'],
             $order['customer_name'],
             $subject,
-            $htmlBody
+            $htmlBody,
+            $force
         );
     }
 

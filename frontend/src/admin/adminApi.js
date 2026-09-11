@@ -246,7 +246,7 @@ export const adminApi = {
     return res.data;
   },
 
-  async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '') {
+  async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '', customMessage = '', notifyCustomer = true) {
     const res = await request('/admin/orders.php?action=update_status', {
       method: 'POST',
       body: JSON.stringify({
@@ -254,8 +254,30 @@ export const adminApi = {
         order_status: orderStatus,
         awb_code: awbCode,
         courier_partner: courierPartner,
+        custom_message: customMessage,
+        notify_customer: notifyCustomer,
       }),
     });
+    return res.data;
+  },
+
+  async sendCustomerEmail(orderId, emailType, customMessage = '', reason = '', status = '') {
+    const res = await request('/admin/orders.php?action=send_customer_email', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id: orderId,
+        email_type: emailType,
+        custom_message: customMessage,
+        reason,
+        status,
+      }),
+    });
+    return res.data;
+  },
+
+  async previewEmailTemplate(type = 'order_confirmation', params = {}) {
+    const qs = new URLSearchParams({ action: 'preview_email', type, ...params }).toString();
+    const res = await request(`/admin/orders.php?${qs}`);
     return res.data;
   },
 

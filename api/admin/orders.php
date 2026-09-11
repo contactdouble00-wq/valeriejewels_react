@@ -12,8 +12,119 @@ $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Handle GET: List or Single Order
+// Handle GET: List, Single Order, or Email Template Preview
 if ($method === 'GET') {
+    $action = $_GET['action'] ?? '';
+
+    // Action: Preview Email Template Formats
+    if ($action === 'preview_email') {
+        $templateType = trim($_GET['type'] ?? 'order_confirmation');
+        $format = $_GET['format'] ?? 'json';
+
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $storeUrl = $appConfig['app']['url'] ?? 'http://localhost:5173';
+
+        // Sample luxury order data
+        $order = [
+            'id' => 101,
+            'order_number' => 'VJ-2026-8942',
+            'customer_name' => 'Aarav Singhania',
+            'customer_email' => 'aarav.singhania@example.com',
+            'customer_phone' => '98201 23456',
+            'shipping_address_line1' => 'Flat 14B, Oberoi Sky Heights, Lokhandwala Complex',
+            'shipping_address_line2' => 'Andheri West',
+            'city' => 'Mumbai',
+            'state' => 'Maharashtra',
+            'pincode' => '400053',
+            'payment_type' => 'full_prepaid',
+            'payment_status' => 'paid',
+            'order_status' => $_GET['status'] ?? 'confirmed',
+            'subtotal' => 2498.00,
+            'discount_amount' => 200.00,
+            'shipping_fee' => 0.00,
+            'total_amount' => 2298.00,
+            'amount_paid_upfront' => 2298.00,
+            'amount_due_on_delivery' => 0.00,
+            'shiprocket_awb' => 'BLUEDART-882190471',
+            'courier_name' => 'Bluedart Air Express',
+            'tracking_url' => $storeUrl . '/#track-order?order=VJ-2026-8942',
+            'estimated_delivery_date' => date('Y-m-d', strtotime('+4 days')),
+            'cancellation_reason' => 'Customer requested pre-dispatch cancellation',
+            'refund_amount' => 2298.00,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $items = [
+            [
+                'id' => 1,
+                'product_name' => '18K Gold Plated Emerald Clover Necklace',
+                'variant_title' => 'Anti-Tarnish 316L Stainless Steel',
+                'quantity' => 1,
+                'unit_price' => 1299.00,
+                'total_price' => 1299.00,
+                'primary_image' => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=300&q=80',
+            ],
+            [
+                'id' => 2,
+                'product_name' => 'Signature Festive 4-Box Jhumka Set',
+                'variant_title' => 'Set of 4 Pairs / Traditional Micro-Polish',
+                'quantity' => 1,
+                'unit_price' => 1199.00,
+                'total_price' => 1199.00,
+                'primary_image' => 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=300&q=80',
+            ]
+        ];
+
+        $reason = $_GET['reason'] ?? 'Standard concierge verification & address validation';
+        $customMessage = $_GET['custom_message'] ?? 'We have prepared your handcrafted pieces with signature anti-tarnish micro-polishing and added our complimentary velvet pouch. Enjoy your Valerie jewelry!';
+        $status = $_GET['status'] ?? 'shipped';
+
+        ob_start();
+        switch ($templateType) {
+            case 'order_failed':
+                $subject = "Payment Incomplete for {$order['order_number']} — Your Pieces Are Safe — Valerie Jewels";
+                require dirname(__DIR__) . '/templates/emails/order_failed.php';
+                break;
+            case 'order_on_hold':
+                $subject = "Order {$order['order_number']} Temporarily On Hold — Valerie Jewels Concierge";
+                require dirname(__DIR__) . '/templates/emails/order_on_hold.php';
+                break;
+            case 'order_status_update':
+                $statusTitle = ucwords(str_replace('_', ' ', $status));
+                $subject = "Order Status Update: {$statusTitle} ({$order['order_number']}) — Valerie Jewels";
+                require dirname(__DIR__) . '/templates/emails/order_status_update.php';
+                break;
+            case 'order_shipped':
+                $subject = "Your Piece Has Shipped: {$order['order_number']} (AWB: {$order['shiprocket_awb']}) — Valerie Jewels";
+                require dirname(__DIR__) . '/templates/emails/order_shipped.php';
+                break;
+            case 'order_cancelled':
+                $subject = "Order Cancelled: {$order['order_number']} — Valerie Jewels";
+                require dirname(__DIR__) . '/templates/emails/order_cancelled.php';
+                break;
+            case 'order_confirmation':
+            default:
+                $templateType = 'order_confirmation';
+                $subject = "Order Confirmed: {$order['order_number']} — Valerie Jewels";
+                require dirname(__DIR__) . '/templates/emails/order_confirmation.php';
+                break;
+        }
+        $renderedHtml = ob_get_clean();
+
+        if ($format === 'html') {
+            header('Content-Type: text/html; charset=UTF-8');
+            echo $renderedHtml;
+            exit;
+        }
+
+        ApiResponse::success([
+            'template_type' => $templateType,
+            'subject'       => $subject,
+            'html'          => $renderedHtml,
+            'sample_order'  => $order,
+        ], 'Email template preview generated successfully');
+    }
+
     $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if ($id > 0) {
@@ -113,7 +224,7 @@ if ($action === 'update_status') {
     $orderId = (int)($input['order_id'] ?? 0);
     $newStatus = trim($input['order_status'] ?? '');
 
-    $allowedStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'rto'];
+    $allowedStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'on_hold', 'failed', 'cancelled', 'rto'];
     if ($orderId <= 0 || !in_array($newStatus, $allowedStatuses, true)) {
         ApiResponse::error('Invalid order ID or status value', 422);
     }
@@ -128,6 +239,7 @@ if ($action === 'update_status') {
 
     $awbCode = trim($input['awb_code'] ?? ($order['shiprocket_awb'] ?? ''));
     $courier = trim($input['courier_partner'] ?? ($order['courier_name'] ?? 'Bluedart Express Air'));
+    $customMessage = trim($input['custom_message'] ?? '');
 
     $updateSql = "UPDATE orders SET order_status = :status, shiprocket_awb = :awb, courier_name = :courier WHERE id = :id";
     $pdo->prepare($updateSql)->execute([
@@ -138,6 +250,10 @@ if ($action === 'update_status') {
     ]);
 
     // Insert tracking event
+    $eventDesc = !empty($customMessage) 
+        ? $customMessage 
+        : 'Order status manual update via administrative panel by ' . $adminUser['name'];
+        
     $eventStmt = $pdo->prepare("
         INSERT INTO order_tracking_events (order_id, status_milestone, title, description, location, courier_partner, awb_code)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -145,19 +261,40 @@ if ($action === 'update_status') {
     $eventStmt->execute([
         $orderId,
         $newStatus,
-        ucfirst($newStatus) . ' by Admin Concierge',
-        'Order status manual update via administrative panel by ' . $adminUser['name'],
+        ucwords(str_replace('_', ' ', $newStatus)) . ' by Admin Concierge',
+        $eventDesc,
         'Mumbai Central Hub',
         $courier,
         $awbCode ?: null,
     ]);
 
-    // Trigger Phase 7 Email if marked Shipped
-    if ($newStatus === 'shipped') {
+    // Send corresponding customer notification email based on new status
+    $emailSendResult = null;
+    $shouldNotify = !isset($input['notify_customer']) || (bool)$input['notify_customer'];
+    if ($shouldNotify) {
         try {
-            MailerService::sendOrderShipped($orderId);
+            switch ($newStatus) {
+                case 'confirmed':
+                    $emailSendResult = MailerService::sendOrderConfirmation($orderId, true);
+                    break;
+                case 'shipped':
+                    $emailSendResult = MailerService::sendOrderShipped($orderId, true);
+                    break;
+                case 'on_hold':
+                    $emailSendResult = MailerService::sendOrderOnHold($orderId, $customMessage ?: null, true);
+                    break;
+                case 'failed':
+                    $emailSendResult = MailerService::sendOrderFailed($orderId, $customMessage ?: null, true);
+                    break;
+                case 'cancelled':
+                    $emailSendResult = MailerService::sendOrderCancelled($orderId, true);
+                    break;
+                default:
+                    $emailSendResult = MailerService::sendStatusUpdate($orderId, $newStatus, $customMessage ?: null, true);
+                    break;
+            }
         } catch (Throwable $e) {
-            error_log('Mailer error: ' . $e->getMessage());
+            error_log('Mailer status update error: ' . $e->getMessage());
         }
     }
 
@@ -165,9 +302,70 @@ if ($action === 'update_status') {
         'old_status' => $order['order_status'],
         'new_status' => $newStatus,
         'awb'        => $awbCode,
+        'email_sent' => $emailSendResult['status'] ?? 'none',
     ]);
 
-    ApiResponse::success(['order_id' => $orderId, 'status' => $newStatus], 'Order status updated successfully');
+    ApiResponse::success([
+        'order_id'   => $orderId, 
+        'status'     => $newStatus,
+        'email_info' => $emailSendResult
+    ], 'Order status updated successfully');
+}
+
+// Handle Dedicated Manual Send Customer Email
+if ($action === 'send_customer_email') {
+    $orderId = (int)($input['order_id'] ?? 0);
+    $emailType = trim($input['email_type'] ?? 'order_status_update');
+    $customMessage = trim($input['custom_message'] ?? '');
+    $reason = trim($input['reason'] ?? '');
+    $force = true;
+
+    if ($orderId <= 0) {
+        ApiResponse::error('Order ID is required', 422);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        ApiResponse::error('Order not found', 404);
+    }
+
+    try {
+        switch ($emailType) {
+            case 'order_confirmation':
+                $result = MailerService::sendOrderConfirmation($orderId, $force);
+                break;
+            case 'order_failed':
+                $result = MailerService::sendOrderFailed($orderId, $reason ?: null, $force);
+                break;
+            case 'order_on_hold':
+                $result = MailerService::sendOrderOnHold($orderId, $reason ?: null, $force);
+                break;
+            case 'order_shipped':
+                $result = MailerService::sendOrderShipped($orderId, $force);
+                break;
+            case 'order_cancelled':
+                $result = MailerService::sendOrderCancelled($orderId, $force);
+                break;
+            case 'order_status_update':
+            default:
+                $targetStatus = !empty($input['status']) ? trim($input['status']) : $order['order_status'];
+                $result = MailerService::sendStatusUpdate($orderId, $targetStatus, $customMessage ?: null, $force);
+                break;
+        }
+
+        AdminAuth::logActivity($adminUser['id'], 'send_customer_email', 'order', $orderId, [
+            'email_type' => $emailType,
+            'result'     => $result['status'] ?? 'unknown',
+            'recipient'  => $order['customer_email'],
+        ]);
+
+        ApiResponse::success($result, "Email dispatch processed successfully ({$emailType})");
+    } catch (Throwable $e) {
+        ApiResponse::error('Failed to dispatch email: ' . $e->getMessage(), 500);
+    }
 }
 
 // Handle Cancel & Refund
