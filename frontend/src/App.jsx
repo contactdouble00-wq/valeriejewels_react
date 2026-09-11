@@ -37,6 +37,7 @@ import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
 import NotFoundPage from './components/NotFoundPage';
 import PolicyPage from './components/PolicyPage';
 import FaqPage from './components/FaqPage';
+import MobileHeroSlider from './components/MobileHeroSlider';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
@@ -495,8 +496,20 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 space-y-12 sm:space-y-16 pb-28 sm:pb-12">
 
-        {/* Fast Fashion Hero Banner */}
-        <section className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
+        {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
+        {content?.mobileSlider?.enabled !== false && (
+          <div className="md:hidden">
+            <MobileHeroSlider
+              slides={content?.mobileSlider?.slides}
+              autoPlay={content?.mobileSlider?.autoPlay ?? true}
+              interval={content?.mobileSlider?.interval ?? 4500}
+              onSelectCategory={setSelectedCategory}
+            />
+          </div>
+        )}
+
+        {/* Desktop View: Fast Fashion Hero Banner */}
+        <section className="hidden md:block relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
           {/* Desktop-Only Creatively Faded Hero Photograph */}

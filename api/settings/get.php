@@ -23,6 +23,51 @@ try {
             if (isset($data['heroBanner']) && is_array($data['heroBanner']) && !isset($data['heroBanner']['rightImageUrl'])) {
                 $data['heroBanner']['rightImageUrl'] = '/hero-jewelry-model.jpg';
             }
+            if (!isset($data['mobileSlider']) || !is_array($data['mobileSlider'])) {
+                $data['mobileSlider'] = [
+                    'enabled'  => true,
+                    'autoPlay' => true,
+                    'interval' => 4500,
+                    'slides'   => [
+                        [
+                            'id'         => 'slide-1',
+                            'imageUrl'   => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=85',
+                            'title'      => 'The Everyday Diamond Edit',
+                            'subtitle'   => 'Under ₹999 Luxury Collection',
+                            'buttonText' => 'SHOP NOW',
+                            'linkUrl'    => '#catalog',
+                            'isActive'   => true,
+                        ],
+                        [
+                            'id'         => 'slide-2',
+                            'imageUrl'   => 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=85',
+                            'title'      => 'The 4 Signature Jhumka Boxes',
+                            'subtitle'   => 'Viral 5 to 6 Pair Festive Keepsakes',
+                            'buttonText' => 'EXPLORE BOXES',
+                            'linkUrl'    => '#jhumka-boxes',
+                            'isActive'   => true,
+                        ],
+                        [
+                            'id'         => 'slide-3',
+                            'imageUrl'   => 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=85',
+                            'title'      => '18K Anti-Tarnish Everyday Edit',
+                            'subtitle'   => 'Waterproof & Shower-Safe PVD Gold',
+                            'buttonText' => 'SHOP COLLECTION',
+                            'linkUrl'    => '#catalog',
+                            'isActive'   => true,
+                        ],
+                        [
+                            'id'         => 'slide-4',
+                            'imageUrl'   => 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=85',
+                            'title'      => 'Statement Pairings & Duos',
+                            'subtitle'   => 'Layered Elegance with Free Express Delivery',
+                            'buttonText' => 'VIEW PIECES',
+                            'linkUrl'    => '#jhumka-boxes',
+                            'isActive'   => true,
+                        ],
+                    ],
+                ];
+            }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
             exit;
         }
@@ -30,6 +75,49 @@ try {
 
     // Fallback default structure if not yet seeded
     $defaults = [
+        'mobileSlider' => [
+            'enabled'  => true,
+            'autoPlay' => true,
+            'interval' => 4500,
+            'slides'   => [
+                [
+                    'id'         => 'slide-1',
+                    'imageUrl'   => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=85',
+                    'title'      => 'The Everyday Diamond Edit',
+                    'subtitle'   => 'Under ₹999 Luxury Collection',
+                    'buttonText' => 'SHOP NOW',
+                    'linkUrl'    => '#catalog',
+                    'isActive'   => true,
+                ],
+                [
+                    'id'         => 'slide-2',
+                    'imageUrl'   => 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=85',
+                    'title'      => 'The 4 Signature Jhumka Boxes',
+                    'subtitle'   => 'Viral 5 to 6 Pair Festive Keepsakes',
+                    'buttonText' => 'EXPLORE BOXES',
+                    'linkUrl'    => '#jhumka-boxes',
+                    'isActive'   => true,
+                ],
+                [
+                    'id'         => 'slide-3',
+                    'imageUrl'   => 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=85',
+                    'title'      => '18K Anti-Tarnish Everyday Edit',
+                    'subtitle'   => 'Waterproof & Shower-Safe PVD Gold',
+                    'buttonText' => 'SHOP COLLECTION',
+                    'linkUrl'    => '#catalog',
+                    'isActive'   => true,
+                ],
+                [
+                    'id'         => 'slide-4',
+                    'imageUrl'   => 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=85',
+                    'title'      => 'Statement Pairings & Duos',
+                    'subtitle'   => 'Layered Elegance with Free Express Delivery',
+                    'buttonText' => 'VIEW PIECES',
+                    'linkUrl'    => '#jhumka-boxes',
+                    'isActive'   => true,
+                ],
+            ],
+        ],
         'topRibbon' => [
             'enabled'         => true,
             'text'            => 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',

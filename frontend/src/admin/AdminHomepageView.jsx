@@ -16,10 +16,59 @@ import {
   UploadCloud,
   Image as ImageIcon,
   Trash2,
+  Smartphone,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Layers,
+  ExternalLink,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
 const FACTORY_DEFAULTS = {
+  mobileSlider: {
+    enabled: true,
+    autoPlay: true,
+    interval: 4500,
+    slides: [
+      {
+        id: 'slide-1',
+        imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=85',
+        title: 'The Everyday Diamond Edit',
+        subtitle: 'Under ₹999 Luxury Collection',
+        buttonText: 'SHOP NOW',
+        linkUrl: '#catalog',
+        isActive: true,
+      },
+      {
+        id: 'slide-2',
+        imageUrl: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=85',
+        title: 'The 4 Signature Jhumka Boxes',
+        subtitle: 'Viral 5 to 6 Pair Festive Keepsakes',
+        buttonText: 'EXPLORE BOXES',
+        linkUrl: '#jhumka-boxes',
+        isActive: true,
+      },
+      {
+        id: 'slide-3',
+        imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=85',
+        title: '18K Anti-Tarnish Everyday Edit',
+        subtitle: 'Waterproof & Shower-Safe PVD Gold',
+        buttonText: 'SHOP COLLECTION',
+        linkUrl: '#catalog',
+        isActive: true,
+      },
+      {
+        id: 'slide-4',
+        imageUrl: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=85',
+        title: 'Statement Pairings & Duos',
+        subtitle: 'Layered Elegance with Free Express Delivery',
+        buttonText: 'VIEW PIECES',
+        linkUrl: '#jhumka-boxes',
+        isActive: true,
+      },
+    ],
+  },
   topRibbon: {
     enabled: true,
     text: 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',
@@ -90,8 +139,9 @@ export default function AdminHomepageView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
-  const [activeSection, setActiveSection] = useState('ribbon');
+  const [activeSection, setActiveSection] = useState('mobileSlider');
   const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
+  const [uploadingSlideIndex, setUploadingSlideIndex] = useState(null);
 
   useEffect(() => {
     loadSettings();
@@ -105,6 +155,13 @@ export default function AdminHomepageView() {
         setFormData({
           ...FACTORY_DEFAULTS,
           ...data,
+          mobileSlider: {
+            ...FACTORY_DEFAULTS.mobileSlider,
+            ...(data.mobileSlider || {}),
+            slides: Array.isArray(data.mobileSlider?.slides) && data.mobileSlider.slides.length > 0
+              ? data.mobileSlider.slides
+              : FACTORY_DEFAULTS.mobileSlider.slides,
+          },
           topRibbon: { ...FACTORY_DEFAULTS.topRibbon, ...(data.topRibbon || {}) },
           heroBanner: { ...FACTORY_DEFAULTS.heroBanner, ...(data.heroBanner || {}) },
           jhumkaHero: { ...FACTORY_DEFAULTS.jhumkaHero, ...(data.jhumkaHero || {}) },
@@ -131,7 +188,7 @@ export default function AdminHomepageView() {
       await adminApi.updateHomepageSettings(formData);
       setFeedback({
         type: 'success',
-        message: 'Homepage banners and text updated! Changes are now live on the storefront.',
+        message: 'Homepage banners, posters and text updated! Changes are now live on the storefront.',
       });
       setTimeout(() => setFeedback(null), 5000);
     } catch (err) {
@@ -168,8 +225,105 @@ export default function AdminHomepageView() {
     }
   };
 
+  const addSlide = () => {
+    const newSlide = {
+      id: 'slide-' + Date.now(),
+      imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=85',
+      title: 'New Poster Edit',
+      subtitle: 'Under ₹999 Luxury Collection',
+      buttonText: 'SHOP NOW',
+      linkUrl: '#catalog',
+      isActive: true,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      mobileSlider: {
+        ...prev.mobileSlider,
+        slides: [...(prev.mobileSlider?.slides || []), newSlide],
+      },
+    }));
+    setFeedback({
+      type: 'success',
+      message: 'New slide added! You can upload an image and click "Save Live Changes".',
+    });
+  };
+
+  const removeSlide = (idx) => {
+    if ((formData.mobileSlider?.slides?.length || 0) <= 1) {
+      alert('You must keep at least 1 slide in the mobile slider.');
+      return;
+    }
+    if (!window.confirm(`Delete slide ${idx + 1}?`)) return;
+    setFormData((prev) => {
+      const updated = prev.mobileSlider.slides.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        mobileSlider: {
+          ...prev.mobileSlider,
+          slides: updated,
+        },
+      };
+    });
+  };
+
+  const updateSlide = (idx, field, value) => {
+    setFormData((prev) => {
+      const updated = [...(prev.mobileSlider?.slides || [])];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return {
+        ...prev,
+        mobileSlider: {
+          ...prev.mobileSlider,
+          slides: updated,
+        },
+      };
+    });
+  };
+
+  const moveSlide = (idx, direction) => {
+    setFormData((prev) => {
+      const slides = [...(prev.mobileSlider?.slides || [])];
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= slides.length) return prev;
+      const temp = slides[idx];
+      slides[idx] = slides[targetIdx];
+      slides[targetIdx] = temp;
+      return {
+        ...prev,
+        mobileSlider: {
+          ...prev.mobileSlider,
+          slides,
+        },
+      };
+    });
+  };
+
+  const handleSlideUpload = async (e, idx) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingSlideIndex(idx);
+    try {
+      const res = await adminApi.uploadMedia(file);
+      if (res && res.url) {
+        updateSlide(idx, 'imageUrl', res.url);
+        setFeedback({
+          type: 'success',
+          message: `Slide ${idx + 1} poster uploaded successfully! Click "Save Live Changes" to publish.`,
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Failed to upload slide image.',
+      });
+    } finally {
+      setUploadingSlideIndex(null);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleReset = () => {
-    if (window.confirm('Reset all homepage banners and text to factory original defaults?')) {
+    if (window.confirm('Reset all homepage banners, mobile slider, and text to factory original defaults?')) {
       setFormData(FACTORY_DEFAULTS);
       setFeedback({
         type: 'success',
@@ -206,8 +360,9 @@ export default function AdminHomepageView() {
   }
 
   const sections = [
+    { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
-    { id: 'hero', label: 'Fast Fashion Hero Banner', icon: Sliders },
+    { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
     { id: 'jhumka', label: '4 Jhumka Boxes Spotlight', icon: Flame },
     { id: 'catalog', label: 'Catalog & Combos Headers', icon: Tag },
     { id: 'trust', label: 'Trust Strip (4 Pillars)', icon: ShieldCheck },
@@ -300,6 +455,367 @@ export default function AdminHomepageView() {
 
       {/* Tab Panels */}
       <div className="bg-white rounded-2xl border border-brand-border p-6 sm:p-8 shadow-xs space-y-6">
+
+        {/* 0. MOBILE HERO POSTER SLIDER (TANISHQ STYLE) */}
+        {activeSection === 'mobileSlider' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border/60 pb-5">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary-light text-brand-primary text-[10px] font-caps uppercase tracking-wider font-bold mb-1">
+                  <Smartphone className="w-3 h-3" />
+                  <span>Mobile Viewport Exclusive</span>
+                </div>
+                <h3 className="text-lg font-editorial font-bold text-brand-tertiary">
+                  Mobile Poster Slider (Tanishq Style)
+                </h3>
+                <p className="text-xs text-brand-muted font-light max-w-2xl mt-0.5">
+                  Replaces the text banner on mobile viewports with an auto-playing, touch-swipable luxury poster slider with diamond indicators. Upload any number of slides, reorder them, or set custom landing links.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={addSlide}
+                  className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase shadow-xs flex items-center space-x-1.5 active:scale-95 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Slide ({formData.mobileSlider?.slides?.length || 0})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Slider Master Settings */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-[#FAF8FD] border border-brand-border/60">
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.mobileSlider?.enabled !== false}
+                  onChange={(e) => updateNested('mobileSlider', 'enabled', e.target.checked)}
+                  className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                />
+                <div>
+                  <span className="text-xs font-bold text-brand-tertiary block">Enable Mobile Slider</span>
+                  <span className="text-[10px] text-brand-muted font-light">Show poster slider on mobile devices</span>
+                </div>
+              </label>
+
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.mobileSlider?.autoPlay !== false}
+                  onChange={(e) => updateNested('mobileSlider', 'autoPlay', e.target.checked)}
+                  className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                />
+                <div>
+                  <span className="text-xs font-bold text-brand-tertiary block">Auto-Play Carousel</span>
+                  <span className="text-[10px] text-brand-muted font-light">Automatically advances slides</span>
+                </div>
+              </label>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-brand-tertiary">Slide Duration</span>
+                  <span className="text-[11px] font-mono text-brand-primary font-bold">
+                    {((formData.mobileSlider?.interval || 4500) / 1000).toFixed(1)}s
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="2500"
+                  max="8000"
+                  step="500"
+                  value={formData.mobileSlider?.interval || 4500}
+                  onChange={(e) => updateNested('mobileSlider', 'interval', Number(e.target.value))}
+                  className="w-full accent-brand-primary cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Live Mobile Interactive Preview */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
+                  Live Mobile Storefront Preview:
+                </span>
+                <span className="text-[11px] text-brand-muted font-light">
+                  {formData.mobileSlider?.slides?.length || 0} total slides in rotation
+                </span>
+              </div>
+
+              {/* Centered Phone Mockup Frame */}
+              <div className="max-w-sm mx-auto bg-white p-3 rounded-2xl border-2 border-brand-primary/20 shadow-md">
+                <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 border border-brand-border">
+                  {/* First active slide preview */}
+                  {(() => {
+                    const activeSlides = (formData.mobileSlider?.slides || []).filter((s) => s.isActive !== false);
+                    const previewSlide = activeSlides[0] || formData.mobileSlider?.slides?.[0];
+                    if (!previewSlide) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-brand-muted">
+                          No slides added yet. Click "Add Slide" below.
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="relative w-full h-full flex items-end">
+                        <img
+                          src={previewSlide.imageUrl}
+                          alt="Mobile Poster Preview"
+                          className="absolute inset-0 w-full h-full object-cover object-center"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
+                        <div className="relative z-10 w-full p-4 flex items-end justify-between gap-2">
+                          <div className="text-white space-y-0.5 max-w-[70%]">
+                            {previewSlide.subtitle && (
+                              <p className="text-[9px] font-caps uppercase tracking-widest text-white/90 font-semibold truncate">
+                                {previewSlide.subtitle}
+                              </p>
+                            )}
+                            {previewSlide.title && (
+                              <h4 className="text-base font-editorial font-bold text-white leading-tight truncate">
+                                {previewSlide.title}
+                              </h4>
+                            )}
+                          </div>
+                          {previewSlide.buttonText && (
+                            <span className="shrink-0 px-3 py-1.5 rounded bg-white text-brand-tertiary text-[10px] font-caps tracking-widest uppercase font-bold shadow-md flex items-center space-x-1">
+                              <span>{previewSlide.buttonText}</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Reference Diamond Indicators */}
+                <div className="flex items-center justify-center space-x-2 pt-2.5 pb-1">
+                  {(formData.mobileSlider?.slides || []).map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`block transform rotate-45 transition-all ${
+                        idx === 0
+                          ? 'w-2 h-2 bg-[#8366B0]'
+                          : 'w-1.5 h-1.5 bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Slides List & Editor Cards */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between border-b border-brand-border pb-2">
+                <h4 className="text-sm font-editorial font-bold text-brand-tertiary">
+                  Manage Poster Slides ({formData.mobileSlider?.slides?.length || 0})
+                </h4>
+                <button
+                  type="button"
+                  onClick={addSlide}
+                  className="text-xs text-brand-primary hover:text-brand-primary-hover font-bold flex items-center space-x-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Another Slide</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {(formData.mobileSlider?.slides || []).map((slide, idx) => (
+                  <div
+                    key={slide.id || idx}
+                    className="p-4 sm:p-5 rounded-xl border border-brand-border bg-[#FAF8FD]/40 space-y-4 transition-all hover:border-brand-primary/40"
+                  >
+                    {/* Top Bar of Card */}
+                    <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
+                      <div className="flex items-center space-x-2.5">
+                        <span className="w-6 h-6 rounded-full bg-brand-primary text-white text-xs font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-brand-tertiary">
+                          Slide #{idx + 1}: {slide.title || 'Untitled Poster'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {/* Reorder Buttons */}
+                        <button
+                          type="button"
+                          onClick={() => moveSlide(idx, 'up')}
+                          disabled={idx === 0}
+                          title="Move Slide Up"
+                          className="p-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary hover:bg-gray-50 disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveSlide(idx, 'down')}
+                          disabled={idx === (formData.mobileSlider?.slides?.length || 1) - 1}
+                          title="Move Slide Down"
+                          className="p-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary hover:bg-gray-50 disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Active Checkbox */}
+                        <label className="flex items-center space-x-1.5 px-2 py-1 rounded-lg border border-brand-border bg-white cursor-pointer text-[11px] font-semibold text-brand-tertiary">
+                          <input
+                            type="checkbox"
+                            checked={slide.isActive !== false}
+                            onChange={(e) => updateSlide(idx, 'isActive', e.target.checked)}
+                            className="rounded text-brand-primary focus:ring-brand-primary h-3.5 w-3.5"
+                          />
+                          <span>Active</span>
+                        </label>
+
+                        {/* Delete Slide */}
+                        <button
+                          type="button"
+                          onClick={() => removeSlide(idx)}
+                          className="p-1.5 rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          title="Delete this slide"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Image Upload & Poster Details Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                      {/* Left: Thumbnail & File Upload */}
+                      <div className="md:col-span-4 space-y-2">
+                        <label className="text-xs font-bold text-brand-tertiary block">
+                          Poster Image
+                        </label>
+                        <div className="relative aspect-[4/5] w-full max-w-[200px] rounded-xl overflow-hidden border border-brand-border bg-gray-50 group">
+                          <img
+                            src={slide.imageUrl}
+                            alt={`Slide ${idx + 1}`}
+                            className="w-full h-full object-cover object-center"
+                          />
+                          {uploadingSlideIndex === idx && (
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white space-y-1">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span className="text-[10px] font-medium">Uploading...</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Direct File Upload Button */}
+                        <div className="pt-1">
+                          <label className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-semibold cursor-pointer shadow-2xs active:scale-95 transition-all">
+                            <UploadCloud className="w-3.5 h-3.5 text-brand-primary" />
+                            <span>{uploadingSlideIndex === idx ? 'Uploading...' : 'Upload Image File'}</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/jpg"
+                              onChange={(e) => handleSlideUpload(e, idx)}
+                              disabled={uploadingSlideIndex === idx}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        {/* Image URL text fallback */}
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] text-brand-muted font-light block">Or paste image URL:</span>
+                          <input
+                            type="text"
+                            value={slide.imageUrl}
+                            onChange={(e) => updateSlide(idx, 'imageUrl', e.target.value)}
+                            placeholder="https://images.unsplash.com/..."
+                            className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-[11px] font-mono bg-white focus:outline-none focus:border-brand-primary"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Right: Slide Text & Destination Settings */}
+                      <div className="md:col-span-8 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-brand-tertiary block">
+                              Subtitle / Eyebrow Text
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.subtitle || ''}
+                              onChange={(e) => updateSlide(idx, 'subtitle', e.target.value)}
+                              placeholder="e.g. Under 30k • The Everyday Diamond Edit"
+                              className="w-full px-3 py-2 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-brand-tertiary block">
+                              Main Title Headline
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.title || ''}
+                              onChange={(e) => updateSlide(idx, 'title', e.target.value)}
+                              placeholder="e.g. The Everyday Diamond Edit"
+                              className="w-full px-3 py-2 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-brand-tertiary block">
+                              Action Button Text
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.buttonText || ''}
+                              onChange={(e) => updateSlide(idx, 'buttonText', e.target.value)}
+                              placeholder="e.g. SHOP NOW"
+                              className="w-full px-3 py-2 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-brand-tertiary block">
+                              Destination Link
+                            </label>
+                            <select
+                              value={['#catalog', '#jhumka-boxes'].includes(slide.linkUrl) ? slide.linkUrl : 'custom'}
+                              onChange={(e) => {
+                                if (e.target.value !== 'custom') {
+                                  updateSlide(idx, 'linkUrl', e.target.value);
+                                }
+                              }}
+                              className="w-full px-3 py-2 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary mb-1.5"
+                            >
+                              <option value="#catalog">All Everyday Jewelry (#catalog)</option>
+                              <option value="#jhumka-boxes">4 Signature Jhumka Boxes (#jhumka-boxes)</option>
+                              <option value="custom">Custom URL or Anchor</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={slide.linkUrl || '#catalog'}
+                              onChange={(e) => updateSlide(idx, 'linkUrl', e.target.value)}
+                              placeholder="#catalog, #jhumka-boxes, or /product/slug"
+                              className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-[11px] font-mono bg-white focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-lg bg-white/70 border border-brand-border/60 text-[11px] text-brand-muted flex items-center justify-between">
+                          <span>
+                            Tip: For optimal resolution on high-DPI retina screens, upload 4:5 vertical portrait posters (e.g. 1080×1350px).
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 1. TOP RIBBON */}
         {activeSection === 'ribbon' && (

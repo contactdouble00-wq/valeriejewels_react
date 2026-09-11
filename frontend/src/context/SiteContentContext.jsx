@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
+import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
 const DEFAULT_SITE_CONTENT = {
   topRibbon: {
@@ -7,6 +8,12 @@ const DEFAULT_SITE_CONTENT = {
     text: 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',
     highlightAmount: '₹999',
     suffix: '• 18K GOLD PVD ANTI-TARNISH',
+  },
+  mobileSlider: {
+    enabled: true,
+    autoPlay: true,
+    interval: 4500,
+    slides: DEFAULT_MOBILE_SLIDES,
   },
   heroBanner: {
     badgeText: '18K PVD Anti-Tarnish Everyday Luxury',
@@ -101,6 +108,13 @@ export function SiteContentProvider({ children }) {
             trustStrip: Array.isArray(res.data.trustStrip) && res.data.trustStrip.length > 0
               ? res.data.trustStrip
               : DEFAULT_SITE_CONTENT.trustStrip,
+            mobileSlider: {
+              ...DEFAULT_SITE_CONTENT.mobileSlider,
+              ...(res.data.mobileSlider || {}),
+              slides: Array.isArray(res.data.mobileSlider?.slides) && res.data.mobileSlider.slides.length > 0
+                ? res.data.mobileSlider.slides
+                : DEFAULT_SITE_CONTENT.mobileSlider.slides,
+            },
             telemetryBanner: { ...DEFAULT_SITE_CONTENT.telemetryBanner, ...(res.data.telemetryBanner || {}) },
           };
           try {
