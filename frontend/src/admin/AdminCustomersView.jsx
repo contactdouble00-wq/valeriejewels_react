@@ -320,7 +320,7 @@ export default function AdminCustomersView() {
                 </div>
 
                 <a
-                  href={`/api/admin/orders.php?action=preview_email&type=${activeTemplate}&format=html`}
+                  href={`/api/admin/orders.php?action=preview_email&type=${activeTemplate}&format=html&token=${localStorage.getItem('valerie_admin_token') || ''}`}
                   target="_blank"
                   rel="noreferrer"
                   className="p-2 text-brand-muted hover:text-brand-primary rounded-xl hover:bg-gray-100 transition-colors"

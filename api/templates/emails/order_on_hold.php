@@ -9,7 +9,12 @@
  * - $reason (string|null): Optional reason for hold (e.g. address verification)
  */
 $storeUrl = $storeUrl ?? 'http://localhost:5173';
-$logoUrl = rtrim($storeUrl, '/') . '/valerie.png';
+$assetLogoFile = dirname(dirname(dirname(__DIR__))) . '/Assets/valerie.png';
+if (file_exists($assetLogoFile) && (!isset($logoUrl) || strpos($storeUrl, 'localhost') !== false || strpos($storeUrl, '127.0.0.1') !== false)) {
+    $logoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($assetLogoFile));
+} else {
+    $logoUrl = $logoUrl ?? (rtrim($storeUrl, '/') . '/valerie.png');
+}
 $trackingUrl = rtrim($storeUrl, '/') . '/#track-order?order=' . urlencode($order['order_number'] ?? '');
 $orderNumber = htmlspecialchars($order['order_number'] ?? '');
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');

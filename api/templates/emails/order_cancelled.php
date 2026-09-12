@@ -7,7 +7,12 @@
  * - $storeUrl (string): Base URL of the storefront
  */
 $storeUrl = $storeUrl ?? 'http://localhost:5173';
-$logoUrl = rtrim($storeUrl, '/') . '/valerie.png';
+$assetLogoFile = dirname(dirname(dirname(__DIR__))) . '/Assets/valerie.png';
+if (file_exists($assetLogoFile) && (!isset($logoUrl) || strpos($storeUrl, 'localhost') !== false || strpos($storeUrl, '127.0.0.1') !== false)) {
+    $logoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($assetLogoFile));
+} else {
+    $logoUrl = $logoUrl ?? (rtrim($storeUrl, '/') . '/valerie.png');
+}
 $orderNumber = htmlspecialchars($order['order_number'] ?? '');
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
 $reason = htmlspecialchars($order['cancellation_reason'] ?? 'Customer requested cancellation prior to dispatch');

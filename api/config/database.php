@@ -8,10 +8,12 @@ class Database {
     private static ?PDO $instance = null;
     private static array $config = [];
     private static string $driver = 'mysql';
+    private static bool $sqliteTablesChecked = false;
 
     /**
      * Retrieve the active PDO database connection singleton.
      * Tries MySQL first (with Hostinger auto-detection), falls back to SQLite if unreachable.
+     * Uses sub-50ms socket check and local caching to eliminate the 5-second blocking timeout when MySQL is offline.
      *
      * @throws PDOException
      * @return PDO
@@ -22,7 +24,7 @@ class Database {
 
             $db = self::$config['db'] ?? [];
             $host = $db['host'] ?? '127.0.0.1';
-            $port = $db['port'] ?? 3306;
+            $port = (int)($db['port'] ?? 3306);
             $database = $db['database'] ?? 'valerie_jewels';
             $charset = $db['charset'] ?? 'utf8mb4';
 
@@ -31,32 +33,69 @@ class Database {
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::ATTR_TIMEOUT            => 5,
+                PDO::ATTR_TIMEOUT            => 2,
             ];
 
-            try {
-                self::$instance = new PDO($dsn, $db['username'] ?? 'root', $db['password'] ?? '', $options);
-                self::$driver = 'mysql';
-                self::ensureTablesExist(self::$instance);
-            } catch (Throwable $e) {
-                // If MySQL fails (e.g. Access denied, missing credentials on live host),
-                // fall back to self-contained SQLite to prevent 500 crashes
-                if (in_array('sqlite', PDO::getAvailableDrivers(), true)) {
-                    $sqliteDir = dirname(__DIR__) . '/database';
-                    if (!is_dir($sqliteDir)) {
-                        @mkdir($sqliteDir, 0755, true);
+            // Fast connection probe for local dev environment
+            // When MySQL is not running locally, fsockopen with a 0.05s timeout fails in ~60ms
+            // instead of letting PDO block for 2-5+ seconds per request!
+            $isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true);
+            $shouldTryMysql = true;
+
+            $cacheFile = sys_get_temp_dir() . '/vj_mysql_alive.cache';
+            if ($isLocal) {
+                if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 30)) {
+                    $cached = @file_get_contents($cacheFile);
+                    if ($cached === '0') {
+                        $shouldTryMysql = false;
                     }
-                    $sqliteFile = $sqliteDir . '/valerie_jewels.sqlite';
-                    self::$instance = new PDO('sqlite:' . $sqliteFile, null, null, [
-                        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_TIMEOUT            => 5,
-                    ]);
-                    self::$driver = 'sqlite';
-                    self::ensureSqliteTablesExist(self::$instance);
                 } else {
-                    throw $e;
+                    $errno = 0;
+                    $errstr = '';
+                    $socket = @fsockopen($host, $port, $errno, $errstr, 0.05);
+                    if ($socket) {
+                        fclose($socket);
+                        @file_put_contents($cacheFile, '1');
+                    } else {
+                        @file_put_contents($cacheFile, '0');
+                        $shouldTryMysql = false;
+                    }
                 }
+            }
+
+            if ($shouldTryMysql) {
+                try {
+                    self::$instance = new PDO($dsn, $db['username'] ?? 'root', $db['password'] ?? '', $options);
+                    self::$driver = 'mysql';
+                    if ($isLocal) {
+                        @file_put_contents($cacheFile, '1');
+                    }
+                    self::ensureTablesExist(self::$instance);
+                    return self::$instance;
+                } catch (Throwable $e) {
+                    if ($isLocal) {
+                        @file_put_contents($cacheFile, '0');
+                    }
+                    // MySQL failed, proceed to SQLite fallback
+                }
+            }
+
+            // SQLite fallback
+            if (in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+                $sqliteDir = dirname(__DIR__) . '/database';
+                if (!is_dir($sqliteDir)) {
+                    @mkdir($sqliteDir, 0755, true);
+                }
+                $sqliteFile = $sqliteDir . '/valerie_jewels.sqlite';
+                self::$instance = new PDO('sqlite:' . $sqliteFile, null, null, [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_TIMEOUT            => 5,
+                ]);
+                self::$driver = 'sqlite';
+                self::ensureSqliteTablesExist(self::$instance);
+            } else {
+                throw new Exception("Database connection failed: MySQL unreachable and SQLite driver not available.");
             }
         }
 
@@ -124,6 +163,10 @@ class Database {
      * Ensure SQLite tables and default admin account exist
      */
     private static function ensureSqliteTablesExist(PDO $pdo): void {
+        if (self::$sqliteTablesChecked) {
+            return;
+        }
+
         try {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS users (
@@ -166,6 +209,78 @@ class Database {
                     is_active INTEGER NOT NULL DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS product_images (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    image_url TEXT NOT NULL,
+                    alt_text TEXT,
+                    display_order INTEGER NOT NULL DEFAULT 0,
+                    is_primary INTEGER NOT NULL DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS product_variants (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    sku TEXT NOT NULL UNIQUE,
+                    title TEXT NOT NULL,
+                    option1_name TEXT DEFAULT 'Size',
+                    option1_value TEXT,
+                    mrp REAL,
+                    price REAL,
+                    stock_quantity INTEGER NOT NULL DEFAULT 0,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS bundles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    slug TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    bundle_price REAL NOT NULL,
+                    compare_price REAL NOT NULL,
+                    badge_text TEXT NOT NULL DEFAULT 'Curated Combo Set',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS bundle_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bundle_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 1
+                );
+                CREATE TABLE IF NOT EXISTS coupons (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code TEXT NOT NULL UNIQUE,
+                    discount_type TEXT NOT NULL DEFAULT 'percentage',
+                    discount_value REAL NOT NULL,
+                    min_order_amount REAL NOT NULL DEFAULT 0.0,
+                    max_discount_amount REAL,
+                    usage_limit INTEGER,
+                    used_count INTEGER NOT NULL DEFAULT 0,
+                    valid_from DATETIME,
+                    valid_until DATETIME,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    user_id INTEGER,
+                    reviewer_name TEXT NOT NULL,
+                    rating INTEGER NOT NULL,
+                    title TEXT,
+                    comment TEXT,
+                    is_verified_buyer INTEGER NOT NULL DEFAULT 1,
+                    status TEXT NOT NULL DEFAULT 'approved',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS rate_limits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rate_key TEXT NOT NULL,
+                    hits INTEGER DEFAULT 1,
+                    expires_at DATETIME NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
                 CREATE TABLE IF NOT EXISTS token_blacklist (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     token_hash TEXT NOT NULL UNIQUE,
@@ -203,17 +318,20 @@ class Database {
                 CREATE TABLE IF NOT EXISTS order_tracking_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     order_id INTEGER NOT NULL,
-                    status_milestone TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'confirmed',
+                    status_milestone TEXT NOT NULL DEFAULT 'confirmed',
                     title TEXT NOT NULL,
                     description TEXT,
-                    location TEXT,
+                    location TEXT DEFAULT 'Mumbai Fulfillment Atelier',
                     courier_partner TEXT,
                     awb_code TEXT,
+                    occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE TABLE IF NOT EXISTS orders (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     order_number TEXT NOT NULL UNIQUE,
+                    user_id INTEGER DEFAULT NULL,
                     customer_name TEXT NOT NULL,
                     customer_email TEXT NOT NULL,
                     customer_phone TEXT NOT NULL,
@@ -231,10 +349,15 @@ class Database {
                     total_amount REAL NOT NULL DEFAULT 0.0,
                     amount_paid_upfront REAL NOT NULL DEFAULT 0.0,
                     amount_due_on_delivery REAL NOT NULL DEFAULT 0.0,
+                    fastrr_risk_tier TEXT NOT NULL DEFAULT 'low',
+                    fastrr_order_id TEXT,
+                    shiprocket_order_id TEXT,
+                    shiprocket_shipment_id TEXT,
                     shiprocket_awb TEXT,
-                    courier_name TEXT,
+                    courier_name TEXT DEFAULT 'Bluedart Express',
                     tracking_url TEXT,
                     estimated_delivery_date TEXT,
+                    cancelled_at DATETIME,
                     cancellation_reason TEXT,
                     refund_amount REAL DEFAULT 0.0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -244,6 +367,7 @@ class Database {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     order_id INTEGER NOT NULL,
                     product_id INTEGER DEFAULT NULL,
+                    variant_id INTEGER DEFAULT NULL,
                     product_name TEXT NOT NULL,
                     variant_title TEXT,
                     quantity INTEGER NOT NULL DEFAULT 1,
@@ -253,15 +377,39 @@ class Database {
                 );
             ");
 
-            try {
-                $pdo->exec("ALTER TABLE products ADD COLUMN pairs_count INTEGER DEFAULT NULL");
-            } catch (Throwable $e) {
-                // Column already exists
+            // Safe column additions for existing SQLite database files
+            $migrations = [
+                "ALTER TABLE products ADD COLUMN pairs_count INTEGER DEFAULT NULL",
+                "ALTER TABLE products ADD COLUMN meta_title TEXT DEFAULT NULL",
+                "ALTER TABLE products ADD COLUMN meta_description TEXT DEFAULT NULL",
+                "ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN user_id INTEGER DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN fastrr_risk_tier TEXT NOT NULL DEFAULT 'low'",
+                "ALTER TABLE orders ADD COLUMN fastrr_order_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN shiprocket_order_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN shiprocket_shipment_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
+                "ALTER TABLE order_items ADD COLUMN variant_id INTEGER DEFAULT NULL",
+                "ALTER TABLE order_tracking_events ADD COLUMN status TEXT DEFAULT 'confirmed'",
+                "ALTER TABLE order_tracking_events ADD COLUMN occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+            ];
+
+            foreach ($migrations as $migrationSql) {
+                try {
+                    $pdo->exec($migrationSql);
+                } catch (Throwable $e) {
+                    // Column already exists or table structure already migrated
+                }
             }
 
             self::seedAdminUser($pdo);
             self::seedDefaultSiteSettings($pdo);
             self::seedDefaultCatalogSqlite($pdo);
+            self::seedDefaultImagesSqlite($pdo);
+            self::seedDefaultCouponsSqlite($pdo);
+            self::seedDefaultBundlesSqlite($pdo);
+
+            self::$sqliteTablesChecked = true;
         } catch (Throwable $e) {
             error_log('ensureSqliteTablesExist error: ' . $e->getMessage());
         }
@@ -392,6 +540,109 @@ class Database {
             }
         } catch (Throwable $e) {
             error_log('seedDefaultCatalogSqlite error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Seed primary and gallery images for SQLite products
+     */
+    private static function seedDefaultImagesSqlite(PDO $pdo): void {
+        try {
+            $imgCount = (int)$pdo->query("SELECT COUNT(*) FROM product_images")->fetchColumn();
+            if ($imgCount > 0) {
+                return;
+            }
+
+            $imgMap = [
+                'VJ-BX-001' => [
+                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80',
+                ],
+                'VJ-BX-002' => [
+                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80',
+                ],
+                'VJ-BX-003' => [
+                    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+                ],
+                'VJ-BX-004' => [
+                    'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
+                ],
+                'VJ-NK-001' => [
+                    'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=800&q=80',
+                ],
+            ];
+
+            $prods = $pdo->query("SELECT id, name, sku FROM products")->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare("INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary) VALUES (?, ?, ?, ?, ?)");
+
+            foreach ($prods as $p) {
+                $sku = $p['sku'];
+                $images = $imgMap[$sku] ?? [
+                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+                ];
+                foreach ($images as $idx => $url) {
+                    $stmt->execute([
+                        $p['id'],
+                        $url,
+                        $p['name'],
+                        $idx,
+                        ($idx === 0) ? 1 : 0,
+                    ]);
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('seedDefaultImagesSqlite error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Seed initial promotional coupons for SQLite
+     */
+    private static function seedDefaultCouponsSqlite(PDO $pdo): void {
+        try {
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM coupons")->fetchColumn();
+            if ($count > 0) {
+                return;
+            }
+
+            $coupons = [
+                ['WELCOME10', 'percentage', 10, 999, 500, 1000],
+                ['FIRSTORDER', 'fixed', 200, 1299, null, 500],
+                ['VALERIEVIP', 'percentage', 15, 1999, 1000, 200],
+            ];
+            $stmt = $pdo->prepare("INSERT INTO coupons (code, discount_type, discount_value, min_order_amount, max_discount_amount, usage_limit, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)");
+            foreach ($coupons as $c) {
+                $stmt->execute($c);
+            }
+        } catch (Throwable $e) {
+            error_log('seedDefaultCouponsSqlite error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Seed initial combo bundles for SQLite
+     */
+    private static function seedDefaultBundlesSqlite(PDO $pdo): void {
+        try {
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM bundles")->fetchColumn();
+            if ($count > 0) {
+                return;
+            }
+
+            $bundles = [
+                ['The Royal Heritage Duo', 'royal-heritage-duo', 'Curated combo pairing The Royal Noor Jhumka Box with the Aurelia Solitaire Pendant.', 2499, 4498, 'Best Value Combo'],
+                ['Pastel Festive Gift Box', 'pastel-festive-gift-box', 'The Gulabi Mehal Box paired with lightweight festive ear jewelry.', 2199, 3998, 'Trending Duo'],
+            ];
+            $stmt = $pdo->prepare("INSERT INTO bundles (title, slug, description, bundle_price, compare_price, badge_text, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)");
+            foreach ($bundles as $b) {
+                $stmt->execute($b);
+            }
+        } catch (Throwable $e) {
+            error_log('seedDefaultBundlesSqlite error: ' . $e->getMessage());
         }
     }
 
