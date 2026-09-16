@@ -41,7 +41,7 @@ try {
             'lastUpdated' => 'September 2026',
             'brandName' => 'VALERIÉ (Valerie Jewels)',
             'companyLegalName' => 'Valerie Jewels Atelier Private Limited',
-            'websiteUrl' => 'https://shop.valeriejewels.in',
+            'websiteUrl' => 'https://valeriejewels.in',
             'supportEmail' => 'orders@valeriejewels.in',
             'supportPhone' => '+91 90234 22392',
             'whatsappNumber' => '+91 70163 47945',
@@ -62,7 +62,7 @@ try {
                 [
                     'id' => 'dispatch-timeline',
                     'heading' => '1. Order Processing & Dispatch Timelines',
-                    'content' => 'All orders placed on shop.valeriejewels.in undergo multi-point quality inspection at our Rajkot atelier. Orders are packaged in tamper-evident security containers and handed over to our logistics partners within 24 to 48 business hours from order placement (excluding national holidays and Sundays).'
+                    'content' => 'All orders placed on valeriejewels.in undergo multi-point quality inspection at our Rajkot atelier. Orders are packaged in tamper-evident security containers and handed over to our logistics partners within 24 to 48 business hours from order placement (excluding national holidays and Sundays).'
                 ],
                 [
                     'id' => 'delivery-window',
@@ -136,7 +136,7 @@ try {
                 [
                     'id' => 'dpdp-compliance',
                     'heading' => '1. Commitment to Privacy & Regulatory Compliance',
-                    'content' => 'Valerie Jewels Atelier Private Limited ("VALERIÉ", "we", "us", or "our") operates https://shop.valeriejewels.in. We are committed to protecting your personal data in strict compliance with the Digital Personal Data Protection Act, 2023 (DPDP Act, India), the Information Technology Act, 2000, and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011.'
+                    'content' => 'Valerie Jewels Atelier Private Limited ("VALERIÉ", "we", "us", or "our") operates https://valeriejewels.in. We are committed to protecting your personal data in strict compliance with the Digital Personal Data Protection Act, 2023 (DPDP Act, India), the Information Technology Act, 2000, and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011.'
                 ],
                 [
                     'id' => 'information-collected',
@@ -173,12 +173,12 @@ try {
         'terms' => [
             'title' => 'Terms & Conditions of Service',
             'badge' => 'Legal Agreement',
-            'subtitle' => 'Standard terms governing the use of shop.valeriejewels.in and purchases.',
+            'subtitle' => 'Standard terms governing the use of valeriejewels.in and purchases.',
             'sections' => [
                 [
                     'id' => 'acceptance',
                     'heading' => '1. Acceptance of Terms',
-                    'content' => 'By accessing, browsing, or purchasing from https://shop.valeriejewels.in ("Site"), you agree to be bound by these Terms and Conditions of Service ("Terms"). These Terms constitute a binding legal agreement between you ("User" or "Customer") and Valerie Jewels Atelier Private Limited ("VALERIÉ"). If you do not agree to these Terms, please do not use the Site.'
+                    'content' => 'By accessing, browsing, or purchasing from https://valeriejewels.in ("Site"), you agree to be bound by these Terms and Conditions of Service ("Terms"). These Terms constitute a binding legal agreement between you ("User" or "Customer") and Valerie Jewels Atelier Private Limited ("VALERIÉ"). If you do not agree to these Terms, please do not use the Site.'
                 ],
                 [
                     'id' => 'eligibility',

@@ -3,7 +3,7 @@ VALERIE JEWELS — ADMIN ACCESS CREDENTIALS
 =====================================================
 
 1. ACCESS ROUTE
-   Live URL:  https://shop.valeriejewels.in/vj-manage-x1126
+   Live URL:  https://valeriejewels.in/vj-manage-x1126
    Local URL: http://localhost:5173/#vj-manage-x1126
    (Note: The old '/admin' route has been disabled and returns 404)
 

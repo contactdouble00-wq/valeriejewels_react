@@ -39,11 +39,11 @@ class Database {
             // Fast connection probe for local dev environment
             // When MySQL is not running locally, fsockopen with a 0.05s timeout fails in ~60ms
             // instead of letting PDO block for 2-5+ seconds per request!
-            $isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true);
+            $isLocalDev = (PHP_OS_FAMILY === 'Windows') || in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost:8000', '127.0.0.1:8000', 'localhost:5173', '127.0.0.1:5173'], true);
             $shouldTryMysql = true;
 
             $cacheFile = sys_get_temp_dir() . '/vj_mysql_alive.cache';
-            if ($isLocal) {
+            if ($isLocalDev) {
                 if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 30)) {
                     $cached = @file_get_contents($cacheFile);
                     if ($cached === '0') {
@@ -67,13 +67,13 @@ class Database {
                 try {
                     self::$instance = new PDO($dsn, $db['username'] ?? 'root', $db['password'] ?? '', $options);
                     self::$driver = 'mysql';
-                    if ($isLocal) {
+                    if ($isLocalDev) {
                         @file_put_contents($cacheFile, '1');
                     }
                     self::ensureTablesExist(self::$instance);
                     return self::$instance;
                 } catch (Throwable $e) {
-                    if ($isLocal) {
+                    if ($isLocalDev) {
                         @file_put_contents($cacheFile, '0');
                     }
                     // MySQL failed, proceed to SQLite fallback
