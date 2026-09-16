@@ -28,7 +28,7 @@ jobs:
           path: frontend/dist/
           remote_path: /home/u513962642/domains/valeriejewels.in/public_html/
           remote_host: ${{ secrets.SSH_HOST }}
-          remote_port: ${{ secrets.SSH_PORT }}
+          remote_port: '65002'
           remote_user: ${{ secrets.SSH_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
@@ -39,6 +39,6 @@ jobs:
           path: api/
           remote_path: /home/u513962642/domains/valeriejewels.in/public_html/api/
           remote_host: ${{ secrets.SSH_HOST }}
-          remote_port: ${{ secrets.SSH_PORT }}
+          remote_port: '65002'
           remote_user: ${{ secrets.SSH_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
