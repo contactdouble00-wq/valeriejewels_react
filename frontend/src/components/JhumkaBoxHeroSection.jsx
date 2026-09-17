@@ -113,7 +113,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
             >
               {/* Badges on Image */}
               <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                {Boolean(jHero.showBoxNumber) && (
+                {(jHero.showBoxNumber !== false) && (
                   <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
                     <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-white text-white" />
                     <span>Box #{idx + 1}</span>
@@ -147,13 +147,13 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
               </button>
 
-              {/* Box Image */}
+              {/* Box Image: 3:4 Portrait Ratio */}
               <div
                 onClick={() => onOpenPdp && onOpenPdp(box.slug)}
-                className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer"
+                className="relative aspect-[3/4] overflow-hidden bg-brand-primary-light/20 cursor-pointer"
               >
                 <img
-                  src={box.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80'}
+                  src={box.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85'}
                   alt={box.name}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
@@ -166,7 +166,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     <span>4.9</span>
                     <span className="text-white/80 font-normal">(1.2k)</span>
                   </span>
-                  {Boolean(jHero.showPricePerPair) && (
+                  {(jHero.showPricePerPair !== false) && (
                     <span className="text-white font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-[8px]">
                       ₹{pricePerPair}/pair
                     </span>

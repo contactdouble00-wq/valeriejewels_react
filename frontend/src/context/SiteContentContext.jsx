@@ -34,8 +34,8 @@ const DEFAULT_SITE_CONTENT = {
     pill1: '5–6 Curated Pairs Per Box',
     pill2: 'Zero Earache • Featherlight',
     pill3: 'Save up to 50% vs Single Pairs',
-    showBoxNumber: false,
-    showPricePerPair: false,
+    showBoxNumber: true,
+    showPricePerPair: true,
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
