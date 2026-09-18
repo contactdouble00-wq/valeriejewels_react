@@ -16,7 +16,8 @@ import {
   MessageSquare,
   HelpCircle,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Smartphone
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -34,6 +35,8 @@ export default function AdminPaymentSettingsView() {
     fastrr_app_id: 'vj_fastrr_app_test',
     fastrr_secret_key: 'vj_fastrr_secret_test_2026',
     fastrr_webhook_secret: 'vj_fastrr_whsec_test',
+    sms_provider: 'sandbox',
+    sms_fast2sms_api_key: '',
     prepaid_discount: 50,
     prepaid_gift_title: 'Free Zircon Necklace',
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
@@ -291,12 +294,67 @@ export default function AdminPaymentSettingsView() {
           </div>
         </div>
 
-        {/* Section 2: Prepaid Discount & Complimentary Luxury Perk */}
+        {/* Section 2: Checkout OTP & SMS Delivery Engine */}
+        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
+              <Smartphone className="w-4 h-4 text-brand-primary" />
+              <span>2. Checkout OTP & SMS Delivery Engine</span>
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+              settings.sms_provider === 'sandbox'
+                ? 'text-amber-700 bg-amber-50 border-amber-200'
+                : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+            }`}>
+              {settings.sms_provider === 'sandbox' ? '⚡ Sandbox Simulation (OTP: 123456)' : '📲 Live Cellular SMS Active'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* SMS Provider Selector */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-brand-tertiary">OTP Verification Mode</label>
+              <select
+                value={settings.sms_provider || 'sandbox'}
+                onChange={(e) => setSettings({ ...settings, sms_provider: e.target.value })}
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold text-brand-tertiary focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="sandbox">Sandbox / Demo Mode (Test Code 123456 • Zero SMS Cost)</option>
+                <option value="fast2sms">Fast2SMS Gateway (Real SMS to Indian Numbers)</option>
+                <option value="twilio">Twilio SMS Gateway (Global Cellular Delivery)</option>
+              </select>
+              <p className="text-[10.5px] text-brand-muted">
+                {settings.sms_provider === 'sandbox'
+                  ? '💡 In Sandbox mode, no physical cellular SMS is sent. Customers use test code 123456 or 1-click Auto-Fill so you can test orders without SMS gateway bills.'
+                  : 'Delivers real SMS verification codes to customer phones using your API credentials.'}
+              </p>
+            </div>
+
+            {/* API Key */}
+            {settings.sms_provider === 'fast2sms' && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-brand-tertiary">Fast2SMS API Key</label>
+                <input
+                  type="password"
+                  value={settings.sms_fast2sms_api_key || ''}
+                  onChange={(e) => setSettings({ ...settings, sms_fast2sms_api_key: e.target.value })}
+                  placeholder="Enter Fast2SMS Authorization Key"
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10.5px] text-brand-muted">
+                  Obtain from your Fast2SMS Developer Dashboard to send real SMS over Indian cellular networks.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 3: Prepaid Discount & Complimentary Luxury Perk */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Gift className="w-4 h-4 text-brand-primary" />
-              <span>2. Prepaid Incentives & Complimentary Gift (High Conversion)</span>
+              <span>3. Prepaid Incentives & Complimentary Gift (High Conversion)</span>
             </div>
             <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               MadeWidLove Benchmark
@@ -352,12 +410,12 @@ export default function AdminPaymentSettingsView() {
           </div>
         </div>
 
-        {/* Section 3: Partial COD (RTO Protection) & Standard COD */}
+        {/* Section 4: Partial COD (RTO Protection) & Standard COD */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <CreditCard className="w-4 h-4 text-brand-primary" />
-              <span>3. Smart Partial COD (RTO Engine) & Standard Cash on Delivery</span>
+              <span>4. Smart Partial COD (RTO Engine) & Standard Cash on Delivery</span>
             </div>
             <span className="text-[11px] text-brand-muted">Risk Mitigation</span>
           </div>
@@ -394,19 +452,19 @@ export default function AdminPaymentSettingsView() {
                 />
               </div>
               <p className="text-[10.5px] text-brand-muted font-light">
-                Customer pays ₹{settings.partial_advance} now via UPI, remaining balance paid in cash on delivery.
+                Initial deposit collected via UPI now. Remainder collected on delivery.
               </p>
             </div>
 
-            {/* Standard COD Fee */}
+            {/* Full COD Handling Fee */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">Standard COD Handling Fee (₹)</label>
+              <label className="text-xs font-semibold text-brand-tertiary">Full COD Convenience Surcharge (₹)</label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-xs font-bold text-brand-muted">₹</span>
                 <input
                   type="number"
                   min="0"
-                  max="200"
+                  max="250"
                   value={settings.cod_fee}
                   onChange={(e) => setSettings({ ...settings, cod_fee: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-brand-tertiary"
@@ -419,12 +477,12 @@ export default function AdminPaymentSettingsView() {
           </div>
         </div>
 
-        {/* Section 4: 1-Click Fastrr Modal Branding & Conversion Messaging */}
+        {/* Section 5: 1-Click Fastrr Modal Branding & Conversion Messaging */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Sparkles className="w-4 h-4 text-brand-primary" />
-              <span>4. Fastrr Modal Banners, Exit-Intent & Social Proof</span>
+              <span>5. Fastrr Modal Banners, Exit-Intent & Social Proof</span>
             </div>
             <span className="text-[11px] text-brand-muted">Customer Experience</span>
           </div>
