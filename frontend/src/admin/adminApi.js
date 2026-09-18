@@ -426,4 +426,65 @@ export const adminApi = {
 
     return res.data;
   },
+
+  // Fastrr Checkout & Payment Settings Management
+  async getPaymentSettings() {
+    try {
+      const res = await request('/settings/payments.php');
+      if (res && res.data) {
+        localStorage.setItem('valerie_payment_settings_cache', JSON.stringify(res.data));
+        return res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to fetch remote payment settings, checking cache:', e);
+    }
+    const cached = localStorage.getItem('valerie_payment_settings_cache');
+    if (cached) {
+      try { return JSON.parse(cached); } catch (err) {}
+    }
+    return {
+      gateway_mode: 'sandbox',
+      fastrr_app_id: 'vj_fastrr_app_test',
+      fastrr_secret_key: 'vj_fastrr_secret_test_2026',
+      fastrr_webhook_secret: 'vj_fastrr_whsec_test',
+      prepaid_discount: 50,
+      prepaid_gift_title: 'Free Zircon Necklace',
+      prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+      partial_cod_enabled: true,
+      partial_advance: 199,
+      cod_fee: 0,
+      cod_available: true,
+      checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
+      exit_intent_enabled: true,
+      exit_intent_title: 'Wait! Are you sure you want to exit?',
+      exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
+      testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+      testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
+    };
+  },
+
+  async updatePaymentSettings(settings) {
+    let resData = settings;
+    try {
+      const res = await request('/settings/payments.php', {
+        method: 'POST',
+        body: JSON.stringify(settings),
+      });
+      if (res && res.data) {
+        resData = res.data;
+      }
+    } catch (e) {
+      console.warn('Remote payment settings update failed, persisting locally:', e);
+    }
+
+    try {
+      localStorage.setItem('valerie_payment_settings_updated', Date.now().toString());
+      localStorage.setItem('valerie_payment_settings_cache', JSON.stringify(resData));
+      window.dispatchEvent(new CustomEvent('valerie_payment_settings_updated', { detail: resData }));
+    } catch (e) {
+      console.warn('Sync broadcast warning for payment settings:', e);
+    }
+
+    return resData;
+  },
 };

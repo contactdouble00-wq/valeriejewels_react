@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Star,
@@ -11,13 +11,19 @@ import {
   ChevronRight,
   ChevronLeft,
   Share2,
-  ArrowLeft
+  ArrowLeft,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Film
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
 
-export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart }) {
+export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
 
   // Find synchronous fallback from seed catalog to prevent empty screen or loading jump
@@ -26,16 +32,22 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const [product, setProduct] = useState(fallbackProduct);
   const [loading, setLoading] = useState(!fallbackProduct);
   const [error, setError] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(fallbackProduct?.variants?.[0] || null);
   const [addedNotice, setAddedNotice] = useState(false);
   const [copiedNotice, setCopiedNotice] = useState(false);
+
+  const videoRefMobile = useRef(null);
+  const videoRefDesktop = useRef(null);
 
   const wishlisted = isInWishlist(product?.id);
 
   // Sync state when productSlug changes or when initialProduct is passed
   useEffect(() => {
-    setSelectedImage(0);
+    setSelectedMediaIndex(0);
     if (initialProduct) {
       setProduct(initialProduct);
       if (initialProduct.variants && initialProduct.variants.length > 0) {
@@ -120,6 +132,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     setTimeout(() => setAddedNotice(false), 2200);
   };
 
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (onBuyNow) {
+      onBuyNow(product, selectedVariant);
+    } else if (onAddToCart) {
+      onAddToCart(product, selectedVariant);
+    }
+  };
+
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}#product-${product?.slug || productSlug}`;
     if (navigator.share) {
@@ -141,17 +162,103 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   const activePrice = selectedVariant?.price || product?.price || 0;
   const activeMrp = selectedVariant?.mrp || product?.mrp || 0;
-  const images =
-    product?.images && product.images.length > 0
-      ? product.images
+
+  // Build unified media items (High-Res 3:4 Images + 9:16 Vertical Video Reels)
+  const mediaItems = useMemo(() => {
+    let list = [];
+    if (product?.images && product.images.length > 0) {
+      list = product.images.map((img, idx) => {
+        const url = typeof img === 'string' ? img : (img.image_url || img.url);
+        const isVideo = img.media_type === 'video' || (typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url));
+        return {
+          id: img.id || `media-${idx}`,
+          url,
+          alt: img.alt_text || product.name,
+          type: isVideo ? 'video' : 'image',
+          is_primary: img.is_primary ?? (idx === 0 ? 1 : 0),
+        };
+      });
+    } else if (product?.primary_image) {
+      list = [
+        {
+          id: 'primary-0',
+          url: product.primary_image,
+          alt: product.name,
+          type: 'image',
+          is_primary: 1,
+        },
+      ];
+    }
+
+    // Seamlessly include product video_url if not already in list
+    if (product?.video_url && !list.some((m) => m.url === product.video_url)) {
+      const vidObj = {
+        id: 'product-reel',
+        url: product.video_url,
+        alt: `${product.name} Reel Showcase`,
+        type: 'video',
+        is_primary: 0,
+      };
+      if (list.length > 1) {
+        list.splice(1, 0, vidObj);
+      } else {
+        list.push(vidObj);
+      }
+    }
+
+    return list.length > 0
+      ? list
       : [
           {
-            image_url:
-              product?.primary_image ||
-              'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
-            alt_text: product?.name,
+            id: 'fallback-0',
+            url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=1200&h=1600&q=85',
+            alt: product?.name,
+            type: 'image',
+            is_primary: 1,
           },
         ];
+  }, [product]);
+
+  const activeMedia = mediaItems[selectedMediaIndex] || mediaItems[0];
+
+  const toggleMute = (e) => {
+    e?.stopPropagation?.();
+    const next = !isMuted;
+    setIsMuted(next);
+    if (videoRefMobile.current) videoRefMobile.current.muted = next;
+    if (videoRefDesktop.current) videoRefDesktop.current.muted = next;
+  };
+
+  const togglePlay = (e) => {
+    e?.stopPropagation?.();
+    const activeVid = videoRefMobile.current || videoRefDesktop.current;
+    if (!activeVid) return;
+    if (activeVid.paused) {
+      activeVid.play();
+      setIsPlaying(true);
+    } else {
+      activeVid.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  // Sync autoplay when switching media slides
+  useEffect(() => {
+    setIsPlaying(true);
+    if (activeMedia?.type === 'video') {
+      const timer = setTimeout(() => {
+        if (videoRefMobile.current) {
+          videoRefMobile.current.currentTime = 0;
+          videoRefMobile.current.play().catch(() => {});
+        }
+        if (videoRefDesktop.current) {
+          videoRefDesktop.current.currentTime = 0;
+          videoRefDesktop.current.play().catch(() => {});
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedMediaIndex, activeMedia]);
 
   return (
     <>
@@ -221,65 +328,140 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         ) : product ? (
           <div className="flex-1 overflow-y-auto overscroll-contain">
             
-            {/* Edge-to-Edge Hero Image Stage */}
-            <div className="relative w-full aspect-square bg-[#FAF7FC] overflow-hidden">
-              <img
-                src={images[selectedImage]?.image_url || product.primary_image}
-                alt={images[selectedImage]?.alt_text || product.name}
-                className="w-full h-full object-cover object-center transition-all duration-300"
-              />
+            {/* Edge-to-Edge Hero Media Stage: High-Quality 3:4 Vertical Portrait Rectangle */}
+            <div 
+              className="relative w-full max-w-[380px] mx-auto aspect-[3/4] h-[480px] max-h-[62vh] bg-[#FAF7FC] overflow-hidden flex items-center justify-center rounded-2xl shadow-sm"
+              style={{ aspectRatio: '3 / 4' }}
+            >
+              {activeMedia.type === 'video' ? (
+                <div 
+                  onClick={togglePlay}
+                  className="relative w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
+                >
+                  {/* Full-bleed Vertical Video Reel that fills the entire portrait rectangle */}
+                  <video
+                    ref={videoRefMobile}
+                    src={activeMedia.url}
+                    muted={isMuted}
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
 
-              {/* Badges Overlay */}
-              <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-                {product.discount_percentage > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm w-fit">
-                    {product.discount_percentage}% OFF
-                  </span>
-                )}
-                {Boolean(product.is_bestseller) && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                    Best Seller
-                  </span>
-                )}
-                {Boolean(product.is_anti_tarnish) && (
-                  <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
-                    <ShieldCheck className="w-3 h-3 text-brand-primary" />
-                    18K Anti-Tarnish
-                  </span>
-                )}
-              </div>
+                  {/* Floating REEL / Try-on Tag */}
+                  <div className="absolute top-3 left-3 z-20 pointer-events-none">
+                    <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
+                      <Film className="w-3 h-3 text-amber-300" />
+                      <span>Live Try-On Reel</span>
+                    </span>
+                  </div>
+
+                  {/* Audio Mute/Unmute Toggle */}
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md active:scale-90"
+                    title={isMuted ? 'Unmute video audio' : 'Mute audio'}
+                    aria-label="Toggle audio mute"
+                  >
+                    {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                  </button>
+
+                  {/* Play/Pause Overlay */}
+                  {!isPlaying && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
+                      <div className="w-12 h-12 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xl">
+                        <Play className="w-6 h-6 fill-current ml-0.5" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  onClick={() => setLightboxOpen(true)}
+                  className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in group overflow-hidden"
+                >
+                  <img
+                    src={activeMedia.url}
+                    alt={activeMedia.alt || product.name}
+                    className="w-full h-full object-cover object-center transition-all duration-300"
+                  />
+
+                  {/* Badges Overlay */}
+                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                    {product.discount_percentage > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm w-fit">
+                        {product.discount_percentage}% OFF
+                      </span>
+                    )}
+                    {Boolean(product.is_bestseller) && (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
+                        Best Seller
+                      </span>
+                    )}
+                    {Boolean(product.is_anti_tarnish) && (
+                      <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
+                        <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                        18K Anti-Tarnish
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Tap to Zoom indicator */}
+                  <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[9px] flex items-center gap-1 font-medium pointer-events-none">
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Tap to zoom</span>
+                  </div>
+                </div>
+              )}
 
               {/* Photo Indicator Dot Pills */}
-              {images.length > 1 && (
-                <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono font-medium tracking-wider">
-                  {selectedImage + 1} / {images.length}
+              {mediaItems.length > 1 && (
+                <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono font-medium tracking-wider z-20 pointer-events-none">
+                  {selectedMediaIndex + 1} / {mediaItems.length}
                 </div>
               )}
             </div>
 
-            {/* Horizontal Thumbnail Selector Track */}
-            {images.length > 1 && (
+            {/* Horizontal Thumbnail Selector Track: 3:4 Aspect Ratio Thumbnails */}
+            {mediaItems.length > 1 && (
               <div className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto no-scrollbar bg-brand-surface border-b border-brand-border/60">
-                {images.map((img, idx) => {
-                  const isSelected = selectedImage === idx;
+                {mediaItems.map((item, idx) => {
+                  const isSelected = selectedMediaIndex === idx;
+                  const isVideo = item.type === 'video';
                   return (
                     <button
-                      key={img.id || idx}
+                      key={item.id || idx}
                       type="button"
-                      onClick={() => setSelectedImage(idx)}
-                      className={`relative w-14 h-14 rounded-xl p-0.5 transition-all shrink-0 cursor-pointer bg-white outline-none focus:outline-none focus-visible:outline-none select-none ${
+                      onClick={() => setSelectedMediaIndex(idx)}
+                      className={`relative w-12 h-16 rounded-xl p-0.5 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
                         isSelected
-                          ? 'border-2 border-brand-primary shadow-sm'
+                          ? 'border-2 border-brand-primary shadow-sm ring-2 ring-brand-primary/20'
                           : 'border border-brand-border/80 opacity-65 hover:opacity-100'
                       }`}
-                      aria-label={`View image ${idx + 1}`}
+                      aria-label={`View media ${idx + 1}`}
                     >
-                      <div className="w-full h-full rounded-[9px] overflow-hidden bg-brand-surface flex items-center justify-center">
-                        <img
-                          src={img.image_url}
-                          alt={img.alt_text || product.name}
-                          className="w-full h-full object-cover object-center pointer-events-none select-none"
-                        />
+                      <div className="w-full h-full rounded-[9px] overflow-hidden bg-[#1f1b26] flex items-center justify-center relative">
+                        {isVideo ? (
+                          <>
+                            <video src={item.url} muted className="w-full h-full object-cover pointer-events-none" />
+                            <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
+                              <div className="w-4 h-4 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xs">
+                                <Play className="w-2 h-2 fill-current ml-0.5" />
+                              </div>
+                            </div>
+                            <span className="absolute bottom-0.5 inset-x-0 text-center text-[7px] font-extrabold bg-brand-primary text-white tracking-wider">
+                              REEL
+                            </span>
+                          </>
+                        ) : (
+                          <img
+                            src={item.url}
+                            alt={item.alt || product.name}
+                            className="w-full h-full object-cover object-center pointer-events-none select-none"
+                          />
+                        )}
                       </div>
                     </button>
                   );
@@ -419,36 +601,42 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
         {/* Mobile Pinned Bottom CTA Bar */}
         {product && (
-          <div className="shrink-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 flex items-center gap-2.5 shadow-lg z-20">
-            <button
-              onClick={() => toggleWishlist(product)}
-              className={`p-3 rounded-xl border transition-all shrink-0 ${
-                wishlisted
-                  ? 'border-rose-300 bg-rose-50 text-rose-500'
-                  : 'border-brand-border text-brand-tertiary hover:text-rose-500 bg-white'
-              }`}
-              title={wishlisted ? 'Saved' : 'Save'}
-              aria-label="Save piece"
-            >
-              <Heart className={`w-5 h-5 ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
-            </button>
+          <div className="shrink-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 flex flex-col gap-2 shadow-lg z-20">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toggleWishlist(product)}
+                className={`p-3 rounded-xl border transition-all shrink-0 ${
+                  wishlisted
+                    ? 'border-rose-300 bg-rose-50 text-rose-500'
+                    : 'border-brand-border text-brand-tertiary hover:text-rose-500 bg-white'
+                }`}
+                title={wishlisted ? 'Saved' : 'Save'}
+                aria-label="Save piece"
+              >
+                <Heart className={`w-5 h-5 ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
+              </button>
 
-            <button
-              onClick={handleAdd}
-              className="flex-1 py-3.5 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2"
-            >
-              {addedNotice ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-300" />
-                  <span>Added to Bag!</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Add to Bag • ₹{Math.round(activePrice).toLocaleString('en-IN')}</span>
-                </>
-              )}
-            </button>
+              <button
+                onClick={handleBuyNow}
+                className="flex-1 py-3 px-4 rounded-xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5 font-caps tracking-wider uppercase font-bold text-xs">
+                  <Zap className="w-3.5 h-3.5 text-amber-300 fill-current" />
+                  <span>ORDER NOW - CASH ON DELIVERY</span>
+                </div>
+                <span className="text-[9.5px] text-purple-200 font-medium">
+                  ◆ Pay online → save ₹50 + free luxury gift
+                </span>
+              </button>
+
+              <button
+                onClick={handleAdd}
+                className="p-3 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-primary hover:text-white text-brand-tertiary transition-all shrink-0"
+                title="Add to Bag"
+              >
+                <ShoppingBag className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -556,93 +744,168 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             {/* Left Stage (7 cols on 12-col grid): Gallery Stage with High-Res Zoom & Thumbnails */}
             <div className="col-span-7 p-8 lg:p-12 overflow-y-auto bg-[#FAF8FC] border-r border-brand-border flex flex-col items-center justify-start space-y-6">
               
-              {/* Main Image Stage */}
-              <div className="relative w-full max-w-xl aspect-square rounded-3xl overflow-hidden bg-white shadow-sm border border-brand-border group flex items-center justify-center">
-                <img
-                  src={images[selectedImage]?.image_url || product.primary_image}
-                  alt={images[selectedImage]?.alt_text || product.name}
-                  className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
-                />
+              {/* Main 3:4 Portrait Stage with High-Definition Framing */}
+              <div 
+                className="relative w-full max-w-[420px] aspect-[3/4] h-[560px] max-h-[75vh] rounded-3xl overflow-hidden bg-[#FAF7FC] shadow-luxury border border-brand-border group flex items-center justify-center select-none"
+                style={{ aspectRatio: '3 / 4' }}
+              >
+                {activeMedia.type === 'video' ? (
+                  <div 
+                    onClick={togglePlay}
+                    className="relative w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
+                  >
+                    {/* Full-bleed Vertical Reel Player */}
+                    <video
+                      ref={videoRefDesktop}
+                      src={activeMedia.url}
+                      muted={isMuted}
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover rounded-3xl shadow-xl"
+                    />
 
-                {/* Overlays */}
-                <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
-                  {product.discount_percentage > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm w-fit">
-                      {product.discount_percentage}% OFF
-                    </span>
-                  )}
-                  {Boolean(product.is_bestseller) && (
-                    <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                      Best Seller
-                    </span>
-                  )}
-                  {Boolean(product.is_anti_tarnish) && (
-                    <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
-                      <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
-                      18K Anti-Tarnish
-                    </span>
-                  )}
-                </div>
+                    {/* Floating REEL Tag */}
+                    <div className="absolute top-4 left-4 z-20 pointer-events-none">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1.5 shadow-lg">
+                        <Film className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Live Try-On Reel</span>
+                      </span>
+                    </div>
+
+                    {/* Audio Mute/Unmute Toggle */}
+                    <button
+                      type="button"
+                      onClick={toggleMute}
+                      className="absolute bottom-4 left-4 z-20 p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md hover:scale-105 active:scale-95 cursor-pointer"
+                      title={isMuted ? 'Unmute video audio' : 'Mute audio'}
+                      aria-label="Toggle audio mute"
+                    >
+                      {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                    </button>
+
+                    {/* Play/Pause Overlay */}
+                    {!isPlaying && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
+                        <div className="w-14 h-14 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xl">
+                          <Play className="w-7 h-7 fill-current ml-0.5" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => setLightboxOpen(true)}
+                    className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in overflow-hidden group"
+                  >
+                    <img
+                      src={activeMedia.url}
+                      alt={activeMedia.alt || product.name}
+                      className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+                    />
+
+                    {/* Badges */}
+                    <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
+                      {product.discount_percentage > 0 && (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm w-fit">
+                          {product.discount_percentage}% OFF
+                        </span>
+                      )}
+                      {Boolean(product.is_bestseller) && (
+                        <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
+                          Best Seller
+                        </span>
+                      )}
+                      {Boolean(product.is_anti_tarnish) && (
+                        <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
+                          <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
+                          18K Anti-Tarnish
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Click to zoom badge */}
+                    <div className="absolute bottom-4 left-4 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[10px] flex items-center gap-1.5 font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Click to expand high-res view</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Prev / Next Nav Buttons */}
-                {images.length > 1 && (
+                {mediaItems.length > 1 && (
                   <>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedImage((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                        setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
                       }}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-10"
-                      title="Previous photo"
-                      aria-label="Previous image"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-20"
+                      title="Previous media"
+                      aria-label="Previous slide"
                     >
                       <ChevronLeft className="w-5 h-5 stroke-[2]" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedImage((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                        setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
                       }}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-10"
-                      title="Next photo"
-                      aria-label="Next image"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-20"
+                      title="Next media"
+                      aria-label="Next slide"
                     >
                       <ChevronRight className="w-5 h-5 stroke-[2]" />
                     </button>
                   </>
                 )}
 
-                {images.length > 1 && (
-                  <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-mono font-medium tracking-wider pointer-events-none">
-                    {selectedImage + 1} / {images.length}
+                {mediaItems.length > 1 && (
+                  <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-mono font-medium tracking-wider pointer-events-none z-20">
+                    {selectedMediaIndex + 1} / {mediaItems.length}
                   </div>
                 )}
               </div>
 
-              {/* Thumbnails Row */}
-              {images.length > 1 && (
-                <div className="w-full max-w-xl flex flex-wrap items-center justify-center gap-3.5 py-3 px-2">
-                  {images.map((img, idx) => {
-                    const isSelected = selectedImage === idx;
+              {/* Desktop 3:4 Thumbnails Row */}
+              {mediaItems.length > 1 && (
+                <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-3 py-2 px-2">
+                  {mediaItems.map((item, idx) => {
+                    const isSelected = selectedMediaIndex === idx;
+                    const isVideo = item.type === 'video';
                     return (
                       <button
-                        key={img.id || idx}
+                        key={item.id || idx}
                         type="button"
-                        onClick={() => setSelectedImage(idx)}
-                        className={`relative w-20 h-20 rounded-2xl p-1 transition-all shrink-0 cursor-pointer bg-white outline-none focus:outline-none focus-visible:outline-none select-none ${
+                        onClick={() => setSelectedMediaIndex(idx)}
+                        className={`relative w-16 h-20 rounded-2xl p-1 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
                           isSelected
                             ? 'border-2 border-brand-primary ring-2 ring-brand-primary/20 shadow-md'
                             : 'border border-brand-border/80 opacity-60 hover:opacity-100 hover:border-brand-primary/50'
                         }`}
-                        title={`View image ${idx + 1}`}
-                        aria-label={`View image ${idx + 1}`}
+                        title={isVideo ? 'Watch try-on reel' : `View photo ${idx + 1}`}
+                        aria-label={`View media ${idx + 1}`}
                       >
-                        <div className="w-full h-full rounded-xl overflow-hidden bg-brand-surface flex items-center justify-center">
-                          <img
-                            src={img.image_url}
-                            alt={img.alt_text || product.name}
-                            className="w-full h-full object-cover object-center pointer-events-none select-none"
-                          />
+                        <div className="w-full h-full rounded-xl overflow-hidden bg-[#1b1822] flex items-center justify-center relative">
+                          {isVideo ? (
+                            <>
+                              <video src={item.url} muted className="w-full h-full object-cover pointer-events-none" />
+                              <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xs">
+                                  <Play className="w-3 h-3 fill-current ml-0.5" />
+                                </div>
+                              </div>
+                              <span className="absolute bottom-1 inset-x-0 text-center text-[8px] font-bold bg-brand-primary text-white tracking-wider">
+                                REEL
+                              </span>
+                            </>
+                          ) : (
+                            <img
+                              src={item.url}
+                              alt={item.alt || product.name}
+                              className="w-full h-full object-cover object-center pointer-events-none select-none"
+                            />
+                          )}
                         </div>
                       </button>
                     );
@@ -763,21 +1026,35 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </div>
                 )}
 
-                {/* Primary CTA Buttons */}
+                {/* Primary Fastrr 1-Click Order & Add to Bag CTAs (MadeWidLove Format) */}
                 <div className="pt-2 space-y-3">
+                  {/* High-Converting 1-Click Fastrr Button */}
+                  <button
+                    onClick={handleBuyNow}
+                    className="w-full py-4 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.99] text-white flex flex-col items-center justify-center shadow-luxury transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
+                      <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
+                      <span>ORDER NOW - CASH ON DELIVERY</span>
+                    </div>
+                    <span className="text-[10.5px] text-purple-200 font-medium mt-0.5">
+                      ◆ Pay online → save ₹50 + free complimentary gift
+                    </span>
+                  </button>
+
                   <div className="flex items-center gap-3">
                     <button
                       onClick={handleAdd}
-                      className="flex-1 py-4 px-6 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.99] text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2.5 cursor-pointer"
+                      className="flex-1 py-3.5 px-6 rounded-xl border border-brand-border bg-white hover:bg-brand-surface active:scale-[0.99] text-brand-tertiary text-xs font-caps tracking-wider uppercase font-bold shadow-2xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
                     >
                       {addedNotice ? (
                         <>
-                          <Check className="w-4 h-4 text-emerald-300" />
+                          <Check className="w-4 h-4 text-emerald-500" />
                           <span>Added to Bag!</span>
                         </>
                       ) : (
                         <>
-                          <ShoppingBag className="w-4 h-4" />
+                          <ShoppingBag className="w-4 h-4 text-brand-primary" />
                           <span>Add to Bag • ₹{Math.round(activePrice).toLocaleString('en-IN')}</span>
                         </>
                       )}
@@ -787,7 +1064,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       onClick={() => product && toggleWishlist(product)}
                       aria-label={wishlisted ? 'Remove from saved pieces' : 'Save to wishlist'}
                       title={wishlisted ? 'Saved in Wishlist' : 'Save to Wishlist'}
-                      className={`p-4 rounded-2xl border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                      className={`p-3.5 rounded-xl border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
                         wishlisted
                           ? 'border-rose-300 bg-rose-50 text-rose-500 shadow-sm scale-105'
                           : 'border-brand-border hover:border-brand-primary text-brand-tertiary hover:text-rose-500 bg-white'
@@ -797,8 +1074,9 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     </button>
                   </div>
 
-                  <p className="text-[11px] text-center text-brand-muted font-light">
-                    ⚡ Fastrr 1-Click Checkout • UPI, Google Pay, Cards, NetBanking &amp; Cash on Delivery Available
+                  <p className="text-[11px] text-center text-brand-muted font-light flex items-center justify-center gap-1.5">
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    <span>Fastrr 1-Click Checkout • UPI, Cards, NetBanking & Cash on Delivery Available</span>
                   </p>
                 </div>
 
@@ -873,6 +1151,62 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         )}
 
       </div>
+
+      {/* Full-Screen High-Resolution Inspection Lightbox */}
+      {lightboxOpen && activeMedia.type !== 'video' && (
+        <div 
+          className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-5 right-5 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer z-50 shadow-lg"
+            title="Close zoom view (Esc)"
+            aria-label="Close high-res lightbox"
+          >
+            <X className="w-6 h-6 stroke-[2]" />
+          </button>
+
+          {mediaItems.filter(m => m.type !== 'video').length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
+                }}
+                className="absolute left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all hover:scale-105 active:scale-95 cursor-pointer z-50 shadow-lg"
+                title="Previous photo"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2]" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all hover:scale-105 active:scale-95 cursor-pointer z-50 shadow-lg"
+                title="Next photo"
+              >
+                <ChevronRight className="w-6 h-6 stroke-[2]" />
+              </button>
+            </>
+          )}
+
+          <div 
+            className="relative max-w-4xl max-h-[88vh] flex flex-col items-center justify-center select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={activeMedia.url}
+              alt={activeMedia.alt || product.name}
+              className="max-w-full max-h-[82vh] object-contain rounded-2xl shadow-2xl"
+            />
+            <div className="mt-3 text-center text-xs text-white/75 font-mono tracking-wider">
+              {product.name} • {selectedMediaIndex + 1} of {mediaItems.length}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

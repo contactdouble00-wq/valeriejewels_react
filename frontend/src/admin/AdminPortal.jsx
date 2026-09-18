@@ -14,7 +14,8 @@ import {
   X,
   Sliders,
   Scale,
-  HelpCircle
+  HelpCircle,
+  Zap
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -28,6 +29,7 @@ import AdminActivityLogView from './AdminActivityLogView';
 import AdminCategoriesView from './AdminCategoriesView';
 import AdminPoliciesView from './AdminPoliciesView';
 import AdminFaqsView from './AdminFaqsView';
+import AdminPaymentSettingsView from './AdminPaymentSettingsView';
 
 
 export default function AdminPortal({ onReturnToStore }) {
@@ -61,6 +63,7 @@ export default function AdminPortal({ onReturnToStore }) {
     { id: 'products', label: 'Products & Stock', icon: Package },
     { id: 'categories', label: 'Category Manager', icon: Tag },
     { id: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag },
+    { id: 'payments', label: 'Fastrr & Payments', icon: Zap, badge: '1-Click' },
     { id: 'customers', label: 'Customers & RTO', icon: Users },
     { id: 'coupons', label: 'Promotions & Vouchers', icon: Tag },
     { id: 'policies', label: 'Legal & Policies', icon: Scale, badge: 'DPDP / Legal' },
@@ -241,6 +244,8 @@ export default function AdminPortal({ onReturnToStore }) {
           {activeTab === 'coupons' && <AdminCouponsView currentUser={currentUser} />}
 
           {activeTab === 'policies' && <AdminPoliciesView currentUser={currentUser} />}
+
+          {activeTab === 'payments' && <AdminPaymentSettingsView />}
 
           {activeTab === 'faqs' && <AdminFaqsView currentUser={currentUser} />}
 

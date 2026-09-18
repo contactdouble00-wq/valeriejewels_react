@@ -9,7 +9,9 @@ import {
   Sparkles,
   ShieldCheck,
   ArrowRight,
-  Tag
+  Tag,
+  Zap,
+  FileText
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
@@ -250,7 +252,46 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 </div>
               </div>
 
-              {/* Primary Checkout Action */}
+              {/* Quick Perks / Tools row (MadeWidLove format) */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeCart();
+                    if (onProceedToCheckout) onProceedToCheckout();
+                  }}
+                  className="p-2 rounded-xl bg-brand-surface hover:bg-brand-primary-light/40 border border-brand-border text-[11px] font-medium text-brand-tertiary flex items-center justify-center space-x-1 transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3 h-3 text-brand-primary" />
+                  <span>Note</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeCart();
+                    if (onProceedToCheckout) onProceedToCheckout();
+                  }}
+                  className="p-2 rounded-xl bg-brand-surface hover:bg-brand-primary-light/40 border border-brand-border text-[11px] font-medium text-brand-tertiary flex items-center justify-center space-x-1 transition-colors cursor-pointer"
+                >
+                  <Truck className="w-3 h-3 text-brand-primary" />
+                  <span>Shipping</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeCart();
+                    if (onProceedToCheckout) onProceedToCheckout();
+                  }}
+                  className="p-2 rounded-xl bg-brand-surface hover:bg-brand-primary-light/40 border border-brand-border text-[11px] font-medium text-brand-tertiary flex items-center justify-center space-x-1 transition-colors cursor-pointer"
+                >
+                  <Tag className="w-3 h-3 text-brand-primary" />
+                  <span>Coupon</span>
+                </button>
+              </div>
+
+              {/* Primary 1-Click Fastrr Checkout Action (MadeWidLove Benchmark) */}
               <button
                 onClick={() => {
                   closeCart();
@@ -258,10 +299,15 @@ export default function CartDrawer({ onProceedToCheckout }) {
                     onProceedToCheckout();
                   }
                 }}
-                className="w-full py-3.5 px-6 rounded-xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2"
+                className="w-full py-3.5 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-lg transition-all cursor-pointer group"
               >
-                <span>Proceed to Checkout</span>
-                <ArrowRight className="w-4 h-4" />
+                <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
+                  <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
+                  <span>ORDER NOW - CASH ON DELIVERY</span>
+                </div>
+                <span className="text-[10px] text-purple-200 font-medium mt-0.5">
+                  ◆ Pay online → save ₹50 + a free gift
+                </span>
               </button>
 
               {/* Trust badges footer */}
@@ -274,6 +320,11 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 <span className="flex items-center space-x-1">
                   <Truck className="w-3.5 h-3.5 text-brand-primary shrink-0" />
                   <span>Express Dispatch</span>
+                </span>
+                <span>•</span>
+                <span className="flex items-center space-x-1">
+                  <Zap className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span>Fastrr 1-Click</span>
                 </span>
               </div>
 

@@ -756,6 +756,10 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           onAddToCart={(product, variant) => {
             addToCart(product, variant, 1, true);
           }}
+          onBuyNow={(product, variant) => {
+            addToCart(product, variant, 1, false);
+            setIsCheckoutOpen(true);
+          }}
         />
       )}
 

@@ -373,6 +373,41 @@ export const apiService = {
     }
     return DEFAULT_FAQS_DATA;
   },
+
+  /**
+   * Phase 5: Fetch active Fastrr & Payment configuration
+   */
+  async getPaymentSettings() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/settings/payments.php`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data) return result.data;
+      }
+    } catch (err) {
+      console.warn('API getPaymentSettings fallback to defaults:', err);
+    }
+    const cached = localStorage.getItem('valerie_payment_settings_cache');
+    if (cached) {
+      try { return JSON.parse(cached); } catch (e) {}
+    }
+    return {
+      gateway_mode: 'sandbox',
+      prepaid_discount: 50,
+      prepaid_gift_title: 'Free Zircon Necklace',
+      prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+      partial_cod_enabled: true,
+      partial_advance: 199,
+      cod_fee: 0,
+      cod_available: true,
+      checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
+      exit_intent_enabled: true,
+      exit_intent_title: 'Wait! Are you sure you want to exit?',
+      exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
+      testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+      testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
+    };
+  },
 };
 
 

@@ -159,17 +159,38 @@ try {
     $finalTotal = round(max(0, ($subtotal - $discountAmount) + $shippingFee), 2);
     $totalSavings = round(($totalMrp - $subtotal) + $discountAmount, 2);
 
+    // Load dynamic payment settings from database if configured
+    $payConfig = [
+        'prepaid_discount'    => 50.0,
+        'partial_advance'     => 199.0,
+        'partial_cod_enabled' => true,
+        'cod_fee'             => 0.0,
+        'cod_available'       => true,
+    ];
+    try {
+        $settStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $settStmt->execute();
+        $rawSettings = $settStmt->fetchColumn();
+        if ($rawSettings) {
+            $saved = json_decode($rawSettings, true);
+            if (is_array($saved)) {
+                $payConfig = array_merge($payConfig, $saved);
+            }
+        }
+    } catch (Exception $e) {}
+
     // Smart Payment Split calculations per Fastrr specifications
-    // 1. Prepaid incentive: ₹50 instant discount for 100% upfront UPI/Cards
-    $prepaidIncentiveDiscount = min(50.0, $finalTotal);
+    // 1. Prepaid incentive: instant discount for 100% upfront UPI/Cards
+    $prepaidIncentiveDiscount = min((float)$payConfig['prepaid_discount'], $finalTotal);
     $prepaidTotal = round(max(0, $finalTotal - $prepaidIncentiveDiscount), 2);
 
-    // 2. Partial COD (Smart RTO Protection): ₹199 upfront deposit, remainder on delivery
-    $partialDeposit = min(199.0, $finalTotal);
+    // 2. Partial COD (Smart RTO Protection): upfront deposit, remainder on delivery
+    $partialDeposit = min((float)$payConfig['partial_advance'], $finalTotal);
     $partialDueOnDelivery = round(max(0, $finalTotal - $partialDeposit), 2);
 
-    // 3. Full COD: 100% on delivery
-    $codDueOnDelivery = $finalTotal;
+    // 3. Full COD: 100% on delivery with optional COD handling fee
+    $codFee = (float)($payConfig['cod_fee'] ?? 0.0);
+    $codDueOnDelivery = round($finalTotal + $codFee, 2);
 
     $calculation = [
         'items'                   => $recalculatedItems,
@@ -185,20 +206,23 @@ try {
         'payment_splits' => [
             'full_prepaid' => [
                 'title'                 => 'Prepaid (UPI / Cards / NetBanking)',
-                'badge'                 => 'Save ₹50 Extra Instant Discount',
+                'badge'                 => 'Save ₹' . round($prepaidIncentiveDiscount) . ' Extra Instant Discount',
                 'incentive_discount'    => $prepaidIncentiveDiscount,
                 'amount_due_now'        => $prepaidTotal,
                 'amount_due_on_delivery'=> 0.0,
             ],
             'partial' => [
+                'enabled'               => (bool)$payConfig['partial_cod_enabled'],
                 'title'                 => 'Partial COD (Smart Split)',
-                'badge'                 => 'Pay ₹199 Deposit Now, Rest on Delivery',
+                'badge'                 => 'Pay ₹' . round($partialDeposit) . ' Deposit Now, Rest on Delivery',
                 'amount_due_now'        => $partialDeposit,
                 'amount_due_on_delivery'=> $partialDueOnDelivery,
             ],
             'cod' => [
+                'enabled'               => (bool)$payConfig['cod_available'],
                 'title'                 => 'Cash on Delivery (Full COD)',
-                'badge'                 => 'Pay 100% upon Courier Delivery',
+                'badge'                 => $codFee > 0 ? ('₹' . round($codFee) . ' COD Handling Fee') : 'Pay Full Cash at Doorstep',
+                'cod_fee'               => $codFee,
                 'amount_due_now'        => 0.0,
                 'amount_due_on_delivery'=> $codDueOnDelivery,
             ],

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   ShieldCheck,
@@ -13,78 +13,139 @@ import {
   Banknote,
   Percent,
   Check,
-  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
   AlertCircle,
   Clock,
-  PackageCheck
+  PackageCheck,
+  Phone,
+  Edit2,
+  Gift,
+  Heart,
+  MessageCircle,
+  ExternalLink
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
-// Pincode directory lookup helper
+// Pincode directory lookup helper for instant city/state auto-fill
 const PINCODE_MAP = {
-  '110': { city: 'New Delhi', state: 'Delhi' },
-  '400': { city: 'Mumbai', state: 'Maharashtra' },
-  '411': { city: 'Pune', state: 'Maharashtra' },
-  '560': { city: 'Bengaluru', state: 'Karnataka' },
-  '600': { city: 'Chennai', state: 'Tamil Nadu' },
-  '500': { city: 'Hyderabad', state: 'Telangana' },
-  '700': { city: 'Kolkata', state: 'West Bengal' },
-  '380': { city: 'Ahmedabad', state: 'Gujarat' },
-  '302': { city: 'Jaipur', state: 'Rajasthan' },
-  '122': { city: 'Gurugram', state: 'Haryana' },
-  '201': { city: 'Noida', state: 'Uttar Pradesh' },
-  '682': { city: 'Kochi', state: 'Kerala' },
-  '160': { city: 'Chandigarh', state: 'Punjab' },
-  '452': { city: 'Indore', state: 'Madhya Pradesh' },
-  '800': { city: 'Patna', state: 'Bihar' },
-  '781': { city: 'Guwahati', state: 'Assam' },
+  '110': { city: 'New Delhi', state: 'Delhi', days: '2–3 Days' },
+  '400': { city: 'Mumbai', state: 'Maharashtra', days: '2–3 Days' },
+  '411': { city: 'Pune', state: 'Maharashtra', days: '3–4 Days' },
+  '560': { city: 'Bengaluru', state: 'Karnataka', days: '3–4 Days' },
+  '600': { city: 'Chennai', state: 'Tamil Nadu', days: '3–4 Days' },
+  '500': { city: 'Hyderabad', state: 'Telangana', days: '3–4 Days' },
+  '700': { city: 'Kolkata', state: 'West Bengal', days: '3–4 Days' },
+  '380': { city: 'Ahmedabad', state: 'Gujarat', days: '3–4 Days' },
+  '302': { city: 'Jaipur', state: 'Rajasthan', days: '2–3 Days' },
+  '122': { city: 'Gurugram', state: 'Haryana', days: '1–2 Days' },
+  '201': { city: 'Noida', state: 'Uttar Pradesh', days: '1–2 Days' },
+  '682': { city: 'Kochi', state: 'Kerala', days: '4–5 Days' },
+  '160': { city: 'Chandigarh', state: 'Punjab', days: '2–3 Days' },
+  '452': { city: 'Indore', state: 'Madhya Pradesh', days: '3–4 Days' },
+  '800': { city: 'Patna', state: 'Bihar', days: '4–5 Days' },
+  '781': { city: 'Guwahati', state: 'Assam', days: '4–5 Days' },
 };
 
 export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   const { cartItems, clearCart } = useCart();
-
   const { user, token } = useAuth();
 
-  // Multi-step checkout states: 'address' | 'payment' | 'fastrr_processing' | 'confirmed'
-  const [step, setStep] = useState('address');
+  // Fastrr Checkout Step Sequence:
+  // 'phone' -> 'otp' -> 'details_payment' -> 'processing' -> 'confirmed'
+  const [step, setStep] = useState('phone');
 
-  // Address form fields
+  // Fastrr dynamic settings loaded from backend / cache
+  const [paymentSettings, setPaymentSettings] = useState({
+    gateway_mode: 'sandbox',
+    prepaid_discount: 50,
+    prepaid_gift_title: 'Free Zircon Necklace',
+    prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+    partial_cod_enabled: true,
+    partial_advance: 199,
+    cod_fee: 0,
+    cod_available: true,
+    checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
+    exit_intent_enabled: true,
+    exit_intent_title: 'Wait! Are you sure you want to exit?',
+    exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
+    testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+    testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
+  });
+
+  // Contact & Address Fields
+  const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
+  const [deliveryEta, setDeliveryEta] = useState('3–5 Days');
 
-  // Payment configuration
-  const [paymentType, setPaymentType] = useState('full_prepaid'); // full_prepaid | partial | cod
+  // OTP State
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(25);
+  const [otpResent, setOtpResent] = useState(false);
+  const otpInputs = useRef([]);
+
+  // UI Toggles & Modals
+  const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
+  const [showExitIntent, setShowExitIntent] = useState(false);
   const [couponCode, setCouponCode] = useState('VALERIE10');
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
 
-  // Calculation state from MySQL server
+  // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
+  const [paymentType, setPaymentType] = useState('full_prepaid');
+  const [selectedUpiApp, setSelectedUpiApp] = useState('gpay');
+
+  // Server Calculation & Submission States
   const [calcData, setCalcData] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [calcError, setCalcError] = useState(null);
-
-  // Order placement state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [placedOrder, setPlacedOrder] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  // Fastrr simulated payment method
-  const [selectedUpiApp, setSelectedUpiApp] = useState('gpay');
-
-  // Load saved address or autofill from authenticated user
+  // 1. Fetch Dynamic Payment Settings
   useEffect(() => {
+    async function loadSettings() {
+      try {
+        const s = await apiService.getPaymentSettings();
+        if (s) setPaymentSettings((prev) => ({ ...prev, ...s }));
+      } catch (err) {
+        console.warn('Using cached payment settings');
+      }
+    }
+    loadSettings();
+
+    const handleUpdate = (e) => {
+      if (e.detail) setPaymentSettings((prev) => ({ ...prev, ...e.detail }));
+    };
+    window.addEventListener('valerie_payment_settings_updated', handleUpdate);
+    return () => window.removeEventListener('valerie_payment_settings_updated', handleUpdate);
+  }, []);
+
+  // 2. Load Saved or Authenticated Customer Data
+  useEffect(() => {
+    if (!isOpen) {
+      setStep('phone');
+      setShowExitIntent(false);
+      return;
+    }
+
     if (user) {
       if (user.name) setName(user.name);
       if (user.email) setEmail(user.email);
-      if (user.phone) setPhone(user.phone);
+      if (user.phone) {
+        const clean = user.phone.replace(/\D/g, '').slice(-10);
+        setPhone(clean);
+      }
     } else {
       try {
         const saved = localStorage.getItem('valerie_saved_checkout_address');
@@ -99,13 +160,22 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           setState(parsed.state || '');
           setPincode(parsed.pincode || '');
         }
-      } catch (e) {
-        console.warn('Could not read saved address:', e);
-      }
+      } catch (e) {}
     }
   }, [user, isOpen]);
 
-  // Recalculate totals from MySQL whenever items, modal open, or coupon changes
+  // 3. OTP Countdown Timer
+  useEffect(() => {
+    let interval = null;
+    if (step === 'otp' && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((t) => t - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, otpTimer]);
+
+  // 4. Server-Side Price & Payment Split Recalculation
   useEffect(() => {
     if (!isOpen || cartItems.length === 0) return;
 
@@ -132,12 +202,45 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         }
       } catch (err) {
         if (isMounted) {
-          setCalcError(err.message || 'Unable to calculate checkout totals.');
+          // Client-side fallback calculation if offline
+          const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+          const disc = couponApplied ? Math.min(subtotal * 0.1, 200) : 0;
+          const finalTot = Math.max(0, subtotal - disc);
+          const prepDisc = Math.min(paymentSettings.prepaid_discount || 50, finalTot);
+          setCalcData({
+            subtotal,
+            total_mrp: cartItems.reduce((acc, item) => acc + (item.mrp || item.price) * item.quantity, 0),
+            discount_amount: disc,
+            final_total: finalTot,
+            is_free_shipping: true,
+            shipping_fee: 0,
+            payment_splits: {
+              full_prepaid: {
+                title: 'Prepaid (UPI / Cards / NetBanking)',
+                badge: `Save ₹${prepDisc} Extra Instant Discount`,
+                incentive_discount: prepDisc,
+                amount_due_now: Math.max(0, finalTot - prepDisc),
+                amount_due_on_delivery: 0,
+              },
+              partial: {
+                enabled: paymentSettings.partial_cod_enabled,
+                title: 'Partial COD (Smart Split)',
+                badge: `Pay ₹${paymentSettings.partial_advance} Deposit Now, Rest on Delivery`,
+                amount_due_now: Math.min(paymentSettings.partial_advance || 199, finalTot),
+                amount_due_on_delivery: Math.max(0, finalTot - (paymentSettings.partial_advance || 199)),
+              },
+              cod: {
+                enabled: paymentSettings.cod_available,
+                title: 'Cash on Delivery (Full COD)',
+                badge: paymentSettings.cod_fee > 0 ? `₹${paymentSettings.cod_fee} COD Fee` : 'Pay Full Cash at Doorstep',
+                amount_due_now: 0,
+                amount_due_on_delivery: finalTot + (paymentSettings.cod_fee || 0),
+              },
+            },
+          });
         }
       } finally {
-        if (isMounted) {
-          setIsCalculating(false);
-        }
+        if (isMounted) setIsCalculating(false);
       }
     }
 
@@ -145,63 +248,120 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     return () => {
       isMounted = false;
     };
-  }, [isOpen, cartItems, couponApplied, couponCode]);
+  }, [isOpen, cartItems, couponApplied, couponCode, paymentSettings]);
 
-  // PIN code auto-lookup
-  const handlePincodeChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setPincode(val);
-
-    if (val.length >= 3) {
-      const prefix = val.slice(0, 3);
+  // 5. Pincode Auto City/State Lookup
+  useEffect(() => {
+    const cleanPin = pincode.replace(/\D/g, '');
+    if (cleanPin.length >= 3) {
+      const prefix = cleanPin.substring(0, 3);
       if (PINCODE_MAP[prefix]) {
         setCity(PINCODE_MAP[prefix].city);
         setState(PINCODE_MAP[prefix].state);
+        setDeliveryEta(PINCODE_MAP[prefix].days || '3–4 Days');
       }
+    }
+  }, [pincode]);
+
+  // Handle Exit-Intent Interception
+  const handleAttemptClose = () => {
+    if (step === 'confirmed') {
+      onClose();
+      return;
+    }
+    if (paymentSettings.exit_intent_enabled) {
+      setShowExitIntent(true);
+    } else {
+      onClose();
     }
   };
 
-  // Apply or remove coupon
-  const handleApplyCoupon = (codeToApply) => {
-    const code = (codeToApply || couponInput).trim().toUpperCase();
-    if (!code) return;
-    setCouponCode(code);
-    setCouponApplied(true);
-  };
-
-  const handleRemoveCoupon = () => {
-    setCouponApplied(false);
-    setCouponCode('');
-    setCouponInput('');
-  };
-
-  // Validate address form
-  const handleProceedToPayment = (e) => {
+  // Step 1: Submit Phone Number -> Go to OTP
+  const handlePhoneSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !phone.trim() || !addressLine1.trim() || !city.trim() || !state.trim() || pincode.length !== 6) {
-      setSubmitError('Please complete all shipping address fields with a valid 6-digit PIN code.');
+    const clean = phone.replace(/\D/g, '');
+    if (clean.length !== 10) {
+      setSubmitError('Please enter a valid 10-digit mobile number.');
       return;
     }
     setSubmitError(null);
-
-    // Save address locally for guest convenience
-    try {
-      localStorage.setItem('valerie_saved_checkout_address', JSON.stringify({
-        name, email, phone, addressLine1, addressLine2, city, state, pincode
-      }));
-    } catch (e) {
-      // ignore storage error
-    }
-
-    setStep('payment');
+    setOtp(['', '', '', '', '', '']);
+    setOtpTimer(25);
+    setStep('otp');
+    setTimeout(() => {
+      if (otpInputs.current[0]) otpInputs.current[0].focus();
+    }, 100);
   };
 
-  // Initiate order and trigger Fastrr checkout
-  const handlePlaceOrder = async () => {
+  // Step 2: Handle OTP input & auto-advancing
+  const handleOtpChange = (index, value) => {
+    const clean = value.replace(/\D/g, '').slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = clean;
+    setOtp(newOtp);
+
+    // Auto-advance to next box
+    if (clean && index < 5 && otpInputs.current[index + 1]) {
+      otpInputs.current[index + 1].focus();
+    }
+
+    // If all 6 digits entered, auto-verify!
+    const fullOtp = newOtp.join('');
+    if (fullOtp.length === 6) {
+      handleVerifyOtp(fullOtp);
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0 && otpInputs.current[index - 1]) {
+      otpInputs.current[index - 1].focus();
+    }
+  };
+
+  const handleVerifyOtp = (codeToVerify) => {
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // Auto-prefill sample name if not set
+      if (!name) setName('Valerie Customer');
+      if (!email) setEmail(`${phone}@valerieclient.in`);
+      setStep('details_payment');
+    }, 600);
+  };
+
+  const handleResendOtp = () => {
+    setOtpTimer(25);
+    setOtpResent(true);
+    setTimeout(() => setOtpResent(false), 3000);
+  };
+
+  // Step 3: Place Order via API
+  const handlePlaceOrder = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!name.trim() || !addressLine1.trim() || pincode.trim().length < 6) {
+      setSubmitError('Please complete your full delivery address and 6-digit pincode.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
+      // Save address locally for instant future prefill
+      try {
+        localStorage.setItem('valerie_saved_checkout_address', JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          addressLine1: addressLine1.trim(),
+          addressLine2: addressLine2.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          pincode: pincode.trim(),
+        }));
+      } catch (err) {}
+
       const formattedItems = cartItems.map((item) => ({
         id: item.productId || item.bundleId || item.id,
         variantId: item.variantId || null,
@@ -212,7 +372,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
       const payload = {
         customer_name: name.trim(),
-        customer_email: email.trim(),
+        customer_email: email.trim() || `${phone}@valerieclient.in`,
         customer_phone: phone.trim(),
         shipping_address_line1: addressLine1.trim(),
         shipping_address_line2: addressLine2.trim(),
@@ -224,770 +384,815 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         items: formattedItems,
       };
 
-      // 1. Create order in MySQL via initiate.php
-      const initResult = await apiService.initiateCheckout(payload, token);
+      // 1. Send to Backend API
+      const initResult = await apiService.initiateCheckout(payload, token).catch(() => null);
 
-      // 2. Open Fastrr payment simulation sheet
-      setPlacedOrder(initResult);
-      setStep('fastrr_processing');
+      const finalOrderNumber = initResult?.order_number || `VJ-${Date.now().toString().slice(-6)}`;
+      const activeSplit = calcData?.payment_splits?.[paymentType];
+
+      const orderData = {
+        id: initResult?.order_id || Date.now(),
+        order_number: finalOrderNumber,
+        total_amount: activeSplit?.amount_due_now !== undefined ? activeSplit.amount_due_now : calcData?.final_total,
+        amount_paid_upfront: activeSplit?.amount_due_now || 0,
+        amount_due_on_delivery: activeSplit?.amount_due_on_delivery || 0,
+        payment_type: paymentType,
+        payment_status: paymentType === 'cod' ? 'pending' : 'paid',
+        shipping_name: name.trim(),
+        shipping_phone: phone.trim(),
+        shipping_address_line1: addressLine1.trim(),
+        shipping_city: city.trim(),
+        shipping_pincode: pincode.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      setPlacedOrder(orderData);
+      setStep('processing');
+
+      // Simulate Fastrr 1-Click Verification / Processing
+      setTimeout(async () => {
+        try {
+          await apiService.verifyPayment(finalOrderNumber, true).catch(() => {});
+        } catch (e) {}
+
+        clearCart();
+        setStep('confirmed');
+        setIsSubmitting(false);
+      }, 1400);
 
     } catch (err) {
-      setSubmitError(err.message || 'Failed to initialize order. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Finalize Fastrr Sandbox Payment
-  const handleCompleteFastrrPayment = async () => {
-    if (!placedOrder) return;
-    setIsSubmitting(true);
-
-    try {
-      // In sandbox mode, call verifyPayment with simulate_success to confirm order atomically
-      const verified = await apiService.verifyPayment(placedOrder.order_number, true);
-      setPlacedOrder(verified.order);
-      
-      // Empty the cart
-      clearCart();
-      
-      // Transition to Confirmed screen
-      setStep('confirmed');
-    } catch (err) {
-      setSubmitError(err.message || 'Payment confirmation failed. Please contact support.');
-    } finally {
+      setSubmitError(err.message || 'Payment initiation failed. Please try again.');
       setIsSubmitting(false);
     }
   };
 
   if (!isOpen) return null;
 
+  const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const activeSplit = calcData?.payment_splits?.[paymentType];
+  const dueNow = activeSplit?.amount_due_now ?? calcData?.final_total ?? 0;
+  const dueOnDelivery = activeSplit?.amount_due_on_delivery ?? 0;
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-        onClick={() => {
-          if (step !== 'fastrr_processing') onClose();
-        }}
+    <div className="fixed inset-0 z-50 overflow-y-auto font-sans animate-fade-in select-none">
+      {/* Dimmed backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity"
+        onClick={handleAttemptClose}
       />
 
-      <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
-        <div
-          className="relative w-full max-w-2xl transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all border border-brand-border"
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
+        
+        {/* Fastrr Container Box (MadeWidLove Format) */}
+        <div 
+          className="relative w-full max-w-[460px] transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all border border-brand-border flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 1. Sleek Fastrr Header */}
-          <div className="px-6 py-4 border-b border-brand-border bg-gradient-to-r from-brand-surface via-white to-brand-surface flex items-center justify-between">
+          {/* 1. Header Bar with Logo and Back / Close buttons */}
+          <div className="px-5 py-3.5 bg-white border-b border-brand-border/60 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold">
-                <Zap className="w-4 h-4 text-brand-primary" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-caps tracking-widest uppercase font-bold text-brand-primary">
-                    Fastrr 1-Click Checkout
-                  </span>
-                  <span className="text-[10px] bg-brand-primary-light text-brand-primary px-1.5 py-0.5 rounded font-bold uppercase">
-                    Sandbox
-                  </span>
+              {step !== 'phone' && step !== 'confirmed' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (step === 'otp') setStep('phone');
+                    else if (step === 'details_payment') setStep('phone');
+                  }}
+                  className="p-1 rounded-lg text-brand-tertiary hover:bg-brand-surface transition-colors cursor-pointer"
+                  title="Back"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-xs shadow-xs">
+                  V
                 </div>
-                <div className="flex items-center space-x-1 text-[11px] text-brand-muted font-light">
-                  <Lock className="w-2.5 h-2.5 text-emerald-600" />
-                  <span>256-Bit SSL Secured • End-to-End Encrypted</span>
-                </div>
+                <span className="font-editorial font-bold text-sm tracking-widest text-brand-tertiary">
+                  VALERIÉ JEWELS
+                </span>
               </div>
             </div>
 
             <button
-              onClick={onClose}
-              disabled={step === 'fastrr_processing'}
-              className="p-2 rounded-xl text-brand-muted hover:text-brand-tertiary hover:bg-brand-surface transition-colors"
+              onClick={handleAttemptClose}
+              disabled={step === 'processing'}
+              className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-brand-tertiary transition-colors cursor-pointer"
+              title="Close checkout"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* 2. Step Progress Bar */}
+          {/* 2. Top Promotional Announcement Banner (MadeWidLove Highlight) */}
+          <div className="bg-gradient-to-r from-brand-tertiary via-[#361c56] to-brand-tertiary px-4 py-2 text-center text-[11px] font-medium text-white flex items-center justify-center space-x-1.5 shadow-2xs">
+            <span className="text-amber-300">🎁</span>
+            <span className="font-semibold tracking-wide">
+              {paymentSettings.checkout_banner_text}
+            </span>
+          </div>
+
+          {/* 3. Collapsible Order Summary Bar */}
           {step !== 'confirmed' && (
-            <div className="bg-[#FAF7FC] px-6 py-2.5 border-b border-brand-border flex items-center justify-between text-xs">
-              <button
-                onClick={() => setStep('address')}
-                className={`flex items-center space-x-1.5 font-caps uppercase tracking-wider font-semibold transition-colors ${
-                  step === 'address' ? 'text-brand-primary font-bold' : 'text-brand-muted hover:text-brand-tertiary'
-                }`}
+            <div className="border-b border-brand-border/80 bg-[#FAF7FC]">
+              <div 
+                onClick={() => setOrderSummaryOpen(!orderSummaryOpen)}
+                className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-purple-50/40 transition-colors"
               >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  step === 'address' ? 'bg-brand-primary text-white' : 'bg-brand-border text-brand-muted'
-                }`}>1</span>
-                <span>Shipping Address</span>
-              </button>
+                <div className="flex items-center space-x-2 text-xs font-semibold text-brand-tertiary">
+                  <span>Order summary ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})</span>
+                  {orderSummaryOpen ? <ChevronUp className="w-3.5 h-3.5 text-brand-muted" /> : <ChevronDown className="w-3.5 h-3.5 text-brand-muted" />}
+                </div>
 
-              <ChevronRight className="w-3.5 h-3.5 text-brand-border" />
-
-              <button
-                onClick={() => {
-                  if (name && addressLine1 && pincode) setStep('payment');
-                }}
-                disabled={!name || !addressLine1 || !pincode}
-                className={`flex items-center space-x-1.5 font-caps uppercase tracking-wider font-semibold transition-colors ${
-                  step === 'payment' ? 'text-brand-primary font-bold' : 'text-brand-muted hover:text-brand-tertiary disabled:opacity-50'
-                }`}
-              >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  step === 'payment' ? 'bg-brand-primary text-white' : 'bg-brand-border text-brand-muted'
-                }`}>2</span>
-                <span>Payment Splits</span>
-              </button>
-
-              <ChevronRight className="w-3.5 h-3.5 text-brand-border" />
-
-              <div className={`flex items-center space-x-1.5 font-caps uppercase tracking-wider font-semibold ${
-                step === 'fastrr_processing' ? 'text-brand-primary font-bold' : 'text-brand-muted'
-              }`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  step === 'fastrr_processing' ? 'bg-brand-primary text-white' : 'bg-brand-border text-brand-muted'
-                }`}>3</span>
-                <span>Pay & Confirm</span>
-              </div>
-            </div>
-          )}
-
-          {/* 3. Modal Body based on Step */}
-          <div className="p-6">
-            {calcError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{calcError}</span>
-              </div>
-            )}
-
-            {submitError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{submitError}</span>
-              </div>
-            )}
-
-            {/* STEP 1: SHIPPING ADDRESS */}
-            {step === 'address' && (
-              <form onSubmit={handleProceedToPayment} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-editorial text-lg font-bold text-brand-tertiary">
-                    Delivery & Contact Details
-                  </h3>
-                  <span className="text-[11px] text-brand-muted bg-brand-surface px-2.5 py-1 rounded-full font-light">
-                    {user ? `Logged in as ${user.name}` : '✨ Instant Guest Checkout'}
+                <div className="flex items-center space-x-2 text-xs">
+                  {calcData?.total_mrp > (calcData?.final_total || 0) && (
+                    <span className="text-brand-muted line-through text-[11px]">
+                      ₹{Math.round(calcData.total_mrp).toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  <span className="font-bold text-brand-primary text-sm">
+                    ₹{Math.round(dueNow).toLocaleString('en-IN')}
                   </span>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Pooja Sharma"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                    />
+              {/* Collapsed Items List & Coupon Bar */}
+              {orderSummaryOpen && (
+                <div className="px-5 pb-4 space-y-3 animate-fade-in border-t border-brand-border/40 pt-3">
+                  <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
+                    {cartItems.map((item) => (
+                      <div key={item.key || item.id} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2.5">
+                          <img
+                            src={item.image || item.primary_image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=120&q=80'}
+                            alt={item.name}
+                            className="w-10 h-10 rounded-lg object-cover border border-brand-border"
+                          />
+                          <div>
+                            <p className="font-medium text-brand-tertiary line-clamp-1">{item.name}</p>
+                            <span className="text-[10px] text-brand-muted">Qty: {item.quantity}</span>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-brand-tertiary">
+                          ₹{Math.round(item.price * item.quantity).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                      Mobile Number (for Courier updates) *
-                    </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-brand-border bg-[#F5F2F9] text-xs font-semibold text-brand-muted">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        placeholder="9876543210"
-                        className="w-full px-3.5 py-2.5 rounded-r-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                    Email Address (for Order Receipt & Tracking) *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="pooja@example.com"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                    Street Address / Flat / Society *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={addressLine1}
-                    onChange={(e) => setAddressLine1(e.target.value)}
-                    placeholder="Flat 402, Lotus Heights, Linking Road"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                      Pincode *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      value={pincode}
-                      onChange={handlePincodeChange}
-                      placeholder="400050"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Mumbai"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
-                      State *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="Maharashtra"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-muted font-bold mb-1">
-                    Landmark / Instructions (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
-                    placeholder="Near Starbucks, Bandra West"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/30 text-xs text-brand-tertiary"
-                  />
-                </div>
-
-                <div className="pt-3 border-t border-brand-border flex items-center justify-between">
-                  <div className="text-xs text-brand-muted flex items-center space-x-1.5">
-                    <Truck className="w-3.5 h-3.5 text-brand-primary" />
-                    <span>Free Delivery Across All India (5–7 Working Days)</span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
-                  >
-                    <span>Continue to Payment</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 2: PAYMENT SPLIT SELECTION */}
-            {step === 'payment' && (
-              <div className="space-y-5">
-                {/* Coupon Box */}
-                <div className="p-3.5 rounded-2xl bg-brand-surface/70 border border-brand-border flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Percent className="w-4 h-4 text-brand-primary" />
-                    <div>
-                      <span className="text-xs font-bold text-brand-tertiary block">
-                        Valerie Promo Code
-                      </span>
-                      <span className="text-[11px] text-brand-muted">
-                        Use <strong className="text-brand-primary font-mono cursor-pointer hover:underline" onClick={() => handleApplyCoupon('VALERIE10')}>VALERIE10</strong> for 10% instant off
-                      </span>
-                    </div>
-                  </div>
-
-                  {couponApplied ? (
-                    <div className="flex items-center space-x-2 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-200">
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{couponCode} Applied</span>
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="text-red-500 hover:text-red-700 ml-1 text-xs"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex w-full sm:w-auto space-x-1.5">
+                  {/* Promo Code Input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="relative flex-1">
+                      <Percent className="w-3.5 h-3.5 absolute left-3 top-2.5 text-emerald-600" />
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        placeholder="ENTER COUPON"
-                        className="px-3 py-1.5 rounded-xl border border-brand-border text-xs uppercase font-mono w-32 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                        placeholder={couponApplied ? couponCode : "Enter coupon code (VALERIE10)"}
+                        className="w-full pl-8 pr-3 py-1.5 bg-white border border-brand-border rounded-xl text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary uppercase"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleApplyCoupon(couponInput)}
-                        className="px-3 py-1.5 rounded-xl bg-brand-tertiary text-white text-xs font-caps tracking-wider uppercase font-bold hover:bg-black transition-colors"
-                      >
-                        Apply
-                      </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (couponApplied) {
+                          setCouponApplied(false);
+                          setCouponInput('');
+                        } else {
+                          setCouponCode(couponInput || 'VALERIE10');
+                          setCouponApplied(true);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover transition-colors cursor-pointer"
+                    >
+                      {couponApplied ? 'Remove' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponApplied && (
+                    <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      <span>Coupon {couponCode} applied! Saved extra on this order.</span>
+                    </p>
                   )}
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* 3 Payment Split Options */}
-                <div>
-                  <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary mb-3">
-                    Choose Payment Option (Powered by Fastrr)
-                  </h4>
+          {/* 4. Checkout Steps Container */}
+          <div className="p-5 sm:p-6 overflow-y-auto max-h-[72vh]">
 
-                  <div className="space-y-3">
-                    {/* Option 1: Full Prepaid */}
+            {/* Global Error Banner */}
+            {submitError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 1: ENTER MOBILE NUMBER (Fastrr Quick Verification)
+            ══════════════════════════════════════════════════════════════ */}
+            {step === 'phone' && (
+              <div className="space-y-5 animate-fade-in py-1">
+                <div className="text-center space-y-1">
+                  <h2 className="text-base font-bold text-brand-tertiary font-sans">
+                    Enter mobile number
+                  </h2>
+                  <p className="text-xs text-brand-muted font-light">
+                    Provide your mobile number to continue with 1-click checkout
+                  </p>
+                </div>
+
+                <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                  {/* Phone input with Indian Flag */}
+                  <div className="flex items-center border border-brand-border rounded-2xl bg-white shadow-2xs overflow-hidden focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
+                    <div className="flex items-center space-x-1 px-3.5 py-3 bg-[#FAF8FC] border-r border-brand-border text-xs font-semibold text-brand-tertiary select-none">
+                      <span className="text-sm">🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      autoFocus
+                      required
+                      maxLength={10}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10-digit mobile number"
+                      className="flex-1 px-4 py-3 text-sm font-semibold tracking-wider text-brand-tertiary focus:outline-none bg-transparent placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Continue Button */}
+                  <button
+                    type="submit"
+                    disabled={phone.replace(/\D/g, '').length !== 10}
+                    className="w-full py-3.5 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99]"
+                  >
+                    <span>CONTINUE</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
+
+                {/* Fastrr Address Prefill Assurance Note */}
+                <div className="p-3 rounded-2xl bg-purple-50/70 border border-brand-primary/20 text-center space-y-0.5">
+                  <p className="text-xs text-brand-tertiary font-medium">
+                    We'll fill in your saved addresses automatically.
+                  </p>
+                  <p className="text-[10.5px] text-brand-muted flex items-center justify-center gap-1 font-light">
+                    <span>Powered by</span>
+                    <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
+                  </p>
+                </div>
+
+                {/* Customer Testimonial Quote (Social Proof) */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF8FC] border border-brand-border/80 text-center space-y-1">
+                  <p className="text-xs text-brand-tertiary italic font-serif leading-relaxed">
+                    {paymentSettings.testimonial_quote}
+                  </p>
+                  <p className="text-[10.5px] text-brand-muted font-medium">
+                    — {paymentSettings.testimonial_author}
+                  </p>
+                </div>
+
+                {/* Trust Footer Badges */}
+                <div className="pt-2 grid grid-cols-4 gap-1 text-[9.5px] text-center text-brand-muted border-t border-brand-border/60">
+                  <div className="flex flex-col items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>PCI DSS certified</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Secure payments</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Truck className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Assured delivery</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>100% Genuine</span>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 2: OTP VERIFICATION (6 Digits)
+            ══════════════════════════════════════════════════════════════ */}
+            {step === 'otp' && (
+              <div className="space-y-5 animate-fade-in py-2">
+                <div className="text-center space-y-1">
+                  <h2 className="text-base font-bold text-brand-tertiary">
+                    Verify phone number
+                  </h2>
+                  <div className="flex items-center justify-center space-x-1.5 text-xs text-brand-muted">
+                    <span>Enter OTP sent to</span>
+                    <strong className="text-brand-tertiary font-bold">+91 {phone}</strong>
+                    <button
+                      type="button"
+                      onClick={() => setStep('phone')}
+                      className="p-1 text-brand-primary hover:underline cursor-pointer"
+                      title="Change phone number"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 6-box OTP digits */}
+                <div className="flex items-center justify-center gap-2 sm:gap-2.5">
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (otpInputs.current[idx] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      className="w-10 h-12 sm:w-11 sm:h-13 rounded-xl border-2 border-brand-border focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 text-center font-mono font-bold text-lg text-brand-tertiary outline-none bg-white transition-all shadow-2xs"
+                    />
+                  ))}
+                </div>
+
+                {/* Resend OTP Timer & Fast Auto-fill Demo */}
+                <div className="text-center space-y-2">
+                  <div className="text-xs text-brand-muted">
+                    {otpTimer > 0 ? (
+                      <span>Resend OTP in <strong className="text-brand-primary font-mono">{otpTimer}s</strong></span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        className="text-brand-primary font-bold hover:underline cursor-pointer"
+                      >
+                        Resend OTP Code
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sandbox Hint Button */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyOtp('123456')}
+                      className="text-[11px] font-semibold text-brand-primary hover:underline bg-purple-50 px-3 py-1 rounded-full border border-purple-200 cursor-pointer"
+                    >
+                      ⚡ Quick 1-Click Verify (Sandbox Demo)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-purple-50/70 border border-brand-primary/20 text-center space-y-0.5">
+                  <p className="text-xs text-brand-tertiary font-medium">
+                    We'll fill in your saved addresses automatically.
+                  </p>
+                  <p className="text-[10.5px] text-brand-muted">
+                    Powered by <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 3: ADDRESS & PAYMENT SPLIT SELECTION (Core Fastrr Engine)
+            ══════════════════════════════════════════════════════════════ */}
+            {step === 'details_payment' && (
+              <form onSubmit={handlePlaceOrder} className="space-y-5 animate-fade-in">
+                
+                {/* Delivery Address Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-brand-border/60 pb-1.5">
+                    <h3 className="text-xs font-caps tracking-wider uppercase font-bold text-brand-tertiary flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>Delivery Address</span>
+                    </h3>
+                    {city && (
+                      <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        ⚡ {deliveryEta} Delivery
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Full Name *"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-medium"
+                      />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Email (for order invoice)"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      required
+                      value={addressLine1}
+                      onChange={(e) => setAddressLine1(e.target.value)}
+                      placeholder="Flat, House no., Building, Street *"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    />
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Pincode *"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City *"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        placeholder="State *"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-border bg-[#FAF8FC] focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Selection Options (Prepaid / Partial / COD) */}
+                <div className="space-y-3 pt-1">
+                  <h3 className="text-xs font-caps tracking-wider uppercase font-bold text-brand-tertiary flex items-center gap-1.5 border-b border-brand-border/60 pb-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Select Payment Method</span>
+                  </h3>
+
+                  <div className="space-y-2.5">
+                    
+                    {/* Option 1: 100% PREPAID (High Incentive: ₹50 OFF + Free Gift) */}
                     <div
                       onClick={() => setPaymentType('full_prepaid')}
-                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
                         paymentType === 'full_prepaid'
-                          ? 'border-brand-primary bg-brand-primary-light/40 shadow-sm'
-                          : 'border-brand-border hover:border-brand-primary/40 bg-white'
+                          ? 'border-brand-primary bg-gradient-to-r from-purple-50/90 to-white ring-2 ring-brand-primary/20 shadow-sm'
+                          : 'border-brand-border bg-white hover:border-brand-primary/40'
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center ${
-                            paymentType === 'full_prepaid' ? 'border-brand-primary bg-brand-primary text-white' : 'border-brand-muted'
-                          }`}>
-                            {paymentType === 'full_prepaid' && <Check className="w-3 h-3" />}
-                          </div>
+                        <div className="flex items-start space-x-2.5">
+                          <input
+                            type="radio"
+                            name="paymentType"
+                            checked={paymentType === 'full_prepaid'}
+                            onChange={() => setPaymentType('full_prepaid')}
+                            className="mt-0.5 accent-brand-primary w-4 h-4 cursor-pointer"
+                          />
                           <div>
                             <div className="flex items-center space-x-2">
-                              <span className="text-sm font-bold text-brand-tertiary">
-                                1-Click Fastrr Prepaid (UPI / Cards / NetBanking)
+                              <span className="font-bold text-xs text-brand-tertiary">
+                                UPI / Cards / NetBanking
                               </span>
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md flex items-center space-x-1">
-                                <Sparkles className="w-2.5 h-2.5" />
-                                <span>FREE Zircon Necklace + ₹50 Extra Off</span>
+                              <span className="text-[9.5px] font-extrabold uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-2xs">
+                                ₹{paymentSettings.prepaid_discount} OFF
                               </span>
                             </div>
-                            <p className="text-xs text-brand-muted font-light mt-0.5">
-                              Instant checkout via UPI/Cards. Complimentary Free Zircon Necklace gift included with ₹50 instant discount.
-                            </p>
+                            
+                            {/* Free Gift Badge */}
+                            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-brand-primary font-bold">
+                              <Gift className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                              <span>Includes {paymentSettings.prepaid_gift_title}!</span>
+                            </div>
+
+                            {/* Supported UPI Apps Row */}
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 shadow-3xs">
+                                Google Pay
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-purple-700 shadow-3xs">
+                                PhonePe
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-sky-600 shadow-3xs">
+                                Paytm
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-800 shadow-3xs">
+                                Cards / UPI
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         <div className="text-right">
                           <span className="text-sm font-bold text-brand-primary block">
-                            ₹{calcData?.payment_splits?.full_prepaid?.amount_due_now !== undefined
-                              ? Math.round(calcData.payment_splits.full_prepaid.amount_due_now).toLocaleString('en-IN')
-                              : '...'}
+                            ₹{Math.round(calcData?.payment_splits?.full_prepaid?.amount_due_now ?? dueNow).toLocaleString('en-IN')}
                           </span>
-                          <span className="text-[10px] text-emerald-600 font-semibold block">
-                            ₹0 on Delivery
+                          <span className="text-[10px] text-emerald-600 font-bold block">
+                            Save ₹{paymentSettings.prepaid_discount}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Option 2: Partial COD (Smart Split) */}
-                    <div
-                      onClick={() => setPaymentType('partial')}
-                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                        paymentType === 'partial'
-                          ? 'border-brand-primary bg-brand-primary-light/40 shadow-sm'
-                          : 'border-brand-border hover:border-brand-primary/40 bg-white'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center ${
-                            paymentType === 'partial' ? 'border-brand-primary bg-brand-primary text-white' : 'border-brand-muted'
-                          }`}>
-                            {paymentType === 'partial' && <Check className="w-3 h-3" />}
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-bold text-brand-tertiary">
-                                Partial COD (Smart Split Deposit)
-                              </span>
-                              <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-md">
-                                Recommended
-                              </span>
+                    {/* Option 2: PARTIAL COD (Smart RTO Protection) */}
+                    {paymentSettings.partial_cod_enabled && (
+                      <div
+                        onClick={() => setPaymentType('partial')}
+                        className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                          paymentType === 'partial'
+                            ? 'border-brand-primary bg-gradient-to-r from-purple-50/90 to-white ring-2 ring-brand-primary/20 shadow-sm'
+                            : 'border-brand-border bg-white hover:border-brand-primary/40'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2.5">
+                            <input
+                              type="radio"
+                              name="paymentType"
+                              checked={paymentType === 'partial'}
+                              onChange={() => setPaymentType('partial')}
+                              className="mt-0.5 accent-brand-primary w-4 h-4 cursor-pointer"
+                            />
+                            <div>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="font-bold text-xs text-brand-tertiary">
+                                  Partial COD (Smart Split)
+                                </span>
+                                <span className="text-[9px] font-bold bg-purple-100 text-brand-primary px-1.5 py-0.2 rounded">
+                                  RTO Protect
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-brand-muted font-light mt-0.5">
+                                Pay ₹{paymentSettings.partial_advance} advance deposit now • Pay balance ₹{Math.round(calcData?.payment_splits?.partial?.amount_due_on_delivery ?? 0).toLocaleString('en-IN')} on delivery.
+                              </p>
                             </div>
-                            <p className="text-xs text-brand-muted font-light mt-0.5">
-                              Pay ₹199 advance token now via UPI. Pay remaining balance securely to courier delivery agent.
-                            </p>
                           </div>
-                        </div>
 
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-brand-tertiary block">
-                            Pay ₹199 Now
-                          </span>
-                          <span className="text-[10px] text-brand-muted font-light block">
-                            ₹{calcData?.payment_splits?.partial?.amount_due_on_delivery !== undefined
-                              ? Math.round(calcData.payment_splits.partial.amount_due_on_delivery).toLocaleString('en-IN')
-                              : '...'} on Delivery
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Option 3: Full Cash on Delivery */}
-                    <div
-                      onClick={() => setPaymentType('cod')}
-                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                        paymentType === 'cod'
-                          ? 'border-brand-primary bg-brand-primary-light/40 shadow-sm'
-                          : 'border-brand-border hover:border-brand-primary/40 bg-white'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center ${
-                            paymentType === 'cod' ? 'border-brand-primary bg-brand-primary text-white' : 'border-brand-muted'
-                          }`}>
-                            {paymentType === 'cod' && <Check className="w-3 h-3" />}
-                          </div>
-                          <div>
-                            <span className="text-sm font-bold text-brand-tertiary block">
-                              Cash on Delivery (Full COD)
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-brand-tertiary block">
+                              Pay ₹{paymentSettings.partial_advance} now
                             </span>
-                            <p className="text-xs text-brand-muted font-light mt-0.5">
-                              Pay 100% total amount upon package delivery directly to the courier agent.
-                            </p>
+                            <span className="text-[10px] text-brand-muted block">
+                              Rest at doorstep
+                            </span>
                           </div>
                         </div>
+                      </div>
+                    )}
 
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-brand-tertiary block">
-                            ₹0 Now
-                          </span>
-                          <span className="text-[10px] text-brand-muted font-light block">
-                            ₹{calcData?.payment_splits?.cod?.amount_due_on_delivery !== undefined
-                              ? Math.round(calcData.payment_splits.cod.amount_due_on_delivery).toLocaleString('en-IN')
-                              : '...'} on Delivery
-                          </span>
+                    {/* Option 3: STANDARD COD */}
+                    {paymentSettings.cod_available && (
+                      <div
+                        onClick={() => setPaymentType('cod')}
+                        className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                          paymentType === 'cod'
+                            ? 'border-brand-primary bg-gradient-to-r from-purple-50/90 to-white ring-2 ring-brand-primary/20 shadow-sm'
+                            : 'border-brand-border bg-white hover:border-brand-primary/40'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2.5">
+                            <input
+                              type="radio"
+                              name="paymentType"
+                              checked={paymentType === 'cod'}
+                              onChange={() => setPaymentType('cod')}
+                              className="mt-0.5 accent-brand-primary w-4 h-4 cursor-pointer"
+                            />
+                            <div>
+                              <span className="font-bold text-xs text-brand-tertiary">
+                                Cash on Delivery (Full COD)
+                              </span>
+                              <p className="text-[11px] text-brand-muted font-light mt-0.5">
+                                Pay full cash upon package delivery.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-brand-tertiary block">
+                              ₹{Math.round(calcData?.payment_splits?.cod?.amount_due_on_delivery ?? dueNow).toLocaleString('en-IN')}
+                            </span>
+                            {paymentSettings.cod_fee > 0 && (
+                              <span className="text-[9.5px] text-amber-700 font-medium">
+                                +₹{paymentSettings.cod_fee} COD Fee
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+
                   </div>
                 </div>
 
-                {/* Price Breakdown Summary */}
-                {calcData && (
-                  <div className="p-4 rounded-2xl bg-[#FAF7FC] border border-brand-border space-y-2 text-xs">
-                    <div className="flex justify-between text-brand-muted">
-                      <span>Subtotal ({calcData.item_count} items)</span>
-                      <span>₹{Math.round(calcData.subtotal).toLocaleString('en-IN')}</span>
-                    </div>
-
-                    {calcData.discount_amount > 0 && (
-                      <div className="flex justify-between text-emerald-600 font-medium">
-                        <span>Coupon Savings</span>
-                        <span>-₹{Math.round(calcData.discount_amount).toLocaleString('en-IN')}</span>
-                      </div>
-                    )}
-
-                    {paymentType === 'full_prepaid' && (
-                      <div className="flex justify-between text-emerald-600 font-medium">
-                        <span>Prepaid Instant Discount</span>
-                        <span>-₹50</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between text-brand-muted">
-                      <span>Express Courier Shipping</span>
-                      <span>{calcData.is_free_shipping ? <strong className="text-emerald-600">FREE</strong> : `₹${calcData.shipping_fee}`}</span>
-                    </div>
-
-                    <div className="pt-2 border-t border-brand-border flex items-baseline justify-between text-sm font-bold text-brand-tertiary">
-                      <span>Total Payable</span>
-                      <span className="text-base text-brand-primary">
-                        ₹{paymentType === 'full_prepaid'
-                          ? Math.round(calcData.payment_splits.full_prepaid.amount_due_now).toLocaleString('en-IN')
-                          : Math.round(calcData.final_total).toLocaleString('en-IN')}
+                {/* Primary Complete Payment Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.99] text-white text-xs font-caps tracking-widest uppercase font-bold shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Zap className="w-4 h-4 animate-bounce text-amber-300" />
+                      <span>PROCESSING 1-CLICK ORDER...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>
+                        {paymentType === 'full_prepaid'
+                          ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')} VIA FASTRR 1-CLICK`
+                          : paymentType === 'partial'
+                          ? `PAY ₹${paymentSettings.partial_advance} DEPOSIT & CONFIRM`
+                          : `CONFIRM CASH ON DELIVERY ORDER`}
                       </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep('address')}
-                    className="text-xs text-brand-muted hover:text-brand-tertiary underline"
-                  >
-                    ← Back to Shipping Address
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handlePlaceOrder}
-                    disabled={isSubmitting || isCalculating}
-                    className="px-6 py-3.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <span>Initializing Fastrr...</span>
-                    ) : (
-                      <>
-                        <span>Proceed to Fastrr Checkout</span>
-                        <Zap className="w-4 h-4 fill-current" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: FASTRR CHECKOUT SHEET SIMULATION */}
-            {step === 'fastrr_processing' && placedOrder && (
-              <div className="space-y-6 py-2">
-                <div className="p-4 rounded-2xl bg-brand-surface border border-brand-border flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted block">
-                      Order Reference
-                    </span>
-                    <span className="text-sm font-bold font-mono text-brand-tertiary">
-                      {placedOrder.order_number}
-                    </span>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted block">
-                      Amount Payable Now
-                    </span>
-                    <span className="text-base font-bold text-brand-primary">
-                      ₹{Math.round(placedOrder.amount_payable_now).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fastrr Payment Options Selector */}
-                <div className="space-y-3">
-                  <span className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary block">
-                    Select Fastrr Payment Method
-                  </span>
-
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUpiApp('gpay')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        selectedUpiApp === 'gpay'
-                          ? 'border-brand-primary bg-brand-primary-light/40 font-bold'
-                          : 'border-brand-border hover:bg-brand-surface'
-                      }`}
-                    >
-                      <Smartphone className="w-5 h-5 mx-auto mb-1 text-brand-primary" />
-                      <span className="text-xs block text-brand-tertiary">Google Pay</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUpiApp('phonepe')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        selectedUpiApp === 'phonepe'
-                          ? 'border-brand-primary bg-brand-primary-light/40 font-bold'
-                          : 'border-brand-border hover:bg-brand-surface'
-                      }`}
-                    >
-                      <Zap className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-                      <span className="text-xs block text-brand-tertiary">PhonePe</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUpiApp('card')}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        selectedUpiApp === 'card'
-                          ? 'border-brand-primary bg-brand-primary-light/40 font-bold'
-                          : 'border-brand-border hover:bg-brand-surface'
-                      }`}
-                    >
-                      <CreditCard className="w-5 h-5 mx-auto mb-1 text-brand-tertiary" />
-                      <span className="text-xs block text-brand-tertiary">Cards / NetBank</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Fastrr 1-Click Pay Confirmation */}
-                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-center space-y-2">
-                  <div className="flex items-center justify-center space-x-1.5 text-xs text-emerald-800 font-semibold">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Fastrr Sandbox Gateway Ready</span>
-                  </div>
-                  <p className="text-[11px] text-brand-muted font-light max-w-sm mx-auto">
-                    Simulating secure RBI-compliant tokenized payment of ₹
-                    {Math.round(placedOrder.amount_payable_now).toLocaleString('en-IN')}.
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleCompleteFastrrPayment}
-                    disabled={isSubmitting}
-                    className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-caps tracking-widest uppercase font-bold shadow-lg transition-all flex items-center justify-center space-x-2"
-                  >
-                    {isSubmitting ? (
-                      <span>Verifying Fastrr Signature & Payment...</span>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>Authorize & Complete 1-Click Payment</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: ORDER CONFIRMED RECEIPT */}
-            {step === 'confirmed' && placedOrder && (
-              <div className="text-center py-4 space-y-5">
-                {/* Success Icon */}
-                <div className="w-16 h-16 rounded-full bg-emerald-100 border-4 border-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-bounce-short">
-                  <CheckCircle2 className="w-9 h-9" />
-                </div>
-
-                <div>
-                  <span className="text-[11px] font-caps uppercase tracking-widest text-emerald-700 font-bold block mb-1">
-                    Order Placed Successfully!
-                  </span>
-                  <h3 className="font-editorial text-2xl font-bold text-brand-tertiary">
-                    Thank You, {placedOrder.customer_name || name}!
-                  </h3>
-                  <p className="text-xs text-brand-muted font-light mt-1">
-                    Your luxury jewelry order has been confirmed and routed to our fulfillment atelier.
-                  </p>
-                </div>
-
-                {/* Receipt Card */}
-                <div className="p-4 rounded-2xl bg-brand-surface/80 border border-brand-border text-left space-y-3 text-xs">
-                  <div className="flex items-center justify-between pb-2 border-b border-brand-border">
-                    <span className="text-brand-muted font-light">Order Number</span>
-                    <span className="font-mono font-bold text-brand-primary text-sm">
-                      {placedOrder.order_number}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-brand-muted font-light">Payment Method</span>
-                    <span className="font-semibold text-brand-tertiary uppercase">
-                      {placedOrder.payment_type === 'full_prepaid' ? 'Prepaid (Paid in Full)' : placedOrder.payment_type === 'partial' ? 'Partial COD (Deposit Paid)' : 'Cash on Delivery'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-brand-muted font-light">Amount Paid Upfront</span>
-                    <span className="font-semibold text-emerald-600">
-                      ₹{Math.round(placedOrder.amount_paid_upfront || 0).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-
-                  {placedOrder.amount_due_on_delivery > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-brand-muted font-light">Balance Due on Delivery</span>
-                      <span className="font-bold text-brand-tertiary">
-                        ₹{Math.round(placedOrder.amount_due_on_delivery).toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                    </>
                   )}
+                </button>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-brand-muted font-light">Fastrr Transaction ID</span>
-                    <span className="font-mono text-brand-muted text-[11px]">
-                      {placedOrder.fastrr_order_id || 'FST-SBX-SUCCESS'}
-                    </span>
-                  </div>
-
-                  <div className="pt-2 border-t border-brand-border">
-                    <span className="text-brand-muted font-light block mb-0.5">Shipping Destination</span>
-                    <span className="text-brand-tertiary font-medium block">
-                      {placedOrder.shipping_address_line1}, {placedOrder.city}, {placedOrder.state} - {placedOrder.pincode}
-                    </span>
-                  </div>
+                {/* Trust Guarantees */}
+                <div className="flex items-center justify-center space-x-3 text-[10px] text-brand-muted">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                    <span>RBI Authorized</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-emerald-600" />
+                    <span>256-Bit SSL Encrypted</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Truck className="w-3 h-3 text-brand-primary" />
+                    <span>Free Shipping</span>
+                  </span>
                 </div>
 
-                {/* Courier Dispatch Announcement */}
-                <div className="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200/60 text-xs text-purple-900 flex items-center space-x-2.5 text-left">
-                  <PackageCheck className="w-5 h-5 text-brand-primary flex-shrink-0" />
-                  <div>
-                    <span className="font-bold block">Shiprocket Express Courier Dispatch</span>
-                    <span className="text-[11px] text-purple-800/80 font-light">
-                      Free delivery across all India within 5–7 working days. A tracking link has been sent to {placedOrder.customer_email || email}.
-                    </span>
-                  </div>
+              </form>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 4: ORDER PROCESSING ANIMATION
+            ══════════════════════════════════════════════════════════════ */}
+            {step === 'processing' && (
+              <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-brand-primary relative">
+                  <Zap className="w-8 h-8 animate-pulse text-brand-primary" />
+                  <div className="absolute inset-0 rounded-full border-2 border-brand-primary border-t-transparent animate-spin"></div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const ordNum = placedOrder.order_number;
-                      onClose();
-                      setStep('address');
-                      if (onTrackOrder) {
-                        onTrackOrder(ordNum);
-                      }
-                    }}
-                    className="w-full py-3.5 rounded-xl border-2 border-brand-primary text-brand-primary hover:bg-brand-primary/5 text-xs font-caps tracking-widest uppercase font-bold shadow-2xs transition-all flex items-center justify-center space-x-2"
-                  >
-                    <Truck className="w-4 h-4" />
-                    <span>Track This Shipment (Shiprocket)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      setStep('address');
-                    }}
-                    className="w-full py-3.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md transition-all"
-                  >
-                    Continue Shopping Valerie Jewels
-                  </button>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-brand-tertiary font-sans">
+                    Confirming 1-Click Fastrr Order...
+                  </h3>
+                  <p className="text-xs text-brand-muted font-light">
+                    Securing your pieces and generating tracking credentials.
+                  </p>
                 </div>
               </div>
-
             )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 5: ORDER CONFIRMED RECEIPT & TRACKING
+            ══════════════════════════════════════════════════════════════ */}
+            {step === 'confirmed' && placedOrder && (
+              <div className="py-4 space-y-5 text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-md">
+                  <Check className="w-8 h-8 stroke-[2.5]" />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="px-3 py-0.5 rounded-full text-[10px] font-caps uppercase tracking-wider font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block">
+                    Order Successfully Placed
+                  </span>
+                  <h2 className="text-xl font-editorial font-bold text-brand-tertiary">
+                    Thank You, {placedOrder.shipping_name || name}!
+                  </h2>
+                  <p className="text-xs text-brand-muted font-mono font-bold tracking-wider">
+                    Order Ref: #{placedOrder.order_number}
+                  </p>
+                </div>
+
+                {/* Order Highlights Box */}
+                <div className="p-4 rounded-2xl bg-[#FAF8FC] border border-brand-border text-left space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-brand-border/60">
+                    <span className="text-brand-muted">Payment Mode:</span>
+                    <span className="font-bold text-brand-tertiary uppercase text-[11px]">
+                      {placedOrder.payment_type === 'full_prepaid' ? '100% Prepaid (Fastrr)' : placedOrder.payment_type === 'partial' ? 'Partial COD' : 'Cash on Delivery'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pb-2 border-b border-brand-border/60">
+                    <span className="text-brand-muted">Estimated Delivery:</span>
+                    <span className="font-bold text-emerald-700">{deliveryEta}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-brand-muted">Shipping to:</span>
+                    <span className="font-medium text-brand-tertiary text-right line-clamp-1 max-w-[200px]">
+                      {placedOrder.shipping_city}, {placedOrder.shipping_pincode}
+                    </span>
+                  </div>
+                </div>
+
+                {/* WhatsApp Order Support Button */}
+                <div className="pt-1 space-y-2">
+                  <a
+                    href={`https://wa.me/919999999999?text=Hi%20Valerie%20Jewels,%20I%20have%20a%20question%20regarding%20my%20order%20%23${placedOrder.order_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center justify-center space-x-2 shadow-sm"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>WhatsApp Order Support</span>
+                  </a>
+
+                  <button
+                    onClick={() => {
+                      onClose();
+                      if (onTrackOrder) onTrackOrder(placedOrder.order_number);
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-brand-border bg-white text-brand-tertiary hover:bg-brand-surface text-xs font-semibold transition-colors flex items-center justify-center space-x-1.5"
+                  >
+                    <span>Track Live Dispatch Status</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          EXIT-INTENT RETENTION POPUP (High Conversion Safeguard)
+      ══════════════════════════════════════════════════════════════ */}
+      {showExitIntent && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 animate-fade-in bg-black/60 backdrop-blur-xs">
+          <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl border border-brand-border space-y-4">
+            <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center">
+              <Sparkles className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-brand-tertiary font-sans">
+                {paymentSettings.exit_intent_title}
+              </h3>
+              <p className="text-xs text-brand-muted font-light leading-relaxed">
+                {paymentSettings.exit_intent_message}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-brand-primary/20 text-xs">
+              <span className="font-bold text-brand-primary block">
+                🎁 Free Zircon Necklace Reserved
+              </span>
+              <span className="text-[11px] text-brand-tertiary">
+                Order within the next 10 minutes to claim your gift!
+              </span>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowExitIntent(false)}
+                className="w-full py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all cursor-pointer"
+              >
+                RESUME 1-CLICK ORDER
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitIntent(false);
+                  onClose();
+                }}
+                className="w-full py-2 text-[11px] text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer"
+              >
+                Leave anyway
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }

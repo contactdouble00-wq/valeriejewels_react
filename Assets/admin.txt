@@ -28,3 +28,13 @@ Entered in the Valerie Jewels Admin login screen:
      the account / IP for 15 minutes (HTTP 429 Too Many Requests).
    * Session lifetime is 30 minutes.
 =====================================================
+
+http://valeriejewels.in/?preview=vj2026#catalog
+
+start api
+cd "D:\Agency stuff\valeriejewels_react\api"
+php -S localhost:8000
+
+start frontend
+cd "D:\Agency stuff\valeriejewels_react\frontend"
+npm run dev

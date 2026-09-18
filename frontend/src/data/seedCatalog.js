@@ -70,10 +70,12 @@ export const SEED_PRODUCTS = [
     is_anti_tarnish: 1,
     material: 'Brass Alloy with 18K Micro Gold Polish & Handset Seed Pearls',
     is_bestseller: 1,
-    primary_image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+    primary_image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85',
+    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-woman-trying-on-jewelry-43407-large.mp4',
     images: [
-      { id: 1, image_url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
-      { id: 2, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80', is_primary: 0 },
+      { id: 1, image_url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
+      { id: 'reel-1', image_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-woman-trying-on-jewelry-43407-large.mp4', is_primary: 0, media_type: 'video' },
+      { id: 2, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 1, title: 'Antique Gold Polish', sku: 'VJ-JHM-001-GLD', option1_value: 'Antique Gold', price: '1299.00', mrp: '2499.00', stock_quantity: 100 },
@@ -97,10 +99,12 @@ export const SEED_PRODUCTS = [
     is_anti_tarnish: 1,
     material: 'Hand-Glazed Meenakari Enamel & Seed Pearl Clusters',
     is_bestseller: 1,
-    primary_image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
+    primary_image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1200&h=1600&q=85',
+    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-showing-a-diamond-ring-43406-large.mp4',
     images: [
-      { id: 3, image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
-      { id: 4, image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80', is_primary: 0 },
+      { id: 3, image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
+      { id: 'reel-2', image_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-showing-a-diamond-ring-43406-large.mp4', is_primary: 0, media_type: 'video' },
+      { id: 4, image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 3, title: 'Signature Pastel Palette', sku: 'VJ-JHM-002-PST', option1_value: 'Pastel Palette', price: '1199.00', mrp: '2299.00', stock_quantity: 130 },

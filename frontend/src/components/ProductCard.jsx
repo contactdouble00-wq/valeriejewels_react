@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Sparkles, Heart } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Sparkles, Heart, Film } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 
 export default function ProductCard({ product, onQuickView, onAddToCart }) {
@@ -14,6 +14,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     is_bestseller,
     is_anti_tarnish,
     primary_image,
+    video_url,
     material,
     short_description,
   } = product;
@@ -21,7 +22,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
   return (
     <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
       <div>
-        {/* Product Image Stage */}
+        {/* Product Image Stage: Crisp 1:1 Square Ratio - perfectly balanced without vertical stretching */}
         <div 
           onClick={() => onQuickView(product)}
           className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer"
@@ -43,6 +44,12 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             {Boolean(is_bestseller) && (
               <span className="px-1.5 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
                 Best Seller
+              </span>
+            )}
+            {Boolean(video_url) && (
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm flex items-center gap-1 w-fit">
+                <Film className="w-2.5 h-2.5 text-amber-300" />
+                <span>Reel</span>
               </span>
             )}
           </div>

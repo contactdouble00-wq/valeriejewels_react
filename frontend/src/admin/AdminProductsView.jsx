@@ -3,7 +3,7 @@ import {
   Plus, Search, Filter, Copy, Trash2, Edit2, Star,
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
-  ChevronUp,
+  ChevronUp, Sparkles, Film, Play,
 } from 'lucide-react';
 import {
   DndContext,
@@ -21,10 +21,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { adminApi } from './adminApi';
 
-// ─── Sortable Image Tile ───────────────────────────────────────────────────────
-function SortableImageTile({ img, index, onRemove, onSetPrimary }) {
+// ─── Sortable Media Tile (Balanced 1:1 Square & Reels Support) ──────────
+function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: img.id || `img-${index}` });
+    useSortable({ id: item.id || `media-${index}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -32,53 +32,68 @@ function SortableImageTile({ img, index, onRemove, onSetPrimary }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const url = typeof img === 'string' ? img : img.image_url;
-  const isPrimary = img.is_primary || index === 0;
+  const url = typeof item === 'string' ? item : (item.image_url || item.url);
+  const isVideo = item.media_type === 'video' || (typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url));
+  const isPrimary = item.is_primary || (!isVideo && index === 0);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="relative w-20 h-20 rounded-xl overflow-hidden border-2 group shrink-0 select-none"
-      style={{ ...style, borderColor: isPrimary ? '#8366B0' : '#e5e7eb' }}
+      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 group shrink-0 select-none shadow-2xs transition-all ${isPrimary ? 'border-brand-primary ring-2 ring-brand-primary/20' : 'border-gray-200 hover:border-brand-primary/40'
+        }`}
     >
-      <img src={url} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" />
+      {isVideo ? (
+        <div className="w-full h-full bg-[#181420] flex items-center justify-center relative">
+          <video src={url} muted className="w-full h-full object-cover pointer-events-none" />
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xs">
+              <Play className="w-3 h-3 fill-current ml-0.5" />
+            </div>
+          </div>
+          <span className="absolute bottom-1 inset-x-0 text-center text-[7.5px] font-extrabold bg-brand-primary text-white tracking-wider py-0.5">
+            REEL
+          </span>
+        </div>
+      ) : (
+        <div className="w-full h-full bg-gray-50 relative">
+          <img src={url} alt={`Product media ${index + 1}`} className="w-full h-full object-cover" />
+          {isPrimary && (
+            <span className="absolute bottom-0 inset-x-0 text-center text-[7.5px] font-bold bg-brand-primary text-white py-0.5">
+              PRIMARY
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Drag handle */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity"
+        className="absolute top-0 left-0 right-0 h-6 flex items-center justify-center cursor-grab opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity z-10"
       >
-        <GripVertical className="w-3 h-3 text-white" />
+        <GripVertical className="w-3.5 h-3.5 text-white" />
       </div>
 
-      {/* Primary badge */}
-      {isPrimary && (
-        <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-bold bg-brand-primary text-white py-0.5">
-          PRIMARY
-        </span>
-      )}
-
       {/* Hover overlay: Set Primary + Remove */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
-        {!isPrimary && (
+      <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 z-20">
+        {!isPrimary && !isVideo && (
           <button
             type="button"
             onClick={() => onSetPrimary(index)}
-            className="text-[9px] font-bold text-yellow-300 hover:text-yellow-100 whitespace-nowrap"
-            title="Set as primary image"
+            className="text-[9px] font-bold text-yellow-300 hover:text-yellow-100 whitespace-nowrap bg-black/40 px-1.5 py-0.5 rounded cursor-pointer"
+            title="Set as primary photo"
           >
-            ⭐ Set Primary
+            ⭐ Primary
           </button>
         )}
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="bg-rose-600 text-white rounded-full p-0.5"
-          title="Remove image"
+          className="bg-rose-600 hover:bg-rose-700 text-white rounded-full p-1 shadow-sm transition-transform active:scale-90 cursor-pointer"
+          title="Remove media"
         >
-          <X className="w-2.5 h-2.5" />
+          <X className="w-3 h-3 stroke-[2.5]" />
         </button>
       </div>
     </div>
@@ -98,11 +113,11 @@ export default function AdminProductsView({ currentUser }) {
   const [inlineEditingStockId, setInlineEditingStockId] = useState(null);
   const [inlineStockVal, setInlineStockVal] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [mediaUrlInput, setMediaUrlInput] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [seoOpen, setSeoOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
   const csvImportRef = useRef(null);
-
   const isStaff = currentUser?.role === 'staff';
 
   // DnD sensors
@@ -196,12 +211,26 @@ export default function AdminProductsView({ currentUser }) {
 
   // ── Open Editor ───────────────────────────────────────────────────────────
   const handleOpenEdit = async (product) => {
+    let p = product;
     try {
       const full = await adminApi.getProduct(product.id);
-      setEditingProduct(full);
+      p = full;
     } catch {
-      setEditingProduct(product);
+      p = product;
     }
+    // Ensure media array contains video if video_url is present
+    let imgs = p.images ? [...p.images] : [];
+    if (p.video_url && !imgs.some((img) => (typeof img === 'string' ? img : img.image_url) === p.video_url)) {
+      imgs.push({
+        id: `reel-${Date.now()}`,
+        image_url: p.video_url,
+        media_type: 'video',
+        display_order: imgs.length,
+        is_primary: 0,
+      });
+    }
+    setEditingProduct({ ...p, images: imgs });
+    setMediaUrlInput('');
     setModalError('');
     setSeoOpen(false);
   };
@@ -212,11 +241,21 @@ export default function AdminProductsView({ currentUser }) {
     setModalSaving(true);
     setModalError('');
     try {
-      if (editingProduct.id) {
-        await adminApi.updateProduct(editingProduct);
+      // Keep video_url synced with the first video reel in images if present
+      const firstReel = editingProduct.images?.find((m) => {
+        const u = typeof m === 'string' ? m : (m.image_url || m.url);
+        return m.media_type === 'video' || (typeof u === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(u));
+      });
+      const payload = {
+        ...editingProduct,
+        video_url: firstReel ? (typeof firstReel === 'string' ? firstReel : (firstReel.image_url || firstReel.url)) : (editingProduct.video_url || null),
+      };
+
+      if (payload.id) {
+        await adminApi.updateProduct(payload);
         showToast('Product saved');
       } else {
-        await adminApi.createProduct(editingProduct);
+        await adminApi.createProduct(payload);
         showToast('Product created');
       }
       setEditingProduct(null);
@@ -229,33 +268,55 @@ export default function AdminProductsView({ currentUser }) {
     }
   };
 
-  // ── Media Upload ──────────────────────────────────────────────────────────
+  // ── Media Upload (Photos + Video Reels) ──────────────────────────────────
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMedia(true);
     try {
       const res = await adminApi.uploadMedia(file);
-      if (res.is_video) {
-        setEditingProduct((prev) => ({ ...prev, video_url: res.url }));
-        showToast('Demo video uploaded');
-      } else {
-        const existing = editingProduct.images || [];
-        const newImg = {
-          id: `new-${Date.now()}`,
-          image_url: res.url,
-          display_order: existing.length,
-          is_primary: existing.length === 0 ? 1 : 0,
-        };
-        setEditingProduct((prev) => ({ ...prev, images: [...existing, newImg] }));
-        showToast('Image uploaded');
-      }
+      const isVideo = res.is_video || file.type.startsWith('video/');
+      const existing = editingProduct.images || [];
+      const newMedia = {
+        id: `media-${Date.now()}`,
+        image_url: res.url,
+        media_type: isVideo ? 'video' : 'image',
+        display_order: existing.length,
+        is_primary: existing.length === 0 && !isVideo ? 1 : 0,
+      };
+      setEditingProduct((prev) => ({
+        ...prev,
+        video_url: isVideo ? res.url : (prev.video_url || null),
+        images: [...existing, newMedia],
+      }));
+      showToast(isVideo ? '🎬 Vertical video reel added' : '📸 Portrait image added');
     } catch (err) {
       showToast(err.message || 'Upload failed');
     } finally {
       setUploadingMedia(false);
       e.target.value = '';
     }
+  };
+
+  const handleAddMediaUrl = () => {
+    const url = mediaUrlInput.trim();
+    if (!url) return;
+    const isVideo = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
+    const existing = editingProduct.images || [];
+    const newMedia = {
+      id: `media-${Date.now()}`,
+      image_url: url,
+      media_type: isVideo ? 'video' : 'image',
+      display_order: existing.length,
+      is_primary: existing.length === 0 && !isVideo ? 1 : 0,
+    };
+    setEditingProduct((prev) => ({
+      ...prev,
+      video_url: isVideo ? url : (prev.video_url || null),
+      images: [...existing, newMedia],
+    }));
+    setMediaUrlInput('');
+    showToast(isVideo ? '🎬 Video reel added to gallery' : '📸 Image added to gallery');
   };
 
   // ── Image Drag-to-Reorder ─────────────────────────────────────────────────
@@ -417,22 +478,20 @@ export default function AdminProductsView({ currentUser }) {
         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
           <button
             onClick={() => setCategoryFilter('')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
-              categoryFilter === ''
-                ? 'bg-brand-primary text-white font-semibold shadow-xs'
-                : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${categoryFilter === ''
+              ? 'bg-brand-primary text-white font-semibold shadow-xs'
+              : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
+              }`}
           >
             All
           </button>
           {/* Jhumka Boxes special pill */}
           <button
             onClick={() => setCategoryFilter('jhumka-boxes')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap flex items-center space-x-1 ${
-              categoryFilter === 'jhumka-boxes'
-                ? 'bg-rose-500 text-white font-semibold shadow-xs'
-                : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-            }`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap flex items-center space-x-1 ${categoryFilter === 'jhumka-boxes'
+              ? 'bg-rose-500 text-white font-semibold shadow-xs'
+              : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+              }`}
           >
             <span>🔥 4 Jhumka Boxes</span>
           </button>
@@ -443,11 +502,10 @@ export default function AdminProductsView({ currentUser }) {
               <button
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.slug)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
-                  categoryFilter === cat.slug
-                    ? 'bg-brand-primary text-white font-semibold'
-                    : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${categoryFilter === cat.slug
+                  ? 'bg-brand-primary text-white font-semibold'
+                  : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
+                  }`}
               >
                 {cat.name}
               </button>
@@ -737,34 +795,34 @@ export default function AdminProductsView({ currentUser }) {
                 categories.find((c) => c.id === editingProduct.category_id)?.slug === 'jhumka-boxes' ||
                 editingProduct.name?.toLowerCase().includes('jhumka') ||
                 editingProduct.sku?.startsWith('VJ-JHM')) && (
-                <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
-                  <div className="space-y-0.5">
-                    <div className="font-bold flex items-center gap-1.5 text-amber-900">
-                      <Flame className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
+                  <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+                    <div className="space-y-0.5">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                        <Flame className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 font-light">
+                        Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Box # and per-pair badges are removed for clean visuals
+                      </p>
                     </div>
-                    <p className="text-[11px] text-amber-800 font-light">
-                      Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Box # and per-pair badges are removed for clean visuals
-                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="text-[11px] font-semibold text-amber-900">Pairs inside box:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={editingProduct.pairs_count ?? (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)}
+                        onChange={(e) =>
+                          setEditingProduct({
+                            ...editingProduct,
+                            pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10),
+                          })
+                        }
+                        className="w-16 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-amber-900 shadow-2xs focus:outline-none focus:border-amber-600"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <label className="text-[11px] font-semibold text-amber-900">Pairs inside box:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      value={editingProduct.pairs_count ?? (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10),
-                        })
-                      }
-                      className="w-16 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-amber-900 shadow-2xs focus:outline-none focus:border-amber-600"
-                    />
-                  </div>
-                </div>
-              )}
+                )}
 
               {/* Row 3: Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -819,35 +877,67 @@ export default function AdminProductsView({ currentUser }) {
                 />
               </div>
 
-              {/* Row 5: Media — Drag-to-Reorder + Upload */}
-              <div className="space-y-3 pt-2 border-t border-brand-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-brand-tertiary">Product Images & Video</span>
-                    <p className="text-[10px] text-brand-muted mt-0.5">Drag to reorder · First image = primary storefront image · ⭐ to set primary</p>
+              {/* Row 5: Media — Drag-to-Reorder + Upload + Dimension Guidelines */}
+              <div className="space-y-4 pt-3 border-t border-brand-border">
+
+                {/* MadeWidLove High-Quality Dimension Guidelines Banner */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-50/90 via-[#FAF7FD] to-brand-primary-light/40 border border-brand-primary/25 text-xs space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-caps tracking-wider uppercase font-bold text-brand-primary flex items-center gap-1.5 text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>Studio Media Standards</span>
+                    </span>
+                    <span className="text-[10px] font-semibold bg-white/90 px-2 py-0.5 rounded-md border border-brand-primary/20 text-brand-tertiary">
+                      High-Definition E-Commerce
+                    </span>
                   </div>
-                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary-light text-brand-primary border border-brand-border text-xs font-semibold transition-colors">
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>{uploadingMedia ? 'Uploading...' : 'Upload'}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div className="bg-white/95 p-2.5 rounded-xl border border-brand-border/70 space-y-1">
+                      <strong className="block text-brand-tertiary font-bold flex items-center gap-1">
+                        <span>📸 Product Photos: 1:1 Square Standard</span>
+                      </strong>
+                      <p className="text-[10.5px] text-brand-muted font-light leading-relaxed">
+                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1200 × 1200 px</strong> or <strong className="font-semibold text-brand-tertiary font-mono">1000 × 1000 px</strong>. Keeps product cards proportional, clean, and prevents cards or jewellery from stretching out.
+                      </p>
+                    </div>
+                    <div className="bg-white/95 p-2.5 rounded-xl border border-brand-border/70 space-y-1">
+                      <strong className="block text-brand-tertiary font-bold flex items-center gap-1">
+                        <span>🎬 Video Reels: 9:16 Vertical HD</span>
+                      </strong>
+                      <p className="text-[10.5px] text-brand-muted font-light leading-relaxed">
+                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1080 × 1920 px</strong> (MP4/WebM). Plays live try-ons and unboxings in gallery with audio toggle.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="font-semibold text-brand-tertiary">Gallery Media (Photos & Video Reels)</span>
+                    <p className="text-[10.5px] text-brand-muted mt-0.5">Drag tiles to reorder · Supports square photos & vertical video reels · First photo = storefront primary</p>
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-brand-surface hover:bg-brand-primary-light text-brand-primary border border-brand-border text-xs font-semibold transition-colors shrink-0">
+                    <UploadCloud className="w-4 h-4" />
+                    <span>{uploadingMedia ? 'Uploading...' : 'Upload Media File'}</span>
                     <input
-                      type="file" accept="image/*,video/mp4,video/quicktime"
+                      type="file" accept="image/*,video/mp4,video/quicktime,video/webm"
                       onChange={handleFileUpload} className="hidden" disabled={uploadingMedia}
                     />
                   </label>
                 </div>
 
-                {/* Sortable Image Grid */}
+                {/* Sortable Media Grid */}
                 {editingProduct.images && editingProduct.images.length > 0 && (
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleImageDragEnd}>
                     <SortableContext
                       items={editingProduct.images.map((img, i) => img.id || `img-${i}`)}
                       strategy={horizontalListSortingStrategy}
                     >
-                      <div className="flex flex-wrap gap-2 pt-1">
+                      <div className="flex flex-wrap gap-2.5 pt-1">
                         {editingProduct.images.map((img, idx) => (
-                          <SortableImageTile
-                            key={img.id || `img-${idx}`}
-                            img={img}
+                          <SortableMediaTile
+                            key={img.id || `media-${idx}`}
+                            item={img}
                             index={idx}
                             onRemove={handleRemoveImage}
                             onSetPrimary={handleSetPrimary}
@@ -858,20 +948,31 @@ export default function AdminProductsView({ currentUser }) {
                   </DndContext>
                 )}
 
-                {/* Video URL */}
-                <div className="space-y-1">
-                  <label className="text-[11px] text-brand-muted flex items-center space-x-1">
-                    <Video className="w-3 h-3" />
-                    <span>Video URL (Demo / Unboxing / Try-On)</span>
+                {/* Direct Media URL Addition Bar */}
+                <div className="p-3 bg-[#FAF8FC] border border-brand-border/80 rounded-xl space-y-2">
+                  <label className="text-[11px] font-semibold text-brand-tertiary flex items-center space-x-1.5">
+                    <Film className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Add Media URL (High-Res Image URL or MP4 Video Reel)</span>
                   </label>
-                  <input
-                    type="url"
-                    value={editingProduct.video_url || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, video_url: e.target.value })}
-                    placeholder="https://... or upload above"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="url"
+                      value={mediaUrlInput}
+                      onChange={(e) => setMediaUrlInput(e.target.value)}
+                      placeholder="https://... (.jpg, .png, .webp or .mp4 vertical reel)"
+                      className="flex-1 bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddMediaUrl}
+                      disabled={!mediaUrlInput.trim()}
+                      className="px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary-hover disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
+                    >
+                      Add to Gallery
+                    </button>
+                  </div>
                 </div>
+
               </div>
 
               {/* Row 6: Toggles */}

@@ -147,13 +147,13 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
               </button>
 
-              {/* Box Image: 3:4 Portrait Ratio */}
+              {/* Box Image: 1:1 Balanced Square Ratio */}
               <div
                 onClick={() => onOpenPdp && onOpenPdp(box.slug)}
-                className="relative aspect-[3/4] overflow-hidden bg-brand-primary-light/20 cursor-pointer"
+                className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer"
               >
                 <img
-                  src={box.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85'}
+                  src={box.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80'}
                   alt={box.name}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
