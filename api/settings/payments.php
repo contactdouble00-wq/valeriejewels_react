@@ -1,6 +1,6 @@
 <?php
 /**
- * VALERIE JEWELS — Payment & Fastrr Settings Endpoint
+ * VALERIE JEWELS — Payment, Fastrr & SMS Settings Endpoint
  * Supports GET (public checkout settings / admin credentials) and POST (admin update)
  */
 
@@ -10,13 +10,20 @@ require_once dirname(__DIR__) . '/config/database.php';
 
 handleCors();
 
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $defaultSettings = [
     'gateway_mode'          => 'sandbox', // 'sandbox' | 'live'
     'fastrr_app_id'         => 'vj_fastrr_app_test',
     'fastrr_secret_key'     => 'vj_fastrr_secret_test_2026',
     'fastrr_webhook_secret' => 'vj_fastrr_whsec_test',
+    'sms_provider'          => 'sandbox', // 'sandbox' | 'fast2sms' | 'twofactor' | 'twilio' | 'fastrr'
+    'sms_fast2sms_api_key'  => '',
+    'sms_2factor_api_key'   => '',
+    'sms_twilio_sid'        => '',
+    'sms_twilio_token'      => '',
+    'sms_twilio_from'       => '',
+    'sms_fastrr_auth_token' => '',
     'prepaid_discount'      => 50,
     'prepaid_gift_title'    => 'Free Zircon Necklace',
     'prepaid_gift_subtitle' => 'Included complimentary with all prepaid orders',
@@ -35,15 +42,42 @@ $defaultSettings = [
 try {
     $pdo = Database::getConnection();
 
-    // Ensure site_settings table exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `site_settings` (
-            `key` VARCHAR(100) NOT NULL PRIMARY KEY,
-            `value` LONGTEXT NOT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
+    // Ensure site_settings and checkout_otps tables exist
+    if (Database::getDriver() === 'sqlite') {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS checkout_otps (
+                phone TEXT PRIMARY KEY,
+                otp_code TEXT NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                is_verified INTEGER DEFAULT 0,
+                expires_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+        ");
+    } else {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `site_settings` (
+                `key` VARCHAR(100) NOT NULL PRIMARY KEY,
+                `value` LONGTEXT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            CREATE TABLE IF NOT EXISTS `checkout_otps` (
+                `phone` VARCHAR(20) NOT NULL PRIMARY KEY,
+                `otp_code` VARCHAR(10) NOT NULL,
+                `attempts` INT DEFAULT 0,
+                `is_verified` TINYINT DEFAULT 0,
+                `expires_at` BIGINT NOT NULL,
+                `created_at` BIGINT NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
 
     if ($method === 'GET') {
         $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
@@ -73,6 +107,10 @@ try {
         if (!$isAdmin) {
             unset($settings['fastrr_secret_key']);
             unset($settings['fastrr_webhook_secret']);
+            unset($settings['sms_fast2sms_api_key']);
+            unset($settings['sms_2factor_api_key']);
+            unset($settings['sms_twilio_token']);
+            unset($settings['sms_fastrr_auth_token']);
         }
 
         ApiResponse::success($settings);
@@ -104,6 +142,13 @@ try {
             'fastrr_app_id'         => !empty($data['fastrr_app_id']) ? trim($data['fastrr_app_id']) : $current['fastrr_app_id'],
             'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : $current['fastrr_secret_key'],
             'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : $current['fastrr_webhook_secret'],
+            'sms_provider'          => in_array($data['sms_provider'] ?? '', ['sandbox', 'fast2sms', 'twofactor', 'twilio', 'fastrr']) ? $data['sms_provider'] : $current['sms_provider'],
+            'sms_fast2sms_api_key'  => isset($data['sms_fast2sms_api_key']) ? trim($data['sms_fast2sms_api_key']) : $current['sms_fast2sms_api_key'],
+            'sms_2factor_api_key'   => isset($data['sms_2factor_api_key']) ? trim($data['sms_2factor_api_key']) : $current['sms_2factor_api_key'],
+            'sms_twilio_sid'        => isset($data['sms_twilio_sid']) ? trim($data['sms_twilio_sid']) : $current['sms_twilio_sid'],
+            'sms_twilio_token'      => isset($data['sms_twilio_token']) ? trim($data['sms_twilio_token']) : $current['sms_twilio_token'],
+            'sms_twilio_from'       => isset($data['sms_twilio_from']) ? trim($data['sms_twilio_from']) : $current['sms_twilio_from'],
+            'sms_fastrr_auth_token' => isset($data['sms_fastrr_auth_token']) ? trim($data['sms_fastrr_auth_token']) : $current['sms_fastrr_auth_token'],
             'prepaid_discount'      => max(0, (float)($data['prepaid_discount'] ?? $current['prepaid_discount'])),
             'prepaid_gift_title'    => trim($data['prepaid_gift_title'] ?? $current['prepaid_gift_title']),
             'prepaid_gift_subtitle' => trim($data['prepaid_gift_subtitle'] ?? $current['prepaid_gift_subtitle']),
@@ -120,9 +165,8 @@ try {
         ]);
 
         $saveStmt = $pdo->prepare("
-            INSERT INTO `site_settings` (`key`, `value`)
+            REPLACE INTO `site_settings` (`key`, `value`)
             VALUES ('payment_settings', :val)
-            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
         ");
         $saveStmt->execute([':val' => json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
 
@@ -135,14 +179,14 @@ try {
             $logStmt->execute([
                 ':aid'     => $adminUser['id'] ?? null,
                 ':aname'   => $adminUser['name'] ?? 'Admin',
-                ':details' => json_encode(['mode' => $merged['gateway_mode'], 'prepaid_discount' => $merged['prepaid_discount']]),
+                ':details' => json_encode(['mode' => $merged['gateway_mode'], 'sms_provider' => $merged['sms_provider']]),
                 ':ip'      => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
             ]);
         } catch (Exception $e) {
-            // Non-fatal if activity log table differs
+            // Non-fatal
         }
 
-        ApiResponse::success($merged, 'Payment & Fastrr settings updated successfully');
+        ApiResponse::success($merged, 'Payment, Fastrr & SMS settings updated successfully');
     }
 
     ApiResponse::error('Method not allowed', 405);

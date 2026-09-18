@@ -1,12 +1,14 @@
 <?php
 /**
  * VALERIE JEWELS — Send Checkout OTP API
- * Supports Sandbox Mode (demo OTP 123456) and Live SMS Delivery (Fast2SMS / Twilio)
+ * Dispatches real cellular SMS OTPs to Indian customer mobile numbers (like MadeWidLove)
+ * Multi-Provider support: Fast2SMS, 2Factor.in, Twilio, Fastrr, with Sandbox fallback
  */
 
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/config/database.php';
+require_once dirname(__DIR__) . '/utils/sms_gateway.php';
 
 handleCors();
 
@@ -24,7 +26,7 @@ if (strlen($cleanPhone) === 12 && str_starts_with($cleanPhone, '91')) {
 }
 
 if (strlen($cleanPhone) !== 10) {
-    ApiResponse::error('Please provide a valid 10-digit mobile number.', 422);
+    ApiResponse::error('Please provide a valid 10-digit Indian mobile number.', 422);
 }
 
 try {
@@ -33,85 +35,87 @@ try {
     // Fetch site payment & SMS settings
     $settings = [];
     try {
-        $stmt = $pdo->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'payment_%' OR setting_key LIKE 'sms_%'");
-        while ($row = $stmt->fetch()) {
-            $settings[$row['setting_key']] = $row['setting_value'];
+        $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $stmt->execute();
+        $raw = $stmt->fetchColumn();
+        if ($raw) {
+            $settings = json_decode($raw, true) ?: [];
         }
     } catch (Exception $e) {
         // Fallback default settings
     }
 
-    $gatewayMode = $settings['payment_gateway_mode'] ?? 'sandbox';
-    $smsProvider = $settings['sms_provider'] ?? 'sandbox'; // sandbox | fast2sms | twilio
-    $fast2smsKey = $settings['sms_fast2sms_api_key'] ?? '';
+    $smsProvider = strtolower($settings['sms_provider'] ?? 'sandbox');
+    $isSandbox = ($smsProvider === 'sandbox');
 
-    // In sandbox mode or default: Use deterministic test OTP for effortless testing
-    $otpCode = '123456';
-    $isLiveDelivery = false;
-    $smsStatus = 'sandbox_simulated';
-
-    // If live SMS gateway is configured (e.g. Fast2SMS for Indian numbers)
-    if ($gatewayMode === 'live' && $smsProvider === 'fast2sms' && !empty($fast2smsKey)) {
-        // Generate random 6-digit OTP for real dispatch
+    // Generate random 6-digit OTP code (or 123456 if in sandbox mode)
+    if ($isSandbox) {
+        $otpCode = '123456';
+    } else {
         $otpCode = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-
-        $postData = [
-            'variables_values' => $otpCode,
-            'route'            => 'otp',
-            'numbers'          => $cleanPhone,
-        ];
-
-        $ch = curl_init('https://www.fast2sms.com/dev/bulkV2');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "authorization: {$fast2smsKey}",
-            "Content-Type: application/json"
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200) {
-            $isLiveDelivery = true;
-            $smsStatus = 'dispatched';
-        } else {
-            $smsStatus = 'gateway_failed_fallback_to_sandbox';
-        }
     }
 
-    // Store OTP in session or transient cache (keyed by phone)
+    // Dispatch SMS via SMS Gateway
+    $smsResult = SmsGateway::sendOtp($cleanPhone, $otpCode, $settings);
+
+    // If live provider failed (e.g. invalid API key or zero balance), gracefully fall back
+    $isLiveDelivery = !empty($smsResult['is_live']) && !empty($smsResult['success']);
+    if (!$isLiveDelivery && !$isSandbox) {
+        // Fall back to sandbox demo OTP so customer checkout doesn't halt
+        $otpCode = '123456';
+    }
+
+    $now = time();
+    $expiresAt = $now + 600; // 10 minutes
+
+    // Persist OTP in database table checkout_otps
+    try {
+        $saveStmt = $pdo->prepare("
+            REPLACE INTO `checkout_otps` (`phone`, `otp_code`, `attempts`, `is_verified`, `expires_at`, `created_at`)
+            VALUES (:phone, :otp, 0, 0, :exp, :created)
+        ");
+        $saveStmt->execute([
+            ':phone'   => $cleanPhone,
+            ':otp'     => $otpCode,
+            ':exp'     => $expiresAt,
+            ':created' => $now,
+        ]);
+    } catch (Exception $dbErr) {
+        // Table fallback
+    }
+
+    // Also store in PHP session
     if (session_status() === PHP_SESSION_NONE) {
         @session_start();
     }
     $_SESSION['checkout_otp_' . $cleanPhone] = [
         'code'       => $otpCode,
-        'expires_at' => time() + 600, // 10 minutes
+        'expires_at' => $expiresAt,
         'attempts'   => 0
     ];
 
     ApiResponse::success([
         'phone'            => $cleanPhone,
-        'mode'             => $gatewayMode,
+        'provider'         => $smsResult['provider'] ?? $smsProvider,
         'is_live_delivery' => $isLiveDelivery,
-        'sms_status'       => $smsStatus,
-        'demo_otp'         => ($gatewayMode === 'sandbox' || !$isLiveDelivery) ? $otpCode : null,
-        'message'          => $isLiveDelivery 
-            ? "Live OTP dispatched to +91 {$cleanPhone} via SMS."
-            : "Sandbox Mode: Real SMS is not sent on localhost. Use test OTP: {$otpCode} (or click Quick Auto-Fill)."
-    ], 'OTP processed successfully.');
+        'sms_status'       => $smsResult['success'] ? 'sent' : 'failed_fallback',
+        'gateway_message'  => $smsResult['message'] ?? '',
+        // Only return demo_otp when running in sandbox or if live gateway fell back
+        'demo_otp'         => (!$isLiveDelivery) ? $otpCode : null,
+        'message'          => $isLiveDelivery
+            ? "Real SMS OTP dispatched to +91 {$cleanPhone}."
+            : ($isSandbox 
+                ? "Sandbox Mode: Use test OTP 123456 (or click Auto-Fill)." 
+                : "SMS Gateway Error: " . ($smsResult['message'] ?? 'Failed') . ". Fallback test code 123456 available.")
+    ], 'OTP processed.');
 
 } catch (Exception $e) {
-    // Graceful fallback for offline / disconnected DB
+    // Ultimate offline fallback
     ApiResponse::success([
         'phone'            => $cleanPhone,
-        'mode'             => 'sandbox',
+        'provider'         => 'sandbox',
         'is_live_delivery' => false,
-        'sms_status'       => 'offline_sandbox',
         'demo_otp'         => '123456',
-        'message'          => "Sandbox Mode: Use test OTP 123456 to continue checkout."
+        'message'          => "Sandbox Mode: Use test OTP 123456 to continue."
     ], 'OTP initialized in sandbox mode.');
 }

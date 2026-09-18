@@ -178,6 +178,29 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     return () => clearInterval(interval);
   }, [step, otpTimer]);
 
+  // 3b. WebOTP API (Auto-reads incoming cellular SMS OTP on mobile browsers like MadeWidLove)
+  useEffect(() => {
+    if (step === 'otp' && typeof window !== 'undefined' && 'OTPCredential' in window) {
+      const ac = new AbortController();
+      navigator.credentials
+        ?.get({
+          otp: { transport: ['sms'] },
+          signal: ac.signal,
+        })
+        .then((otpCredential) => {
+          if (otpCredential && otpCredential.code) {
+            const cleanCode = otpCredential.code.replace(/\D/g, '').slice(0, 6);
+            if (cleanCode.length === 6) {
+              setOtp(cleanCode.split(''));
+              handleVerifyOtp(cleanCode);
+            }
+          }
+        })
+        .catch(() => {});
+      return () => ac.abort();
+    }
+  }, [step]);
+
   // 4. Server-Side Price & Payment Split Recalculation
   useEffect(() => {
     if (!isOpen || cartItems.length === 0) return;
@@ -797,26 +820,44 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   ))}
                 </div>
 
-                {/* Full-width Auto-Fill CTA button for instant bypass */}
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    const digits = (demoOtp || '123456').split('');
-                    setOtp(digits);
-                    handleVerifyOtp(demoOtp || '123456');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 fill-amber-300 text-amber-300" />
-                      <span>AUTO-FILL TEST OTP & CONTINUE ({demoOtp || '123456'})</span>
-                    </>
-                  )}
-                </button>
+                {/* Verify Button or Auto-fill button */}
+                {!isLiveSms ? (
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      const digits = (demoOtp || '123456').split('');
+                      setOtp(digits);
+                      handleVerifyOtp(demoOtp || '123456');
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 fill-amber-300 text-amber-300" />
+                        <span>AUTO-FILL TEST OTP & CONTINUE ({demoOtp || '123456'})</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isSubmitting || otp.join('').length !== 6}
+                    onClick={() => handleVerifyOtp(otp.join(''))}
+                    className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                        <span>VERIFY & CONTINUE</span>
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {/* Resend OTP Timer & Info */}
                 <div className="text-center space-y-1 pt-1">
