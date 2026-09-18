@@ -17,7 +17,8 @@ import {
   Volume2,
   VolumeX,
   Maximize2,
-  Film
+  Film,
+  Zap
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
