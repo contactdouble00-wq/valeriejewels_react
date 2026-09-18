@@ -178,28 +178,6 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     return () => clearInterval(interval);
   }, [step, otpTimer]);
 
-  // 3b. WebOTP API (Auto-reads incoming cellular SMS OTP on mobile browsers like MadeWidLove)
-  useEffect(() => {
-    if (step === 'otp' && typeof window !== 'undefined' && 'OTPCredential' in window) {
-      const ac = new AbortController();
-      navigator.credentials
-        ?.get({
-          otp: { transport: ['sms'] },
-          signal: ac.signal,
-        })
-        .then((otpCredential) => {
-          if (otpCredential && otpCredential.code) {
-            const cleanCode = otpCredential.code.replace(/\D/g, '').slice(0, 6);
-            if (cleanCode.length === 6) {
-              setOtp(cleanCode.split(''));
-              handleVerifyOtp(cleanCode);
-            }
-          }
-        })
-        .catch(() => {});
-      return () => ac.abort();
-    }
-  }, [step]);
 
   // 4. Server-Side Price & Payment Split Recalculation
   useEffect(() => {
