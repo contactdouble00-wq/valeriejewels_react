@@ -26,6 +26,7 @@ import {
   Gift,
   Zap,
   Percent,
+  EyeOff,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -474,13 +475,21 @@ export default function AdminHomepageView() {
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-muted'}`} />
               <span>{sec.label}</span>
-              {sec.badge && (
+              {sec.id === 'festivalOffer' ? (
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  (formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false')
+                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                }`}>
+                  {(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false') ? 'Hidden' : 'Active'}
+                </span>
+              ) : sec.badge ? (
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
                   isActive ? 'bg-amber-300 text-[#1B0A33]' : 'bg-amber-100 text-amber-900 border border-amber-300/80'
                 }`}>
                   {sec.badge}
                 </span>
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -1427,26 +1436,62 @@ export default function AdminHomepageView() {
                 </p>
               </div>
 
-              {/* Master Status Badge & Toggle */}
-              <div className="flex items-center gap-3 shrink-0">
-                <label className="flex items-center space-x-2.5 p-2.5 px-4 rounded-xl bg-[#FAF8FD] border border-brand-border cursor-pointer hover:border-brand-primary transition-all">
-                  <input
-                    type="checkbox"
-                    checked={formData.festivalOffer?.enabled !== false}
-                    onChange={(e) => updateNested('festivalOffer', 'enabled', e.target.checked)}
-                    className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
-                  />
-                  <div>
-                    <span className="text-xs font-bold text-brand-tertiary block">
-                      {formData.festivalOffer?.enabled !== false ? 'Active on Storefront' : 'Section Hidden'}
-                    </span>
-                    <span className="text-[10px] text-brand-muted font-light">
-                      {formData.festivalOffer?.enabled !== false ? 'Live royal festival banner visible' : 'Hidden from customers'}
-                    </span>
-                  </div>
-                </label>
+              {/* Master Visibility Segmented Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+                <div className="flex items-center gap-1.5 bg-[#FAF8FD] p-1.5 rounded-xl border border-brand-border">
+                  <button
+                    type="button"
+                    onClick={() => updateNested('festivalOffer', 'enabled', true)}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      formData.festivalOffer?.enabled !== false && formData.festivalOffer?.enabled !== 'false'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
+                    }`}
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Active on Storefront</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateNested('festivalOffer', 'enabled', false)}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
+                    }`}
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span>Section Hidden</span>
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Visibility Status Alert Banner */}
+            {(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false') ? (
+              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between gap-3 text-xs text-rose-900 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <EyeOff className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>
+                    <strong>Section is set to HIDDEN:</strong> The Festival Offer Panel and navbar link are completely removed from the storefront. Click <strong>"Save Live Changes"</strong> above to publish.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateNested('festivalOffer', 'enabled', true)}
+                  className="text-xs font-bold text-rose-700 underline hover:text-rose-900 shrink-0 cursor-pointer"
+                >
+                  Unhide Section
+                </button>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-xs text-emerald-900 animate-in fade-in">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Section is ACTIVE:</strong> The festival showcase banner and navbar link are visible to visiting customers on the homepage.
+                </span>
+              </div>
+            )}
 
             {/* 1. Header & Storytelling Copy */}
             <div className="p-5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-4">
@@ -1687,38 +1732,45 @@ export default function AdminHomepageView() {
             </div>
 
             {/* 5. Live Admin Preview Box */}
-            <div className="p-5 rounded-2xl bg-[#1B0A33] border border-amber-500/40 text-white space-y-4 shadow-xl">
+            <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[#26153D] via-[#1E0F33] to-[#150A24] border border-[#C5A25D]/40 text-white space-y-4 shadow-2xl overflow-hidden">
+              {(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false') && (
+                <div className="absolute top-3 right-3 z-20 px-3 py-1 rounded-full bg-rose-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md backdrop-blur-xs flex items-center gap-1.5">
+                  <EyeOff className="w-3 h-3" />
+                  <span>Hidden on Storefront</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-[11px] font-caps uppercase tracking-wider text-amber-300 font-bold flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Real-Time Live Storefront Preview</span>
+                <span className="text-[11px] font-caps uppercase tracking-wider text-[#E7CF9B] font-bold flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-[#C5A25D]" />
+                  <span>Real-Time Live Storefront Preview (Brand Palette)</span>
                 </span>
-                <span className="text-[10px] text-white/60">
-                  Updates instantly as you type
+                <span className="text-[10px] text-white/50">
+                  Updates dynamically as you edit
                 </span>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#C5A25D]/15 text-[#E7CF9B] border border-[#C5A25D]/30">
                     {formData.festivalOffer?.badgeText || '✨ GRAND FESTIVE CELEBRATION'}
                   </span>
                   <h4 className="text-2xl font-editorial font-bold text-white mt-1.5">
                     {formData.festivalOffer?.headline || 'The Royal Festive Edit'}
                   </h4>
-                  <p className="text-xs text-purple-200/80 font-light mt-1 max-w-xl line-clamp-2">
+                  <p className="text-xs text-[#D8CEE8] font-light mt-1 max-w-xl line-clamp-2">
                     {formData.festivalOffer?.subtitle || 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry.'}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 pt-2">
-                  <div className="px-3 py-1.5 bg-[#120524] border border-dashed border-amber-400/50 rounded-lg font-mono text-sm font-bold text-amber-300">
+                  <div className="px-3 py-1.5 bg-[#140822] border border-dashed border-[#C5A25D]/60 rounded-lg font-mono text-sm font-bold text-[#F2DFB8]">
                     {formData.festivalOffer?.couponCode || 'FESTIVE20'}
                   </div>
-                  <span className="text-xs font-bold text-emerald-400">
+                  <span className="text-xs font-bold text-[#6EE7B7]">
                     {formData.festivalOffer?.couponDiscount || 'FLAT 20% OFF'}
                   </span>
-                  <span className="text-xs text-purple-200/70">
+                  <span className="text-xs text-[#D8CEE8]/70">
                     • 1-Click Fastrr Checkout Integrated
                   </span>
                 </div>

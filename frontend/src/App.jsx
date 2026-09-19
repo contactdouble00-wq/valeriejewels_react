@@ -444,13 +444,15 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                   </a>
                 ))}
 
-              <a
-                href="#festive-offers"
-                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-                <span>Festive Offers</span>
-              </a>
+              {content?.festivalOffer?.enabled !== false && content?.festivalOffer?.enabled !== 'false' && (
+                <a
+                  href="#festive-offers"
+                  className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-[#C5A25D] hover:text-[#B38F49] font-semibold flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3 text-[#C5A25D] animate-pulse" />
+                  <span>Festive Offers</span>
+                </a>
+              )}
             </div>
           </div>
         </nav>
@@ -733,13 +735,15 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         </section>
 
         {/* Festival Offer Panel (Grand Celebrations) */}
-        <section id="festive-offers" className="scroll-mt-28">
-          <FestivalOfferSection
-            products={products}
-            onQuickView={(p) => openPdp(p.slug, p)}
-            onAddToCart={(p) => addToCart(p, null, 1, true)}
-          />
-        </section>
+        {content?.festivalOffer?.enabled !== false && content?.festivalOffer?.enabled !== 'false' && (
+          <section id="festive-offers" className="scroll-mt-28">
+            <FestivalOfferSection
+              products={products}
+              onQuickView={(p) => openPdp(p.slug, p)}
+              onAddToCart={(p) => addToCart(p, null, 1, true)}
+            />
+          </section>
+        )}
 
         {/* Trust Badges Strip */}
         <TrustStrip />

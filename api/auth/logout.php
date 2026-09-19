@@ -77,11 +77,20 @@ try {
         // Even if token format is unverified, blacklisting the hash neutralizes it
     }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO token_blacklist (token_hash, user_id, expires_at)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
-    ");
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'sqlite') {
+        $stmt = $pdo->prepare("
+            INSERT INTO token_blacklist (token_hash, user_id, expires_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(token_hash) DO UPDATE SET expires_at = excluded.expires_at
+        ");
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO token_blacklist (token_hash, user_id, expires_at)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
+        ");
+    }
     $stmt->execute([$tokenHash, $userId, $expiresAt]);
 
     ApiResponse::success(null, 'Session successfully invalidated and logged out.');

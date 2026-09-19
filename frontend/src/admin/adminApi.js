@@ -18,20 +18,17 @@ function getApiBaseUrl() {
   const rawUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
   return rawUrl.replace(/\/+$/, '');
 }
-
 const API_BASE_URL = getApiBaseUrl();
 
 function getAdminToken() {
   return localStorage.getItem('valerie_admin_token') || '';
 }
-
 async function request(endpoint, options = {}) {
   const token = getAdminToken();
   const headers = {
     'Accept': 'application/json',
     ...(options.headers || {}),
   };
-
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -440,7 +437,7 @@ export const adminApi = {
     }
     const cached = localStorage.getItem('valerie_payment_settings_cache');
     if (cached) {
-      try { return JSON.parse(cached); } catch (err) {}
+      try { return JSON.parse(cached); } catch (err) { }
     }
     return {
       gateway_mode: 'sandbox',

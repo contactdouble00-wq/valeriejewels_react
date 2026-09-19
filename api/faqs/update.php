@@ -61,27 +61,47 @@ $sanitizedData['meta']['lastUpdated'] = date('F Y');
 try {
     $pdo = Database::getConnection();
 
-    // Ensure site_settings table exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `site_settings` (
-            `key` VARCHAR(100) NOT NULL PRIMARY KEY,
-            `value` LONGTEXT NOT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'sqlite') {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT NOT NULL PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+    } else {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `site_settings` (
+                `key` VARCHAR(100) NOT NULL PRIMARY KEY,
+                `value` LONGTEXT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
 
     $jsonValue = json_encode($sanitizedData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    $stmt = $pdo->prepare("
-        INSERT INTO `site_settings` (`key`, `value`, `updated_at`)
-        VALUES ('site_faqs', :val, CURRENT_TIMESTAMP)
-        ON DUPLICATE KEY UPDATE `value` = :val_upd, `updated_at` = CURRENT_TIMESTAMP
-    ");
-    $stmt->execute([
-        ':val' => $jsonValue,
-        ':val_upd' => $jsonValue
-    ]);
+    if ($driver === 'sqlite') {
+        $stmt = $pdo->prepare("
+            INSERT INTO site_settings (key, value, updated_at)
+            VALUES ('site_faqs', ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        ");
+        $stmt->execute([$jsonValue]);
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO `site_settings` (`key`, `value`, `updated_at`)
+            VALUES ('site_faqs', :val, CURRENT_TIMESTAMP)
+            ON DUPLICATE KEY UPDATE `value` = :val_upd, `updated_at` = CURRENT_TIMESTAMP
+        ");
+        $stmt->execute([
+            ':val' => $jsonValue,
+            ':val_upd' => $jsonValue
+        ]);
+    }
 
     // Record audit trail
     try {

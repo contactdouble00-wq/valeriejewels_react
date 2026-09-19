@@ -105,7 +105,17 @@ export function SiteContentProvider({ children }) {
       const cached = localStorage.getItem('valerie_site_content_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
-        return { ...DEFAULT_SITE_CONTENT, ...parsed };
+        return {
+          ...DEFAULT_SITE_CONTENT,
+          ...parsed,
+          festivalOffer: {
+            ...DEFAULT_SITE_CONTENT.festivalOffer,
+            ...(parsed.festivalOffer || {}),
+            enabled: parsed.festivalOffer?.enabled !== undefined
+              ? (parsed.festivalOffer.enabled !== false && parsed.festivalOffer.enabled !== 'false' && parsed.festivalOffer.enabled !== 0 && parsed.festivalOffer.enabled !== '0')
+              : true,
+          },
+        };
       }
     } catch {}
     return DEFAULT_SITE_CONTENT;
@@ -125,7 +135,13 @@ export function SiteContentProvider({ children }) {
             jhumkaHero: { ...DEFAULT_SITE_CONTENT.jhumkaHero, ...(res.data.jhumkaHero || {}) },
             catalogHeader: { ...DEFAULT_SITE_CONTENT.catalogHeader, ...(res.data.catalogHeader || {}) },
             combosHeader: { ...DEFAULT_SITE_CONTENT.combosHeader, ...(res.data.combosHeader || {}) },
-            festivalOffer: { ...DEFAULT_SITE_CONTENT.festivalOffer, ...(res.data.festivalOffer || {}) },
+            festivalOffer: {
+              ...DEFAULT_SITE_CONTENT.festivalOffer,
+              ...(res.data.festivalOffer || {}),
+              enabled: res.data.festivalOffer?.enabled !== undefined
+                ? (res.data.festivalOffer.enabled !== false && res.data.festivalOffer.enabled !== 'false' && res.data.festivalOffer.enabled !== 0 && res.data.festivalOffer.enabled !== '0')
+                : true,
+            },
             trustStrip: Array.isArray(res.data.trustStrip) && res.data.trustStrip.length > 0
               ? res.data.trustStrip
               : DEFAULT_SITE_CONTENT.trustStrip,
@@ -154,7 +170,27 @@ export function SiteContentProvider({ children }) {
   useEffect(() => {
     fetchContent();
 
-    const handleUpdate = () => {
+    const handleUpdate = (e) => {
+      if (e?.detail) {
+        setContent((prev) => {
+          const incoming = e.detail;
+          const merged = {
+            ...prev,
+            ...incoming,
+            festivalOffer: {
+              ...prev.festivalOffer,
+              ...(incoming.festivalOffer || {}),
+              enabled: incoming.festivalOffer?.enabled !== undefined
+                ? (incoming.festivalOffer.enabled !== false && incoming.festivalOffer.enabled !== 'false' && incoming.festivalOffer.enabled !== 0 && incoming.festivalOffer.enabled !== '0')
+                : (prev.festivalOffer?.enabled ?? true),
+            },
+          };
+          try {
+            localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
       fetchContent();
     };
 

@@ -23,14 +23,11 @@ LAYER 2: ADMIN PORTAL LOGIN (Inside React / Backend)
 Entered in the Valerie Jewels Admin login screen:
    Email:    admin@valeriejewels.com
    Password: Admin@Valerie2026!
-
    * Security Note: 5 consecutive failed login attempts will lock out
      the account / IP for 15 minutes (HTTP 429 Too Many Requests).
    * Session lifetime is 30 minutes.
 =====================================================
-
 http://valeriejewels.in/?preview=vj2026#catalog
-
 start api
 cd "D:\Agency stuff\valeriejewels_react\api"
 php -S localhost:8000

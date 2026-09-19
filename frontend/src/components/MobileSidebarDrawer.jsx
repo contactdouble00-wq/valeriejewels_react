@@ -16,6 +16,7 @@ import {
   RotateCcw,
   HelpCircle
 } from 'lucide-react';
+import { useSiteContent } from '../context/SiteContentContext';
 
 export default function MobileSidebarDrawer({
   isOpen,
@@ -32,6 +33,7 @@ export default function MobileSidebarDrawer({
   onOpenPolicy,
   onOpenFaqs,
 }) {
+  const { content } = useSiteContent();
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -187,21 +189,23 @@ export default function MobileSidebarDrawer({
                 })}
 
               {/* Festive Offers Special Feature */}
-              <button
-                onClick={() => {
-                  onClose();
-                  handleScrollToSection('festive-offers');
-                }}
-                className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
-              >
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span>Festive Offers & Edit</span>
-                </div>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300/60">
-                  SPECIAL OFFERS
-                </span>
-              </button>
+              {content?.festivalOffer?.enabled !== false && content?.festivalOffer?.enabled !== 'false' && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    handleScrollToSection('festive-offers');
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-[#C5A25D] animate-pulse" />
+                    <span>Festive Offers & Edit</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FAF5E9] text-[#8C6D2B] border border-[#C5A25D]/40">
+                    SPECIAL OFFERS
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* 3. Account & Orders Section (Clean D2C Utility List) */}

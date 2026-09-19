@@ -85,6 +85,18 @@ function filterSeedProducts(params = {}) {
 
 export const apiService = {
   /**
+   * Generic GET request helper
+   */
+  async get(endpoint) {
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`GET ${endpoint} failed with status ${response.status}`);
+    }
+    return await response.json();
+  },
+
+  /**
    * Check backend health and status
    */
   async getHealth() {

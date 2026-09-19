@@ -14,14 +14,26 @@ try {
     $pdo = Database::getConnection();
 
     // Ensure site_settings table exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `site_settings` (
-            `key` VARCHAR(100) NOT NULL PRIMARY KEY,
-            `value` LONGTEXT NOT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'sqlite') {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT NOT NULL PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+    } else {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `site_settings` (
+                `key` VARCHAR(100) NOT NULL PRIMARY KEY,
+                `value` LONGTEXT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
 
     $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'legal_policies' LIMIT 1");
     $stmt->execute();

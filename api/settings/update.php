@@ -55,21 +55,32 @@ $sanitizedData = sanitizeContent($data);
 
 try {
     $pdo = Database::getConnection();
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 
-    // Ensure table exists
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `site_settings` (
-            `key` VARCHAR(100) NOT NULL PRIMARY KEY,
-            `value` LONGTEXT NOT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
+    // Ensure table exists compatible with active driver
+    if ($driver === 'sqlite') {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT NOT NULL PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+    } else {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `site_settings` (
+                `key` VARCHAR(100) NOT NULL PRIMARY KEY,
+                `value` LONGTEXT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
 
     $jsonValue = json_encode($sanitizedData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
     // Support both MySQL ON DUPLICATE and SQLite ON CONFLICT
-    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
     if ($driver === 'sqlite') {
         $stmt = $pdo->prepare("
             INSERT INTO site_settings (key, value, updated_at)
