@@ -935,6 +935,9 @@ export default function App() {
   const checkIsPreview = () => {
     try {
       if (typeof window === 'undefined') return false;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return true;
+      }
       const urlParams = new URLSearchParams(window.location.search);
       if (
         urlParams.get('preview') === 'vj2026' ||

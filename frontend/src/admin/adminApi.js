@@ -15,7 +15,7 @@ function getApiBaseUrl() {
       return '/api';
     }
   }
-  const rawUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const rawUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
   return rawUrl.replace(/\/+$/, '');
 }
 const API_BASE_URL = getApiBaseUrl();
