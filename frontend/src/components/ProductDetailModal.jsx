@@ -44,6 +44,22 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const videoRefMobile = useRef(null);
   const videoRefDesktop = useRef(null);
 
+  // Touch swipe detection for mobile gallery
+  const [touchStartX, setTouchStartX] = useState(null);
+  const handleTouchStart = (e) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null) return;
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (diff > 45 && mediaItems.length > 1) {
+      setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
+    } else if (diff < -45 && mediaItems.length > 1) {
+      setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
+    }
+    setTouchStartX(null);
+  };
+
   const wishlisted = isInWishlist(product?.id);
 
   // Sync state when productSlug changes or when initialProduct is passed
@@ -329,105 +345,151 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         ) : product ? (
           <div className="flex-1 overflow-y-auto overscroll-contain">
             
-            {/* Edge-to-Edge Hero Media Stage: High-Quality 3:4 Vertical Portrait Rectangle */}
-            <div 
-              className="relative w-full max-w-[380px] mx-auto aspect-[3/4] h-[480px] max-h-[62vh] bg-[#FAF7FC] overflow-hidden flex items-center justify-center rounded-2xl shadow-sm"
-              style={{ aspectRatio: '3 / 4' }}
-            >
-              {activeMedia.type === 'video' ? (
-                <div 
-                  onClick={togglePlay}
-                  className="relative w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
-                >
-                  {/* Full-bleed Vertical Video Reel that fills the entire portrait rectangle */}
-                  <video
-                    ref={videoRefMobile}
-                    src={activeMedia.url}
-                    muted={isMuted}
-                    autoPlay
-                    loop
-                    playsInline
-                    className="w-full h-full object-cover rounded-2xl"
-                  />
-
-                  {/* Floating REEL / Try-on Tag */}
-                  <div className="absolute top-3 left-3 z-20 pointer-events-none">
-                    <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
-                      <Film className="w-3 h-3 text-amber-300" />
-                      <span>Live Try-On Reel</span>
-                    </span>
-                  </div>
-
-                  {/* Audio Mute/Unmute Toggle */}
-                  <button
-                    type="button"
-                    onClick={toggleMute}
-                    className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md active:scale-90"
-                    title={isMuted ? 'Unmute video audio' : 'Mute audio'}
-                    aria-label="Toggle audio mute"
+            {/* Edge-to-Edge Hero Media Stage: 1:1 Square Aspect Ratio */}
+            <div className="w-full px-4 pt-3 pb-1">
+              <div 
+                className="relative w-full max-w-[380px] sm:max-w-[420px] mx-auto aspect-square bg-[#FAF7FC] overflow-hidden flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-sm border border-brand-border/60 select-none"
+                style={{ aspectRatio: '1 / 1' }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                {activeMedia.type === 'video' ? (
+                  <div 
+                    onClick={togglePlay}
+                    className="relative w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                   >
-                    {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-                  </button>
+                    {/* Full-bleed Vertical Video Reel that fills the square player */}
+                    <video
+                      ref={videoRefMobile}
+                      src={activeMedia.url}
+                      muted={isMuted}
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover rounded-2xl"
+                    />
 
-                  {/* Play/Pause Overlay */}
-                  {!isPlaying && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
-                      <div className="w-12 h-12 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xl">
-                        <Play className="w-6 h-6 fill-current ml-0.5" />
-                      </div>
+                    {/* Floating REEL / Try-on Tag */}
+                    <div className="absolute top-3 left-3 z-20 pointer-events-none">
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
+                        <Film className="w-3 h-3 text-amber-300" />
+                        <span>Live Try-On Reel</span>
+                      </span>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div 
-                  onClick={() => setLightboxOpen(true)}
-                  className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in group overflow-hidden"
-                >
-                  <img
-                    src={activeMedia.url}
-                    alt={activeMedia.alt || product.name}
-                    className="w-full h-full object-cover object-center transition-all duration-300"
-                  />
 
-                  {/* Badges Overlay */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-                    {product.discount_percentage > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm w-fit">
-                        {product.discount_percentage}% OFF
-                      </span>
-                    )}
-                    {Boolean(product.is_bestseller) && (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                        Best Seller
-                      </span>
-                    )}
-                    {Boolean(product.is_anti_tarnish) && (
-                      <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
-                        <ShieldCheck className="w-3 h-3 text-brand-primary" />
-                        18K Anti-Tarnish
-                      </span>
+                    {/* Audio Mute/Unmute Toggle */}
+                    <button
+                      type="button"
+                      onClick={toggleMute}
+                      className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md active:scale-90"
+                      title={isMuted ? 'Unmute video audio' : 'Mute audio'}
+                      aria-label="Toggle audio mute"
+                    >
+                      {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                    </button>
+
+                    {/* Play/Pause Overlay */}
+                    {!isPlaying && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
+                        <div className="w-12 h-12 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xl">
+                          <Play className="w-6 h-6 fill-current ml-0.5" />
+                        </div>
+                      </div>
                     )}
                   </div>
+                ) : (
+                  <div 
+                    onClick={() => setLightboxOpen(true)}
+                    className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in group overflow-hidden flex items-center justify-center"
+                  >
+                    <img
+                      src={activeMedia.url}
+                      alt={activeMedia.alt || product.name}
+                      className="w-full h-full object-cover object-center transition-all duration-300"
+                    />
 
-                  {/* Tap to Zoom indicator */}
-                  <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[9px] flex items-center gap-1 font-medium pointer-events-none">
-                    <Maximize2 className="w-3 h-3" />
-                    <span>Tap to zoom</span>
+                    {/* Badges Overlay */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                      {product.discount_percentage > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm w-fit">
+                          {product.discount_percentage}% OFF
+                        </span>
+                      )}
+                      {Boolean(product.is_bestseller) && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
+                          Best Seller
+                        </span>
+                      )}
+                      {Boolean(product.is_anti_tarnish) && (
+                        <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
+                          <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                          18K Anti-Tarnish
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tap to Zoom indicator */}
+                    <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[9px] flex items-center gap-1 font-medium pointer-events-none">
+                      <Maximize2 className="w-3 h-3" />
+                      <span>Tap to zoom</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Photo Indicator Dot Pills */}
+                {/* Left & Right Circular Arrow Buttons (Matching Reference) */}
+                {mediaItems.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
+                      }}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/95 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center border border-brand-border/40 transition-all active:scale-90 cursor-pointer z-20"
+                      title="Previous media"
+                      aria-label="Previous slide"
+                    >
+                      <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/95 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center border border-brand-border/40 transition-all active:scale-90 cursor-pointer z-20"
+                      title="Next media"
+                      aria-label="Next slide"
+                    >
+                      <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Centered Pagination Dots (Matching Reference: Elongated Active Pill) */}
               {mediaItems.length > 1 && (
-                <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-mono font-medium tracking-wider z-20 pointer-events-none">
-                  {selectedMediaIndex + 1} / {mediaItems.length}
+                <div className="flex items-center justify-center gap-1.5 pt-3 pb-1">
+                  {mediaItems.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedMediaIndex(idx)}
+                      className={`transition-all duration-300 rounded-full cursor-pointer ${
+                        selectedMediaIndex === idx
+                          ? 'w-6 h-1.5 bg-[#26153D]'
+                          : 'w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Horizontal Thumbnail Selector Track: 3:4 Aspect Ratio Thumbnails */}
+            {/* Horizontal Thumbnail Selector Track: 1:1 Square Thumbnails */}
             {mediaItems.length > 1 && (
-              <div className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto no-scrollbar bg-brand-surface border-b border-brand-border/60">
+              <div className="flex items-center gap-2.5 px-4 py-2 overflow-x-auto no-scrollbar bg-brand-surface border-b border-brand-border/60">
                 {mediaItems.map((item, idx) => {
                   const isSelected = selectedMediaIndex === idx;
                   const isVideo = item.type === 'video';
@@ -436,7 +498,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       key={item.id || idx}
                       type="button"
                       onClick={() => setSelectedMediaIndex(idx)}
-                      className={`relative w-12 h-16 rounded-xl p-0.5 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
+                      className={`relative w-14 h-14 aspect-square rounded-xl p-0.5 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
                         isSelected
                           ? 'border-2 border-brand-primary shadow-sm ring-2 ring-brand-primary/20'
                           : 'border border-brand-border/80 opacity-65 hover:opacity-100'
@@ -745,10 +807,10 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             {/* Left Stage (7 cols on 12-col grid): Gallery Stage with High-Res Zoom & Thumbnails */}
             <div className="col-span-7 p-8 lg:p-12 overflow-y-auto bg-[#FAF8FC] border-r border-brand-border flex flex-col items-center justify-start space-y-6">
               
-              {/* Main 3:4 Portrait Stage with High-Definition Framing */}
+              {/* Main 1:1 Square Stage with High-Definition Framing */}
               <div 
-                className="relative w-full max-w-[420px] aspect-[3/4] h-[560px] max-h-[75vh] rounded-3xl overflow-hidden bg-[#FAF7FC] shadow-luxury border border-brand-border group flex items-center justify-center select-none"
-                style={{ aspectRatio: '3 / 4' }}
+                className="relative w-full max-w-[440px] lg:max-w-[480px] aspect-square rounded-3xl overflow-hidden bg-[#FAF7FC] shadow-luxury border border-brand-border group flex items-center justify-center select-none"
+                style={{ aspectRatio: '1 / 1' }}
               >
                 {activeMedia.type === 'video' ? (
                   <div 
@@ -797,7 +859,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 ) : (
                   <div 
                     onClick={() => setLightboxOpen(true)}
-                    className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in overflow-hidden group"
+                    className="relative w-full h-full bg-[#FAF7FC] cursor-zoom-in overflow-hidden group flex items-center justify-center"
                   >
                     <img
                       src={activeMedia.url}
@@ -833,7 +895,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </div>
                 )}
 
-                {/* Prev / Next Nav Buttons */}
+                {/* Prev / Next Nav Buttons (Circular white buttons matching reference) */}
                 {mediaItems.length > 1 && (
                   <>
                     <button
@@ -841,36 +903,49 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         e.stopPropagation();
                         setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
                       }}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-20"
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center border border-brand-border/40 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
                       title="Previous media"
                       aria-label="Previous slide"
                     >
-                      <ChevronLeft className="w-5 h-5 stroke-[2]" />
+                      <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
                       }}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95 cursor-pointer z-20"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 hover:bg-white text-brand-tertiary shadow-md flex items-center justify-center border border-brand-border/40 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
                       title="Next media"
                       aria-label="Next slide"
                     >
-                      <ChevronRight className="w-5 h-5 stroke-[2]" />
+                      <ChevronRight className="w-5 h-5 stroke-[2.5]" />
                     </button>
                   </>
                 )}
-
-                {mediaItems.length > 1 && (
-                  <div className="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-mono font-medium tracking-wider pointer-events-none z-20">
-                    {selectedMediaIndex + 1} / {mediaItems.length}
-                  </div>
-                )}
               </div>
 
-              {/* Desktop 3:4 Thumbnails Row */}
+              {/* Centered Pagination Dots Row (Matching Reference: Elongated Active Pill) */}
               {mediaItems.length > 1 && (
-                <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-3 py-2 px-2">
+                <div className="flex items-center justify-center gap-1.5 pt-1">
+                  {mediaItems.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedMediaIndex(idx)}
+                      className={`transition-all duration-300 rounded-full cursor-pointer ${
+                        selectedMediaIndex === idx
+                          ? 'w-7 h-2 bg-[#26153D]'
+                          : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to photo ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Desktop 1:1 Square Thumbnails Row */}
+              {mediaItems.length > 1 && (
+                <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-3 py-1 px-2">
                   {mediaItems.map((item, idx) => {
                     const isSelected = selectedMediaIndex === idx;
                     const isVideo = item.type === 'video';
@@ -879,7 +954,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         key={item.id || idx}
                         type="button"
                         onClick={() => setSelectedMediaIndex(idx)}
-                        className={`relative w-16 h-20 rounded-2xl p-1 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
+                        className={`relative w-16 h-16 aspect-square rounded-2xl p-1 transition-all shrink-0 cursor-pointer bg-white outline-none select-none ${
                           isSelected
                             ? 'border-2 border-brand-primary ring-2 ring-brand-primary/20 shadow-md'
                             : 'border border-brand-border/80 opacity-60 hover:opacity-100 hover:border-brand-primary/50'
@@ -892,11 +967,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                             <>
                               <video src={item.url} muted className="w-full h-full object-cover pointer-events-none" />
                               <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
-                                <div className="w-6 h-6 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xs">
-                                  <Play className="w-3 h-3 fill-current ml-0.5" />
+                                <div className="w-5 h-5 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xs">
+                                  <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
                                 </div>
                               </div>
-                              <span className="absolute bottom-1 inset-x-0 text-center text-[8px] font-bold bg-brand-primary text-white tracking-wider">
+                              <span className="absolute bottom-1 inset-x-0 text-center text-[7.5px] font-bold bg-brand-primary text-white tracking-wider">
                                 REEL
                               </span>
                             </>
