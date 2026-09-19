@@ -24,7 +24,7 @@ import { SiteContentProvider, useSiteContent } from './context/SiteContentContex
 import { WishlistProvider, useWishlist } from './context/WishlistContext';
 import ProductCard from './components/ProductCard';
 import ProductDetailModal from './components/ProductDetailModal';
-import BundleSection from './components/BundleSection';
+import FestivalOfferSection from './components/FestivalOfferSection';
 import TrustStrip from './components/TrustStrip';
 import FaqSection from './components/FaqSection';
 import CartDrawer from './components/CartDrawer';
@@ -445,10 +445,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 ))}
 
               <a
-                href="#combos"
-                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-primary font-semibold"
+                href="#festive-offers"
+                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1"
               >
-                Combo Offers
+                <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+                <span>Festive Offers</span>
               </a>
             </div>
           </div>
@@ -731,11 +732,12 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           )}
         </section>
 
-        {/* Curated Combo Sets Section */}
-        <section id="combos" className="scroll-mt-28">
-          <BundleSection
-            bundles={bundles}
-            onSelectBundle={(bundle) => addBundleToCart(bundle, 1, true)}
+        {/* Festival Offer Panel (Grand Celebrations) */}
+        <section id="festive-offers" className="scroll-mt-28">
+          <FestivalOfferSection
+            products={products}
+            onQuickView={(p) => openPdp(p.slug, p)}
+            onAddToCart={(p) => addToCart(p, null, 1, true)}
           />
         </section>
 

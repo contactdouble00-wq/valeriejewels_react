@@ -186,20 +186,20 @@ export default function MobileSidebarDrawer({
                   );
                 })}
 
-              {/* Combo Duos Special Feature */}
+              {/* Festive Offers Special Feature */}
               <button
                 onClick={() => {
                   onClose();
-                  handleScrollToSection('combos');
+                  handleScrollToSection('festive-offers');
                 }}
                 className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
               >
                 <div className="flex items-center space-x-2">
-                  <Gift className="w-4 h-4 text-brand-primary" />
-                  <span>Curated Combo Sets</span>
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span>Festive Offers & Edit</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300/60">
-                  SAVE UP TO 45%
+                  SPECIAL OFFERS
                 </span>
               </button>
             </div>

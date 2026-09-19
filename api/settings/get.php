@@ -68,6 +68,26 @@ try {
                     ],
                 ];
             }
+            if (!isset($data['festivalOffer']) || !is_array($data['festivalOffer'])) {
+                $data['festivalOffer'] = [
+                    'enabled'             => true,
+                    'badgeText'           => '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
+                    'headline'            => 'The Royal Festive Edit',
+                    'subtitle'            => 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+                    'countdownEnabled'    => true,
+                    'countdownEndDate'    => '2026-11-15T23:59:59',
+                    'countdownLabel'      => 'FESTIVE CELEBRATION OFFERS END IN:',
+                    'couponCode'          => 'FESTIVE20',
+                    'couponDiscount'      => 'FLAT 20% OFF',
+                    'couponDescription'   => 'Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999.',
+                    'perk1Title'          => 'Free Velvet Keepsake Box',
+                    'perk1Desc'           => 'Luxury royal unboxing packaging included complimentary with all festive orders.',
+                    'perk2Title'          => 'Extra ₹50 OFF + Free Gift',
+                    'perk2Desc'           => 'Instant discount & complimentary zircon necklace on 1-Click Fastrr Prepaid.',
+                    'perk3Title'          => 'Shiprocket Priority Express',
+                    'perk3Desc'           => 'Priority dispatch & insured delivery across 29,000+ Indian pincodes.',
+                ];
+            }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
             exit;
         }
@@ -154,6 +174,24 @@ try {
             'eyebrow'  => 'Curated Pairings',
             'title'    => 'Jewelry Combo Sets & Duos',
             'subtitle' => 'Expertly styled layered pairings with bundle-exclusive discounts up to 45%.',
+        ],
+        'festivalOffer' => [
+            'enabled'             => true,
+            'badgeText'           => '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
+            'headline'            => 'The Royal Festive Edit',
+            'subtitle'            => 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+            'countdownEnabled'    => true,
+            'countdownEndDate'    => '2026-11-15T23:59:59',
+            'countdownLabel'      => 'FESTIVE CELEBRATION OFFERS END IN:',
+            'couponCode'          => 'FESTIVE20',
+            'couponDiscount'      => 'FLAT 20% OFF',
+            'couponDescription'   => 'Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999.',
+            'perk1Title'          => 'Free Velvet Keepsake Box',
+            'perk1Desc'           => 'Luxury royal unboxing packaging included complimentary with all festive orders.',
+            'perk2Title'          => 'Extra ₹50 OFF + Free Gift',
+            'perk2Desc'           => 'Instant discount & complimentary zircon necklace on 1-Click Fastrr Prepaid.',
+            'perk3Title'          => 'Shiprocket Priority Express',
+            'perk3Desc'           => 'Priority dispatch & insured delivery across 29,000+ Indian pincodes.',
         ],
         'trustStrip' => [
             [

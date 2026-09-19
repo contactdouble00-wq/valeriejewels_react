@@ -528,9 +528,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
           {/* 2. Top Promotional Announcement Banner (MadeWidLove Highlight) */}
           <div className="bg-gradient-to-r from-brand-tertiary via-[#361c56] to-brand-tertiary px-4 py-2 text-center text-[11px] font-medium text-white flex items-center justify-center space-x-1.5 shadow-2xs">
-            <span className="text-amber-300">🎁</span>
             <span className="font-semibold tracking-wide">
-              {paymentSettings.checkout_banner_text}
+              {paymentSettings.checkout_banner_text?.startsWith('🎁') 
+                ? paymentSettings.checkout_banner_text 
+                : `🎁 ${paymentSettings.checkout_banner_text}`}
             </span>
           </div>
 
@@ -723,14 +724,17 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             {/* ══════════════════════════════════════════════════════════════
                 STEP 2: OTP VERIFICATION (6 Digits)
             ══════════════════════════════════════════════════════════════ */}
+            {/* ══════════════════════════════════════════════════════════════
+                STEP 2: OTP VERIFICATION (6 Digits) — Luxury Fastrr Style
+            ══════════════════════════════════════════════════════════════ */}
             {step === 'otp' && (
               <div className="space-y-4 animate-fade-in py-1">
                 <div className="text-center space-y-1">
-                  <h2 className="text-base font-bold text-brand-tertiary">
+                  <h2 className="text-base font-bold text-brand-tertiary font-serif sm:text-lg">
                     Verify phone number
                   </h2>
                   <div className="flex items-center justify-center space-x-1.5 text-xs text-brand-muted">
-                    <span>Verifying</span>
+                    <span>Enter 6-digit code sent to</span>
                     <strong className="text-brand-tertiary font-bold">+91 {phone}</strong>
                     <button
                       type="button"
@@ -743,32 +747,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   </div>
                 </div>
 
-                {/* Localhost / Sandbox Notice Banner */}
-                {!isLiveSms ? (
-                  <div className="p-3 bg-purple-50/90 border border-brand-primary/20 rounded-2xl text-center space-y-1 shadow-2xs">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold tracking-wider uppercase">
-                      <Zap className="w-3 h-3 fill-amber-400 text-amber-500" />
-                      <span>Sandbox Test Mode</span>
-                    </div>
-                    <p className="text-xs text-brand-tertiary font-medium">
-                      Physical SMS is not sent on localhost. Your test OTP is:
-                    </p>
-                    <div className="inline-flex items-center justify-center">
-                      <span className="font-mono text-lg font-extrabold text-brand-primary tracking-widest bg-white py-1 px-4 rounded-xl border border-brand-primary/20 shadow-xs">
-                        {demoOtp || '123456'}
-                      </span>
-                    </div>
-                    <p className="text-[10.5px] text-brand-muted font-light">
-                      Type <strong className="font-semibold text-brand-tertiary">{demoOtp || '123456'}</strong> in boxes or tap the button below
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-0.5">
-                    <p className="text-xs text-emerald-800 font-semibold">
-                      📲 Live SMS dispatched to +91 {phone}
-                    </p>
-                    <p className="text-[11px] text-emerald-600">
-                      Please enter the 6-digit OTP received on your phone.
+                {/* Live SMS Status Banner */}
+                {isLiveSms && (
+                  <div className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-center">
+                    <p className="text-xs text-emerald-800 font-semibold flex items-center justify-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Text message (SMS) sent to your mobile phone</span>
                     </p>
                   </div>
                 )}
@@ -782,7 +766,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 )}
 
                 {/* 6-box OTP digits */}
-                <div className="flex items-center justify-center gap-2 sm:gap-2.5 pt-1">
+                <div className="flex items-center justify-center gap-2 sm:gap-2.5 pt-2">
                   {otp.map((digit, idx) => (
                     <input
                       key={idx}
@@ -798,50 +782,28 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   ))}
                 </div>
 
-                {/* Verify Button or Auto-fill button */}
-                {!isLiveSms ? (
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => {
-                      const digits = (demoOtp || '123456').split('');
-                      setOtp(digits);
-                      handleVerifyOtp(demoOtp || '123456');
-                    }}
-                    className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4 fill-amber-300 text-amber-300" />
-                        <span>AUTO-FILL TEST OTP & CONTINUE ({demoOtp || '123456'})</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={isSubmitting || otp.join('').length !== 6}
-                    onClick={() => handleVerifyOtp(otp.join(''))}
-                    className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                        <span>VERIFY & CONTINUE</span>
-                      </>
-                    )}
-                  </button>
-                )}
+                {/* Verify Button */}
+                <button
+                  type="button"
+                  disabled={isSubmitting || otp.join('').length !== 6}
+                  onClick={() => handleVerifyOtp(otp.join(''))}
+                  className="w-full py-3.5 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-1"
+                >
+                  {isSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                      <span>VERIFY & CONTINUE</span>
+                    </>
+                  )}
+                </button>
 
                 {/* Resend OTP Timer & Info */}
-                <div className="text-center space-y-1 pt-1">
+                <div className="text-center space-y-1.5 pt-1">
                   <div className="text-xs text-brand-muted">
                     {otpTimer > 0 ? (
-                      <span>Resend OTP in <strong className="text-brand-primary font-mono">{otpTimer}s</strong></span>
+                      <span>Didn't receive code? Resend OTP in <strong className="text-brand-primary font-mono">{otpTimer}s</strong></span>
                     ) : (
                       <button
                         type="button"
@@ -854,18 +816,36 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   </div>
                   {otpResent && (
                     <p className="text-[11px] text-emerald-600 font-semibold animate-fade-in">
-                      ✓ OTP resent! In test mode, use code {demoOtp || '123456'}.
+                      ✓ A new verification code has been dispatched.
                     </p>
+                  )}
+
+                  {/* Discreet Dev Helper Shortcut (subtle text, only when live SMS recharge is pending) */}
+                  {!isLiveSms && (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const digits = (demoOtp || '123456').split('');
+                          setOtp(digits);
+                          handleVerifyOtp(demoOtp || '123456');
+                        }}
+                        className="text-[10px] text-brand-muted/60 hover:text-brand-primary underline transition-colors cursor-pointer"
+                      >
+                        (Dev test shortcut: Auto-fill {demoOtp || '123456'})
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {/* Fastrr Assurance */}
+                {/* Fastrr Assurance Footer */}
                 <div className="p-2.5 rounded-2xl bg-[#FAF8FC] border border-brand-border/80 text-center space-y-0.5">
                   <p className="text-[11.5px] text-brand-tertiary font-medium">
                     We'll fill in your saved addresses automatically.
                   </p>
-                  <p className="text-[10px] text-brand-muted">
-                    Powered by <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
+                  <p className="text-[10.5px] text-brand-muted flex items-center justify-center gap-1">
+                    <span>Powered by</span>
+                    <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
                   </p>
                 </div>
               </div>

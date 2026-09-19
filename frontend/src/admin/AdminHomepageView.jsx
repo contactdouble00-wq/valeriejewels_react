@@ -22,6 +22,10 @@ import {
   ChevronDown,
   Layers,
   ExternalLink,
+  Clock,
+  Gift,
+  Zap,
+  Percent,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -107,6 +111,24 @@ const FACTORY_DEFAULTS = {
     title: 'Jewelry Combo Sets & Duos',
     subtitle: 'Expertly styled layered pairings with bundle-exclusive discounts up to 45%.',
   },
+  festivalOffer: {
+    enabled: true,
+    badgeText: '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
+    headline: 'The Royal Festive Edit',
+    subtitle: 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+    countdownEnabled: true,
+    countdownEndDate: '2026-11-15T23:59:59',
+    countdownLabel: 'FESTIVE CELEBRATION OFFERS END IN:',
+    couponCode: 'FESTIVE20',
+    couponDiscount: 'FLAT 20% OFF',
+    couponDescription: 'Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999.',
+    perk1Title: 'Free Velvet Keepsake Box',
+    perk1Desc: 'Luxury royal unboxing packaging included complimentary with all festive orders.',
+    perk2Title: 'Extra ₹50 OFF + Free Gift',
+    perk2Desc: 'Instant discount & complimentary zircon necklace on 1-Click Fastrr Prepaid.',
+    perk3Title: 'Shiprocket Priority Express',
+    perk3Desc: 'Priority dispatch & insured delivery across 29,000+ Indian pincodes.',
+  },
   trustStrip: [
     {
       id: 'pillar1',
@@ -169,6 +191,7 @@ export default function AdminHomepageView() {
           jhumkaHero: { ...FACTORY_DEFAULTS.jhumkaHero, ...(data.jhumkaHero || {}) },
           catalogHeader: { ...FACTORY_DEFAULTS.catalogHeader, ...(data.catalogHeader || {}) },
           combosHeader: { ...FACTORY_DEFAULTS.combosHeader, ...(data.combosHeader || {}) },
+          festivalOffer: { ...FACTORY_DEFAULTS.festivalOffer, ...(data.festivalOffer || {}) },
           trustStrip: Array.isArray(data.trustStrip) && data.trustStrip.length > 0
             ? data.trustStrip
             : FACTORY_DEFAULTS.trustStrip,
@@ -366,7 +389,8 @@ export default function AdminHomepageView() {
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
     { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
     { id: 'jhumka', label: '4 Jhumka Boxes Spotlight', icon: Flame },
-    { id: 'catalog', label: 'Catalog & Combos Headers', icon: Tag },
+    { id: 'festivalOffer', label: 'Festival Offer Panel', icon: Sparkles, badge: 'Festive' },
+    { id: 'catalog', label: 'Catalog Headers', icon: Tag },
     { id: 'trust', label: 'Trust Strip (4 Pillars)', icon: ShieldCheck },
     { id: 'telemetry', label: 'Developer System Banner', icon: Eye },
   ];
@@ -450,6 +474,13 @@ export default function AdminHomepageView() {
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-muted'}`} />
               <span>{sec.label}</span>
+              {sec.badge && (
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  isActive ? 'bg-amber-300 text-[#1B0A33]' : 'bg-amber-100 text-amber-900 border border-amber-300/80'
+                }`}>
+                  {sec.badge}
+                </span>
+              )}
             </button>
           );
         })}
@@ -1352,41 +1383,348 @@ export default function AdminHomepageView() {
                 </div>
               </div>
 
-              <div className="p-5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-4">
-                <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-primary">
-                  2. Combo Sets & Duos Header
+              <div className="p-5 rounded-xl bg-gradient-to-r from-amber-50 to-purple-50 border border-amber-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-amber-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>2. Combo Sets Upgraded to Festival Offer Panel</span>
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-amber-200/80 text-amber-900">
+                    Upgraded
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900/80 font-light leading-relaxed">
+                  The old Combo Sets & Duos section has been successfully converted into the high-converting <strong>Festival Offer Panel</strong> with live countdown tickers, 1-click promo coupons, and curated gifting perks.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('festivalOffer')}
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary-hover transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>Configure Festival Offer Panel</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FESTIVAL OFFER PANEL (GRAND CELEBRATIONS) */}
+        {activeSection === 'festivalOffer' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border/60 pb-5">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-caps uppercase tracking-wider font-bold mb-1">
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                  <span>Grand Festival Campaign Engine</span>
+                </div>
+                <h3 className="text-lg font-editorial font-bold text-brand-tertiary">
+                  Festival Offer Panel Controls
+                </h3>
+                <p className="text-xs text-brand-muted font-light max-w-2xl mt-0.5">
+                  Convert holiday and wedding shopping traffic with a royal festive showcase module. Customize live countdown tickers, 1-click festive promo vouchers, complimentary gifting perks, and festive spotlight jewelry pieces.
+                </p>
+              </div>
+
+              {/* Master Status Badge & Toggle */}
+              <div className="flex items-center gap-3 shrink-0">
+                <label className="flex items-center space-x-2.5 p-2.5 px-4 rounded-xl bg-[#FAF8FD] border border-brand-border cursor-pointer hover:border-brand-primary transition-all">
+                  <input
+                    type="checkbox"
+                    checked={formData.festivalOffer?.enabled !== false}
+                    onChange={(e) => updateNested('festivalOffer', 'enabled', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-brand-tertiary block">
+                      {formData.festivalOffer?.enabled !== false ? 'Active on Storefront' : 'Section Hidden'}
+                    </span>
+                    <span className="text-[10px] text-brand-muted font-light">
+                      {formData.festivalOffer?.enabled !== false ? 'Live royal festival banner visible' : 'Hidden from customers'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* 1. Header & Storytelling Copy */}
+            <div className="p-5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-4">
+              <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>1. Festival Campaign Branding & Copy</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Festive Eyebrow Tag / Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.festivalOffer?.badgeText || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'badgeText', e.target.value)}
+                    placeholder="e.g. ✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Grand Festive Headline
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.festivalOffer?.headline || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'headline', e.target.value)}
+                    placeholder="e.g. The Royal Festive Edit"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white font-medium"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Festive Storytelling Subtitle
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.festivalOffer?.subtitle || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'subtitle', e.target.value)}
+                    placeholder="Descriptive copy introducing your anti-tarnish festive jewelry..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white leading-relaxed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Live Countdown Timer Engine */}
+            <div className="p-5 rounded-xl bg-gradient-to-r from-purple-50/70 to-amber-50/70 border border-purple-200/80 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-purple-950 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-purple-700" />
+                  <span>2. Live Countdown Timer Configuration</span>
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.festivalOffer?.countdownEnabled !== false}
+                    onChange={(e) => updateNested('festivalOffer', 'countdownEnabled', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                  />
+                  <span className="text-xs font-bold text-purple-950">
+                    Enable Countdown Ticker
+                  </span>
+                </label>
+              </div>
+
+              {formData.festivalOffer?.countdownEnabled !== false && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-brand-tertiary block">Eyebrow Tag</label>
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Target Expiry Date & Time
+                    </label>
                     <input
-                      type="text"
-                      value={formData.combosHeader.eyebrow}
-                      onChange={(e) => updateNested('combosHeader', 'eyebrow', e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
+                      type="datetime-local"
+                      value={(formData.festivalOffer?.countdownEndDate || '2026-11-15T23:59').slice(0, 16)}
+                      onChange={(e) => updateNested('festivalOffer', 'countdownEndDate', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white font-mono"
                     />
+                    <span className="text-[10px] text-brand-muted block">
+                      Ticking down live second-by-second on the storefront.
+                    </span>
                   </div>
+
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-brand-tertiary block">Main Title</label>
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Timer Header Label
+                    </label>
                     <input
                       type="text"
-                      value={formData.combosHeader.title}
-                      onChange={(e) => updateNested('combosHeader', 'title', e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
-                    />
-                  </div>
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-brand-tertiary block">Subtitle Description</label>
-                    <input
-                      type="text"
-                      value={formData.combosHeader.subtitle}
-                      onChange={(e) => updateNested('combosHeader', 'subtitle', e.target.value)}
+                      value={formData.festivalOffer?.countdownLabel || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'countdownLabel', e.target.value)}
+                      placeholder="e.g. FESTIVE CELEBRATION OFFERS END IN:"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
                     />
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* 3. Interactive Festive Voucher Card Settings */}
+            <div className="p-5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-4">
+              <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-primary flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                <span>3. Festive Promo Voucher Strip (1-Click Copy)</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Promo Coupon Code
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.festivalOffer?.couponCode || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'couponCode', e.target.value.toUpperCase())}
+                    placeholder="e.g. FESTIVE20"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white font-mono font-bold tracking-wider uppercase text-amber-700"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Discount Value Pill
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.festivalOffer?.couponDiscount || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'couponDiscount', e.target.value)}
+                    placeholder="e.g. FLAT 20% OFF or ₹300 OFF"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white font-bold text-emerald-700"
+                  />
+                </div>
+
+                <div className="sm:col-span-1 space-y-1.5">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Offer Description / Terms
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.festivalOffer?.couponDescription || ''}
+                    onChange={(e) => updateNested('festivalOffer', 'couponDescription', e.target.value)}
+                    placeholder="e.g. Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* 4. Three Festive Perks (Packaging, Fastrr, Delivery) */}
+            <div className="p-5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-4">
+              <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-primary flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5" />
+                <span>4. Curated Festive Perks Cards</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                {/* Perk 1 */}
+                <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-2.5">
+                  <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+                    <Gift className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Perk 1 (Packaging / Gift)</span>
+                  </span>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Title</label>
+                    <input
+                      type="text"
+                      value={formData.festivalOffer?.perk1Title || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk1Title', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Description</label>
+                    <textarea
+                      rows={2}
+                      value={formData.festivalOffer?.perk1Desc || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk1Desc', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-tight"
+                    />
+                  </div>
+                </div>
+
+                {/* Perk 2 */}
+                <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-2.5">
+                  <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Perk 2 (Prepaid / Fastrr)</span>
+                  </span>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Title</label>
+                    <input
+                      type="text"
+                      value={formData.festivalOffer?.perk2Title || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk2Title', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Description</label>
+                    <textarea
+                      rows={2}
+                      value={formData.festivalOffer?.perk2Desc || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk2Desc', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-tight"
+                    />
+                  </div>
+                </div>
+
+                {/* Perk 3 */}
+                <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-2.5">
+                  <span className="text-[11px] font-bold text-purple-800 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Perk 3 (Shipping / Delivery)</span>
+                  </span>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Title</label>
+                    <input
+                      type="text"
+                      value={formData.festivalOffer?.perk3Title || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk3Title', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-brand-muted block">Description</label>
+                    <textarea
+                      rows={2}
+                      value={formData.festivalOffer?.perk3Desc || ''}
+                      onChange={(e) => updateNested('festivalOffer', 'perk3Desc', e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-tight"
+                    />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* 5. Live Admin Preview Box */}
+            <div className="p-5 rounded-2xl bg-[#1B0A33] border border-amber-500/40 text-white space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <span className="text-[11px] font-caps uppercase tracking-wider text-amber-300 font-bold flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Real-Time Live Storefront Preview</span>
+                </span>
+                <span className="text-[10px] text-white/60">
+                  Updates instantly as you type
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    {formData.festivalOffer?.badgeText || '✨ GRAND FESTIVE CELEBRATION'}
+                  </span>
+                  <h4 className="text-2xl font-editorial font-bold text-white mt-1.5">
+                    {formData.festivalOffer?.headline || 'The Royal Festive Edit'}
+                  </h4>
+                  <p className="text-xs text-purple-200/80 font-light mt-1 max-w-xl line-clamp-2">
+                    {formData.festivalOffer?.subtitle || 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry.'}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <div className="px-3 py-1.5 bg-[#120524] border border-dashed border-amber-400/50 rounded-lg font-mono text-sm font-bold text-amber-300">
+                    {formData.festivalOffer?.couponCode || 'FESTIVE20'}
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400">
+                    {formData.festivalOffer?.couponDiscount || 'FLAT 20% OFF'}
+                  </span>
+                  <span className="text-xs text-purple-200/70">
+                    • 1-Click Fastrr Checkout Integrated
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
