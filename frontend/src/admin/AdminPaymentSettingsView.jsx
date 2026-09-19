@@ -28,6 +28,8 @@ export default function AdminPaymentSettingsView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [showSecret, setShowSecret] = useState(false);
+  const [showFast2SmsKey, setShowFast2SmsKey] = useState(false);
+  const [showShiprocketPassword, setShowShiprocketPassword] = useState(false);
   const [webhookCopied, setWebhookCopied] = useState(false);
 
   // SMS Diagnostic test states
@@ -122,6 +124,11 @@ export default function AdminPaymentSettingsView() {
       const res = await adminApi.sendTestSms({
         phone: clean,
         sms_provider: settings.sms_provider,
+        fastrr_app_id: settings.fastrr_app_id,
+        fastrr_secret_key: settings.fastrr_secret_key,
+        shiprocket_email: settings.shiprocket_email,
+        shiprocket_password: settings.shiprocket_password,
+        sms_fastrr_auth_token: settings.sms_fastrr_auth_token,
         sms_fast2sms_api_key: settings.sms_fast2sms_api_key,
         sms_2factor_api_key: settings.sms_2factor_api_key,
         sms_twilio_sid: settings.sms_twilio_sid,
@@ -359,54 +366,149 @@ export default function AdminPaymentSettingsView() {
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-tertiary">SMS Gateway Provider</label>
               <select
-                value={settings.sms_provider || 'sandbox'}
+                value={settings.sms_provider || 'fastrr'}
                 onChange={(e) => setSettings({ ...settings, sms_provider: e.target.value })}
                 className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold text-brand-tertiary focus:outline-none focus:border-brand-primary cursor-pointer"
               >
-                <option value="fast2sms">Fast2SMS (Recommended for India • Instant real SMS • No DLT delay)</option>
-                <option value="twofactor">2Factor.in (Indian OTP SMS Gateway)</option>
+                <option value="fastrr">Fastrr (Shiprocket Checkout) • Exactly like MadeWidLove</option>
+                <option value="fast2sms">Fast2SMS Gateway (Alternative India SMS)</option>
+                <option value="twofactor">2Factor.in (Alternative Indian OTP Gateway)</option>
                 <option value="twilio">Twilio SMS Gateway (Global Cellular Delivery)</option>
-                <option value="fastrr">Fastrr Headless API (Shiprocket Fastrr)</option>
                 <option value="sandbox">Sandbox / Demo Simulation (Test Code 123456 • Zero SMS cost)</option>
               </select>
               <p className="text-[10.5px] text-brand-muted">
+                {settings.sms_provider === 'fastrr' && 'Shiprocket Fastrr sends real cellular SMS under registered telecom header FSTRR / SHPRKT and pre-fills delivery addresses from 50M+ Indian buyers.'}
                 {settings.sms_provider === 'fast2sms' && 'Fast2SMS delivers real cellular SMS directly to any Indian +91 number in 2–5 seconds with pre-approved OTP route.'}
                 {settings.sms_provider === 'twofactor' && '2Factor.in provides dedicated Indian OTP SMS infrastructure.'}
                 {settings.sms_provider === 'twilio' && 'Twilio sends global SMS via Twilio REST API.'}
-                {settings.sms_provider === 'fastrr' && 'Routes OTP requests through Fastrr / Shiprocket Checkout merchant API.'}
                 {settings.sms_provider === 'sandbox' && '💡 No cellular SMS is sent. Test OTP is 123456 with 1-click Auto-Fill.'}
               </p>
             </div>
 
-            {/* Provider 1: Fast2SMS */}
+            {/* Provider 1: Fastrr (Shiprocket Checkout) */}
+            {settings.sms_provider === 'fastrr' && (
+              <div className="space-y-3 md:col-span-2 p-4 rounded-xl bg-purple-50/50 border border-purple-200/80">
+                <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+                    <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                    <span>Shiprocket Fastrr Integration Credentials</span>
+                  </div>
+                  <a
+                    href="https://app.shiprocket.in/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-brand-primary hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Shiprocket Dashboard</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Channel App ID / Store Slug</label>
+                    <input
+                      type="text"
+                      value={settings.fastrr_app_id || ''}
+                      onChange={(e) => setSettings({ ...settings, fastrr_app_id: e.target.value })}
+                      placeholder="e.g. valerie_jewels or App ID"
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-brand-muted mt-0.5">Your Fastrr merchant store identifier</p>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Secret Key / API Token</label>
+                    <input
+                      type="password"
+                      value={settings.fastrr_secret_key || ''}
+                      onChange={(e) => setSettings({ ...settings, fastrr_secret_key: e.target.value })}
+                      placeholder="vj_fastrr_sec_live_xxxx"
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-brand-muted mt-0.5">Found under Fastrr / Shiprocket Developer API settings</p>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-brand-tertiary">Shiprocket API User Email (Optional)</label>
+                    <input
+                      type="email"
+                      value={settings.shiprocket_email || ''}
+                      onChange={(e) => setSettings({ ...settings, shiprocket_email: e.target.value })}
+                      placeholder="api.user@valeriejewels.com"
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-brand-tertiary">Shiprocket API User Password (Optional)</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowShiprocketPassword(!showShiprocketPassword)}
+                        className="text-[10px] text-brand-muted hover:text-brand-primary flex items-center gap-1"
+                      >
+                        {showShiprocketPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        <span>{showShiprocketPassword ? 'Hide' : 'Show'}</span>
+                      </button>
+                    </div>
+                    <input
+                      type={showShiprocketPassword ? "text" : "password"}
+                      value={settings.shiprocket_password || ''}
+                      onChange={(e) => setSettings({ ...settings, shiprocket_password: e.target.value })}
+                      placeholder="••••••••••••"
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white/80 border border-purple-200/60 text-[11px] text-brand-tertiary">
+                  💡 <strong>How it works:</strong> When a customer clicks <em>ORDER NOW</em>, Fastrr connects directly with Shiprocket's Indian telecom infrastructure to dispatch the SMS OTP under sender <strong>FSTRR</strong> and pre-populates their saved address.
+                </div>
+              </div>
+            )}
+
+            {/* Provider 2: Fast2SMS */}
             {settings.sms_provider === 'fast2sms' && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-brand-tertiary">Fast2SMS Authorization Key</label>
-                  <a
-                    href="https://www.fast2sms.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-brand-primary hover:underline flex items-center gap-1"
-                  >
-                    <span>Get Free Key</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowFast2SmsKey(!showFast2SmsKey)}
+                      className="text-[11px] text-brand-muted hover:text-brand-primary flex items-center gap-1 cursor-pointer"
+                    >
+                      {showFast2SmsKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showFast2SmsKey ? 'Hide' : 'Show Key'}</span>
+                    </button>
+                    <a
+                      href="https://www.fast2sms.com/dashboard/dev-api"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-brand-primary hover:underline flex items-center gap-1 font-medium"
+                    >
+                      <span>Open Fast2SMS Dev API</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
                 </div>
-                <input
-                  type="password"
-                  value={settings.sms_fast2sms_api_key || ''}
-                  onChange={(e) => setSettings({ ...settings, sms_fast2sms_api_key: e.target.value })}
-                  placeholder="Paste Fast2SMS API Key"
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                />
+                <div className="relative">
+                  <input
+                    type={showFast2SmsKey ? "text" : "password"}
+                    value={settings.sms_fast2sms_api_key || ''}
+                    onChange={(e) => setSettings({ ...settings, sms_fast2sms_api_key: e.target.value })}
+                    placeholder="Paste Fast2SMS API Key from fast2sms.com > Dev API"
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                  />
+                </div>
                 <p className="text-[10.5px] text-brand-muted">
-                  Create a free account at Fast2SMS.com to get instant test credits.
+                  Log in to <strong>fast2sms.com</strong> → click <strong>Dev API</strong> in the left sidebar → copy the key under <strong>"YOUR API AUTHORIZATION KEY"</strong>.
                 </p>
               </div>
             )}
 
-            {/* Provider 2: 2Factor.in */}
+            {/* Provider 3: 2Factor.in */}
             {settings.sms_provider === 'twofactor' && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -431,7 +533,7 @@ export default function AdminPaymentSettingsView() {
               </div>
             )}
 
-            {/* Provider 3: Twilio */}
+            {/* Provider 4: Twilio */}
             {settings.sms_provider === 'twilio' && (
               <div className="space-y-2 md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
@@ -464,20 +566,6 @@ export default function AdminPaymentSettingsView() {
                     className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
                   />
                 </div>
-              </div>
-            )}
-
-            {/* Provider 4: Fastrr */}
-            {settings.sms_provider === 'fastrr' && (
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-tertiary">Fastrr Merchant Auth Token</label>
-                <input
-                  type="password"
-                  value={settings.sms_fastrr_auth_token || ''}
-                  onChange={(e) => setSettings({ ...settings, sms_fastrr_auth_token: e.target.value })}
-                  placeholder="Paste Fastrr Bearer Token (optional)"
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                />
               </div>
             )}
           </div>

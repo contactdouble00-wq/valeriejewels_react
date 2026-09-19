@@ -47,6 +47,21 @@ try {
 if (!empty($input['sms_provider'])) {
     $settings['sms_provider'] = $input['sms_provider'];
 }
+if (!empty($input['fastrr_app_id'])) {
+    $settings['fastrr_app_id'] = $input['fastrr_app_id'];
+}
+if (!empty($input['fastrr_secret_key'])) {
+    $settings['fastrr_secret_key'] = $input['fastrr_secret_key'];
+}
+if (!empty($input['shiprocket_email'])) {
+    $settings['shiprocket_email'] = $input['shiprocket_email'];
+}
+if (!empty($input['shiprocket_password'])) {
+    $settings['shiprocket_password'] = $input['shiprocket_password'];
+}
+if (!empty($input['sms_fastrr_auth_token'])) {
+    $settings['sms_fastrr_auth_token'] = $input['sms_fastrr_auth_token'];
+}
 if (!empty($input['sms_fast2sms_api_key'])) {
     $settings['sms_fast2sms_api_key'] = $input['sms_fast2sms_api_key'];
 }

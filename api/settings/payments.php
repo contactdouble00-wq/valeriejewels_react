@@ -17,13 +17,15 @@ $defaultSettings = [
     'fastrr_app_id'         => 'vj_fastrr_app_test',
     'fastrr_secret_key'     => 'vj_fastrr_secret_test_2026',
     'fastrr_webhook_secret' => 'vj_fastrr_whsec_test',
-    'sms_provider'          => 'sandbox', // 'sandbox' | 'fast2sms' | 'twofactor' | 'twilio' | 'fastrr'
+    'sms_provider'          => 'fastrr', // 'fastrr' (Shiprocket) | 'sandbox' | 'fast2sms' | 'twofactor' | 'twilio'
+    'shiprocket_email'      => '',
+    'shiprocket_password'   => '',
+    'sms_fastrr_auth_token' => '',
     'sms_fast2sms_api_key'  => '',
     'sms_2factor_api_key'   => '',
     'sms_twilio_sid'        => '',
     'sms_twilio_token'      => '',
     'sms_twilio_from'       => '',
-    'sms_fastrr_auth_token' => '',
     'prepaid_discount'      => 50,
     'prepaid_gift_title'    => 'Free Zircon Necklace',
     'prepaid_gift_subtitle' => 'Included complimentary with all prepaid orders',
@@ -97,16 +99,22 @@ try {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
         if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
             require_once dirname(__DIR__) . '/utils/jwt.php';
-            $payload = JwtUtil::decode($matches[1]);
-            if ($payload && in_array($payload['role'] ?? '', ['admin', 'staff'])) {
-                $isAdmin = true;
-            }
+            $configFile = dirname(__DIR__) . '/config/config.php';
+            $config = file_exists($configFile) ? require $configFile : require dirname(__DIR__) . '/config/config.sample.php';
+            $jwtSecret = $config['jwt']['secret'] ?? 'valerie_default_secret_key_2026';
+            try {
+                $payload = JWT::decode(trim($matches[1]), $jwtSecret);
+                if ($payload && in_array($payload['role'] ?? '', ['admin', 'staff'])) {
+                    $isAdmin = true;
+                }
+            } catch (Throwable $e) {}
         }
 
         // Mask secret keys if not admin
         if (!$isAdmin) {
             unset($settings['fastrr_secret_key']);
             unset($settings['fastrr_webhook_secret']);
+            unset($settings['shiprocket_password']);
             unset($settings['sms_fast2sms_api_key']);
             unset($settings['sms_2factor_api_key']);
             unset($settings['sms_twilio_token']);
@@ -143,6 +151,8 @@ try {
             'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : $current['fastrr_secret_key'],
             'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : $current['fastrr_webhook_secret'],
             'sms_provider'          => in_array($data['sms_provider'] ?? '', ['sandbox', 'fast2sms', 'twofactor', 'twilio', 'fastrr']) ? $data['sms_provider'] : $current['sms_provider'],
+            'shiprocket_email'      => isset($data['shiprocket_email']) ? trim($data['shiprocket_email']) : $current['shiprocket_email'],
+            'shiprocket_password'   => !empty($data['shiprocket_password']) ? trim($data['shiprocket_password']) : $current['shiprocket_password'],
             'sms_fast2sms_api_key'  => isset($data['sms_fast2sms_api_key']) ? trim($data['sms_fast2sms_api_key']) : $current['sms_fast2sms_api_key'],
             'sms_2factor_api_key'   => isset($data['sms_2factor_api_key']) ? trim($data['sms_2factor_api_key']) : $current['sms_2factor_api_key'],
             'sms_twilio_sid'        => isset($data['sms_twilio_sid']) ? trim($data['sms_twilio_sid']) : $current['sms_twilio_sid'],

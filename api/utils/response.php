@@ -14,6 +14,9 @@ class ApiResponse {
      * @param array $meta Optional pagination or metadata
      */
     public static function success(mixed $data = null, string $message = 'Success', int $statusCode = 200, array $meta = []): void {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
 
@@ -40,6 +43,9 @@ class ApiResponse {
      * @param array|null $errors Detailed validation or system errors
      */
     public static function error(string $message = 'An error occurred', int $statusCode = 400, ?array $errors = null): void {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
 

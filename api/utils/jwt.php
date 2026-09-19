@@ -108,3 +108,7 @@ class JWT {
         return base64_decode(strtr($data, '-_', '+/'));
     }
 }
+
+if (!class_exists('JwtUtil')) {
+    class_alias('JWT', 'JwtUtil');
+}

@@ -5,6 +5,8 @@
  * Supports: Fast2SMS, 2Factor.in, Twilio, and Fastrr
  */
 
+@error_reporting(E_ALL & ~E_DEPRECATED);
+
 class SmsGateway {
 
     /**
@@ -87,8 +89,19 @@ class SmsGateway {
             $appId  = trim($settings['fastrr_app_id'] ?? '');
             $secret = trim($settings['fastrr_secret_key'] ?? '');
             $token  = trim($settings['sms_fastrr_auth_token'] ?? '');
+            $srEmail = trim($settings['shiprocket_email'] ?? '');
+            $srPassword = trim($settings['shiprocket_password'] ?? '');
 
-            return self::sendViaFastrr($cleanPhone, $otp, $appId, $secret, $token);
+            if (empty($token) && (empty($srEmail) || empty($srPassword))) {
+                return [
+                    'success'  => false,
+                    'is_live'  => false,
+                    'provider' => 'fastrr',
+                    'message'  => 'Please enter your Shiprocket API User Email and Password in the fields above.'
+                ];
+            }
+
+            return self::sendViaFastrr($cleanPhone, $otp, $appId, $secret, $token, $settings);
         }
 
         return [
@@ -104,16 +117,22 @@ class SmsGateway {
      * Delivers in 2-5 seconds across Indian telecom networks
      */
     private static function sendViaFast2Sms(string $phone, string $otp, string $apiKey): array {
+        $cleanApiKey = trim($apiKey);
+        $cleanApiKey = preg_replace('/^authorization:\s*/i', '', $cleanApiKey);
+        $cleanApiKey = trim($cleanApiKey, " \t\n\r\0\x0B\"'");
+
         $postData = [
             'route'            => 'otp',
             'variables_values' => $otp,
             'numbers'          => $phone,
         ];
 
-        $ch = curl_init('https://www.fast2sms.com/dev/bulkV2');
+        $url = 'https://www.fast2sms.com/dev/bulkV2?authorization=' . urlencode($cleanApiKey);
+        $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "authorization: {$apiKey}",
-            "Content-Type: application/json"
+            "authorization: {$cleanApiKey}",
+            "Content-Type: application/json",
+            "Accept: application/json"
         ]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -124,7 +143,9 @@ class SmsGateway {
         $response = curl_exec($ch);
         $err = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            @curl_close($ch);
+        }
 
         if ($err) {
             return [
@@ -147,12 +168,63 @@ class SmsGateway {
             ];
         }
 
-        $errorMsg = $decoded['message'][0] ?? $decoded['message'] ?? "HTTP {$httpCode} Fast2SMS error";
+        // Auto-try fallback to Quick SMS (route=q) if OTP route requires website verification
+        if (($decoded['status_code'] ?? 0) === 996) {
+            $qData = [
+                'route'    => 'q',
+                'message'  => "Your Valerie Jewels verification code is {$otp}. Valid for 10 minutes.",
+                'language' => 'english',
+                'flash'    => 0,
+                'numbers'  => $phone,
+            ];
+            $chQ = curl_init('https://www.fast2sms.com/dev/bulkV2');
+            curl_setopt($chQ, CURLOPT_HTTPHEADER, [
+                "authorization: {$cleanApiKey}",
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($chQ, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chQ, CURLOPT_POST, true);
+            curl_setopt($chQ, CURLOPT_POSTFIELDS, json_encode($qData));
+            curl_setopt($chQ, CURLOPT_TIMEOUT, 10);
+            curl_setopt($chQ, CURLOPT_SSL_VERIFYPEER, false);
+            $qRes = curl_exec($chQ);
+            if (PHP_VERSION_ID < 80000) {
+                @curl_close($chQ);
+            }
+            $qDecoded = json_decode($qRes, true);
+            if (!empty($qDecoded['return'])) {
+                return [
+                    'success'  => true,
+                    'is_live'  => true,
+                    'provider' => 'fast2sms',
+                    'message'  => "Real SMS delivered to +91 {$phone} via Fast2SMS.",
+                    'request_id' => $qDecoded['request_id'] ?? null,
+                    'raw'      => $qDecoded
+                ];
+            }
+            if (!empty($qDecoded['message'])) {
+                $decoded = $qDecoded;
+            }
+        }
+
+        $rawMessage = $decoded['message'] ?? null;
+        if (is_array($rawMessage)) {
+            $errorMsg = implode(', ', $rawMessage);
+        } elseif (is_string($rawMessage) && strlen($rawMessage) > 0) {
+            $errorMsg = $rawMessage;
+        } else {
+            $errorMsg = "HTTP {$httpCode} Fast2SMS error";
+        }
+
+        if (($decoded['status_code'] ?? 0) === 999) {
+            $errorMsg = "Fast2SMS requires a one-time ₹100 wallet recharge to unlock the programmatic API route under TRAI regulations. Please add ₹100 in fast2sms.com wallet.";
+        }
+
         return [
             'success'  => false,
             'is_live'  => true,
             'provider' => 'fast2sms',
-            'message'  => "Fast2SMS Error: {$errorMsg}",
+            'message'  => "Fast2SMS: {$errorMsg}",
             'raw'      => $decoded
         ];
     }
@@ -171,7 +243,9 @@ class SmsGateway {
         $response = curl_exec($ch);
         $err = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            @curl_close($ch);
+        }
 
         if ($err) {
             return [
@@ -226,7 +300,9 @@ class SmsGateway {
         $response = curl_exec($ch);
         $err = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            @curl_close($ch);
+        }
 
         if ($err) {
             return [
@@ -259,50 +335,82 @@ class SmsGateway {
     }
 
     /**
-     * Fastrr Headless OTP endpoint (Shiprocket Fastrr)
+     * Fastrr / Shiprocket Checkout OTP Engine
      */
-    private static function sendViaFastrr(string $phone, string $otp, string $appId, string $secret, string $token): array {
-        $url = 'https://api.fastrr.com/v1/auth/otp/send';
-        $postData = ['phone' => '+91' . $phone];
+    private static function sendViaFastrr(string $phone, string $otp, string $appId, string $secret, string $token, array $settings = []): array {
+        // If Bearer token is not provided but Shiprocket API User credentials exist, generate token
+        $srEmail = trim($settings['shiprocket_email'] ?? '');
+        $srPassword = trim($settings['shiprocket_password'] ?? '');
 
-        $headers = [
-            'Content-Type: application/json',
-            "x-app-id: {$appId}",
-            "x-secret-key: {$secret}"
-        ];
-        if (!empty($token)) {
-            $headers[] = "Authorization: Bearer {$token}";
+        if (empty($token) && !empty($srEmail) && !empty($srPassword)) {
+            $loginCh = curl_init('https://apiv2.shiprocket.in/v1/external/auth/login');
+            curl_setopt($loginCh, CURLOPT_POST, true);
+            curl_setopt($loginCh, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($loginCh, CURLOPT_POSTFIELDS, json_encode([
+                'email'    => $srEmail,
+                'password' => $srPassword
+            ]));
+            curl_setopt($loginCh, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($loginCh, CURLOPT_TIMEOUT, 8);
+            curl_setopt($loginCh, CURLOPT_SSL_VERIFYPEER, false);
+            $loginRes = curl_exec($loginCh);
+            if (PHP_VERSION_ID < 80000) {
+                @curl_close($loginCh);
+            }
+
+            $loginData = json_decode($loginRes, true);
+            if (!empty($loginData['token'])) {
+                $token = $loginData['token'];
+            }
         }
+
+        // 1. Try Fastrr Checkout API Endpoint
+        $url = 'https://api.fastrr.com/v1/auth/otp/send';
+        $postData = [
+            'phone'       => '+91' . $phone,
+            'channel_id'  => $appId ?: 'valerie_store',
+            'order_type'  => 'checkout'
+        ];
+
+        $headers = ['Content-Type: application/json'];
+        if (!empty($appId)) $headers[] = "x-app-id: {$appId}";
+        if (!empty($secret)) $headers[] = "x-secret-key: {$secret}";
+        if (!empty($token)) $headers[] = "Authorization: Bearer {$token}";
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);
+        $err = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            @curl_close($ch);
+        }
 
         $decoded = json_decode($response, true);
-        if ($httpCode === 200) {
+        if ($httpCode === 200 || $httpCode === 201) {
             return [
                 'success'  => true,
                 'is_live'  => true,
                 'provider' => 'fastrr',
-                'message'  => "Real SMS dispatched via Fastrr network to +91 {$phone}.",
+                'message'  => "Real SMS dispatched via Shiprocket Fastrr network to +91 {$phone}.",
                 'raw'      => $decoded
             ];
         }
 
+        // Return clear diagnostic details
+        $errMsg = $decoded['message'] ?? $decoded['error'] ?? "Fastrr API returned HTTP {$httpCode}";
         return [
             'success'  => false,
             'is_live'  => true,
             'provider' => 'fastrr',
-            'message'  => "Fastrr OTP API error: " . ($decoded['message'] ?? "HTTP {$httpCode}"),
-            'raw'      => $decoded
+            'message'  => "Fastrr (Shiprocket) Error: {$errMsg}. (Check your Fastrr/Shiprocket API credentials in Admin Settings)",
+            'raw'      => $decoded ?: $response
         ];
     }
 }
