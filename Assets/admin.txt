@@ -35,3 +35,5 @@ php -S localhost:8000
 start frontend
 cd "D:\Agency stuff\valeriejewels_react\frontend"
 npm run dev
+
+

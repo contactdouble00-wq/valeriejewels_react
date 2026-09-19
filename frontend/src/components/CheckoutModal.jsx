@@ -64,6 +64,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     prepaid_discount: 50,
     prepaid_gift_title: 'Free Zircon Necklace',
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+    online_payment_enabled: true,
     partial_cod_enabled: true,
     partial_advance: 199,
     cod_fee: 0,
@@ -106,6 +107,24 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
   const [paymentType, setPaymentType] = useState('full_prepaid');
   const [selectedUpiApp, setSelectedUpiApp] = useState('gpay');
+
+  // Auto-fallback payment selection if currently selected method is disabled by admin
+  useEffect(() => {
+    const isOnlineOk = paymentSettings.online_payment_enabled !== false && calcData?.payment_splits?.full_prepaid?.enabled !== false;
+    const isPartialOk = !!paymentSettings.partial_cod_enabled && calcData?.payment_splits?.partial?.enabled !== false;
+    const isCodOk = !!paymentSettings.cod_available && calcData?.payment_splits?.cod?.enabled !== false;
+
+    if (paymentType === 'full_prepaid' && !isOnlineOk) {
+      if (isPartialOk) setPaymentType('partial');
+      else if (isCodOk) setPaymentType('cod');
+    } else if (paymentType === 'partial' && !isPartialOk) {
+      if (isOnlineOk) setPaymentType('full_prepaid');
+      else if (isCodOk) setPaymentType('cod');
+    } else if (paymentType === 'cod' && !isCodOk) {
+      if (isOnlineOk) setPaymentType('full_prepaid');
+      else if (isPartialOk) setPaymentType('partial');
+    }
+  }, [paymentSettings.online_payment_enabled, paymentSettings.partial_cod_enabled, paymentSettings.cod_available, calcData?.payment_splits, paymentType]);
 
   // Server Calculation & Submission States
   const [calcData, setCalcData] = useState(null);
@@ -529,9 +548,11 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           {/* 2. Top Promotional Announcement Banner (MadeWidLove Highlight) */}
           <div className="bg-gradient-to-r from-brand-tertiary via-[#361c56] to-brand-tertiary px-4 py-2 text-center text-[11px] font-medium text-white flex items-center justify-center space-x-1.5 shadow-2xs">
             <span className="font-semibold tracking-wide">
-              {paymentSettings.checkout_banner_text?.startsWith('🎁') 
-                ? paymentSettings.checkout_banner_text 
-                : `🎁 ${paymentSettings.checkout_banner_text}`}
+              {paymentSettings.online_payment_enabled !== false
+                ? (paymentSettings.checkout_banner_text?.startsWith('🎁') 
+                    ? paymentSettings.checkout_banner_text 
+                    : `🎁 ${paymentSettings.checkout_banner_text}`)
+                : '⚡ Fastrr 1-Click Secure Express Checkout'}
             </span>
           </div>
 
@@ -939,67 +960,69 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="space-y-2.5">
                     
                     {/* Option 1: 100% PREPAID (High Incentive: ₹50 OFF + Free Gift) */}
-                    <div
-                      onClick={() => setPaymentType('full_prepaid')}
-                      className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
-                        paymentType === 'full_prepaid'
-                          ? 'border-brand-primary bg-gradient-to-r from-purple-50/90 to-white ring-2 ring-brand-primary/20 shadow-sm'
-                          : 'border-brand-border bg-white hover:border-brand-primary/40'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-2.5">
-                          <input
-                            type="radio"
-                            name="paymentType"
-                            checked={paymentType === 'full_prepaid'}
-                            onChange={() => setPaymentType('full_prepaid')}
-                            className="mt-0.5 accent-brand-primary w-4 h-4 cursor-pointer"
-                          />
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="font-bold text-xs text-brand-tertiary">
-                                UPI / Cards / NetBanking
-                              </span>
-                              <span className="text-[9.5px] font-extrabold uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-2xs">
-                                ₹{paymentSettings.prepaid_discount} OFF
-                              </span>
-                            </div>
-                            
-                            {/* Free Gift Badge */}
-                            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-brand-primary font-bold">
-                              <Gift className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                              <span>Includes {paymentSettings.prepaid_gift_title}!</span>
-                            </div>
+                    {(paymentSettings.online_payment_enabled !== false && calcData?.payment_splits?.full_prepaid?.enabled !== false) && (
+                      <div
+                        onClick={() => setPaymentType('full_prepaid')}
+                        className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                          paymentType === 'full_prepaid'
+                            ? 'border-brand-primary bg-gradient-to-r from-purple-50/90 to-white ring-2 ring-brand-primary/20 shadow-sm'
+                            : 'border-brand-border bg-white hover:border-brand-primary/40'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2.5">
+                            <input
+                              type="radio"
+                              name="paymentType"
+                              checked={paymentType === 'full_prepaid'}
+                              onChange={() => setPaymentType('full_prepaid')}
+                              className="mt-0.5 accent-brand-primary w-4 h-4 cursor-pointer"
+                            />
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-bold text-xs text-brand-tertiary">
+                                  UPI / Cards / NetBanking
+                                </span>
+                                <span className="text-[9.5px] font-extrabold uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-md shadow-2xs">
+                                  ₹{paymentSettings.prepaid_discount} OFF
+                                </span>
+                              </div>
+                              
+                              {/* Free Gift Badge */}
+                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-brand-primary font-bold">
+                                <Gift className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                                <span>Includes {paymentSettings.prepaid_gift_title}!</span>
+                              </div>
 
-                            {/* Supported UPI Apps Row */}
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 shadow-3xs">
-                                Google Pay
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-purple-700 shadow-3xs">
-                                PhonePe
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-sky-600 shadow-3xs">
-                                Paytm
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-800 shadow-3xs">
-                                Cards / UPI
-                              </span>
+                              {/* Supported UPI Apps Row */}
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-700 shadow-3xs">
+                                  Google Pay
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-purple-700 shadow-3xs">
+                                  PhonePe
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-sky-600 shadow-3xs">
+                                  Paytm
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-bold text-gray-800 shadow-3xs">
+                                  Cards / UPI
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-brand-primary block">
-                            ₹{Math.round(calcData?.payment_splits?.full_prepaid?.amount_due_now ?? dueNow).toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-[10px] text-emerald-600 font-bold block">
-                            Save ₹{paymentSettings.prepaid_discount}
-                          </span>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-brand-primary block">
+                              ₹{Math.round(calcData?.payment_splits?.full_prepaid?.amount_due_now ?? dueNow).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-bold block">
+                              Save ₹{paymentSettings.prepaid_discount}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Option 2: PARTIAL COD (Smart RTO Protection) */}
                     {paymentSettings.partial_cod_enabled && (
@@ -1087,6 +1110,16 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                             )}
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Fallback if all payment methods are turned off */}
+                    {(paymentSettings.online_payment_enabled === false || calcData?.payment_splits?.full_prepaid?.enabled === false) &&
+                     (!paymentSettings.partial_cod_enabled || calcData?.payment_splits?.partial?.enabled === false) &&
+                     (!paymentSettings.cod_available || calcData?.payment_splits?.cod?.enabled === false) && (
+                      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs text-center space-y-1">
+                        <p className="font-bold">Payment Methods Temporarily Unavailable</p>
+                        <p className="text-[11px] text-amber-800">Our checkout gateways are currently being updated. Please check back in a few minutes.</p>
                       </div>
                     )}
 

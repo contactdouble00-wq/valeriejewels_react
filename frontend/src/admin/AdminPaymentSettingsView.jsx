@@ -18,7 +18,10 @@ import {
   Copy,
   ExternalLink,
   Smartphone,
-  Send
+  Send,
+  CheckCircle2,
+  XCircle,
+  ArrowRight
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -37,6 +40,10 @@ export default function AdminPaymentSettingsView() {
   const [sendingTestSms, setSendingTestSms] = useState(false);
   const [testSmsResult, setTestSmsResult] = useState(null);
 
+  // 1-Click Operations state
+  const [togglingMethod, setTogglingMethod] = useState(null);
+  const [instantSuccessMsg, setInstantSuccessMsg] = useState(null);
+
   // Configuration state
   const [settings, setSettings] = useState({
     gateway_mode: 'sandbox',
@@ -53,6 +60,7 @@ export default function AdminPaymentSettingsView() {
     prepaid_discount: 50,
     prepaid_gift_title: 'Free Zircon Necklace',
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+    online_payment_enabled: true,
     partial_cod_enabled: true,
     partial_advance: 199,
     cod_fee: 0,
@@ -99,6 +107,54 @@ export default function AdminPaymentSettingsView() {
       setError(err.message || 'Failed to update payment settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSingleClickToggle = async (key) => {
+    const currentVal = key === 'online_payment_enabled'
+      ? settings.online_payment_enabled !== false
+      : !!settings[key];
+    const nextVal = !currentVal;
+
+    // Safety validation: Ensure at least one payment method stays enabled
+    const onlineActive = key === 'online_payment_enabled' ? nextVal : (settings.online_payment_enabled !== false);
+    const partialActive = key === 'partial_cod_enabled' ? nextVal : !!settings.partial_cod_enabled;
+    const codActive = key === 'cod_available' ? nextVal : !!settings.cod_available;
+
+    if (!onlineActive && !partialActive && !codActive) {
+      setError('Cannot disable all payment options. At least one payment method (Full COD, Partial COD, or Online Payment) must remain active for checkout.');
+      return;
+    }
+
+    setTogglingMethod(key);
+    setError(null);
+
+    const updatedSettings = {
+      ...settings,
+      [key]: nextVal,
+    };
+
+    // Optimistically update local UI state immediately
+    setSettings(updatedSettings);
+
+    try {
+      const updated = await adminApi.updatePaymentSettings(updatedSettings);
+      if (updated) {
+        setSettings((prev) => ({ ...prev, ...updated }));
+      }
+      const labels = {
+        cod_available: 'Full Cash on Delivery (COD)',
+        partial_cod_enabled: 'Partial COD (Smart Split Advance)',
+        online_payment_enabled: '100% Online Payment (Prepaid UPI/Cards)',
+      };
+      setInstantSuccessMsg(`${labels[key] || key} turned ${nextVal ? 'ON (Active on Storefront)' : 'OFF (Hidden from Storefront)'}!`);
+      setTimeout(() => setInstantSuccessMsg(null), 3500);
+    } catch (err) {
+      // Rollback to previous state on error
+      setSettings(settings);
+      setError(err.message || 'Failed to toggle payment method. Please try again.');
+    } finally {
+      setTogglingMethod(null);
     }
   };
 
@@ -227,6 +283,255 @@ export default function AdminPaymentSettingsView() {
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
+        
+        {/* ══════════════════════════════════════════════════════════════
+            MASTER 1-CLICK PAYMENT CONTROLS (COD, PARTIAL COD, ONLINE)
+        ══════════════════════════════════════════════════════════════ */}
+        <div className="bg-gradient-to-br from-white via-purple-50/20 to-white rounded-2xl border-2 border-brand-primary/30 p-5 sm:p-6 shadow-sm space-y-4 relative overflow-hidden">
+          <div className="absolute -right-16 -top-16 w-48 h-48 bg-purple-200/30 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border/60 pb-3 relative">
+            <div>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                  <Zap className="w-4 h-4 fill-brand-primary" />
+                </div>
+                <h2 className="text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
+                  Master 1-Click Payment Operations Hub
+                </h2>
+              </div>
+              <p className="text-[11.5px] text-brand-muted mt-1">
+                Toggle payment methods ON or OFF in a single click. Changes take effect instantly on storefront checkout without needing to click Save.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-caps tracking-wider uppercase font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Single-Click Auto-Save</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Instant feedback notification */}
+          {instantSuccessMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between animate-fade-in shadow-xs">
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-semibold">{instantSuccessMsg}</span>
+              </div>
+              <span className="text-[10px] text-emerald-700 font-mono">Live synced</span>
+            </div>
+          )}
+
+          {/* 3 Operational Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1 relative">
+            
+            {/* 1. Full Cash on Delivery (COD) Card */}
+            <div className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
+              settings.cod_available
+                ? 'bg-white border-emerald-500/60 shadow-xs ring-1 ring-emerald-500/20'
+                : 'bg-gray-50/90 border-gray-200 opacity-80'
+            }`}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      settings.cod_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'
+                    }`}>
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-brand-tertiary">Cash on Delivery (COD)</h3>
+                      <span className="text-[10px] text-brand-muted">100% Doorstep Payment</span>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-caps tracking-wider uppercase font-bold border ${
+                    settings.cod_available
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-gray-150 text-gray-600 border-gray-300'
+                  }`}>
+                    {settings.cod_available ? '● Active' : '○ Off'}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  Customers pay 100% cash upon doorstep package arrival.
+                  {settings.cod_fee > 0 ? ` (+₹${settings.cod_fee} handling surcharge)` : ' (Zero COD surcharge)'}
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-brand-border/40 mt-3 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-brand-muted">
+                  {settings.cod_available ? 'Shown on Checkout' : 'Hidden from Checkout'}
+                </span>
+                <button
+                  type="button"
+                  disabled={togglingMethod === 'cod_available'}
+                  onClick={() => handleSingleClickToggle('cod_available')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                    settings.cod_available
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  } disabled:opacity-50`}
+                >
+                  {togglingMethod === 'cod_available' ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : settings.cod_available ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>ON (Click to Turn Off)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>OFF (Click to Turn On)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Partial COD (Smart Split Advance) Card */}
+            <div className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
+              settings.partial_cod_enabled
+                ? 'bg-white border-purple-500/60 shadow-xs ring-1 ring-purple-500/20'
+                : 'bg-gray-50/90 border-gray-200 opacity-80'
+            }`}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      settings.partial_cod_enabled ? 'bg-purple-100 text-brand-primary' : 'bg-gray-200 text-gray-500'
+                    }`}>
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-brand-tertiary">Partial COD (Smart Split)</h3>
+                      <span className="text-[10px] text-brand-muted">RTO Protection Engine</span>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-caps tracking-wider uppercase font-bold border ${
+                    settings.partial_cod_enabled
+                      ? 'bg-purple-50 text-brand-primary border-purple-200'
+                      : 'bg-gray-150 text-gray-600 border-gray-300'
+                  }`}>
+                    {settings.partial_cod_enabled ? '● Active' : '○ Off'}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  Requires ₹{settings.partial_advance} UPI token deposit now + remaining on delivery. Cuts RTO fake orders by 70%+.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-brand-border/40 mt-3 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-brand-muted">
+                  {settings.partial_cod_enabled ? 'Shown on Checkout' : 'Hidden from Checkout'}
+                </span>
+                <button
+                  type="button"
+                  disabled={togglingMethod === 'partial_cod_enabled'}
+                  onClick={() => handleSingleClickToggle('partial_cod_enabled')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                    settings.partial_cod_enabled
+                      ? 'bg-brand-primary hover:bg-brand-primary-hover text-white shadow-2xs'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  } disabled:opacity-50`}
+                >
+                  {togglingMethod === 'partial_cod_enabled' ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : settings.partial_cod_enabled ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>ON (Click to Turn Off)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>OFF (Click to Turn On)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Online Payment (100% Prepaid) Card */}
+            <div className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between ${
+              settings.online_payment_enabled !== false
+                ? 'bg-white border-blue-500/60 shadow-xs ring-1 ring-blue-500/20'
+                : 'bg-gray-50/90 border-gray-200 opacity-80'
+            }`}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      settings.online_payment_enabled !== false ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500'
+                    }`}>
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-brand-tertiary">100% Online Payment</h3>
+                      <span className="text-[10px] text-brand-muted">Prepaid UPI & Cards</span>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-caps tracking-wider uppercase font-bold border ${
+                    settings.online_payment_enabled !== false
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-gray-150 text-gray-600 border-gray-300'
+                  }`}>
+                    {settings.online_payment_enabled !== false ? '● Active' : '○ Off'}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  Instant payment via UPI (GPay, PhonePe, Paytm), NetBanking & Cards.
+                  {settings.prepaid_discount > 0 && ` Includes ₹${settings.prepaid_discount} discount.`}
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-brand-border/40 mt-3 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-brand-muted">
+                  {settings.online_payment_enabled !== false ? 'Shown on Checkout' : 'Hidden from Checkout'}
+                </span>
+                <button
+                  type="button"
+                  disabled={togglingMethod === 'online_payment_enabled'}
+                  onClick={() => handleSingleClickToggle('online_payment_enabled')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                    settings.online_payment_enabled !== false
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  } disabled:opacity-50`}
+                >
+                  {togglingMethod === 'online_payment_enabled' ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : settings.online_payment_enabled !== false ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>ON (Click to Turn Off)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>OFF (Click to Turn On)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
         
         {/* Section 1: Fastrr Gateway Mode & Credentials */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
@@ -641,6 +946,29 @@ export default function AdminPaymentSettingsView() {
             </span>
           </div>
 
+          {/* Online Payment Method Toggle in Section 3 */}
+          <div className="p-3.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold text-brand-tertiary">Enable 100% Online Payment (Prepaid UPI/Cards)</span>
+                <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded border ${
+                  settings.online_payment_enabled !== false ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-150 text-gray-500 border-gray-300'
+                }`}>
+                  {settings.online_payment_enabled !== false ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <p className="text-[11px] text-brand-muted font-light">
+                Allows customers to pay instantly via UPI apps (GPay, PhonePe, Paytm), NetBanking, and Credit/Debit Cards.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.online_payment_enabled !== false}
+              onChange={(e) => setSettings({ ...settings, online_payment_enabled: e.target.checked })}
+              className="w-4 h-4 accent-brand-primary cursor-pointer shrink-0 ml-3"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Prepaid Discount */}
             <div className="space-y-1">
@@ -700,11 +1028,28 @@ export default function AdminPaymentSettingsView() {
             <span className="text-[11px] text-brand-muted">Risk Mitigation</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Two Master Checkboxes in Section 4 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Full COD Toggle */}
+            <div className="space-y-2 p-3.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-brand-tertiary">Enable Cash on Delivery (Full COD)</span>
+                <input
+                  type="checkbox"
+                  checked={settings.cod_available}
+                  onChange={(e) => setSettings({ ...settings, cod_available: e.target.checked })}
+                  className="w-4 h-4 accent-brand-primary cursor-pointer"
+                />
+              </div>
+              <p className="text-[11px] text-brand-muted font-light leading-snug">
+                Allows customers to pay 100% cash upon doorstep delivery.
+              </p>
+            </div>
+
             {/* Partial COD Toggle */}
             <div className="space-y-2 p-3.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-brand-tertiary">Enable Partial COD</span>
+                <span className="text-xs font-bold text-brand-tertiary">Enable Partial COD (Smart Split)</span>
                 <input
                   type="checkbox"
                   checked={settings.partial_cod_enabled}
@@ -716,7 +1061,9 @@ export default function AdminPaymentSettingsView() {
                 Reduces Return-to-Origin (RTO) fake orders by 70%+ by collecting a small token advance upfront.
               </p>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Advance Deposit Amount */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-tertiary">Partial COD Advance Deposit (₹)</label>

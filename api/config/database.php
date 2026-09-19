@@ -103,6 +103,16 @@ class Database {
     }
 
     /**
+     * Get active database driver name ('mysql' | 'sqlite')
+     */
+    public static function getDriver(): string {
+        if (self::$instance === null) {
+            self::getConnection();
+        }
+        return self::$driver;
+    }
+
+    /**
      * Ensure MySQL tables and default admin account exist
      */
     private static function ensureTablesExist(PDO $pdo): void {

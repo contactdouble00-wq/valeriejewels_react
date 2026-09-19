@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -32,6 +32,27 @@ export default function CartDrawer({ onProceedToCheckout }) {
     updateQuantity,
     removeFromCart,
   } = useCart();
+
+  const [paySettings, setPaySettings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('valerie_payment_settings_cache');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return {
+      cod_available: true,
+      partial_cod_enabled: true,
+      online_payment_enabled: true,
+      prepaid_discount: 50,
+    };
+  });
+
+  useEffect(() => {
+    const onSettingsUpdate = (e) => {
+      if (e.detail) setPaySettings((prev) => ({ ...prev, ...e.detail }));
+    };
+    window.addEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+    return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+  }, []);
 
   // Lock background body scroll on mobile & desktop when drawer is open
   useEffect(() => {
@@ -303,10 +324,18 @@ export default function CartDrawer({ onProceedToCheckout }) {
               >
                 <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
                   <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
-                  <span>ORDER NOW - CASH ON DELIVERY</span>
+                  <span>
+                    {paySettings.cod_available
+                      ? 'ORDER NOW - CASH ON DELIVERY'
+                      : paySettings.partial_cod_enabled
+                      ? 'ORDER NOW - PARTIAL COD'
+                      : 'ORDER NOW - 1-CLICK PAY ONLINE'}
+                  </span>
                 </div>
                 <span className="text-[10px] text-purple-200 font-medium mt-0.5">
-                  ◆ Pay online → save ₹50 + a free gift
+                  {paySettings.online_payment_enabled !== false
+                    ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + a free gift`
+                    : '◆ Fastrr 1-Click Doorstep Express Delivery'}
                 </span>
               </button>
 

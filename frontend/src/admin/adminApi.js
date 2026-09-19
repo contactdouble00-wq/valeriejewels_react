@@ -447,6 +447,7 @@ export const adminApi = {
       prepaid_discount: 50,
       prepaid_gift_title: 'Free Zircon Necklace',
       prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
+      online_payment_enabled: true,
       partial_cod_enabled: true,
       partial_advance: 199,
       cod_fee: 0,

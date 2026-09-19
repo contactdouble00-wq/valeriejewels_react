@@ -41,6 +41,27 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const [addedNotice, setAddedNotice] = useState(false);
   const [copiedNotice, setCopiedNotice] = useState(false);
 
+  const [paySettings, setPaySettings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('valerie_payment_settings_cache');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return {
+      cod_available: true,
+      partial_cod_enabled: true,
+      online_payment_enabled: true,
+      prepaid_discount: 50,
+    };
+  });
+
+  useEffect(() => {
+    const onSettingsUpdate = (e) => {
+      if (e.detail) setPaySettings((prev) => ({ ...prev, ...e.detail }));
+    };
+    window.addEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+    return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+  }, []);
+
   const videoRefMobile = useRef(null);
   const videoRefDesktop = useRef(null);
 
@@ -685,10 +706,18 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               >
                 <div className="flex items-center gap-1.5 font-caps tracking-wider uppercase font-bold text-xs">
                   <Zap className="w-3.5 h-3.5 text-amber-300 fill-current" />
-                  <span>ORDER NOW - CASH ON DELIVERY</span>
+                  <span>
+                    {paySettings.cod_available
+                      ? 'ORDER NOW - CASH ON DELIVERY'
+                      : paySettings.partial_cod_enabled
+                      ? 'ORDER NOW - PARTIAL COD'
+                      : 'ORDER NOW - 1-CLICK PAY ONLINE'}
+                  </span>
                 </div>
                 <span className="text-[9.5px] text-purple-200 font-medium">
-                  ◆ Pay online → save ₹50 + free luxury gift
+                  {paySettings.online_payment_enabled !== false
+                    ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + free luxury gift`
+                    : '◆ Fastrr 1-Click Doorstep Express Delivery'}
                 </span>
               </button>
 
@@ -1113,10 +1142,18 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   >
                     <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
                       <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
-                      <span>ORDER NOW - CASH ON DELIVERY</span>
+                      <span>
+                        {paySettings.cod_available
+                          ? 'ORDER NOW - CASH ON DELIVERY'
+                          : paySettings.partial_cod_enabled
+                          ? 'ORDER NOW - PARTIAL COD'
+                          : 'ORDER NOW - 1-CLICK PAY ONLINE'}
+                      </span>
                     </div>
                     <span className="text-[10.5px] text-purple-200 font-medium mt-0.5">
-                      ◆ Pay online → save ₹50 + free complimentary gift
+                      {paySettings.online_payment_enabled !== false
+                        ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + free complimentary gift`
+                        : '◆ Fastrr 1-Click Doorstep Express Delivery'}
                     </span>
                   </button>
 
@@ -1154,7 +1191,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
                   <p className="text-[11px] text-center text-brand-muted font-light flex items-center justify-center gap-1.5">
                     <Zap className="w-3 h-3 text-amber-500" />
-                    <span>Fastrr 1-Click Checkout • UPI, Cards, NetBanking & Cash on Delivery Available</span>
+                    <span>
+                      {`Fastrr 1-Click Checkout • ${
+                        paySettings.online_payment_enabled !== false ? 'UPI, Cards, NetBanking' : ''
+                      }${
+                        paySettings.online_payment_enabled !== false && (paySettings.cod_available || paySettings.partial_cod_enabled) ? ' & ' : ''
+                      }${
+                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? 'Partial COD' : '')
+                      } Available`}
+                    </span>
                   </p>
                 </div>
 

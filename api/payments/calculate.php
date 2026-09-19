@@ -161,6 +161,7 @@ try {
 
     // Load dynamic payment settings from database if configured
     $payConfig = [
+        'online_payment_enabled' => true,
         'prepaid_discount'    => 50.0,
         'partial_advance'     => 199.0,
         'partial_cod_enabled' => true,
@@ -205,6 +206,7 @@ try {
         'applied_coupon'          => $appliedCoupon,
         'payment_splits' => [
             'full_prepaid' => [
+                'enabled'               => (bool)($payConfig['online_payment_enabled'] ?? true),
                 'title'                 => 'Prepaid (UPI / Cards / NetBanking)',
                 'badge'                 => 'Save ₹' . round($prepaidIncentiveDiscount) . ' Extra Instant Discount',
                 'incentive_discount'    => $prepaidIncentiveDiscount,
