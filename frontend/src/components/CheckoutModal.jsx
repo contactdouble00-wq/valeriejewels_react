@@ -108,6 +108,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   const [paymentType, setPaymentType] = useState('full_prepaid');
   const [selectedUpiApp, setSelectedUpiApp] = useState('gpay');
 
+  // Server Calculation & Submission States
+  const [calcData, setCalcData] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calcError, setCalcError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+
   // Auto-fallback payment selection if currently selected method is disabled by admin
   useEffect(() => {
     const isOnlineOk = paymentSettings.online_payment_enabled !== false && calcData?.payment_splits?.full_prepaid?.enabled !== false;
@@ -125,14 +133,6 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       else if (isPartialOk) setPaymentType('partial');
     }
   }, [paymentSettings.online_payment_enabled, paymentSettings.partial_cod_enabled, paymentSettings.cod_available, calcData?.payment_splits, paymentType]);
-
-  // Server Calculation & Submission States
-  const [calcData, setCalcData] = useState(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [calcError, setCalcError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [placedOrder, setPlacedOrder] = useState(null);
-  const [submitError, setSubmitError] = useState(null);
 
   // 1. Fetch Dynamic Payment Settings
   useEffect(() => {
