@@ -217,7 +217,9 @@ class SmsGateway {
         }
 
         if (($decoded['status_code'] ?? 0) === 999) {
-            $errorMsg = "Fast2SMS requires a one-time ₹100 wallet recharge to unlock the programmatic API route under TRAI regulations. Please add ₹100 in fast2sms.com wallet.";
+            $errorMsg = "Fast2SMS requires a one-time ₹100 wallet recharge to unlock the programmatic API route under TRAI regulations. Please add ₹100 in your fast2sms.com wallet.";
+        } elseif (($decoded['status_code'] ?? 0) === 996) {
+            $errorMsg = "Fast2SMS requires completing website verification under 'OTP Message' menu on fast2sms.com or completing a one-time ₹100 recharge.";
         }
 
         return [

@@ -810,6 +810,15 @@ export default function AdminPaymentSettingsView() {
                 <p className="text-[10.5px] text-brand-muted">
                   Log in to <strong>fast2sms.com</strong> → click <strong>Dev API</strong> in the left sidebar → copy the key under <strong>"YOUR API AUTHORIZATION KEY"</strong>.
                 </p>
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>TRAI / Fast2SMS Activation Requirement:</span>
+                  </p>
+                  <p className="text-amber-800 leading-relaxed">
+                    Under Indian telecom regulations, Fast2SMS requires newly registered accounts to complete a one-time <strong>₹100 wallet recharge</strong> on fast2sms.com or complete <strong>Website Verification</strong> under the <em>OTP Message</em> menu before API messages can be sent. Until recharged, the store gracefully uses instant test code <strong>123456</strong> so customers can still check out.
+                  </p>
+                </div>
               </div>
             )}
 

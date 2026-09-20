@@ -755,7 +755,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     Verify phone number
                   </h2>
                   <div className="flex items-center justify-center space-x-1.5 text-xs text-brand-muted">
-                    <span>Enter 6-digit code sent to</span>
+                    <span>{isLiveSms ? 'Enter 6-digit code sent to' : 'Verification code for'}</span>
                     <strong className="text-brand-tertiary font-bold">+91 {phone}</strong>
                     <button
                       type="button"
@@ -768,13 +768,40 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   </div>
                 </div>
 
-                {/* Live SMS Status Banner */}
-                {isLiveSms && (
+                {/* Live SMS vs Instant Test Mode Banner */}
+                {isLiveSms ? (
                   <div className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-center">
                     <p className="text-xs text-emerald-800 font-semibold flex items-center justify-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span>Text message (SMS) sent to your mobile phone</span>
+                      <span>Text message (SMS) dispatched to your mobile number</span>
                     </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-purple-50/90 border border-brand-primary/25 rounded-2xl text-center space-y-2 animate-fade-in shadow-2xs">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-brand-primary font-bold">
+                      <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
+                      <span>Instant Verification Mode</span>
+                    </div>
+                    <p className="text-xs text-brand-tertiary">
+                      Enter code <strong className="font-mono text-sm font-extrabold text-brand-primary tracking-wider bg-white px-2.5 py-0.5 rounded-lg border border-brand-primary/20 shadow-2xs">{demoOtp || '123456'}</strong> to continue checkout
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const digits = (demoOtp || '123456').split('');
+                        setOtp(digits);
+                        handleVerifyOtp(demoOtp || '123456');
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-brand-primary text-white text-xs font-bold shadow-xs hover:bg-brand-primary-hover active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      <span>Click to Auto-Fill {demoOtp || '123456'} & Continue</span>
+                    </button>
+                    {otpInfoMsg && (
+                      <p className="text-[10.5px] text-amber-900/90 pt-1 border-t border-purple-200/60 leading-tight font-medium">
+                        ⚠️ {otpInfoMsg}
+                      </p>
+                    )}
                   </div>
                 )}
 
