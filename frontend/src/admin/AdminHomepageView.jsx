@@ -32,6 +32,7 @@ import {
   Mail,
   MapPin,
   Headphones,
+  Globe,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -87,6 +88,11 @@ const FACTORY_DEFAULTS = {
         isActive: true,
       },
     ],
+  },
+  siteIdentity: {
+    siteTitle: 'VALERIE JEWELS | D2C Luxury Everyday Jewelry',
+    faviconUrl: '',
+    metaDescription: 'Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels.',
   },
   topRibbon: {
     enabled: true,
@@ -178,7 +184,8 @@ export default function AdminHomepageView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
-  const [activeSection, setActiveSection] = useState('mobileSlider');
+  const [activeSection, setActiveSection] = useState('siteIdentity');
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
   const [uploadingSlideIndex, setUploadingSlideIndex] = useState(null);
 
@@ -194,6 +201,7 @@ export default function AdminHomepageView() {
         setFormData({
           ...FACTORY_DEFAULTS,
           ...data,
+          siteIdentity: { ...FACTORY_DEFAULTS.siteIdentity, ...(data.siteIdentity || {}) },
           mobileSlider: {
             ...FACTORY_DEFAULTS.mobileSlider,
             ...(data.mobileSlider || {}),
@@ -262,6 +270,30 @@ export default function AdminHomepageView() {
       });
     } finally {
       setUploadingHeroPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleFaviconUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingFavicon(true);
+    try {
+      const res = await adminApi.uploadMedia(file);
+      if (res && res.url) {
+        updateNested('siteIdentity', 'faviconUrl', res.url);
+        setFeedback({
+          type: 'success',
+          message: 'Site logo / favicon uploaded! Click "Save Live Changes" to publish.',
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Failed to upload favicon.',
+      });
+    } finally {
+      setUploadingFavicon(false);
       if (e.target) e.target.value = '';
     }
   };
@@ -401,6 +433,7 @@ export default function AdminHomepageView() {
   }
 
   const sections = [
+    { id: 'siteIdentity', label: 'Site Title, Logo & Favicon', icon: Globe, badge: 'Browser Tab' },
     { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
     { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
@@ -509,6 +542,150 @@ export default function AdminHomepageView() {
 
       {/* Tab Panels */}
       <div className="bg-white rounded-2xl border border-brand-border p-6 sm:p-8 shadow-xs space-y-6">
+
+        {/* 0.0 SITE IDENTITY & BROWSER TAB (TITLE & FAVICON LOGO) */}
+        {activeSection === 'siteIdentity' && (
+          <div className="space-y-6">
+            <div className="border-b border-brand-border/60 pb-5">
+              <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary-light text-brand-primary text-[10px] font-caps uppercase tracking-wider font-bold mb-1">
+                <Globe className="w-3 h-3" />
+                <span>Browser Tab & SEO Identity</span>
+              </div>
+              <h3 className="text-lg font-editorial font-bold text-brand-tertiary">
+                Site Title & Browser Tab Logo / Favicon
+              </h3>
+              <p className="text-xs text-brand-muted font-light max-w-2xl mt-0.5">
+                Customize the title and icon displayed on your visitors' browser tabs, bookmarks, and search engine results.
+              </p>
+            </div>
+
+            {/* Live Browser Tab Preview */}
+            <div className="bg-[#FAF8FC] border border-brand-border rounded-2xl p-5 space-y-2.5">
+              <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
+                Live Browser Tab Preview
+              </span>
+              <div className="bg-[#EAE6F0] p-2.5 rounded-xl flex items-center max-w-md shadow-2xs">
+                <div className="bg-white px-3.5 py-2 rounded-lg shadow-xs flex items-center space-x-2.5 border border-brand-border/60 max-w-sm w-full">
+                  {formData.siteIdentity?.faviconUrl ? (
+                    <img
+                      src={formData.siteIdentity.faviconUrl}
+                      alt="Favicon preview"
+                      className="w-4 h-4 object-contain rounded-xs shrink-0"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-xs bg-brand-primary/20 flex items-center justify-center text-brand-primary text-[10px] font-bold shrink-0">
+                      💎
+                    </div>
+                  )}
+                  <span className="text-xs text-brand-tertiary font-medium truncate">
+                    {formData.siteIdentity?.siteTitle || 'VALERIE JEWELS | D2C Luxury Everyday Jewelry'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Site / Browser Tab Title */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="block text-xs font-semibold text-brand-tertiary">
+                  Browser Tab Title (Page & Store Title)
+                </label>
+                <input
+                  type="text"
+                  value={formData.siteIdentity?.siteTitle || ''}
+                  onChange={(e) => updateNested('siteIdentity', 'siteTitle', e.target.value)}
+                  placeholder="VALERIE JEWELS | D2C Luxury Everyday Jewelry"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">
+                  The primary text visible on browser tabs, bookmarks, and Google search snippets.
+                </p>
+              </div>
+
+              {/* Favicon Logo */}
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-xs font-semibold text-brand-tertiary">
+                  Site Logo / Browser Favicon Icon
+                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-[#FAF8FC] border-2 border-dashed border-brand-border flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                    {formData.siteIdentity?.faviconUrl ? (
+                      <img
+                        src={formData.siteIdentity.faviconUrl}
+                        alt="Favicon"
+                        className="w-10 h-10 object-contain"
+                      />
+                    ) : (
+                      <Globe className="w-6 h-6 text-brand-muted" />
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 flex-1 w-full">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center space-x-1.5 active:scale-95">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>{uploadingFavicon ? 'Uploading...' : 'Upload Icon / Logo'}</span>
+                        <input
+                          type="file"
+                          accept=".png,.ico,.svg,.jpg,.jpeg,.webp"
+                          onChange={handleFaviconUpload}
+                          disabled={uploadingFavicon}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {formData.siteIdentity?.faviconUrl && (
+                        <button
+                          type="button"
+                          onClick={() => updateNested('siteIdentity', 'faviconUrl', '')}
+                          className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors"
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.siteIdentity?.faviconUrl || ''}
+                      onChange={(e) => updateNested('siteIdentity', 'faviconUrl', e.target.value)}
+                      placeholder="Or paste direct image URL (https://.../favicon.png)"
+                      className="w-full px-3.5 py-2 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    />
+                    <p className="text-[10px] text-brand-muted">
+                      Recommended: Square 32x32px or 64x64px PNG, SVG, or ICO file with transparent background.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Description */}
+              <div className="space-y-1.5 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-brand-tertiary">
+                    SEO Meta Description
+                  </label>
+                  <span className={`text-[10px] ${(formData.siteIdentity?.metaDescription || '').length > 160 ? 'text-rose-500' : 'text-brand-muted'}`}>
+                    {(formData.siteIdentity?.metaDescription || '').length}/160
+                  </span>
+                </div>
+                <textarea
+                  rows={2}
+                  value={formData.siteIdentity?.metaDescription || ''}
+                  onChange={(e) => updateNested('siteIdentity', 'metaDescription', e.target.value)}
+                  placeholder="Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels."
+                  className="w-full px-3.5 py-2 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">
+                  Appears below the title in search engine results. Keep between 120–160 characters for best SEO ranking.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 0. MOBILE HERO POSTER SLIDER (TANISHQ STYLE) */}
         {activeSection === 'mobileSlider' && (

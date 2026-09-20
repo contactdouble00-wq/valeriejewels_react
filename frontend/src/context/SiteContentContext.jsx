@@ -3,6 +3,11 @@ import { apiService } from '../services/api';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
 const DEFAULT_SITE_CONTENT = {
+  siteIdentity: {
+    siteTitle: 'VALERIE JEWELS | D2C Luxury Everyday Jewelry',
+    faviconUrl: '',
+    metaDescription: 'Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels.',
+  },
   topRibbon: {
     enabled: true,
     text: 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',
@@ -139,6 +144,7 @@ export function SiteContentProvider({ children }) {
           const merged = {
             ...DEFAULT_SITE_CONTENT,
             ...res.data,
+            siteIdentity: { ...DEFAULT_SITE_CONTENT.siteIdentity, ...(res.data.siteIdentity || {}) },
             topRibbon: { ...DEFAULT_SITE_CONTENT.topRibbon, ...(res.data.topRibbon || {}) },
             heroBanner: { ...DEFAULT_SITE_CONTENT.heroBanner, ...(res.data.heroBanner || {}) },
             jhumkaHero: { ...DEFAULT_SITE_CONTENT.jhumkaHero, ...(res.data.jhumkaHero || {}) },
@@ -218,6 +224,28 @@ export function SiteContentProvider({ children }) {
       window.removeEventListener('storage', handleStorage);
     };
   }, [fetchContent]);
+
+  // Sync document title and favicon icon to live DOM
+  useEffect(() => {
+    if (content?.siteIdentity?.siteTitle) {
+      document.title = content.siteIdentity.siteTitle;
+    }
+    if (content?.siteIdentity?.faviconUrl) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = content.siteIdentity.faviconUrl;
+    }
+    if (content?.siteIdentity?.metaDescription) {
+      let meta = document.querySelector("meta[name='description']");
+      if (meta) {
+        meta.setAttribute('content', content.siteIdentity.metaDescription);
+      }
+    }
+  }, [content?.siteIdentity]);
 
   return (
     <SiteContentContext.Provider value={{ content, refreshContent: fetchContent, loading, DEFAULT_SITE_CONTENT }}>
