@@ -304,67 +304,74 @@ if ($action === 'duplicate') {
     ApiResponse::success(['id' => $newProductId, 'name' => $newName], 'Product duplicated successfully');
 }
 
-// Handle Create (POST)
-if ($method === 'POST') {
-    $name = trim($input['name'] ?? '');
-    $sku = trim($input['sku'] ?? '');
-    $price = (float)($input['price'] ?? 0);
-    $mrp = (float)($input['mrp'] ?? 0);
-    $categoryId = (int)($input['category_id'] ?? 1);
-    $stock = (int)($input['stock_quantity'] ?? 0);
+// Handle Delete (DELETE or POST?action=delete)
+$isDeleteAction = ($method === 'DELETE')
+    || ($method === 'POST' && in_array($action, ['delete', 'delete_product'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_product'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
 
-    if (empty($name) || empty($sku) || $price <= 0) {
-        ApiResponse::error('Name, SKU, and positive price are required', 422);
+if ($isDeleteAction) {
+    // Only admin can delete products
+    if ($adminUser['role'] !== 'admin') {
+        ApiResponse::error('Permission Denied: Only administrators can delete products.', 403);
     }
 
-    $slug = trim($input['slug'] ?? '');
-    if (empty($slug)) {
-        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name)) . '-' . rand(100, 999);
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($input['id'] ?? 0);
+    if ($id <= 0) {
+        ApiResponse::error('Product ID required', 422);
     }
 
-    $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
+    $checkStmt = $pdo->prepare("SELECT id, name FROM products WHERE id = ?");
+    $checkStmt->execute([$id]);
+    $product = $checkStmt->fetch();
+    if (!$product) {
+        ApiResponse::error('Product not found or already removed', 404);
+    }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO products (category_id, name, slug, short_description, description, mrp, price, cost_price, sku, stock_quantity, pairs_count, is_anti_tarnish, material, is_bestseller, video_url, is_active, meta_title, meta_description)
-        VALUES (:cat, :name, :slug, :short_desc, :desc, :mrp, :price, :cost, :sku, :stock, :pairs, :anti, :mat, :best, :vid, :active, :meta_t, :meta_d)
-    ");
-    $stmt->execute([
-        ':cat'        => $categoryId,
-        ':name'       => $name,
-        ':slug'       => $slug,
-        ':short_desc' => $input['short_description'] ?? '',
-        ':desc'       => $input['description'] ?? '',
-        ':mrp'        => $mrp > 0 ? $mrp : $price,
-        ':price'      => $price,
-        ':cost'       => (float)($input['cost_price'] ?? 0),
-        ':sku'        => $sku,
-        ':stock'      => $stock,
-        ':pairs'      => $pairsCount,
-        ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
-        ':mat'        => $input['material'] ?? 'Stainless Steel / 18K Gold PVD',
-        ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
-        ':vid'        => $input['video_url'] ?? null,
-        ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
-        ':meta_t'     => $input['meta_title'] ?? ($name . ' | Valerie Jewels'),
-        ':meta_d'     => $input['meta_description'] ?? ($input['short_description'] ?? ''),
-    ]);
+    try {
+        // Check if product is referenced by existing customer orders
+        $orderCheck = $pdo->prepare("SELECT COUNT(*) FROM order_items WHERE product_id = ?");
+        $orderCheck->execute([$id]);
+        $hasOrders = (int)$orderCheck->fetchColumn() > 0;
 
-    $newId = $pdo->lastInsertId();
+        if ($hasOrders) {
+            // Soft-delete: mark inactive to maintain historical order integrity
+            $pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?")->execute([$id]);
+            AdminAuth::logActivity($adminUser['id'], 'archive_product', 'product', $id, [
+                'name'   => $product['name'],
+                'reason' => 'Product has existing orders; archived from active catalog',
+            ]);
+            ApiResponse::success([
+                'id'       => $id,
+                'archived' => true,
+            ], "Product '{$product['name']}' has existing order records, so it has been archived and removed from active catalog.");
+        } else {
+            // Hard-delete: clean up any child records first
+            $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM bundle_items WHERE product_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM reviews WHERE product_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
 
-    // Insert Images if provided
-    if (!empty($input['images']) && is_array($input['images'])) {
-        $imgStmt = $pdo->prepare("INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary) VALUES (?, ?, ?, ?, ?)");
-        foreach ($input['images'] as $idx => $img) {
-            $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
-            if (!empty($imgUrl)) {
-                $imgStmt->execute([$newId, $imgUrl, $name, $idx, $idx === 0 ? 1 : 0]);
-            }
+            AdminAuth::logActivity($adminUser['id'], 'delete_product', 'product', $id, ['name' => $product['name']]);
+            ApiResponse::success([
+                'id'       => $id,
+                'deleted'  => true,
+            ], "Product '{$product['name']}' deleted successfully");
+        }
+    } catch (PDOException $e) {
+        // If any foreign key constraint is encountered, safely soft delete
+        if ($e->getCode() == '23000') {
+            $pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?")->execute([$id]);
+            AdminAuth::logActivity($adminUser['id'], 'archive_product', 'product', $id, ['name' => $product['name']]);
+            ApiResponse::success([
+                'id'       => $id,
+                'archived' => true,
+            ], "Product '{$product['name']}' is referenced by related store data, so it was archived.");
+        } else {
+            ApiResponse::error('Failed to delete product: ' . $e->getMessage(), 500);
         }
     }
-
-    AdminAuth::logActivity($adminUser['id'], 'create_product', 'product', $newId, ['name' => $name, 'sku' => $sku]);
-
-    ApiResponse::success(['id' => $newId, 'name' => $name, 'slug' => $slug], 'Product created successfully', 201);
 }
 
 // Handle Update (PUT or POST?action=update)
@@ -460,72 +467,65 @@ if ($isUpdateAction) {
     ApiResponse::success(['id' => $id], 'Product updated successfully');
 }
 
-// Handle Delete (DELETE or POST?action=delete)
-$isDeleteAction = ($method === 'DELETE')
-    || ($method === 'POST' && in_array($action, ['delete', 'delete_product'], true))
-    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_product'], true))
-    || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
+// Handle Create (POST)
+if ($method === 'POST') {
+    $name = trim($input['name'] ?? '');
+    $sku = trim($input['sku'] ?? '');
+    $price = (float)($input['price'] ?? 0);
+    $mrp = (float)($input['mrp'] ?? 0);
+    $categoryId = (int)($input['category_id'] ?? 1);
+    $stock = (int)($input['stock_quantity'] ?? 0);
 
-if ($isDeleteAction) {
-    // Only admin can delete products
-    if ($adminUser['role'] !== 'admin') {
-        ApiResponse::error('Permission Denied: Only administrators can delete products.', 403);
+    if (empty($name) || empty($sku) || $price <= 0) {
+        ApiResponse::error('Name, SKU, and positive price are required', 422);
     }
 
-    $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($input['id'] ?? 0);
-    if ($id <= 0) {
-        ApiResponse::error('Product ID required', 422);
+    $slug = trim($input['slug'] ?? '');
+    if (empty($slug)) {
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name)) . '-' . rand(100, 999);
     }
 
-    $checkStmt = $pdo->prepare("SELECT id, name FROM products WHERE id = ?");
-    $checkStmt->execute([$id]);
-    $product = $checkStmt->fetch();
-    if (!$product) {
-        ApiResponse::error('Product not found or already removed', 404);
-    }
+    $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
 
-    try {
-        // Check if product is referenced by existing customer orders
-        $orderCheck = $pdo->prepare("SELECT COUNT(*) FROM order_items WHERE product_id = ?");
-        $orderCheck->execute([$id]);
-        $hasOrders = (int)$orderCheck->fetchColumn() > 0;
+    $stmt = $pdo->prepare("
+        INSERT INTO products (category_id, name, slug, short_description, description, mrp, price, cost_price, sku, stock_quantity, pairs_count, is_anti_tarnish, material, is_bestseller, video_url, is_active, meta_title, meta_description)
+        VALUES (:cat, :name, :slug, :short_desc, :desc, :mrp, :price, :cost, :sku, :stock, :pairs, :anti, :mat, :best, :vid, :active, :meta_t, :meta_d)
+    ");
+    $stmt->execute([
+        ':cat'        => $categoryId,
+        ':name'       => $name,
+        ':slug'       => $slug,
+        ':short_desc' => $input['short_description'] ?? '',
+        ':desc'       => $input['description'] ?? '',
+        ':mrp'        => $mrp > 0 ? $mrp : $price,
+        ':price'      => $price,
+        ':cost'       => (float)($input['cost_price'] ?? 0),
+        ':sku'        => $sku,
+        ':stock'      => $stock,
+        ':pairs'      => $pairsCount,
+        ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
+        ':mat'        => $input['material'] ?? 'Stainless Steel / 18K Gold PVD',
+        ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
+        ':vid'        => $input['video_url'] ?? null,
+        ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
+        ':meta_t'     => $input['meta_title'] ?? ($name . ' | Valerie Jewels'),
+        ':meta_d'     => $input['meta_description'] ?? ($input['short_description'] ?? ''),
+    ]);
 
-        if ($hasOrders) {
-            // Soft-delete: mark inactive to maintain historical order integrity
-            $pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?")->execute([$id]);
-            AdminAuth::logActivity($adminUser['id'], 'archive_product', 'product', $id, [
-                'name'   => $product['name'],
-                'reason' => 'Product has existing orders; archived from active catalog',
-            ]);
-            ApiResponse::success([
-                'id'       => $id,
-                'archived' => true,
-            ], "Product '{$product['name']}' has existing order records, so it has been archived and removed from active catalog.");
-        } else {
-            // Hard-delete: clean up any child records first
-            $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM bundle_items WHERE product_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM reviews WHERE product_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
+    $newId = $pdo->lastInsertId();
 
-            AdminAuth::logActivity($adminUser['id'], 'delete_product', 'product', $id, ['name' => $product['name']]);
-            ApiResponse::success([
-                'id'       => $id,
-                'deleted'  => true,
-            ], "Product '{$product['name']}' deleted successfully");
-        }
-    } catch (PDOException $e) {
-        // If any foreign key constraint is encountered, safely soft delete
-        if ($e->getCode() == '23000') {
-            $pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?")->execute([$id]);
-            AdminAuth::logActivity($adminUser['id'], 'archive_product', 'product', $id, ['name' => $product['name']]);
-            ApiResponse::success([
-                'id'       => $id,
-                'archived' => true,
-            ], "Product '{$product['name']}' is referenced by related store data, so it was archived.");
-        } else {
-            ApiResponse::error('Failed to delete product: ' . $e->getMessage(), 500);
+    // Insert Images if provided
+    if (!empty($input['images']) && is_array($input['images'])) {
+        $imgStmt = $pdo->prepare("INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary) VALUES (?, ?, ?, ?, ?)");
+        foreach ($input['images'] as $idx => $img) {
+            $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
+            if (!empty($imgUrl)) {
+                $imgStmt->execute([$newId, $imgUrl, $name, $idx, $idx === 0 ? 1 : 0]);
+            }
         }
     }
+
+    AdminAuth::logActivity($adminUser['id'], 'create_product', 'product', $newId, ['name' => $name, 'sku' => $sku]);
+
+    ApiResponse::success(['id' => $newId, 'name' => $name, 'slug' => $slug], 'Product created successfully', 201);
 }
