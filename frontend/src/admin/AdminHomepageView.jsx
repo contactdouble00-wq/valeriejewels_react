@@ -459,11 +459,10 @@ export default function AdminHomepageView() {
       {/* Status Feedback Toast */}
       {feedback && (
         <div
-          className={`p-4 rounded-xl border flex items-center space-x-3 text-xs font-medium animate-in fade-in duration-200 ${
-            feedback.type === 'success'
+          className={`p-4 rounded-xl border flex items-center space-x-3 text-xs font-medium animate-in fade-in duration-200 ${feedback.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}
+            }`}
         >
           {feedback.type === 'success' ? (
             <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -483,26 +482,23 @@ export default function AdminHomepageView() {
             <button
               key={sec.id}
               onClick={() => setActiveSection(sec.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all flex items-center space-x-2 ${
-                isActive
+              className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all flex items-center space-x-2 ${isActive
                   ? 'bg-brand-primary text-white shadow-xs font-bold'
                   : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
-              }`}
+                }`}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-muted'}`} />
               <span>{sec.label}</span>
               {sec.id === 'festivalOffer' ? (
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                  (formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false')
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false')
                     ? 'bg-rose-100 text-rose-800 border border-rose-300'
                     : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                }`}>
+                  }`}>
                   {(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false') ? 'Hidden' : 'Active'}
                 </span>
               ) : sec.badge ? (
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                  isActive ? 'bg-amber-300 text-[#1B0A33]' : 'bg-amber-100 text-amber-900 border border-amber-300/80'
-                }`}>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${isActive ? 'bg-amber-300 text-[#1B0A33]' : 'bg-amber-100 text-amber-900 border border-amber-300/80'
+                  }`}>
                   {sec.badge}
                 </span>
               ) : null}
@@ -653,11 +649,10 @@ export default function AdminHomepageView() {
                   {(formData.mobileSlider?.slides || []).map((_, idx) => (
                     <span
                       key={idx}
-                      className={`block transform rotate-45 transition-all ${
-                        idx === 0
+                      className={`block transform rotate-45 transition-all ${idx === 0
                           ? 'w-2 h-2 bg-[#8366B0]'
                           : 'w-1.5 h-1.5 bg-gray-300'
-                      }`}
+                        }`}
                     />
                   ))}
                 </div>
@@ -1677,11 +1672,10 @@ export default function AdminHomepageView() {
                   <button
                     type="button"
                     onClick={() => updateNested('festivalOffer', 'enabled', true)}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      formData.festivalOffer?.enabled !== false && formData.festivalOffer?.enabled !== 'false'
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${formData.festivalOffer?.enabled !== false && formData.festivalOffer?.enabled !== 'false'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
-                    }`}
+                      }`}
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
                     <span>Active on Storefront</span>
@@ -1689,11 +1683,10 @@ export default function AdminHomepageView() {
                   <button
                     type="button"
                     onClick={() => updateNested('festivalOffer', 'enabled', false)}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false'
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false'
                         ? 'bg-rose-600 text-white shadow-xs'
                         : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
-                    }`}
+                      }`}
                   >
                     <EyeOff className="w-3.5 h-3.5" />
                     <span>Section Hidden</span>
@@ -1884,7 +1877,7 @@ export default function AdminHomepageView() {
                 <span>4. Curated Festive Perks Cards</span>
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                
+
                 {/* Perk 1 */}
                 <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-2.5">
                   <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
