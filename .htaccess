@@ -1,0 +1,60 @@
+# ==============================================================================
+# VALERIE JEWELS - Production Hostinger & LiteSpeed SPA Configuration
+# ==============================================================================
+
+DirectoryIndex index.html index.php
+
+# Disable directory browsing (Do NOT use +FollowSymLinks on Hostinger)
+Options -Indexes
+
+# Allow public web access to all assets and pages across Apache & LiteSpeed
+<IfModule mod_authz_core.c>
+  Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order Allow,Deny
+  Allow from all
+</IfModule>
+
+# Protect sensitive server files (.htaccess, .env, .git, etc.)
+<FilesMatch "(^\.ht|\.env|\.git)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order Deny,Allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# ------------------------------------------------------------------------------
+# SPA Routing & API Pass-Through
+# ------------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Pass PHP API requests straight to the backend without rewriting to index.html
+  RewriteCond %{REQUEST_URI} ^/api [NC,OR]
+  RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
+  RewriteRule ^ - [L]
+
+  # 2. Pass existing static files straight through
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # 3. Route all other requests (routes like /faqs, /shipping-policy, /shop, etc.) to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# Caching Headers for Performance
+# ------------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+</IfModule>

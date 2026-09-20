@@ -1,11 +1,11 @@
-name: Deploy to Hostinger
+name: Build & Validate
 
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,34 +20,3 @@ jobs:
         run: |
           npm install
           npm run build
-
-      - name: Deploy Frontend Build to domain root
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_USER: ${{ secrets.SSH_USER || 'u513962642' }}
-          SSH_HOST: '217.21.94.247'
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p 65002 -H $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
-
-          echo "Testing SSH connection to $SSH_USER@$SSH_HOST:65002..."
-          ssh -p 65002 -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST "echo 'Hostinger SSH connection successful! User:' \$(whoami) 'Dir:' \$(pwd)"
-
-          echo "Deploying frontend/dist/ to domain root..."
-          rsync -avzr --delete-after --exclude=api --exclude=wp-config.php --exclude=.env \
-            -e "ssh -p 65002 -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa" \
-            frontend/dist/ $SSH_USER@$SSH_HOST:/home/$SSH_USER/domains/valeriejewels.in/public_html/
-
-      - name: Deploy PHP API folder
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_USER: ${{ secrets.SSH_USER || 'u513962642' }}
-          SSH_HOST: '217.21.94.247'
-        run: |
-          echo "Deploying api/ to public_html/api/..."
-          rsync -avzr --delete-after --exclude=.env --exclude=config/config.local.php \
-            -e "ssh -p 65002 -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa" \
-            api/ $SSH_USER@$SSH_HOST:/home/$SSH_USER/domains/valeriejewels.in/public_html/api/
