@@ -8,6 +8,7 @@ class Database {
     private static ?PDO $instance = null;
     private static array $config = [];
     private static string $driver = 'mysql';
+    private static ?string $activeSqliteFile = null;
     private static bool $sqliteTablesChecked = false;
 
     /**
@@ -84,14 +85,35 @@ class Database {
             if (in_array('sqlite', PDO::getAvailableDrivers(), true)) {
                 $sqliteDir = dirname(__DIR__) . '/database';
                 if (!is_dir($sqliteDir)) {
-                    @mkdir($sqliteDir, 0755, true);
+                    @mkdir($sqliteDir, 0777, true);
                 }
-                $sqliteFile = $sqliteDir . '/valerie_jewels.sqlite';
+                @chmod($sqliteDir, 0777);
+
+                $liveSqlite = $sqliteDir . '/vj_live_store.sqlite';
+                $legacySqlite = $sqliteDir . '/valerie_jewels.sqlite';
+
+                if (file_exists($liveSqlite) && filesize($liveSqlite) > 0) {
+                    $sqliteFile = $liveSqlite;
+                } elseif (file_exists($legacySqlite) && filesize($legacySqlite) > 0) {
+                    @copy($legacySqlite, $liveSqlite);
+                    $sqliteFile = (file_exists($liveSqlite) && filesize($liveSqlite) > 0) ? $liveSqlite : $legacySqlite;
+                } else {
+                    $sqliteFile = $liveSqlite;
+                }
+
+                if (file_exists($sqliteFile)) {
+                    @chmod($sqliteFile, 0666);
+                }
+                self::$activeSqliteFile = $sqliteFile;
                 self::$instance = new PDO('sqlite:' . $sqliteFile, null, null, [
                     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_TIMEOUT            => 5,
+                    PDO::ATTR_TIMEOUT            => 10,
                 ]);
+                try {
+                    self::$instance->exec('PRAGMA journal_mode = WAL;');
+                    self::$instance->exec('PRAGMA synchronous = NORMAL;');
+                } catch (Throwable $e) {}
                 self::$driver = 'sqlite';
                 self::ensureSqliteTablesExist(self::$instance);
             } else {
@@ -711,6 +733,7 @@ class Database {
             return [
                 'connected' => true,
                 'driver'    => self::$driver,
+                'storage'   => self::$driver === 'sqlite' ? basename(self::$activeSqliteFile ?? 'vj_live_store.sqlite') : 'mysql',
                 'message'   => strtoupper(self::$driver) . ' connection active',
                 'version'   => $version ?: 'Unknown',
                 'stats'     => self::getStats(),

@@ -27,6 +27,8 @@ async function request(endpoint, options = {}) {
   const token = getAdminToken();
   const headers = {
     'Accept': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
     ...(options.headers || {}),
   };
   if (token) {
@@ -38,9 +40,10 @@ async function request(endpoint, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const url = `${API_BASE_URL}${endpoint}`;
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${API_BASE_URL}${endpoint}${separator}_t=${Date.now()}`;
   try {
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {

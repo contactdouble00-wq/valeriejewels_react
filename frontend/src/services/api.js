@@ -88,8 +88,16 @@ export const apiService = {
    * Generic GET request helper
    */
   async get(endpoint) {
-    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url);
+    const sep = endpoint.includes('?') ? '&' : '?';
+    const target = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const url = `${target}${sep}_t=${Date.now()}`;
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    });
     if (!response.ok) {
       throw new Error(`GET ${endpoint} failed with status ${response.status}`);
     }
@@ -101,7 +109,10 @@ export const apiService = {
    */
   async getHealth() {
     try {
-      const response = await fetch(`${API_BASE_URL}/health.php`);
+      const response = await fetch(`${API_BASE_URL}/health.php?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       if (response.ok) return await response.json();
     } catch {
       // Return safe offline state
@@ -121,7 +132,13 @@ export const apiService = {
    */
   async getCategories() {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/categories.php`);
+      const response = await fetch(`${API_BASE_URL}/products/categories.php?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       if (response.ok) {
         const result = await response.json();
         if (Array.isArray(result.data) && result.data.length > 0) {
@@ -149,11 +166,18 @@ export const apiService = {
     if (params.limit) query.append('limit', params.limit);
 
     try {
-      const url = `${API_BASE_URL}/products/list.php?${query.toString()}`;
-      const response = await fetch(url);
+      const qs = query.toString();
+      const url = `${API_BASE_URL}/products/list.php?${qs ? qs + '&' : ''}_t=${Date.now()}`;
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       if (response.ok) {
         const result = await response.json();
-        if (Array.isArray(result.data) && result.data.length > 0) {
+        if (Array.isArray(result.data)) {
           return {
             products: result.data,
             meta: result.meta || {},
@@ -173,7 +197,14 @@ export const apiService = {
     const isId = typeof slugOrId === 'number' || /^\d+$/.test(slugOrId);
     const param = isId ? `id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
     try {
-      const response = await fetch(`${API_BASE_URL}/products/detail.php?${param}`);
+      const url = `${API_BASE_URL}/products/detail.php?${param}&_t=${Date.now()}`;
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
       if (response.ok) {
         const result = await response.json();
         if (result.data) return result.data;
