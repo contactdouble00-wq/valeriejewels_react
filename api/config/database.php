@@ -551,8 +551,20 @@ class Database {
      */
     private static function seedDefaultCatalogSqlite(PDO $pdo): void {
         try {
+            // Check if catalog has already been seeded in history
+            try {
+                $seeded = $pdo->query("SELECT `value` FROM `site_settings` WHERE `key` = 'catalog_seeded' LIMIT 1")->fetchColumn();
+                if ($seeded === '1') {
+                    // Catalog already seeded once; NEVER resurrect deleted products on refresh!
+                    return;
+                }
+            } catch (Throwable $e) {}
+
             $count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
             if ($count > 0) {
+                try {
+                    $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('catalog_seeded', '1')");
+                } catch (Throwable $e) {}
                 return;
             }
 
@@ -588,6 +600,10 @@ class Database {
             foreach ($products as $p) {
                 $prodStmt->execute($p);
             }
+
+            try {
+                $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('catalog_seeded', '1')");
+            } catch (Throwable $e) {}
         } catch (Throwable $e) {
             error_log('seedDefaultCatalogSqlite error: ' . $e->getMessage());
         }
@@ -598,8 +614,18 @@ class Database {
      */
     private static function seedDefaultImagesSqlite(PDO $pdo): void {
         try {
+            try {
+                $seeded = $pdo->query("SELECT `value` FROM `site_settings` WHERE `key` = 'images_seeded' LIMIT 1")->fetchColumn();
+                if ($seeded === '1') {
+                    return;
+                }
+            } catch (Throwable $e) {}
+
             $imgCount = (int)$pdo->query("SELECT COUNT(*) FROM product_images")->fetchColumn();
             if ($imgCount > 0) {
+                try {
+                    $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('images_seeded', '1')");
+                } catch (Throwable $e) {}
                 return;
             }
 
@@ -644,6 +670,10 @@ class Database {
                     ]);
                 }
             }
+
+            try {
+                $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('images_seeded', '1')");
+            } catch (Throwable $e) {}
         } catch (Throwable $e) {
             error_log('seedDefaultImagesSqlite error: ' . $e->getMessage());
         }
@@ -654,8 +684,18 @@ class Database {
      */
     private static function seedDefaultCouponsSqlite(PDO $pdo): void {
         try {
+            try {
+                $seeded = $pdo->query("SELECT `value` FROM `site_settings` WHERE `key` = 'coupons_seeded' LIMIT 1")->fetchColumn();
+                if ($seeded === '1') {
+                    return;
+                }
+            } catch (Throwable $e) {}
+
             $count = (int)$pdo->query("SELECT COUNT(*) FROM coupons")->fetchColumn();
             if ($count > 0) {
+                try {
+                    $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('coupons_seeded', '1')");
+                } catch (Throwable $e) {}
                 return;
             }
 
@@ -668,6 +708,10 @@ class Database {
             foreach ($coupons as $c) {
                 $stmt->execute($c);
             }
+
+            try {
+                $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('coupons_seeded', '1')");
+            } catch (Throwable $e) {}
         } catch (Throwable $e) {
             error_log('seedDefaultCouponsSqlite error: ' . $e->getMessage());
         }
@@ -678,8 +722,18 @@ class Database {
      */
     private static function seedDefaultBundlesSqlite(PDO $pdo): void {
         try {
+            try {
+                $seeded = $pdo->query("SELECT `value` FROM `site_settings` WHERE `key` = 'bundles_seeded' LIMIT 1")->fetchColumn();
+                if ($seeded === '1') {
+                    return;
+                }
+            } catch (Throwable $e) {}
+
             $count = (int)$pdo->query("SELECT COUNT(*) FROM bundles")->fetchColumn();
             if ($count > 0) {
+                try {
+                    $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('bundles_seeded', '1')");
+                } catch (Throwable $e) {}
                 return;
             }
 
@@ -691,6 +745,10 @@ class Database {
             foreach ($bundles as $b) {
                 $stmt->execute($b);
             }
+
+            try {
+                $pdo->exec("INSERT OR REPLACE INTO `site_settings` (`key`, `value`) VALUES ('bundles_seeded', '1')");
+            } catch (Throwable $e) {}
         } catch (Throwable $e) {
             error_log('seedDefaultBundlesSqlite error: ' . $e->getMessage());
         }

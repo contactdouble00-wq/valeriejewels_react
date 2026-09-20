@@ -367,9 +367,14 @@ if ($method === 'POST') {
     ApiResponse::success(['id' => $newId, 'name' => $name, 'slug' => $slug], 'Product created successfully', 201);
 }
 
-// Handle Update (PUT)
-if ($method === 'PUT') {
-    $id = (int)($input['id'] ?? 0);
+// Handle Update (PUT or POST?action=update)
+$isUpdateAction = ($method === 'PUT') 
+    || ($method === 'POST' && in_array($action, ['update', 'update_product'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['update', 'update_product'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'PUT');
+
+if ($isUpdateAction) {
+    $id = (int)($input['id'] ?? ($_GET['id'] ?? 0));
     if ($id <= 0) {
         ApiResponse::error('Product ID is required for update', 422);
     }
@@ -455,8 +460,13 @@ if ($method === 'PUT') {
     ApiResponse::success(['id' => $id], 'Product updated successfully');
 }
 
-// Handle Delete (DELETE)
-if ($method === 'DELETE') {
+// Handle Delete (DELETE or POST?action=delete)
+$isDeleteAction = ($method === 'DELETE')
+    || ($method === 'POST' && in_array($action, ['delete', 'delete_product'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_product'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
+
+if ($isDeleteAction) {
     // Only admin can delete products
     if ($adminUser['role'] !== 'admin') {
         ApiResponse::error('Permission Denied: Only administrators can delete products.', 403);
@@ -500,7 +510,10 @@ if ($method === 'DELETE') {
             $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
 
             AdminAuth::logActivity($adminUser['id'], 'delete_product', 'product', $id, ['name' => $product['name']]);
-            ApiResponse::success(null, "Product '{$product['name']}' deleted successfully");
+            ApiResponse::success([
+                'id'       => $id,
+                'deleted'  => true,
+            ], "Product '{$product['name']}' deleted successfully");
         }
     } catch (PDOException $e) {
         // If any foreign key constraint is encountered, safely soft delete

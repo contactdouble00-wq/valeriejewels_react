@@ -8,6 +8,16 @@ DirectoryIndex index.php
 # Disable directory browsing
 Options -Indexes
 
+# Ensure Authorization header is passed to PHP FastCGI
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+</IfModule>
+<IfModule mod_setenvif.c>
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
 # Ensure public web access to API endpoints across Apache & LiteSpeed
 <IfModule mod_authz_core.c>
     Require all granted

@@ -33,6 +33,7 @@ async function request(endpoint, options = {}) {
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    headers['X-Admin-Token'] = token;
   }
 
   // If body is not FormData, add Content-Type: application/json
@@ -122,9 +123,9 @@ export const adminApi = {
   },
 
   async updateProduct(productData) {
-    const res = await request('/admin/products.php', {
-      method: 'PUT',
-      body: JSON.stringify(productData),
+    const res = await request('/admin/products.php?action=update', {
+      method: 'POST',
+      body: JSON.stringify({ ...productData, action: 'update', _method: 'PUT' }),
     });
     return res.data;
   },
@@ -146,8 +147,9 @@ export const adminApi = {
   },
 
   async deleteProduct(productId) {
-    const res = await request(`/admin/products.php?id=${productId}`, {
-      method: 'DELETE',
+    const res = await request(`/admin/products.php?action=delete&id=${productId}`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id: productId, _method: 'DELETE' }),
     });
     return res.data;
   },

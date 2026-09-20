@@ -26,6 +26,11 @@ class AdminAuth {
             $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
         }
 
+        // Fallback for custom header X-Admin-Token (immune to Apache FastCGI Authorization stripping)
+        if (empty($authHeader) && !empty($_SERVER['HTTP_X_ADMIN_TOKEN'])) {
+            $authHeader = 'Bearer ' . trim($_SERVER['HTTP_X_ADMIN_TOKEN']);
+        }
+
         // Fallback for query param (testing or download links)
         if (empty($authHeader) && !empty($_GET['token'])) {
             $authHeader = 'Bearer ' . $_GET['token'];
