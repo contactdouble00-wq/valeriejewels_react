@@ -52,6 +52,25 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const videoRefMobile = useRef(null);
   const videoRefDesktop = useRef(null);
 
+  // Track active viewport (desktop >= 768px vs mobile < 768px) to prevent dual playback/audio
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= 768;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = (e) => setIsDesktop(e.matches);
+    if (mql.addEventListener) {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    } else {
+      mql.addListener(onChange);
+      return () => mql.removeListener(onChange);
+    }
+  }, []);
+
   // Touch swipe detection for mobile gallery
   const [touchStartX, setTouchStartX] = useState(null);
   const handleTouchStart = (e) => {
@@ -256,16 +275,27 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     e?.stopPropagation?.();
     const next = !isMuted;
     setIsMuted(next);
-    if (videoRefMobile.current) videoRefMobile.current.muted = next;
-    if (videoRefDesktop.current) videoRefDesktop.current.muted = next;
+
+    const activeVid = isDesktop ? videoRefDesktop.current : videoRefMobile.current;
+    const inactiveVid = isDesktop ? videoRefMobile.current : videoRefDesktop.current;
+
+    if (activeVid) {
+      activeVid.muted = next;
+    }
+    // Strictly ensure the inactive viewport video is muted and paused
+    if (inactiveVid) {
+      inactiveVid.muted = true;
+      inactiveVid.pause();
+    }
   };
 
   const togglePlay = (e) => {
     e?.stopPropagation?.();
-    const activeVid = videoRefMobile.current || videoRefDesktop.current;
+    const activeVid = isDesktop ? videoRefDesktop.current : videoRefMobile.current;
     if (!activeVid) return;
+
     if (activeVid.paused) {
-      activeVid.play();
+      activeVid.play().catch(() => {});
       setIsPlaying(true);
     } else {
       activeVid.pause();
@@ -273,23 +303,63 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     }
   };
 
-  // Sync autoplay when switching media slides
+  // Sync autoplay when switching media slides or viewport (strictly isolated to active viewport)
   useEffect(() => {
     setIsPlaying(true);
     if (activeMedia?.type === 'video') {
       const timer = setTimeout(() => {
-        if (videoRefMobile.current) {
-          videoRefMobile.current.currentTime = 0;
-          videoRefMobile.current.play().catch(() => {});
+        const activeVid = isDesktop ? videoRefDesktop.current : videoRefMobile.current;
+        const inactiveVid = isDesktop ? videoRefMobile.current : videoRefDesktop.current;
+
+        // Stop and mute the inactive video ref completely to prevent any duplicate audio stream
+        if (inactiveVid) {
+          inactiveVid.pause();
+          inactiveVid.muted = true;
+          inactiveVid.currentTime = 0;
         }
-        if (videoRefDesktop.current) {
-          videoRefDesktop.current.currentTime = 0;
-          videoRefDesktop.current.play().catch(() => {});
+
+        // Play only the active video element
+        if (activeVid) {
+          activeVid.currentTime = 0;
+          activeVid.muted = isMuted;
+          activeVid.play().catch(() => {});
         }
       }, 60);
       return () => clearTimeout(timer);
+    } else {
+      // If active media is an image, ensure all video streams are halted and muted
+      if (videoRefMobile.current) {
+        videoRefMobile.current.pause();
+        videoRefMobile.current.muted = true;
+      }
+      if (videoRefDesktop.current) {
+        videoRefDesktop.current.pause();
+        videoRefDesktop.current.muted = true;
+      }
     }
-  }, [selectedMediaIndex, activeMedia]);
+  }, [selectedMediaIndex, activeMedia, isDesktop, isMuted]);
+
+  // Clean up and stop video audio when modal unmounts
+  useEffect(() => {
+    return () => {
+      if (videoRefMobile.current) {
+        try {
+          videoRefMobile.current.pause();
+          videoRefMobile.current.muted = true;
+          videoRefMobile.current.removeAttribute('src');
+          videoRefMobile.current.load();
+        } catch (e) {}
+      }
+      if (videoRefDesktop.current) {
+        try {
+          videoRefDesktop.current.pause();
+          videoRefDesktop.current.muted = true;
+          videoRefDesktop.current.removeAttribute('src');
+          videoRefDesktop.current.load();
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -372,16 +442,18 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     onClick={togglePlay}
                     className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                   >
-                    {/* Full-bleed Vertical Video Reel that fills the square player */}
-                    <video
-                      ref={videoRefMobile}
-                      src={activeMedia.url}
-                      muted={isMuted}
-                      autoPlay
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover rounded-2xl"
-                    />
+                    {/* Full-bleed Vertical Video Reel that fills the square player (only mounted on mobile viewport) */}
+                    {!isDesktop && (
+                      <video
+                        ref={videoRefMobile}
+                        src={activeMedia.url}
+                        muted={isMuted}
+                        autoPlay
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover rounded-2xl"
+                      />
+                    )}
 
                     {/* Floating REEL / Try-on Tag */}
                     <div className="absolute top-3 left-3 z-20 pointer-events-none">
@@ -840,16 +912,18 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       onClick={togglePlay}
                       className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                     >
-                      {/* Full-bleed Vertical Reel Player */}
-                      <video
-                        ref={videoRefDesktop}
-                        src={activeMedia.url}
-                        muted={isMuted}
-                        autoPlay
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover rounded-3xl shadow-xl"
-                      />
+                      {/* Full-bleed Vertical Reel Player (only mounted on desktop viewport) */}
+                      {isDesktop && (
+                        <video
+                          ref={videoRefDesktop}
+                          src={activeMedia.url}
+                          muted={isMuted}
+                          autoPlay
+                          loop
+                          playsInline
+                          className="w-full h-full object-cover rounded-3xl shadow-xl"
+                        />
+                      )}
 
                       {/* Floating REEL Tag */}
                       <div className="absolute top-4 left-4 z-20 pointer-events-none">
