@@ -611,10 +611,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             <ArrowLeft className="w-5 h-5 stroke-[2]" />
           </button>
 
-          <div className="text-center">
-            <h1 className="font-sans font-bold text-xs sm:text-sm tracking-[0.28em] uppercase text-gray-900">
-              V A L E R I E &nbsp; J E W E L S
-            </h1>
+          <div className="flex items-center justify-center">
+            <img
+              src="/valerie.png"
+              alt="VALERIÉ"
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
           </div>
 
           <div className="w-8 flex items-center justify-end">
