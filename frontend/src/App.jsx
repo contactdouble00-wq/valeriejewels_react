@@ -984,8 +984,15 @@ export default function App() {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
     const hash = window.location.hash;
 
-    // 1. Secret Admin Route (/vj-manage-x1126 or #vj-manage-x1126)
-    if (rawPath.startsWith('/vj-manage-x1126') || hash.startsWith('#vj-manage-x1126')) {
+    // 1. Admin Route (/admin, #admin, /vj-manage-x1126, or #vj-manage-x1126)
+    if (
+      rawPath === '/admin' ||
+      rawPath.startsWith('/admin/') ||
+      hash === '#admin' ||
+      hash.startsWith('#admin') ||
+      rawPath.startsWith('/vj-manage-x1126') ||
+      hash.startsWith('#vj-manage-x1126')
+    ) {
       return 'admin';
     }
 
@@ -1019,6 +1026,7 @@ export default function App() {
     // 5. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
     const validPaths = [
       '/', '', '/shop', '/index.html',
+      '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
       '/refund-policy', '/return-and-refund-policy', '/return-policy',
       '/privacy-policy',
