@@ -13,6 +13,17 @@ handleCors();
 try {
     $pdo = Database::getConnection();
 
+    // Auto-heal: Ensure 'jhumka-boxes' category exists
+    $checkJhumka = $pdo->query("SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1")->fetch();
+    if (!$checkJhumka) {
+        $pdo->exec("
+            INSERT INTO categories (name, slug, description, display_order, is_active)
+            VALUES ('Jhumka Boxes', 'jhumka-boxes', 'Our viral 4 signature curated jhumka boxes designed for weddings, festivities, and daily wear.', 1, 1)
+        ");
+        $newJhumkaId = (int)$pdo->lastInsertId();
+        $pdo->exec("UPDATE products SET category_id = {$newJhumkaId} WHERE sku LIKE 'VJ-JHM%' OR sku LIKE 'VJ-BX-%' OR name LIKE '%Jhumka Box%'");
+    }
+
     $stmt = $pdo->query("
         SELECT 
             c.id,

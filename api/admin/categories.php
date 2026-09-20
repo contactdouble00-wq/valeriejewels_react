@@ -17,6 +17,17 @@ $action = $_GET['action'] ?? ($input['action'] ?? '');
 // GET — List all categories with product counts
 // ─────────────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
+    // Auto-heal: Ensure 'jhumka-boxes' category exists in DB so it never permanently disappears
+    $checkJhumka = $pdo->query("SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1")->fetch();
+    if (!$checkJhumka) {
+        $pdo->exec("
+            INSERT INTO categories (name, slug, description, display_order, is_active)
+            VALUES ('Jhumka Boxes', 'jhumka-boxes', 'Our viral 4 signature curated jhumka boxes designed for weddings, festivities, and daily wear.', 1, 1)
+        ");
+        $newJhumkaId = (int)$pdo->lastInsertId();
+        $pdo->exec("UPDATE products SET category_id = {$newJhumkaId} WHERE sku LIKE 'VJ-JHM%' OR sku LIKE 'VJ-BX-%' OR name LIKE '%Jhumka Box%'");
+    }
+
     $stmt = $pdo->query("
         SELECT 
             c.*,
@@ -90,6 +101,14 @@ if ($isDeleteAction) {
     $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($input['id'] ?? 0);
     if ($id <= 0) {
         ApiResponse::error('Category ID required', 422);
+    }
+
+    // Block if jhumka-boxes (protected system category)
+    $slugStmt = $pdo->prepare("SELECT slug FROM categories WHERE id = ?");
+    $slugStmt->execute([$id]);
+    $catSlug = $slugStmt->fetchColumn();
+    if ($catSlug === 'jhumka-boxes') {
+        ApiResponse::error('The "Jhumka Boxes" category is a protected core hero module for the storefront and cannot be deleted.', 400);
     }
 
     // Block if products are assigned
@@ -203,4 +222,46 @@ if ($action === 'toggle_active') {
     AdminAuth::logActivity($adminUser['id'], 'toggle_category_active', 'category', $id, ['is_active' => $isActive]);
 
     ApiResponse::success(['id' => $id, 'is_active' => $isActive], 'Category visibility updated');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST?action=restore_jhumka_boxes — Ensure 4 Signature Jhumka Boxes category exists & is active
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'restore_jhumka_boxes') {
+    if ($adminUser['role'] !== 'admin') {
+        ApiResponse::error('Permission denied', 403);
+    }
+
+    $stmt = $pdo->prepare("SELECT id, is_active FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1");
+    $stmt->execute();
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing) {
+        $jhumkaId = (int)$existing['id'];
+        $pdo->prepare("UPDATE categories SET is_active = 1, display_order = 1, name = 'Jhumka Boxes' WHERE id = ?")->execute([$jhumkaId]);
+    } else {
+        $insert = $pdo->prepare("
+            INSERT INTO categories (name, slug, description, display_order, is_active)
+            VALUES ('Jhumka Boxes', 'jhumka-boxes', 'Our viral 4 signature curated jhumka boxes designed for weddings, festivities, and daily wear.', 1, 1)
+        ");
+        $insert->execute();
+        $jhumkaId = (int)$pdo->lastInsertId();
+    }
+
+    // Re-link any products that are jhumka boxes
+    $pdo->prepare("
+        UPDATE products 
+        SET category_id = ? 
+        WHERE sku LIKE 'VJ-JHM%' OR sku LIKE 'VJ-BX-%' OR name LIKE '%Jhumka Box%'
+    ")->execute([$jhumkaId]);
+
+    AdminAuth::logActivity($adminUser['id'], 'restore_category', 'category', $jhumkaId, ['slug' => 'jhumka-boxes']);
+
+    ApiResponse::success([
+        'id' => $jhumkaId,
+        'slug' => 'jhumka-boxes',
+        'name' => 'Jhumka Boxes',
+        'is_active' => 1,
+        'restored' => true
+    ], 'Jhumka Boxes category restored and re-linked to hero products successfully');
 }

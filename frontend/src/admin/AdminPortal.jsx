@@ -244,7 +244,12 @@ export default function AdminPortal({ onReturnToStore }) {
 
           {activeTab === 'customers' && <AdminCustomersView />}
 
-          {activeTab === 'categories' && <AdminCategoriesView currentUser={currentUser} />}
+          {activeTab === 'categories' && (
+            <AdminCategoriesView
+              currentUser={currentUser}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+            />
+          )}
 
           {activeTab === 'coupons' && <AdminCouponsView currentUser={currentUser} />}
 

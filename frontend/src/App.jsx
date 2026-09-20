@@ -582,8 +582,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           </div>
         </section>
 
-        {/* Ad Campaign Hero Section: The 4 Signature Jhumka Boxes (only if category is active and has products) */}
-        {categories.some((c) => c.slug === 'jhumka-boxes') && jhumkaBoxes.length > 0 && (
+        {/* Ad Campaign Hero Section: The 4 Signature Jhumka Boxes */}
+        {(categories.some((c) => c.slug === 'jhumka-boxes') || jhumkaBoxes.length > 0) && jhumkaBoxes.length > 0 && (
           <div id="jhumka-boxes" className="scroll-mt-28">
             <JhumkaBoxHeroSection
               products={jhumkaBoxes}
