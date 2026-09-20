@@ -218,14 +218,6 @@ export const adminApi = {
     return res.data;
   },
 
-  async restoreJhumkaCategory() {
-    const res = await request('/admin/categories.php?action=restore_jhumka_boxes', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'restore_jhumka_boxes' }),
-    });
-    return res.data;
-  },
-
   // 2FA
   async requestAdminOtp(email, password) {
     const res = await request('/auth/admin_2fa.php?action=send_otp', {
