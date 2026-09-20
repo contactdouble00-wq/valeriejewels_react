@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X, Star, ShieldCheck, Truck, RefreshCw, ShoppingBag, Heart,
-  Sparkles, Check, ChevronRight, Share2, HelpCircle, AlertCircle,
-  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2
+  Sparkles, Check, ChevronRight, ChevronLeft, Share2, HelpCircle, AlertCircle,
+  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Film, Zap
 } from 'lucide-react';
 import { normalizeMediaUrl } from '../utils/mediaUtils';
 import { apiService } from '../services/api';
