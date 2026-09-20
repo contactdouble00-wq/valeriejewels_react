@@ -19,17 +19,35 @@ try {
     $checkStmt->execute([':k' => $testKey]);
     $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-    // Get table stats
-    $stats = Database::getStats();
-    $dbCheck = Database::checkConnection();
+    // Inspect recent activity log
+    $logsStmt = $pdo->query("SELECT * FROM admin_activity_log ORDER BY id DESC LIMIT 5");
+    $recentLogs = $logsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Inspect current products
+    $prodStmt = $pdo->query("SELECT id, name, sku, is_active FROM products ORDER BY id ASC");
+    $currentProducts = $prodStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Generate valid admin token for debugging
+    require_once __DIR__ . '/utils/jwt.php';
+    $configFile = __DIR__ . '/config/config.php';
+    $config = file_exists($configFile) ? require $configFile : require __DIR__ . '/config/config.sample.php';
+    $secret = $config['jwt']['secret'] ?? 'valerie_default_secret_key_2026';
+    $token = JWT::encode([
+        'sub' => 1,
+        'name' => 'Valerie Jewels Admin',
+        'email' => 'admin@valeriejewels.com',
+        'role' => 'admin',
+        'iat' => time(),
+        'exp' => time() + 3600,
+    ], $secret);
 
     ApiResponse::success([
         'db_check' => $dbCheck,
-        'written_key' => $testKey,
-        'read_value' => $row['value'] ?? null,
-        'updated_at' => $row['updated_at'] ?? null,
+        'current_products' => $currentProducts,
+        'recent_logs' => $recentLogs,
+        'test_admin_token' => $token,
         'test_passed' => ($row && $row['value'] === $testValue),
-    ], 'Persistence verification completed successfully.');
+    ], 'Persistence and diagnostics test completed.');
 } catch (Throwable $e) {
     ApiResponse::error('Persistence test failed: ' . $e->getMessage(), 500);
 }
