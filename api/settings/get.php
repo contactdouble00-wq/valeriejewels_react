@@ -23,6 +23,17 @@ try {
             if (isset($data['heroBanner']) && is_array($data['heroBanner']) && !isset($data['heroBanner']['rightImageUrl'])) {
                 $data['heroBanner']['rightImageUrl'] = '/hero-jewelry-model.jpg';
             }
+            if (!isset($data['customerSupport']) || !is_array($data['customerSupport'])) {
+                $data['customerSupport'] = [
+                    'whatsappNumber'   => '+91 70163 47945',
+                    'drawerButtonText' => 'Customer Care: +91 70163 47945',
+                    'phone'            => '+91 90234 22392',
+                    'email'            => 'orders@valeriejewels.in',
+                    'address'          => 'Patel Chowk, Rajkot, Gujarat',
+                    'hours'            => '7 days a week, 8:00 AM – 4:00 PM',
+                    'whatsappMessage'  => 'Hello Valerie Jewels, I have an inquiry about an item.',
+                ];
+            }
             if (!isset($data['mobileSlider']) || !is_array($data['mobileSlider'])) {
                 $data['mobileSlider'] = [
                     'enabled'  => true,
@@ -219,6 +230,15 @@ try {
             'enabled'  => false,
             'title'    => 'Phase 4 Authentication & Guest Mode Active',
             'subtitle' => 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.',
+        ],
+        'customerSupport' => [
+            'whatsappNumber'   => '+91 70163 47945',
+            'drawerButtonText' => 'Customer Care: +91 70163 47945',
+            'phone'            => '+91 90234 22392',
+            'email'            => 'orders@valeriejewels.in',
+            'address'          => 'Patel Chowk, Rajkot, Gujarat',
+            'hours'            => '7 days a week, 8:00 AM – 4:00 PM',
+            'whatsappMessage'  => 'Hello Valerie Jewels, I have an inquiry about an item.',
         ],
     ];
 

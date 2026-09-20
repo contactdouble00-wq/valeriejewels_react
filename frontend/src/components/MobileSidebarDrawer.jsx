@@ -353,15 +353,26 @@ export default function MobileSidebarDrawer({
           {/* Bottom Footer: Reassurance & Direct WhatsApp Support (Like Everlasting) */}
           <div className="p-4 border-t border-brand-border bg-brand-surface/80 space-y-3">
             {/* WhatsApp Quick Assistance */}
-            <a
-              href="https://wa.me/917016347945"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-semibold flex items-center justify-center space-x-2 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
-              <span>Customer Care: +91 70163 47945</span>
-            </a>
+            {(() => {
+              const support = content?.customerSupport || {};
+              const waNum = support.whatsappNumber || '+91 70163 47945';
+              const cleanDigits = (waNum || '917016347945').replace(/\D/g, '');
+              const btnLabel = support.drawerButtonText || `Customer Care: ${waNum}`;
+              const defaultMsg = support.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.';
+              const waHref = `https://wa.me/${cleanDigits}?text=${encodeURIComponent(defaultMsg)}`;
+
+              return (
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-semibold flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
+                  <span>{btnLabel}</span>
+                </a>
+              );
+            })()}
 
             {/* Quality Seals */}
             <div className="grid grid-cols-2 gap-2 text-[10px] text-brand-muted font-light pt-1">

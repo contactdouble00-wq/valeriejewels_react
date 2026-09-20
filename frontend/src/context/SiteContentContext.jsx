@@ -91,6 +91,15 @@ const DEFAULT_SITE_CONTENT = {
     title: 'Phase 4 Authentication & Guest Mode Active',
     subtitle: 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.',
   },
+  customerSupport: {
+    whatsappNumber: '+91 70163 47945',
+    drawerButtonText: 'Customer Care: +91 70163 47945',
+    phone: '+91 90234 22392',
+    email: 'orders@valeriejewels.in',
+    address: 'Patel Chowk, Rajkot, Gujarat',
+    hours: '7 days a week, 8:00 AM – 4:00 PM',
+    whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
+  },
 };
 
 const SiteContentContext = createContext({
@@ -153,6 +162,7 @@ export function SiteContentProvider({ children }) {
                 : DEFAULT_SITE_CONTENT.mobileSlider.slides,
             },
             telemetryBanner: { ...DEFAULT_SITE_CONTENT.telemetryBanner, ...(res.data.telemetryBanner || {}) },
+            customerSupport: { ...DEFAULT_SITE_CONTENT.customerSupport, ...(res.data.customerSupport || {}) },
           };
           try {
             localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));

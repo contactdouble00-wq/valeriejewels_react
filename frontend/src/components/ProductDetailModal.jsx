@@ -23,9 +23,11 @@ import {
 import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
+import { useSiteContent } from '../context/SiteContentContext';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { content: siteContent } = useSiteContent();
 
   // Find synchronous fallback from seed catalog to prevent empty screen or loading jump
   const fallbackProduct = initialProduct || SEED_PRODUCTS.find((p) => p.slug === productSlug) || null;
@@ -1250,14 +1252,21 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
                 {/* WhatsApp Concierge Assistance */}
                 <div className="pt-2">
-                  <a
-                    href="https://wa.me/917016347945"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-3 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center justify-center space-x-2 transition-colors cursor-pointer"
-                  >
-                    <span>Need sizing or styling advice? Chat on WhatsApp (+91 70163 47945)</span>
-                  </a>
+                  {(() => {
+                    const waNum = siteContent?.customerSupport?.whatsappNumber || '+91 70163 47945';
+                    const cleanWa = (waNum || '917016347945').replace(/\D/g, '');
+                    const inquiryMsg = encodeURIComponent(`Hello Valerie Jewels, I need sizing/styling advice regarding ${product?.title || 'your jewelry'}.`);
+                    return (
+                      <a
+                        href={`https://wa.me/${cleanWa}?text=${inquiryMsg}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-3 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+                      >
+                        <span>Need sizing or styling advice? Chat on WhatsApp ({waNum})</span>
+                      </a>
+                    );
+                  })()}
                 </div>
 
               </div>

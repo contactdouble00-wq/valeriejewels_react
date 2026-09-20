@@ -27,10 +27,24 @@ import {
   Zap,
   Percent,
   EyeOff,
+  MessageCircle,
+  Phone,
+  Mail,
+  MapPin,
+  Headphones,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
 const FACTORY_DEFAULTS = {
+  customerSupport: {
+    whatsappNumber: '+91 70163 47945',
+    drawerButtonText: 'Customer Care: +91 70163 47945',
+    phone: '+91 90234 22392',
+    email: 'orders@valeriejewels.in',
+    address: 'Patel Chowk, Rajkot, Gujarat',
+    hours: '7 days a week, 8:00 AM – 4:00 PM',
+    whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
+  },
   mobileSlider: {
     enabled: true,
     autoPlay: true,
@@ -197,6 +211,7 @@ export default function AdminHomepageView() {
             ? data.trustStrip
             : FACTORY_DEFAULTS.trustStrip,
           telemetryBanner: { ...FACTORY_DEFAULTS.telemetryBanner, ...(data.telemetryBanner || {}) },
+          customerSupport: { ...FACTORY_DEFAULTS.customerSupport, ...(data.customerSupport || {}) },
         });
       }
     } catch (err) {
@@ -387,6 +402,7 @@ export default function AdminHomepageView() {
 
   const sections = [
     { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
+    { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
     { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
     { id: 'jhumka', label: '4 Jhumka Boxes Spotlight', icon: Flame },
@@ -855,6 +871,225 @@ export default function AdminHomepageView() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 0.5. CUSTOMER CARE & WHATSAPP SUPPORT CONTROLS */}
+        {activeSection === 'customerSupport' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border/60 pb-5">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-caps uppercase tracking-wider font-bold mb-1">
+                  <MessageCircle className="w-3 h-3 text-emerald-600" />
+                  <span>Storefront & Drawer Live Sync</span>
+                </div>
+                <h3 className="text-lg font-editorial font-bold text-brand-tertiary">
+                  Customer Care & WhatsApp Support Controls
+                </h3>
+                <p className="text-xs text-brand-muted font-light max-w-2xl mt-0.5">
+                  Directly customize the green Customer Care button in the mobile sidebar drawer, the footer contact strip, product detail inquiry buttons, and pre-filled WhatsApp concierge messages.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://wa.me/${(formData.customerSupport?.whatsappNumber || '917016347945').replace(/\D/g, '')}?text=${encodeURIComponent(formData.customerSupport?.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry.')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Test WhatsApp Chat</span>
+                  <ExternalLink className="w-3 h-3 text-emerald-600/70" />
+                </a>
+              </div>
+            </div>
+
+            {/* Live Interactive Preview Box */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#FAF8FD] to-[#F2EBF9] border border-brand-border/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-caps uppercase tracking-wider text-brand-primary font-bold flex items-center space-x-1.5">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Live Mobile Drawer Button Preview</span>
+                </span>
+                <span className="text-[10px] text-brand-muted font-light">Updates in real-time as you type</span>
+              </div>
+
+              {/* Exact Mobile Drawer Bottom Simulation */}
+              <div className="max-w-md mx-auto p-4 rounded-xl bg-white border border-brand-border shadow-xs space-y-3">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70 text-center">
+                  Mobile Navigation Drawer — Bottom Action
+                </div>
+                <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-semibold flex items-center justify-center space-x-2 shadow-2xs">
+                  <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
+                  <span>{formData.customerSupport?.drawerButtonText || 'Customer Care: +91 70163 47945'}</span>
+                </div>
+                <div className="text-center text-[10px] text-brand-muted font-light">
+                  Target Link: <span className="font-mono text-emerald-700 font-semibold">https://wa.me/{(formData.customerSupport?.whatsappNumber || '917016347945').replace(/\D/g, '')}</span>
+                </div>
+              </div>
+
+              {/* Footer Strip Simulation */}
+              <div className="max-w-2xl mx-auto p-3.5 rounded-xl bg-white/80 border border-brand-border/60 text-xs text-brand-muted space-y-1.5">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70">
+                  Storefront Footer Contact Strip Preview
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-[11px]">
+                  <span>📍 {formData.customerSupport?.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
+                  <span>📞 {formData.customerSupport?.phone || '+91 90234 22392'}</span>
+                  <span className="text-emerald-700 font-semibold">💬 WA: {formData.customerSupport?.whatsappNumber || '+91 70163 47945'}</span>
+                  <span>✉️ {formData.customerSupport?.email || 'orders@valeriejewels.in'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Fields Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              {/* Field 1: Drawer Button Text */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Mobile Drawer Button Label</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.drawerButtonText || ''}
+                  onChange={(e) => updateNested('customerSupport', 'drawerButtonText', e.target.value)}
+                  placeholder="Customer Care: +91 70163 47945"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  The exact text displayed on the green WhatsApp quick-action button in the mobile slide-out menu.
+                </p>
+              </div>
+
+              {/* Field 2: WhatsApp Number */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp Support Number</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.whatsappNumber || ''}
+                  onChange={(e) => updateNested('customerSupport', 'whatsappNumber', e.target.value)}
+                  placeholder="+91 70163 47945"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  Include country code (e.g. <span className="font-mono">+91 70163 47945</span>). Non-digits are automatically filtered for wa.me links.
+                </p>
+              </div>
+
+              {/* Field 3: Pre-filled WhatsApp Welcome Message */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60 md:col-span-2">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Pre-filled WhatsApp Chat Message</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.whatsappMessage || ''}
+                  onChange={(e) => updateNested('customerSupport', 'whatsappMessage', e.target.value)}
+                  placeholder="Hello Valerie Jewels, I have an inquiry about my order / jewelry."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  When the customer clicks the WhatsApp button, this message will automatically pre-populate in their WhatsApp chat input.
+                </p>
+              </div>
+
+              {/* Field 4: Direct Phone Hotline */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <Phone className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Direct Calling Phone Hotline</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.phone || ''}
+                  onChange={(e) => updateNested('customerSupport', 'phone', e.target.value)}
+                  placeholder="+91 90234 22392"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  Appears in the footer contact strip and customer invoices for voice calls.
+                </p>
+              </div>
+
+              {/* Field 5: Support Email */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <Mail className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Concierge Support Email</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.customerSupport?.email || ''}
+                  onChange={(e) => updateNested('customerSupport', 'email', e.target.value)}
+                  placeholder="orders@valeriejewels.in"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  Official support mailbox for customer return queries and escalation emails.
+                </p>
+              </div>
+
+              {/* Field 6: Support Hours */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <Clock className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Support Operating Hours</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.hours || ''}
+                  onChange={(e) => updateNested('customerSupport', 'hours', e.target.value)}
+                  placeholder="7 days a week, 8:00 AM – 4:00 PM"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  Operating schedule displayed in the copyright strip and FAQ pages.
+                </p>
+              </div>
+
+              {/* Field 7: Atelier Address */}
+              <div className="space-y-1.5 p-4 rounded-xl bg-[#FAF9FC] border border-brand-border/60">
+                <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Atelier Location / City</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerSupport?.address || ''}
+                  onChange={(e) => updateNested('customerSupport', 'address', e.target.value)}
+                  placeholder="Patel Chowk, Rajkot, Gujarat"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+                />
+                <p className="text-[11px] text-brand-muted font-light">
+                  Displayed alongside the location pin icon in the footer and contact sections.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Action Save Bar */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/20">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-brand-primary" />
+                <span className="text-xs text-brand-tertiary font-medium">
+                  Changes made here publish live to all visitors upon clicking "Save Live Changes".
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold tracking-wider uppercase shadow-xs hover:bg-brand-primary-hover disabled:opacity-50 transition-all flex items-center space-x-1.5"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+              </button>
             </div>
           </div>
         )}

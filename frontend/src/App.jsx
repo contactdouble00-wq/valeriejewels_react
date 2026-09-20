@@ -900,29 +900,47 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             </div>
           </div>
 
-          {/* Contact Strip — sourced from valeriejewels.in */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2 text-xs text-brand-muted">
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-brand-tertiary">📍</span>
-              <span>Patel Chowk, Rajkot, Gujarat</span>
-            </div>
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="font-semibold text-brand-tertiary">📞</span>
-              <a href="tel:+919023422392" className="hover:text-brand-primary transition-colors">+91 90234 22392</a>
-              <span className="text-brand-border">·</span>
-              <a href="https://wa.me/917016347945" target="_blank" rel="noreferrer" className="hover:text-brand-primary transition-colors">WA: +91 70163 47945</a>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-brand-tertiary">✉️</span>
-              <a href="mailto:orders@valeriejewels.in" className="hover:text-brand-primary transition-colors">orders@valeriejewels.in</a>
-            </div>
-          </div>
+          {/* Contact Strip — dynamically loaded from site settings */}
+          {(() => {
+            const support = content?.customerSupport || {};
+            const phone = support.phone || '+91 90234 22392';
+            const cleanPhone = phone.replace(/\s+/g, '');
+            const waNum = support.whatsappNumber || '+91 70163 47945';
+            const cleanWa = (waNum || '917016347945').replace(/\D/g, '');
+            const email = support.email || 'orders@valeriejewels.in';
+            const address = support.address || 'Patel Chowk, Rajkot, Gujarat';
+            const hours = support.hours || '7 days a week, 8:00 AM – 4:00 PM';
+            const waMsg = encodeURIComponent(support.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.');
 
-          {/* Copyright */}
-          <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4 pt-4 border-t border-brand-border">
-            <div>© {new Date().getFullYear()} VALERIÉ. All rights reserved. Open hours: 7 days a week, 8:00 AM – 4:00 PM.</div>
-            <div className="text-[11px] tracking-wider uppercase">Hostinger Premium • React + PHP REST • Fastrr Checkout Ready</div>
-          </div>
+            return (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2 text-xs text-brand-muted">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-brand-tertiary">📍</span>
+                    <span>{address}</span>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <span className="font-semibold text-brand-tertiary">📞</span>
+                    <a href={`tel:${cleanPhone}`} className="hover:text-brand-primary transition-colors">{phone}</a>
+                    <span className="text-brand-border">·</span>
+                    <a href={`https://wa.me/${cleanWa}?text=${waMsg}`} target="_blank" rel="noreferrer" className="hover:text-brand-primary transition-colors">
+                      WA: {waNum}
+                    </a>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-brand-tertiary">✉️</span>
+                    <a href={`mailto:${email}`} className="hover:text-brand-primary transition-colors">{email}</a>
+                  </div>
+                </div>
+
+                {/* Copyright */}
+                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4 pt-4 border-t border-brand-border">
+                  <div>© {new Date().getFullYear()} VALERIÉ. All rights reserved. Open hours: {hours}.</div>
+                  <div className="text-[11px] tracking-wider uppercase">Hostinger Premium • React + PHP REST • Fastrr Checkout Ready</div>
+                </div>
+              </>
+            );
+          })()}
 
         </div>
       </footer>
