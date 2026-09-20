@@ -485,31 +485,22 @@ export default function AdminProductsView({ currentUser }) {
           >
             All
           </button>
-          {/* Jhumka Boxes special pill */}
-          <button
-            onClick={() => setCategoryFilter('jhumka-boxes')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap flex items-center space-x-1 ${categoryFilter === 'jhumka-boxes'
-              ? 'bg-rose-500 text-white font-semibold shadow-xs'
-              : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-              }`}
-          >
-            <span>🔥 4 Jhumka Boxes</span>
-          </button>
           {/* Dynamic category pills from API */}
-          {categories
-            .filter((c) => c.slug !== 'jhumka-boxes')
-            .map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryFilter(cat.slug)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${categoryFilter === cat.slug
-                  ? 'bg-brand-primary text-white font-semibold'
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.slug)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap flex items-center space-x-1 ${categoryFilter === cat.slug
+                ? 'bg-brand-primary text-white font-semibold shadow-xs'
+                : (cat.slug.includes('jhumk') || cat.id === 1)
+                  ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold'
                   : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
-                  }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+                }`}
+            >
+              {(cat.slug.includes('jhumk') || cat.id === 1) && <span>🔥</span>}
+              <span>{cat.name}</span>
+            </button>
+          ))}
         </div>
       </div>
 

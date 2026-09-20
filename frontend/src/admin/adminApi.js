@@ -185,9 +185,9 @@ export const adminApi = {
   },
 
   async updateCategory(categoryData) {
-    const res = await request('/admin/categories.php', {
-      method: 'PUT',
-      body: JSON.stringify(categoryData),
+    const res = await request('/admin/categories.php?action=update', {
+      method: 'POST',
+      body: JSON.stringify({ ...categoryData, action: 'update', _method: 'PUT' }),
     });
     return res.data;
   },
@@ -201,8 +201,9 @@ export const adminApi = {
   },
 
   async deleteCategory(categoryId) {
-    const res = await request(`/admin/categories.php?id=${categoryId}`, {
-      method: 'DELETE',
+    const res = await request(`/admin/categories.php?action=delete&id=${categoryId}`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id: categoryId, _method: 'DELETE' }),
     });
     return res.data;
   },

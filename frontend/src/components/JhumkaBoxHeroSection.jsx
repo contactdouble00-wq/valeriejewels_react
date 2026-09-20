@@ -19,12 +19,14 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
     }
   };
 
-  // Filter for the 4 Jhumka Boxes
+  // Filter for the Jhumka / Jhumkha Boxes (supports both Jhumka and Jhumkha)
   const jhumkaBoxes = products.filter(
     (p) =>
-      p.category_slug === 'jhumka-boxes' ||
-      (p.sku && p.sku.startsWith('VJ-JHM')) ||
-      (p.name && p.name.toLowerCase().includes('jhumka box'))
+      p.category_id === 1 ||
+      (p.category_slug && (p.category_slug.includes('jhumk') || p.category_slug.includes('box'))) ||
+      (p.category_name && p.category_name.toLowerCase().includes('jhumk')) ||
+      (p.sku && (p.sku.startsWith('VJ-BX-') || p.sku.startsWith('VJ-JHM'))) ||
+      (p.name && (p.name.toLowerCase().includes('jhumk') || p.name.toLowerCase().includes('box')))
   );
 
   if (!jhumkaBoxes || jhumkaBoxes.length === 0) {

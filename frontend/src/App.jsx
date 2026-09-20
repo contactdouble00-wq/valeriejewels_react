@@ -404,20 +404,24 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <nav className="hidden lg:block border-t border-brand-border/60 bg-[#FAF7FC]/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-center space-x-6 xl:space-x-8 h-10 text-[11px] font-caps tracking-[0.14em] uppercase text-brand-tertiary/80 whitespace-nowrap">
-              {/* Highlighted Featured Pill matching Everlasting (only if category is active) */}
-              {categories.some((cat) => cat.slug === 'jhumka-boxes') && (
-                <a
-                  href="#jhumka-boxes"
-                  onClick={() => setSelectedCategory('jhumka-boxes')}
-                  className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${
-                    selectedCategory === 'jhumka-boxes'
-                      ? 'bg-brand-primary text-white font-bold shadow-xs'
-                      : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
-                  }`}
-                >
-                  <span>✨ 4 Jhumka Boxes</span>
-                </a>
-              )}
+              {/* Highlighted Featured Pill matching Everlasting (uses dynamic category name) */}
+              {(() => {
+                const featuredCat = categories.find((cat) => cat.slug.includes('jhumk') || cat.id === 1) || categories[0];
+                if (!featuredCat) return null;
+                return (
+                  <a
+                    href="#jhumka-boxes"
+                    onClick={() => setSelectedCategory(featuredCat.slug)}
+                    className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${
+                      selectedCategory === featuredCat.slug
+                        ? 'bg-brand-primary text-white font-bold shadow-xs'
+                        : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
+                    }`}
+                  >
+                    <span>✨ {featuredCat.name}</span>
+                  </a>
+                );
+              })()}
 
               <a
                 href="#catalog"
@@ -430,7 +434,10 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               </a>
 
               {categories
-                .filter((cat) => cat.slug !== 'jhumka-boxes')
+                .filter((cat) => {
+                  const featuredCat = categories.find((c) => c.slug.includes('jhumk') || c.id === 1) || categories[0];
+                  return cat.id !== featuredCat?.id;
+                })
                 .map((cat) => (
                   <a
                     key={cat.id}

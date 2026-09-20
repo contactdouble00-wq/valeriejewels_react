@@ -118,34 +118,41 @@ export default function MobileSidebarDrawer({
           {/* Scrollable Navigation Body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
-            {/* 1. Viral Hero Feature: 4 Jhumka Boxes Spotlight (Everlasting Top Feature Style) */}
-            <div
-              onClick={() => {
-                handleCategoryClick('jhumka-boxes');
-                handleScrollToSection('jhumka-boxes');
-              }}
-              className="group p-3 rounded-2xl bg-gradient-to-r from-[#FAF4FF] to-[#FFF0F5] border border-brand-primary/20 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-brand-primary text-white flex items-center justify-center shadow-xs">
-                  <Flame className="w-4 h-4 fill-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-sans text-xs font-bold text-brand-tertiary group-hover:text-brand-primary transition-colors">
-                      The 4 Jhumka Boxes
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-rose-500 text-white leading-none">
-                      BESTSELLER
-                    </span>
+            {/* 1. Viral Hero Feature: Featured Spotlight */}
+            {(() => {
+              const featuredCat = categories.find((c) => c.slug.includes('jhumk') || c.id === 1) || categories[0];
+              const catSlug = featuredCat?.slug || 'jhumka-boxes';
+              const catName = featuredCat?.name || 'Jhumkha Box';
+              return (
+                <div
+                  onClick={() => {
+                    handleCategoryClick(catSlug);
+                    handleScrollToSection('jhumka-boxes');
+                  }}
+                  className="group p-3 rounded-2xl bg-gradient-to-r from-[#FAF4FF] to-[#FFF0F5] border border-brand-primary/20 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                      <Flame className="w-4 h-4 fill-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-sans text-xs font-bold text-brand-tertiary group-hover:text-brand-primary transition-colors">
+                          {catName}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-rose-500 text-white leading-none">
+                          BESTSELLER
+                        </span>
+                      </div>
+                      <p className="text-[10.5px] text-brand-muted font-light mt-0.5">
+                        Curated sets • Anti-tarnish gold polish
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10.5px] text-brand-muted font-light mt-0.5">
-                    Curated sets • Anti-tarnish gold polish
-                  </p>
+                  <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-brand-primary group-hover:translate-x-0.5 transition-transform" />
-            </div>
+              );
+            })()}
 
             {/* 2. Main Jewelry Collections Menu (Clean Plus Jakarta Sans, Normal Spacing) */}
             <div className="space-y-1">

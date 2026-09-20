@@ -75,14 +75,54 @@ if ($method === 'POST' && empty($action)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DELETE — Delete category (admin only, blocks if products assigned)
+// ─────────────────────────────────────────────────────────────────────────────
+$isDeleteAction = ($method === 'DELETE')
+    || ($method === 'POST' && in_array($action, ['delete', 'delete_category'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_category'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
+
+if ($isDeleteAction) {
+    if ($adminUser['role'] !== 'admin') {
+        ApiResponse::error('Permission denied: Only admins can delete categories', 403);
+    }
+
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($input['id'] ?? 0);
+    if ($id <= 0) {
+        ApiResponse::error('Category ID required', 422);
+    }
+
+    // Block if products are assigned
+    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category_id = ?");
+    $countStmt->execute([$id]);
+    $productCount = (int)$countStmt->fetchColumn();
+
+    if ($productCount > 0) {
+        ApiResponse::error("Cannot delete: {$productCount} product(s) are assigned to this category. Reassign them first.", 409);
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM categories WHERE id = ?");
+    $stmt->execute([$id]);
+
+    AdminAuth::logActivity($adminUser['id'], 'delete_category', 'category', $id);
+
+    ApiResponse::success(['id' => $id, 'deleted' => true], 'Category deleted');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PUT — Update category (admin only)
 // ─────────────────────────────────────────────────────────────────────────────
-if ($method === 'PUT') {
+$isUpdateAction = ($method === 'PUT')
+    || ($method === 'POST' && in_array($action, ['update', 'update_category'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['update', 'update_category'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'PUT');
+
+if ($isUpdateAction) {
     if ($adminUser['role'] !== 'admin') {
         ApiResponse::error('Permission denied: Only admins can edit categories', 403);
     }
 
-    $id = (int)($input['id'] ?? 0);
+    $id = (int)($input['id'] ?? ($_GET['id'] ?? 0));
     if ($id <= 0) {
         ApiResponse::error('Category ID required', 422);
     }
@@ -117,7 +157,7 @@ if ($method === 'PUT') {
 
     AdminAuth::logActivity($adminUser['id'], 'update_category', 'category', $id, ['name' => $name]);
 
-    ApiResponse::success(['id' => $id], 'Category updated');
+    ApiResponse::success(['id' => $id, 'name' => $name, 'slug' => $slug], 'Category updated');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,34 +203,4 @@ if ($action === 'toggle_active') {
     AdminAuth::logActivity($adminUser['id'], 'toggle_category_active', 'category', $id, ['is_active' => $isActive]);
 
     ApiResponse::success(['id' => $id, 'is_active' => $isActive], 'Category visibility updated');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DELETE — Delete category (admin only, blocks if products assigned)
-// ─────────────────────────────────────────────────────────────────────────────
-if ($method === 'DELETE') {
-    if ($adminUser['role'] !== 'admin') {
-        ApiResponse::error('Permission denied: Only admins can delete categories', 403);
-    }
-
-    $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)($input['id'] ?? 0);
-    if ($id <= 0) {
-        ApiResponse::error('Category ID required', 422);
-    }
-
-    // Block if products are assigned
-    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category_id = ?");
-    $countStmt->execute([$id]);
-    $productCount = (int)$countStmt->fetchColumn();
-
-    if ($productCount > 0) {
-        ApiResponse::error("Cannot delete: {$productCount} product(s) are assigned to this category. Reassign them first.", 409);
-    }
-
-    $stmt = $pdo->prepare("DELETE FROM categories WHERE id = ?");
-    $stmt->execute([$id]);
-
-    AdminAuth::logActivity($adminUser['id'], 'delete_category', 'category', $id);
-
-    ApiResponse::success(null, 'Category deleted');
 }
