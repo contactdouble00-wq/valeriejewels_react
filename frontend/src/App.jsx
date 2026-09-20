@@ -823,8 +823,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         initialOrderNumber={activeTrackingOrderNumber}
       />
 
-      {/* Mobile Sticky CTA Bar (hidden when full-screen PDP or full-screen Checkout is active) */}
-      {!activePdpSlug && !isCheckoutOpen && (
+      {/* Mobile Sticky CTA Bar (hidden when full-screen PDP, full-screen Checkout, or full-screen Tracking is active) */}
+      {!activePdpSlug && !isCheckoutOpen && !isTrackingOpen && (
         <div className="sm:hidden sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-brand-border px-4 py-3 text-brand-tertiary flex items-center justify-between shadow-2xl">
           <div>
             <span className="text-[10px] font-caps uppercase tracking-wider text-brand-primary block font-semibold">Shopping Bag</span>
