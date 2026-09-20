@@ -231,11 +231,10 @@ export default function AdminPoliciesView() {
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`p-4 rounded-2xl border flex items-center space-x-3 text-xs ${
-            feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}
+          className={`p-4 rounded-2xl border flex items-center space-x-3 text-xs ${feedback.type === 'success'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
         >
           {feedback.type === 'success' ? (
             <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -351,18 +350,16 @@ export default function AdminPoliciesView() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center space-x-2 transition-all ${
-                isActive
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-white text-brand-tertiary/75 hover:bg-brand-surface border border-brand-border/70'
-              }`}
+              className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center space-x-2 transition-all ${isActive
+                ? 'bg-brand-primary text-white shadow-sm'
+                : 'bg-white text-brand-tertiary/75 hover:bg-brand-surface border border-brand-border/70'
+                }`}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-muted'}`} />
               <span>{tab.label}</span>
               <span
-                className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-brand-surface text-brand-muted border border-brand-border'
-                }`}
+                className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-brand-surface text-brand-muted border border-brand-border'
+                  }`}
               >
                 {tab.badge}
               </span>
