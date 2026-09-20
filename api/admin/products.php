@@ -111,7 +111,11 @@ if ($method === 'GET') {
             p.*, 
             c.name AS category_name, 
             c.slug AS category_slug,
-            (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image,
+            COALESCE(
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, display_order ASC, id ASC LIMIT 1)
+            ) AS primary_image,
             (SELECT COUNT(*) FROM product_variants WHERE product_id = p.id) AS variant_count
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
@@ -441,7 +445,7 @@ if ($isUpdateAction) {
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => $input['material'] ?? '',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
-        ':vid'        => $input['video_url'] ?? null,
+        ':vid'        => !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $input['video_url']) : null,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
         ':meta_t'     => $input['meta_title'] ?? '',
         ':meta_d'     => $input['meta_description'] ?? '',
@@ -451,10 +455,27 @@ if ($isUpdateAction) {
     if (isset($input['images']) && is_array($input['images'])) {
         $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$id]);
         $imgStmt = $pdo->prepare("INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary) VALUES (?, ?, ?, ?, ?)");
+        
+        $explicitPrimaryIndex = -1;
+        $firstPhotoIndex = -1;
+        foreach ($input['images'] as $idx => $img) {
+            $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
+            $isVid = preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $u);
+            if (is_array($img) && !empty($img['is_primary'])) {
+                $explicitPrimaryIndex = $idx;
+            }
+            if ($firstPhotoIndex === -1 && !$isVid) {
+                $firstPhotoIndex = $idx;
+            }
+        }
+        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : 0);
+
         foreach ($input['images'] as $idx => $img) {
             $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
             if (!empty($imgUrl)) {
-                $imgStmt->execute([$id, $imgUrl, $input['name'] ?? 'Product', $idx, $idx === 0 ? 1 : 0]);
+                $imgUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $imgUrl);
+                $isPri = ($idx === $targetPrimaryIndex) ? 1 : 0;
+                $imgStmt->execute([$id, $imgUrl, $input['name'] ?? 'Product', $idx, $isPri]);
             }
         }
     }
@@ -506,7 +527,7 @@ if ($method === 'POST') {
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => $input['material'] ?? 'Stainless Steel / 18K Gold PVD',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
-        ':vid'        => $input['video_url'] ?? null,
+        ':vid'        => !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $input['video_url']) : null,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
         ':meta_t'     => $input['meta_title'] ?? ($name . ' | Valerie Jewels'),
         ':meta_d'     => $input['meta_description'] ?? ($input['short_description'] ?? ''),
@@ -517,10 +538,27 @@ if ($method === 'POST') {
     // Insert Images if provided
     if (!empty($input['images']) && is_array($input['images'])) {
         $imgStmt = $pdo->prepare("INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary) VALUES (?, ?, ?, ?, ?)");
+        
+        $explicitPrimaryIndex = -1;
+        $firstPhotoIndex = -1;
+        foreach ($input['images'] as $idx => $img) {
+            $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
+            $isVid = preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $u);
+            if (is_array($img) && !empty($img['is_primary'])) {
+                $explicitPrimaryIndex = $idx;
+            }
+            if ($firstPhotoIndex === -1 && !$isVid) {
+                $firstPhotoIndex = $idx;
+            }
+        }
+        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : 0);
+
         foreach ($input['images'] as $idx => $img) {
             $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
             if (!empty($imgUrl)) {
-                $imgStmt->execute([$newId, $imgUrl, $name, $idx, $idx === 0 ? 1 : 0]);
+                $imgUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $imgUrl);
+                $isPri = ($idx === $targetPrimaryIndex) ? 1 : 0;
+                $imgStmt->execute([$newId, $imgUrl, $name, $idx, $isPri]);
             }
         }
     }

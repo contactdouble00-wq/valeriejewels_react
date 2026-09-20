@@ -69,7 +69,7 @@ if (!move_uploaded_file($file['tmp_name'], $destination)) {
 // Compute public URL
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8000';
-$publicUrl = "{$protocol}://{$host}/uploads/{$filename}";
+$publicUrl = "{$protocol}://{$host}/api/uploads/{$filename}";
 
 AdminAuth::logActivity($adminUser['id'], 'upload_media', 'media', $filename, [
     'mime'      => $mime,

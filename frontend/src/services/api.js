@@ -35,6 +35,7 @@ async function handleResponse(response) {
 import { SEED_CATEGORIES, SEED_PRODUCTS, SEED_BUNDLES } from '../data/seedCatalog';
 import { DEFAULT_POLICIES } from '../data/defaultPolicies';
 import { DEFAULT_FAQS_DATA } from '../data/defaultFaqs';
+import { normalizeProductMedia } from '../utils/mediaUtils';
 
 function filterSeedProducts(params = {}) {
   let list = [...SEED_PRODUCTS];
@@ -179,7 +180,7 @@ export const apiService = {
         const result = await response.json();
         if (Array.isArray(result.data)) {
           return {
-            products: result.data,
+            products: result.data.map(normalizeProductMedia),
             meta: result.meta || {},
           };
         }
@@ -187,7 +188,11 @@ export const apiService = {
     } catch (err) {
       console.warn('API getProducts error, falling back to seed products:', err);
     }
-    return filterSeedProducts(params);
+    const fallback = filterSeedProducts(params);
+    return {
+      ...fallback,
+      products: fallback.products.map(normalizeProductMedia),
+    };
   },
 
   /**
@@ -207,13 +212,13 @@ export const apiService = {
       });
       if (response.ok) {
         const result = await response.json();
-        if (result.data) return result.data;
+        if (result.data) return normalizeProductMedia(result.data);
       }
     } catch (err) {
       console.warn('API getProductDetail error, falling back to seed:', err);
     }
     const found = SEED_PRODUCTS.find((p) => (isId ? String(p.id) === String(slugOrId) : p.slug === slugOrId));
-    return found || null;
+    return found ? normalizeProductMedia(found) : null;
   },
 
   /**

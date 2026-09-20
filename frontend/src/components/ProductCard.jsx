@@ -1,6 +1,7 @@
 import React from 'react';
 import { Star, ShoppingBag, Eye, Sparkles, Heart, Film } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
+import { normalizeMediaUrl } from '../utils/mediaUtils';
 
 export default function ProductCard({ product, onQuickView, onAddToCart }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -28,8 +29,15 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer"
         >
           <img
-            src={primary_image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'}
+            src={normalizeMediaUrl(primary_image) || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'}
             alt={name}
+            onError={(e) => {
+              if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+              } else {
+                e.target.src = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
+              }
+            }}
             className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
             loading="lazy"
           />

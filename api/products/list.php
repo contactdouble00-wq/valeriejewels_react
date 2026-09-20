@@ -104,12 +104,10 @@ try {
             p.video_url,
             p.created_at,
             ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage,
-            (
-                SELECT image_url 
-                FROM product_images 
-                WHERE product_id = p.id 
-                ORDER BY is_primary DESC, display_order ASC, id ASC 
-                LIMIT 1
+            COALESCE(
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, display_order ASC, id ASC LIMIT 1)
             ) AS primary_image
         FROM products p
         JOIN categories c ON p.category_id = c.id
@@ -138,6 +136,13 @@ try {
             }
         } else {
             $prod['pairs_count'] = (int)$prod['pairs_count'];
+        }
+
+        if (!empty($prod['primary_image'])) {
+            $prod['primary_image'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $prod['primary_image']);
+        }
+        if (!empty($prod['video_url'])) {
+            $prod['video_url'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $prod['video_url']);
         }
     }
     unset($prod);

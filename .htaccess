@@ -34,7 +34,10 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
-  # 1. Pass PHP API requests straight to the backend without rewriting to index.html
+  # 1. Direct legacy or root /uploads/ requests directly to /api/uploads/
+  RewriteRule ^uploads/(.*)$ api/uploads/$1 [L,NC]
+
+  # 2. Pass PHP API requests straight to the backend without rewriting to index.html
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
   RewriteRule ^ - [L]

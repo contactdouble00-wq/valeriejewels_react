@@ -3,6 +3,8 @@
  * Handles authenticated communication with /api/admin/* endpoints using JWT.
  */
 
+import { normalizeProductMedia, normalizeMediaUrl } from '../utils/mediaUtils';
+
 function getApiBaseUrl() {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
@@ -106,12 +108,12 @@ export const adminApi = {
   async getProducts(params = {}) {
     const qs = new URLSearchParams(params).toString();
     const res = await request(`/admin/products.php${qs ? '?' + qs : ''}`);
-    return res.data;
+    return Array.isArray(res.data) ? res.data.map(normalizeProductMedia) : res.data;
   },
 
   async getProduct(id) {
     const res = await request(`/admin/products.php?id=${id}`);
-    return res.data;
+    return res.data ? normalizeProductMedia(res.data) : res.data;
   },
 
   async createProduct(productData) {
@@ -357,6 +359,9 @@ export const adminApi = {
       method: 'POST',
       body: formData,
     });
+    if (res.data?.url) {
+      res.data.url = normalizeMediaUrl(res.data.url);
+    }
     return res.data;
   },
 

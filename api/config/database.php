@@ -434,6 +434,34 @@ class Database {
                 }
             }
 
+            // Auto-migrate any legacy /uploads/ paths to /api/uploads/ in SQLite database
+            try {
+                $migratedUploads = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key = 'uploads_path_migrated_v2'")->fetchColumn();
+                if ($migratedUploads !== '1') {
+                    $pdo->exec("UPDATE product_images SET image_url = REPLACE(image_url, '/uploads/', '/api/uploads/') WHERE image_url LIKE '%/uploads/%' AND image_url NOT LIKE '%/api/uploads/%'");
+                    $pdo->exec("UPDATE products SET video_url = REPLACE(video_url, '/uploads/', '/api/uploads/') WHERE video_url LIKE '%/uploads/%' AND video_url NOT LIKE '%/api/uploads/%'");
+                    $pdo->exec("UPDATE site_settings SET setting_value = REPLACE(setting_value, '/uploads/', '/api/uploads/') WHERE setting_value LIKE '%/uploads/%' AND setting_value NOT LIKE '%/api/uploads/%'");
+
+                    // Fix primary image for products where video was wrongly assigned as is_primary = 1
+                    $allProductIds = $pdo->query("SELECT id FROM products")->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($allProductIds as $pId) {
+                        $prim = $pdo->query("SELECT id, image_url FROM product_images WHERE product_id = {$pId} AND is_primary = 1 LIMIT 1")->fetch();
+                        if ($prim && preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $prim['image_url'])) {
+                            // Demote video
+                            $pdo->exec("UPDATE product_images SET is_primary = 0 WHERE id = {$prim['id']}");
+                            // Promote first non-video photo
+                            $firstPhoto = $pdo->query("SELECT id FROM product_images WHERE product_id = {$pId} AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' ORDER BY display_order ASC, id ASC LIMIT 1")->fetch();
+                            if ($firstPhoto) {
+                                $pdo->exec("UPDATE product_images SET is_primary = 1 WHERE id = {$firstPhoto['id']}");
+                            }
+                        }
+                    }
+                    $pdo->exec("INSERT OR REPLACE INTO site_settings (setting_key, setting_value) VALUES ('uploads_path_migrated_v2', '1')");
+                }
+            } catch (Throwable $me) {
+                error_log('Uploads migration notice: ' . $me->getMessage());
+            }
+
             self::seedAdminUser($pdo);
             self::seedDefaultSiteSettings($pdo);
             self::seedDefaultCatalogSqlite($pdo);

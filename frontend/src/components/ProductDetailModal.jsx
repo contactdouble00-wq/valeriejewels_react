@@ -1,25 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  X,
-  Star,
-  ShieldCheck,
-  Truck,
-  Sparkles,
-  ShoppingBag,
-  Check,
-  Heart,
-  ChevronRight,
-  ChevronLeft,
-  Share2,
-  ArrowLeft,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize2,
-  Film,
-  Zap
+  X, Star, ShieldCheck, Truck, RefreshCw, ShoppingBag, Heart,
+  Sparkles, Check, ChevronRight, Share2, HelpCircle, AlertCircle,
+  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2
 } from 'lucide-react';
+import { normalizeMediaUrl } from '../utils/mediaUtils';
 import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
@@ -208,7 +193,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     let list = [];
     if (product?.images && product.images.length > 0) {
       list = product.images.map((img, idx) => {
-        const url = typeof img === 'string' ? img : (img.image_url || img.url);
+        const rawUrl = typeof img === 'string' ? img : (img.image_url || img.url);
+        const url = normalizeMediaUrl(rawUrl);
         const isVideo = img.media_type === 'video' || (typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url));
         return {
           id: img.id || `media-${idx}`,
@@ -219,30 +205,35 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         };
       });
     } else if (product?.primary_image) {
+      const normPri = normalizeMediaUrl(product.primary_image);
+      const isPriVideo = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(normPri);
       list = [
         {
           id: 'primary-0',
-          url: product.primary_image,
+          url: normPri,
           alt: product.name,
-          type: 'image',
+          type: isPriVideo ? 'video' : 'image',
           is_primary: 1,
         },
       ];
     }
 
     // Seamlessly include product video_url if not already in list
-    if (product?.video_url && !list.some((m) => m.url === product.video_url)) {
-      const vidObj = {
-        id: 'product-reel',
-        url: product.video_url,
-        alt: `${product.name} Reel Showcase`,
-        type: 'video',
-        is_primary: 0,
-      };
-      if (list.length > 1) {
-        list.splice(1, 0, vidObj);
-      } else {
-        list.push(vidObj);
+    if (product?.video_url) {
+      const normVid = normalizeMediaUrl(product.video_url);
+      if (!list.some((m) => m.url === normVid)) {
+        const vidObj = {
+          id: 'product-reel',
+          url: normVid,
+          alt: `${product.name} Reel Showcase`,
+          type: 'video',
+          is_primary: 0,
+        };
+        if (list.length > 1) {
+          list.splice(1, 0, vidObj);
+        } else {
+          list.push(vidObj);
+        }
       }
     }
 

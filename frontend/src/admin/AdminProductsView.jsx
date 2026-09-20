@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { adminApi } from './adminApi';
+import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 
 // ─── Sortable Media Tile (Balanced 1:1 Square & Reels Support) ──────────
 function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
@@ -32,8 +33,9 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const url = typeof item === 'string' ? item : (item.image_url || item.url);
-  const isVideo = item.media_type === 'video' || (typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url));
+  const rawUrl = typeof item === 'string' ? item : (item.image_url || item.url);
+  const url = normalizeMediaUrl(rawUrl);
+  const isVideo = item.media_type === 'video' || isVideoMedia(url);
   const isPrimary = item.is_primary || (!isVideo && index === 0);
 
   return (
@@ -57,7 +59,16 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
         </div>
       ) : (
         <div className="w-full h-full bg-gray-50 relative">
-          <img src={url} alt={`Product media ${index + 1}`} className="w-full h-full object-cover" />
+          <img
+            src={url}
+            alt={`Product media ${index + 1}`}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+              }
+            }}
+          />
           {isPrimary && (
             <span className="absolute bottom-0 inset-x-0 text-center text-[7.5px] font-bold bg-brand-primary text-white py-0.5">
               PRIMARY
@@ -218,16 +229,33 @@ export default function AdminProductsView({ currentUser }) {
     } catch {
       p = product;
     }
-    // Ensure media array contains video if video_url is present
+    // Ensure media array contains video if video_url is present and normalize all URLs
     let imgs = p.images ? [...p.images] : [];
-    if (p.video_url && !imgs.some((img) => (typeof img === 'string' ? img : img.image_url) === p.video_url)) {
-      imgs.push({
-        id: `reel-${Date.now()}`,
-        image_url: p.video_url,
-        media_type: 'video',
-        display_order: imgs.length,
-        is_primary: 0,
-      });
+    imgs = imgs.map((img, i) => {
+      const u = normalizeMediaUrl(typeof img === 'string' ? img : (img.image_url || img.url));
+      const isVideo = isVideoMedia(img) || isVideoMedia(u);
+      return {
+        ...(typeof img === 'object' ? img : {}),
+        id: img.id || `media-${i}`,
+        image_url: u,
+        url: u,
+        media_type: isVideo ? 'video' : 'image',
+        display_order: img.display_order ?? i,
+        is_primary: img.is_primary ?? 0,
+      };
+    });
+    if (p.video_url) {
+      const normVid = normalizeMediaUrl(p.video_url);
+      if (!imgs.some((img) => (typeof img === 'string' ? img : img.image_url) === normVid)) {
+        imgs.push({
+          id: `reel-${Date.now()}`,
+          image_url: normVid,
+          url: normVid,
+          media_type: 'video',
+          display_order: imgs.length,
+          is_primary: 0,
+        });
+      }
     }
     setEditingProduct({ ...p, images: imgs });
     setMediaUrlInput('');
@@ -244,11 +272,23 @@ export default function AdminProductsView({ currentUser }) {
       // Keep video_url synced with the first video reel in images if present
       const firstReel = editingProduct.images?.find((m) => {
         const u = typeof m === 'string' ? m : (m.image_url || m.url);
-        return m.media_type === 'video' || (typeof u === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(u));
+        return m.media_type === 'video' || isVideoMedia(u);
+      });
+      const normImages = (editingProduct.images || []).map((m, i) => {
+        const u = normalizeMediaUrl(typeof m === 'string' ? m : (m.image_url || m.url));
+        return {
+          ...(typeof m === 'object' ? m : {}),
+          image_url: u,
+          url: u,
+          media_type: m.media_type || (isVideoMedia(u) ? 'video' : 'image'),
+          display_order: m.display_order ?? i,
+          is_primary: m.is_primary ? 1 : 0,
+        };
       });
       const payload = {
         ...editingProduct,
-        video_url: firstReel ? (typeof firstReel === 'string' ? firstReel : (firstReel.image_url || firstReel.url)) : (editingProduct.video_url || null),
+        images: normImages,
+        video_url: firstReel ? normalizeMediaUrl(typeof firstReel === 'string' ? firstReel : (firstReel.image_url || firstReel.url)) : (editingProduct.video_url || null),
       };
 
       if (payload.id) {
@@ -277,16 +317,18 @@ export default function AdminProductsView({ currentUser }) {
       const res = await adminApi.uploadMedia(file);
       const isVideo = res.is_video || file.type.startsWith('video/');
       const existing = editingProduct.images || [];
+      const normUrl = normalizeMediaUrl(res.url);
       const newMedia = {
         id: `media-${Date.now()}`,
-        image_url: res.url,
+        image_url: normUrl,
+        url: normUrl,
         media_type: isVideo ? 'video' : 'image',
         display_order: existing.length,
         is_primary: existing.length === 0 && !isVideo ? 1 : 0,
       };
       setEditingProduct((prev) => ({
         ...prev,
-        video_url: isVideo ? res.url : (prev.video_url || null),
+        video_url: isVideo ? normUrl : (prev.video_url || null),
         images: [...existing, newMedia],
       }));
       showToast(isVideo ? '🎬 Vertical video reel added' : '📸 Portrait image added');
@@ -299,13 +341,15 @@ export default function AdminProductsView({ currentUser }) {
   };
 
   const handleAddMediaUrl = () => {
-    const url = mediaUrlInput.trim();
-    if (!url) return;
-    const isVideo = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
+    const rawUrl = mediaUrlInput.trim();
+    if (!rawUrl) return;
+    const url = normalizeMediaUrl(rawUrl);
+    const isVideo = isVideoMedia(url);
     const existing = editingProduct.images || [];
     const newMedia = {
       id: `media-${Date.now()}`,
       image_url: url,
+      url,
       media_type: isVideo ? 'video' : 'image',
       display_order: existing.length,
       is_primary: existing.length === 0 && !isVideo ? 1 : 0,
@@ -540,11 +584,34 @@ export default function AdminProductsView({ currentUser }) {
                     <tr key={p.id} className="hover:bg-[#FAF8FC] transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-3">
-                          <img
-                            src={p.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80'}
-                            alt={p.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-brand-border shrink-0"
-                          />
+                          {(() => {
+                            const rawThumb = p.primary_image || (p.images && p.images.find((img) => !isVideoMedia(img))?.image_url);
+                            const thumbUrl = normalizeMediaUrl(rawThumb);
+                            const isThumbVideo = isVideoMedia(thumbUrl);
+
+                            if (isThumbVideo) {
+                              return (
+                                <div className="w-12 h-12 rounded-xl bg-[#181420] text-brand-primary flex flex-col items-center justify-center shrink-0 border border-brand-border relative overflow-hidden">
+                                  <Play className="w-4 h-4 fill-white text-white" />
+                                  <span className="text-[7px] font-bold text-white uppercase tracking-tighter mt-0.5">REEL</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <img
+                                src={thumbUrl || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80'}
+                                alt={p.name}
+                                onError={(e) => {
+                                  if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                                    e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                                  } else {
+                                    e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80';
+                                  }
+                                }}
+                                className="w-12 h-12 rounded-xl object-cover border border-brand-border shrink-0"
+                              />
+                            );
+                          })()}
                           <div className="min-w-0 max-w-xs">
                             <div className="font-semibold text-brand-tertiary truncate" title={p.name}>{p.name}</div>
                             <div className="text-[10px] text-brand-muted font-mono">{p.sku}</div>

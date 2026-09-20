@@ -102,12 +102,10 @@ try {
             p.mrp,
             p.price,
             ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage,
-            (
-                SELECT image_url 
-                FROM product_images 
-                WHERE product_id = p.id 
-                ORDER BY is_primary DESC, display_order ASC, id ASC 
-                LIMIT 1
+            COALESCE(
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, display_order ASC, id ASC LIMIT 1)
             ) AS primary_image
         FROM products p
         WHERE p.category_id = :cat_id AND p.id != :prod_id AND p.is_active = 1
@@ -119,6 +117,24 @@ try {
         ':prod_id' => $productId,
     ]);
     $relatedProducts = $relStmt->fetchAll();
+
+    foreach ($images as &$img) {
+        if (!empty($img['image_url'])) {
+            $img['image_url'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $img['image_url']);
+        }
+    }
+    unset($img);
+
+    if (!empty($product['video_url'])) {
+        $product['video_url'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $product['video_url']);
+    }
+
+    foreach ($relatedProducts as &$rel) {
+        if (!empty($rel['primary_image'])) {
+            $rel['primary_image'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $rel['primary_image']);
+        }
+    }
+    unset($rel);
 
     $product['images']           = $images;
     $product['variants']         = $variants;
