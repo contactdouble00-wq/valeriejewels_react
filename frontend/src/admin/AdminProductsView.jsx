@@ -220,6 +220,21 @@ export default function AdminProductsView({ currentUser }) {
     }
   };
 
+  // ── Quick Toggle Bestseller Section Spotlight ─────────────────────────────
+  const handleToggleBestseller = async (p) => {
+    const updatedStatus = Number(p.is_bestseller) === 1 ? 0 : 1;
+    try {
+      await adminApi.updateProduct({ ...p, is_bestseller: updatedStatus });
+      setProducts((prev) =>
+        prev.map((item) => (item.id === p.id ? { ...item, is_bestseller: updatedStatus } : item))
+      );
+      showToast(updatedStatus ? `⭐ "${p.name}" added to Bestseller Section` : `Removed "${p.name}" from Bestseller Section`);
+      notifyCatalogChange();
+    } catch (err) {
+      showToast(err.message || 'Failed to update bestseller status');
+    }
+  };
+
   // ── Open Editor ───────────────────────────────────────────────────────────
   const handleOpenEdit = async (product) => {
     let p = product;
@@ -491,7 +506,7 @@ export default function AdminProductsView({ currentUser }) {
               setEditingProduct({
                 name: '', sku: '', price: '', mrp: '', cost_price: '',
                 category_id: categories[0]?.id || 1,
-                stock_quantity: 50, is_anti_tarnish: 1,
+                stock_quantity: 50, is_anti_tarnish: 0,
                 pairs_count: 6,
                 material: '18K Gold Plated Stainless Steel',
                 is_bestseller: 0, short_description: '', description: '',
@@ -681,14 +696,19 @@ export default function AdminProductsView({ currentUser }) {
                           </div>
                         )}
                         <div>
-                          {Number(p.is_bestseller) === 1 ? (
-                            <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-700">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>Bestseller</span>
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-brand-muted">Standard</span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBestseller(p)}
+                            className={`inline-flex items-center space-x-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                              Number(p.is_bestseller) === 1
+                                ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 shadow-2xs'
+                                : 'bg-gray-100 hover:bg-brand-primary-light text-gray-500 hover:text-brand-primary border border-transparent'
+                            }`}
+                            title="Click to toggle Bestseller Section spotlight"
+                          >
+                            <Star className={`w-3 h-3 ${Number(p.is_bestseller) === 1 ? 'fill-amber-400 text-amber-500' : 'text-gray-400'}`} />
+                            <span>{Number(p.is_bestseller) === 1 ? '★ Bestseller Section' : 'Add to Bestsellers'}</span>
+                          </button>
                         </div>
                       </td>
 
@@ -1042,16 +1062,7 @@ export default function AdminProductsView({ currentUser }) {
                     onChange={(e) => setEditingProduct({ ...editingProduct, is_bestseller: e.target.checked ? 1 : 0 })}
                     className="rounded text-brand-primary focus:ring-brand-primary"
                   />
-                  <span className="text-brand-tertiary font-medium">Bestseller Spotlight Flag</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editingProduct.is_anti_tarnish}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, is_anti_tarnish: e.target.checked ? 1 : 0 })}
-                    className="rounded text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span className="text-brand-tertiary font-medium">18K Anti-Tarnish Certified</span>
+                  <span className="text-brand-tertiary font-medium">Add to Bestselling Section (Homepage Spotlight)</span>
                 </label>
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input

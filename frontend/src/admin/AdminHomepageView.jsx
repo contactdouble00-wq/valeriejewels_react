@@ -438,7 +438,7 @@ export default function AdminHomepageView() {
     { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
     { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
-    { id: 'jhumka', label: '4 Jhumka Boxes Spotlight', icon: Flame },
+    { id: 'jhumka', label: 'Bestsellers Spotlight Section', icon: Flame },
     { id: 'festivalOffer', label: 'Festival Offer Panel', icon: Sparkles, badge: 'Festive' },
     { id: 'catalog', label: 'Catalog Headers', icon: Tag },
     { id: 'trust', label: 'Trust Strip (4 Pillars)', icon: ShieldCheck },
@@ -1594,10 +1594,10 @@ export default function AdminHomepageView() {
           <div className="space-y-6">
             <div className="border-b border-brand-border/60 pb-4">
               <h3 className="text-base font-editorial font-bold text-brand-tertiary">
-                4 Signature Jhumka Boxes Ad Spotlight
+                Bestsellers Hero Spotlight Section
               </h3>
               <p className="text-xs text-brand-muted font-light">
-                The high-converting hero card displaying your viral bestselling curated jhumka sets.
+                The high-converting hero showcase displaying the products you selected as bestsellers in Products manager.
               </p>
             </div>
 

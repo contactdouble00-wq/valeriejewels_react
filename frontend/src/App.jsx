@@ -134,16 +134,18 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
   const reloadData = async () => {
     try {
-      const [cats, bnds, health, jBoxes] = await Promise.all([
+      const [cats, bnds, health, bestsellersRes, jBoxesRes] = await Promise.all([
         apiService.getCategories().catch(() => []),
         apiService.getBundles().catch(() => []),
         apiService.getHealth().catch(() => null),
+        apiService.getProducts({ bestseller: 1 }).then(res => res.products || []).catch(() => []),
         apiService.getProducts({ category: 'jhumka-boxes' }).then(res => res.products || []).catch(() => []),
       ]);
       setCategories(cats || []);
       setBundles(bnds || []);
       setApiHealth(health);
-      setJhumkaBoxes(jBoxes || []);
+      const activeBestsellers = (bestsellersRes && bestsellersRes.length > 0) ? bestsellersRes : (jBoxesRes || []);
+      setJhumkaBoxes(activeBestsellers);
     } catch (err) {
       console.warn('Refresh data error:', err);
     }
@@ -582,8 +584,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           </div>
         </section>
 
-        {/* Ad Campaign Hero Section: The 4 Signature Jhumka Boxes (only if category is active and has products) */}
-        {categories.some((c) => c.slug === 'jhumka-boxes') && jhumkaBoxes.length > 0 && (
+        {/* Bestseller Spotlight Section (Dynamic based on product bestseller toggle) */}
+        {jhumkaBoxes.length > 0 && (
           <div id="jhumka-boxes" className="scroll-mt-28">
             <JhumkaBoxHeroSection
               products={jhumkaBoxes}

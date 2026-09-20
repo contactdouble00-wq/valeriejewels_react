@@ -19,17 +19,10 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
     }
   };
 
-  // Filter for the Jhumka / Jhumkha Boxes (supports both Jhumka and Jhumkha)
-  const jhumkaBoxes = products.filter(
-    (p) =>
-      p.category_id === 1 ||
-      (p.category_slug && (p.category_slug.includes('jhumk') || p.category_slug.includes('box'))) ||
-      (p.category_name && p.category_name.toLowerCase().includes('jhumk')) ||
-      (p.sku && (p.sku.startsWith('VJ-BX-') || p.sku.startsWith('VJ-JHM'))) ||
-      (p.name && (p.name.toLowerCase().includes('jhumk') || p.name.toLowerCase().includes('box')))
-  );
+  // Any product passed in as a bestseller
+  const displayProducts = Array.isArray(products) && products.length > 0 ? products : [];
 
-  if (!jhumkaBoxes || jhumkaBoxes.length === 0) {
+  if (!displayProducts || displayProducts.length === 0) {
     return null;
   }
 
@@ -46,18 +39,20 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
           <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary text-white text-[9.5px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.16em] shadow-sm">
             <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-gold animate-pulse shrink-0" />
             <span className="font-bold whitespace-normal leading-tight text-left">
-              {jHero.badgeText || '#1 Ad Bestseller Collection • 12,000+ Delivered'}
+              {jHero.badgeText && !jHero.badgeText.includes('#1 Ad Bestseller') ? jHero.badgeText : '🔥 Customer Bestsellers • Most Loved Pieces'}
             </span>
           </div>
 
           {/* Heading */}
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-editorial font-bold text-brand-tertiary tracking-tight leading-[1.12]">
-            {jHero.titleLine1 || 'The 4 Signature'} <br className="sm:hidden" />
-            <span className="italic font-light sm:font-normal text-brand-primary">{jHero.titleLine2 || 'Jhumka Treasure Boxes'}</span>
+            {jHero.titleLine1 && !jHero.titleLine1.includes('The 4 Signature') ? jHero.titleLine1 : 'Our Curated'} <br className="sm:hidden" />
+            <span className="italic font-light sm:font-normal text-brand-primary">
+              {jHero.titleLine2 && !jHero.titleLine2.includes('Jhumka Treasure Boxes') ? jHero.titleLine2 : 'Bestseller Collection'}
+            </span>
           </h2>
 
           <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed">
-            {jHero.subtitle || 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.'}
+            {jHero.subtitle || 'Our highest rated handcrafted pieces and viral jewelry, curated for everyday luxury and timeless elegance.'}
           </p>
         </div>
 
@@ -65,8 +60,8 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
         <div className="grid grid-cols-3 gap-1.5 pt-1 sm:hidden w-full">
           <div className="bg-white/90 backdrop-blur-xs px-2 py-1.5 rounded-xl border border-brand-primary/15 text-center shadow-2xs flex flex-col items-center justify-center">
             <Gift className="w-3.5 h-3.5 text-brand-primary mb-0.5 shrink-0" />
-            <span className="text-[10px] font-bold text-brand-tertiary leading-tight">5–6 Pairs</span>
-            <span className="text-[8px] text-brand-muted">Per Box</span>
+            <span className="text-[10px] font-bold text-brand-tertiary leading-tight">Top Rated</span>
+            <span className="text-[8px] text-brand-muted">Verified Pieces</span>
           </div>
           <div className="bg-white/90 backdrop-blur-xs px-2 py-1.5 rounded-xl border border-brand-primary/15 text-center shadow-2xs flex flex-col items-center justify-center">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mb-0.5 shrink-0" />
@@ -75,8 +70,8 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
           </div>
           <div className="bg-white/90 backdrop-blur-xs px-2 py-1.5 rounded-xl border border-brand-primary/15 text-center shadow-2xs flex flex-col items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-brand-gold mb-0.5 shrink-0" />
-            <span className="text-[10px] font-bold text-brand-tertiary leading-tight">Save 50%</span>
-            <span className="text-[8px] text-brand-muted">vs Singles</span>
+            <span className="text-[10px] font-bold text-brand-tertiary leading-tight">18K Plated</span>
+            <span className="text-[8px] text-brand-muted">Micro Polish</span>
           </div>
         </div>
 
@@ -84,7 +79,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
         <div className="hidden sm:flex sm:flex-col gap-2.5 text-xs text-brand-tertiary font-medium shrink-0">
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <Gift className="w-4 h-4 text-brand-primary shrink-0" />
-            <span>{jHero.pill1 || '5–6 Curated Pairs Per Box'}</span>
+            <span>{jHero.pill1 || 'Curated Bestselling Designs'}</span>
           </div>
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -92,21 +87,21 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
           </div>
           <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
             <Sparkles className="w-4 h-4 text-brand-gold shrink-0" />
-            <span>{jHero.pill3 || 'Save up to 50% vs Single Pairs'}</span>
+            <span>{jHero.pill3 || 'Save up to 50% vs Individual Pieces'}</span>
           </div>
         </div>
       </div>
 
-      {/* The 4 Jhumka Boxes Showcase Grid: 2 columns on Mobile, 4 columns on Desktop */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 relative z-10">
-        {jhumkaBoxes.slice(0, 4).map((box, idx) => {
+      {/* The Bestsellers Showcase Grid: 2 cols on Mobile, up to 4 cols on Desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 relative z-10">
+        {displayProducts.map((box, idx) => {
           const wishlisted = isInWishlist(box.id);
           const discount = Math.round(((Number(box.mrp) - Number(box.price)) / Number(box.mrp)) * 100);
           const pairsMatch = box.name?.match(/(\d+)\s*Pair/i);
-          const pairsNumber = Number(box.pairs_count) || (pairsMatch ? Number(pairsMatch[1]) : 6);
+          const pairsNumber = Number(box.pairs_count) || (pairsMatch ? Number(pairsMatch[1]) : 0);
           const pairsSuffix = jHero.pairsBadgeSuffix || 'Pairs Inside';
-          const pairsCount = `${pairsNumber} ${pairsSuffix}`;
-          const pricePerPair = Math.round(Number(box.price) / pairsNumber);
+          const pairsCount = pairsNumber > 0 ? `${pairsNumber} ${pairsSuffix}` : null;
+          const pricePerPair = pairsNumber > 0 ? Math.round(Number(box.price) / pairsNumber) : null;
 
           return (
             <div
@@ -115,16 +110,15 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
             >
               {/* Badges on Image */}
               <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                {(jHero.showBoxNumber !== false) && (
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
-                    <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-white text-white" />
-                    <span>Box #{idx + 1}</span>
+                <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
+                  <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-300 text-amber-300" />
+                  <span>Bestseller</span>
+                </span>
+                {pairsCount && (
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold bg-white/95 text-brand-primary border border-brand-primary/20 shadow-xs backdrop-blur-xs">
+                    {pairsCount}
                   </span>
                 )}
-                {/* Prominently visible pairs count badge on mobile and desktop */}
-                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold bg-white/95 text-brand-primary border border-brand-primary/20 shadow-xs backdrop-blur-xs">
-                  {pairsCount}
-                </span>
                 {discount > 0 && (
                   <span className="bg-rose-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
                     -{discount}%
@@ -149,7 +143,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
               </button>
 
-              {/* Box Image: 1:1 Balanced Square Ratio */}
+              {/* Product Image: 1:1 Balanced Square Ratio */}
               <div
                 onClick={() => onOpenPdp && onOpenPdp(box.slug)}
                 className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer"
@@ -168,7 +162,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     <span>4.9</span>
                     <span className="text-white/80 font-normal">(1.2k)</span>
                   </span>
-                  {(jHero.showPricePerPair !== false) && (
+                  {pricePerPair && (jHero.showPricePerPair !== false) && (
                     <span className="text-white font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-[8px]">
                       ₹{pricePerPair}/pair
                     </span>
@@ -179,7 +173,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <div className="absolute inset-0 bg-brand-tertiary/10 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center">
                   <span className="px-3 py-1.5 rounded-xl bg-white/95 text-brand-tertiary text-xs font-semibold shadow-md flex items-center space-x-1.5 transform translate-y-2 group-hover:translate-y-0 transition-all">
                     <Eye className="w-3.5 h-3.5 text-brand-primary" />
-                    <span>View Box & Pairs</span>
+                    <span>View Piece Details</span>
                   </span>
                 </div>
               </div>
@@ -189,7 +183,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <div className="space-y-1 sm:space-y-1.5">
                   <div className="text-[8.5px] sm:text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold flex items-center space-x-1">
                     <Sparkles className="w-2.5 h-2.5 text-brand-gold shrink-0 sm:hidden" />
-                    <span>Signature Gift Box</span>
+                    <span>{box.category_name || 'Curated Bestseller'}</span>
                   </div>
                   <h3
                     onClick={() => onOpenPdp && onOpenPdp(box.slug)}
@@ -226,7 +220,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                       className="w-full py-2 px-2 rounded-xl bg-gradient-to-r from-brand-primary via-[#6C3E8A] to-brand-primary hover:opacity-95 active:scale-[0.97] text-white text-[10.5px] font-caps tracking-wider uppercase font-bold shadow-xs flex items-center justify-center space-x-1.5 transition-all"
                     >
                       <ShoppingBag className="w-3 h-3 shrink-0" />
-                      <span>ADD BOX</span>
+                      <span>ADD TO BAG</span>
                     </button>
                   </div>
 
@@ -246,7 +240,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                       className="flex-1 py-2 px-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-[11px] font-caps tracking-wider uppercase font-bold transition-all shadow-sm flex items-center justify-center space-x-1"
                     >
                       <ShoppingBag className="w-3 h-3 shrink-0" />
-                      <span className="truncate">Add Box</span>
+                      <span className="truncate">Add to Bag</span>
                     </button>
                   </div>
                 </div>
@@ -262,7 +256,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></div>
             <span className="font-semibold text-[11px] sm:text-xs text-emerald-900">
-              Buy 2 Boxes → Extra 10% Off with Code <span className="font-bold text-brand-primary">VALERIE10</span>
+              Buy 2 or More → Extra 10% Off with Code <span className="font-bold text-brand-primary">VALERIE10</span>
             </span>
           </div>
           <button
