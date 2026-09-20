@@ -22,6 +22,7 @@ $healthData = [
     'phase'       => 'Phase 1 - Database Schema & Core Models Active',
     'environment' => $config['app']['env'] ?? 'development',
     'php_version' => PHP_VERSION,
+    'git_commit'  => trim(@file_get_contents(dirname(__DIR__) . '/.git/refs/heads/main') ?: 'unknown'),
     'database'    => $dbCheck,
     'server_time' => date('c'),
 ];
