@@ -690,12 +690,12 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 </div>
               )}
 
-              {/* Material & Craftsmanship Specification Card */}
+              {/* Material Specification Card */}
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-surface to-[#F9F5FD] border border-brand-border/90 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-caps uppercase tracking-wider text-brand-tertiary font-bold flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
-                    <span>Quality Specification</span>
+                    <span>Material Specification</span>
                   </span>
                   <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
                     100% Anti-Tarnish
@@ -705,35 +705,39 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   {product.material || '18K Gold Plated 316L Stainless Steel'}
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
-                  Engineered with Physical Vapor Deposition (PVD) vacuum coating. Waterproof, shower-safe, and perfume-proof with zero green skin residue.
+                  Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
                 </p>
               </div>
 
-              {/* Description Content */}
+              {/* Free All-India Delivery & 6-7 Days Easy Returns (Placed directly under Material Specification) */}
+              <div className="space-y-2 text-xs">
+                <div className="p-3 rounded-xl border border-brand-border bg-white flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <Truck className="w-4 h-4 text-brand-primary shrink-0" />
+                    <div>
+                      <span className="font-semibold text-brand-tertiary block text-[11.5px]">Free All-India Delivery</span>
+                      <span className="text-[10px] text-brand-muted font-light">Arrives in 5–7 working days via Shiprocket</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl border border-brand-border bg-white flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <span className="font-semibold text-brand-tertiary block text-[11.5px]">6–7 Days Easy Returns</span>
+                      <span className="text-[10px] text-brand-muted font-light">Uncut continuous 360° unboxing video required</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description Content (Placed under Delivery & Returns) */}
               <div className="space-y-1.5 text-xs text-brand-tertiary/90 leading-relaxed font-light">
                 <div className="font-caps uppercase tracking-wider text-brand-muted text-[10px] font-bold">
                   About This Piece
                 </div>
                 <p>{product.description || product.short_description}</p>
-              </div>
-
-              {/* Value & Reassurance Pillars */}
-              <div className="grid grid-cols-1 gap-2 pt-2 border-t border-brand-border/70 text-xs">
-                <div className="flex items-center space-x-2.5 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
-                  <Truck className="w-4 h-4 text-brand-primary shrink-0" />
-                  <div>
-                    <span className="font-semibold text-brand-tertiary block text-[11.5px]">Shiprocket Express Delivery</span>
-                    <span className="text-[10px] text-brand-muted font-light">Dispatched within 24 hours with real-time SMS updates.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2.5 p-2.5 rounded-xl bg-brand-surface border border-brand-border/60">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <div>
-                    <span className="font-semibold text-brand-tertiary block text-[11.5px]">Lifetime Color Guarantee</span>
-                    <span className="text-[10px] text-brand-muted font-light">Guaranteed not to fade, rust, or tarnish through daily wear.</span>
-                  </div>
-                </div>
               </div>
 
             </div>
@@ -1270,7 +1274,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </p>
                 </div>
 
-                {/* Material & Description Cards */}
+                {/* Material Specification & Reassurance Cards */}
                 <div className="space-y-3 pt-2">
                   <div className="p-4 rounded-2xl bg-brand-surface/70 border border-brand-border space-y-1.5">
                     <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-tertiary font-bold block">
@@ -1284,34 +1288,35 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     </p>
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-brand-tertiary/90 leading-relaxed font-light">
+                  {/* Free All-India Delivery & 6-7 Days Easy Returns (Placed directly under Material Specification) */}
+                  <div className="space-y-2 text-xs">
+                    <div className="p-3.5 rounded-xl border border-brand-border bg-white flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <Truck className="w-4 h-4 text-brand-primary shrink-0" />
+                        <div>
+                          <span className="font-semibold text-brand-tertiary block">Free All-India Delivery</span>
+                          <span className="text-[10.5px] text-brand-muted font-light">Arrives in 5–7 working days via Shiprocket</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-brand-border bg-white flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div>
+                          <span className="font-semibold text-brand-tertiary block">6–7 Days Easy Returns</span>
+                          <span className="text-[10.5px] text-brand-muted font-light">Uncut continuous 360° unboxing video required</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* About This Piece (Placed under Delivery & Returns) */}
+                  <div className="space-y-1.5 text-xs text-brand-tertiary/90 leading-relaxed font-light pt-1">
                     <div className="font-caps uppercase tracking-wider text-brand-muted text-[10px] font-bold">
                       About This Piece
                     </div>
                     <p>{product.description || product.short_description}</p>
-                  </div>
-                </div>
-
-                {/* Policy Reassurance Accordion Cards */}
-                <div className="pt-2 border-t border-brand-border space-y-2 text-xs">
-                  <div className="p-3.5 rounded-xl border border-brand-border bg-white flex items-center justify-between">
-                    <div className="flex items-center space-x-2.5">
-                      <Truck className="w-4 h-4 text-brand-primary shrink-0" />
-                      <div>
-                        <span className="font-semibold text-brand-tertiary block">Free All-India Delivery</span>
-                        <span className="text-[10.5px] text-brand-muted font-light">Arrives in 5–7 working days via Shiprocket</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl border border-brand-border bg-white flex items-center justify-between">
-                    <div className="flex items-center space-x-2.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <div>
-                        <span className="font-semibold text-brand-tertiary block">5–7 Days Easy Returns</span>
-                        <span className="text-[10.5px] text-brand-muted font-light">Uncut continuous 360° unboxing video required</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
