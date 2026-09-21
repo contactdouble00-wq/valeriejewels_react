@@ -44,8 +44,64 @@ try {
         ApiResponse::error('Order not found', 404);
     }
 
-    // Optional sandbox simulation for automated demo testing
-    if ($simulate && $order['order_status'] === 'pending') {
+    $razorpayPaymentId = trim($input['razorpay_payment_id'] ?? '');
+    $razorpayOrderId   = trim($input['razorpay_order_id'] ?? '');
+    $razorpaySignature = trim($input['razorpay_signature'] ?? '');
+
+    // 1. Verify Real Razorpay Signature if provided
+    if (!empty($razorpayPaymentId) && !empty($razorpayOrderId) && !empty($razorpaySignature)) {
+        // Fetch secret key from payment_settings
+        $secretStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $secretStmt->execute();
+        $rawS = $secretStmt->fetchColumn();
+        $pSettings = $rawS ? json_decode($rawS, true) : [];
+        $rpSecret = $pSettings['razorpay_key_secret'] ?? '';
+
+        $verified = false;
+        if (!empty($rpSecret)) {
+            $expectedSignature = hash_hmac('sha256', $razorpayOrderId . '|' . $razorpayPaymentId, $rpSecret);
+            $verified = hash_equals($expectedSignature, $razorpaySignature);
+        } else {
+            // In development or test mode without secret key set
+            $verified = true;
+        }
+
+        if ($verified) {
+            $newPaymentStatus = 'paid';
+            if ($order['payment_type'] === 'partial') {
+                $newPaymentStatus = 'partial_paid';
+            } elseif ($order['payment_type'] === 'cod') {
+                $newPaymentStatus = 'pending';
+            }
+
+            $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+            $upStmt = $pdo->prepare("
+                UPDATE orders 
+                SET payment_status = :ps,
+                    order_status = 'confirmed',
+                    fastrr_order_id = :p_id,
+                    updated_at = $nowSql
+                WHERE id = :id
+            ");
+            $upStmt->execute([
+                ':ps'   => $newPaymentStatus,
+                ':p_id' => $razorpayPaymentId,
+                ':id'   => $order['id'],
+            ]);
+
+            // Refresh order
+            $stmt->execute(!empty($orderNumber) ? [$orderNumber] : [$orderId]);
+            $order = $stmt->fetch();
+
+            try {
+                MailerService::sendOrderConfirmation((int)$order['id']);
+            } catch (Throwable $e) {}
+        } else {
+            ApiResponse::error('Payment signature verification failed', 400);
+        }
+    }
+    // 2. Sandbox simulation for test/mock mode
+    elseif ($simulate && $order['order_status'] === 'pending') {
         $newPaymentStatus = 'paid';
         if ($order['payment_type'] === 'partial') {
             $newPaymentStatus = 'partial_paid';
@@ -53,12 +109,13 @@ try {
             $newPaymentStatus = 'pending';
         }
 
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
         $upStmt = $pdo->prepare("
             UPDATE orders 
             SET payment_status = :ps,
                 order_status = 'confirmed',
                 fastrr_order_id = COALESCE(fastrr_order_id, :fid),
-                updated_at = NOW()
+                updated_at = $nowSql
             WHERE id = :id
         ");
         $upStmt->execute([
@@ -71,12 +128,9 @@ try {
         $stmt->execute(!empty($orderNumber) ? [$orderNumber] : [$orderId]);
         $order = $stmt->fetch();
 
-        // Phase 7: Dispatch idempotent order confirmation email
         try {
             MailerService::sendOrderConfirmation((int)$order['id']);
-        } catch (Throwable $e) {
-            // Log silently, do not fail response
-        }
+        } catch (Throwable $e) {}
     }
 
 

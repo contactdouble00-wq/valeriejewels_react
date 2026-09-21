@@ -13,19 +13,14 @@ handleCors();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $defaultSettings = [
-    'gateway_mode'          => 'sandbox', // 'sandbox' | 'live'
-    'fastrr_app_id'         => 'vj_fastrr_app_test',
-    'fastrr_secret_key'     => 'vj_fastrr_secret_test_2026',
-    'fastrr_webhook_secret' => 'vj_fastrr_whsec_test',
-    'sms_provider'          => 'fastrr', // 'fastrr' (Shiprocket) | 'sandbox' | 'fast2sms' | 'twofactor' | 'twilio'
-    'shiprocket_email'      => '',
-    'shiprocket_password'   => '',
-    'sms_fastrr_auth_token' => '',
-    'sms_fast2sms_api_key'  => '',
-    'sms_2factor_api_key'   => '',
-    'sms_twilio_sid'        => '',
-    'sms_twilio_token'      => '',
-    'sms_twilio_from'       => '',
+    'gateway_mode'          => 'live', // 'sandbox' | 'live'
+    'checkout_engine'       => 'shiprocket_fastrr', // 'shiprocket_fastrr' | 'razorpay_direct'
+    'fastrr_app_id'         => 'TAlJIqacN8rB0njv',
+    'fastrr_secret_key'     => 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
+    'fastrr_webhook_secret' => '',
+    'razorpay_key_id'       => '',
+    'razorpay_key_secret'   => '',
+    'sms_provider'          => 'fastrr', // Native Shiprocket Fastrr OTP
     'prepaid_discount'      => 50,
     'prepaid_gift_title'    => 'Free Zircon Necklace',
     'prepaid_gift_subtitle' => 'Included complimentary with all prepaid orders',
@@ -115,11 +110,7 @@ try {
         if (!$isAdmin) {
             unset($settings['fastrr_secret_key']);
             unset($settings['fastrr_webhook_secret']);
-            unset($settings['shiprocket_password']);
-            unset($settings['sms_fast2sms_api_key']);
-            unset($settings['sms_2factor_api_key']);
-            unset($settings['sms_twilio_token']);
-            unset($settings['sms_fastrr_auth_token']);
+            unset($settings['razorpay_key_secret']);
         }
 
         ApiResponse::success($settings);
@@ -148,18 +139,13 @@ try {
 
         $merged = array_merge($current, [
             'gateway_mode'          => in_array($data['gateway_mode'] ?? '', ['sandbox', 'live']) ? $data['gateway_mode'] : $current['gateway_mode'],
-            'fastrr_app_id'         => !empty($data['fastrr_app_id']) ? trim($data['fastrr_app_id']) : $current['fastrr_app_id'],
-            'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : $current['fastrr_secret_key'],
-            'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : $current['fastrr_webhook_secret'],
-            'sms_provider'          => in_array($data['sms_provider'] ?? '', ['sandbox', 'fast2sms', 'twofactor', 'twilio', 'fastrr']) ? $data['sms_provider'] : $current['sms_provider'],
-            'shiprocket_email'      => isset($data['shiprocket_email']) ? trim($data['shiprocket_email']) : $current['shiprocket_email'],
-            'shiprocket_password'   => !empty($data['shiprocket_password']) ? trim($data['shiprocket_password']) : $current['shiprocket_password'],
-            'sms_fast2sms_api_key'  => isset($data['sms_fast2sms_api_key']) ? trim($data['sms_fast2sms_api_key']) : $current['sms_fast2sms_api_key'],
-            'sms_2factor_api_key'   => isset($data['sms_2factor_api_key']) ? trim($data['sms_2factor_api_key']) : $current['sms_2factor_api_key'],
-            'sms_twilio_sid'        => isset($data['sms_twilio_sid']) ? trim($data['sms_twilio_sid']) : $current['sms_twilio_sid'],
-            'sms_twilio_token'      => isset($data['sms_twilio_token']) ? trim($data['sms_twilio_token']) : $current['sms_twilio_token'],
-            'sms_twilio_from'       => isset($data['sms_twilio_from']) ? trim($data['sms_twilio_from']) : $current['sms_twilio_from'],
-            'sms_fastrr_auth_token' => isset($data['sms_fastrr_auth_token']) ? trim($data['sms_fastrr_auth_token']) : $current['sms_fastrr_auth_token'],
+            'checkout_engine'       => in_array($data['checkout_engine'] ?? '', ['shiprocket_fastrr', 'razorpay_direct']) ? $data['checkout_engine'] : ($current['checkout_engine'] ?? 'shiprocket_fastrr'),
+            'fastrr_app_id'         => isset($data['fastrr_app_id']) ? trim($data['fastrr_app_id']) : ($current['fastrr_app_id'] ?? ''),
+            'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : ($current['fastrr_secret_key'] ?? ''),
+            'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : ($current['fastrr_webhook_secret'] ?? ''),
+            'razorpay_key_id'       => isset($data['razorpay_key_id']) ? trim($data['razorpay_key_id']) : ($current['razorpay_key_id'] ?? ''),
+            'razorpay_key_secret'   => !empty($data['razorpay_key_secret']) ? trim($data['razorpay_key_secret']) : ($current['razorpay_key_secret'] ?? ''),
+            'sms_provider'          => 'fastrr',
             'prepaid_discount'      => max(0, (float)($data['prepaid_discount'] ?? $current['prepaid_discount'])),
             'prepaid_gift_title'    => trim($data['prepaid_gift_title'] ?? $current['prepaid_gift_title']),
             'prepaid_gift_subtitle' => trim($data['prepaid_gift_subtitle'] ?? $current['prepaid_gift_subtitle']),

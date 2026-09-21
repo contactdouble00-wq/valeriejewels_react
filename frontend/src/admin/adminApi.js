@@ -496,13 +496,5 @@ export const adminApi = {
 
     return resData;
   },
-
-  async sendTestSms(payload) {
-    const res = await request('/auth/test_sms.php', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    return res;
-  },
 };
 

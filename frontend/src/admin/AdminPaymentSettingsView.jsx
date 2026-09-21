@@ -18,7 +18,6 @@ import {
   Copy,
   ExternalLink,
   Smartphone,
-  Send,
   CheckCircle2,
   XCircle,
   ArrowRight
@@ -31,14 +30,8 @@ export default function AdminPaymentSettingsView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [showSecret, setShowSecret] = useState(false);
-  const [showFast2SmsKey, setShowFast2SmsKey] = useState(false);
-  const [showShiprocketPassword, setShowShiprocketPassword] = useState(false);
+  const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
   const [webhookCopied, setWebhookCopied] = useState(false);
-
-  // SMS Diagnostic test states
-  const [testPhone, setTestPhone] = useState('');
-  const [sendingTestSms, setSendingTestSms] = useState(false);
-  const [testSmsResult, setTestSmsResult] = useState(null);
 
   // 1-Click Operations state
   const [togglingMethod, setTogglingMethod] = useState(null);
@@ -46,17 +39,14 @@ export default function AdminPaymentSettingsView() {
 
   // Configuration state
   const [settings, setSettings] = useState({
-    gateway_mode: 'sandbox',
-    fastrr_app_id: 'vj_fastrr_app_test',
-    fastrr_secret_key: 'vj_fastrr_secret_test_2026',
+    gateway_mode: 'live',
+    checkout_engine: 'shiprocket_fastrr',
+    fastrr_app_id: 'TAlJIqacN8rB0njv',
+    fastrr_secret_key: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
     fastrr_webhook_secret: 'vj_fastrr_whsec_test',
-    sms_provider: 'sandbox',
-    sms_fast2sms_api_key: '',
-    sms_2factor_api_key: '',
-    sms_twilio_sid: '',
-    sms_twilio_token: '',
-    sms_twilio_from: '',
-    sms_fastrr_auth_token: '',
+    razorpay_key_id: '',
+    razorpay_key_secret: '',
+    sms_provider: 'fastrr',
     prepaid_discount: 50,
     prepaid_gift_title: 'Free Zircon Necklace',
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
@@ -166,43 +156,6 @@ export default function AdminPaymentSettingsView() {
     navigator.clipboard.writeText(webhookUrl);
     setWebhookCopied(true);
     setTimeout(() => setWebhookCopied(false), 2000);
-  };
-
-  const handleSendTestSms = async () => {
-    const clean = testPhone.replace(/\D/g, '');
-    if (clean.length !== 10) {
-      setTestSmsResult({ success: false, message: 'Please enter a valid 10-digit mobile number' });
-      return;
-    }
-    setSendingTestSms(true);
-    setTestSmsResult(null);
-    try {
-      const res = await adminApi.sendTestSms({
-        phone: clean,
-        sms_provider: settings.sms_provider,
-        fastrr_app_id: settings.fastrr_app_id,
-        fastrr_secret_key: settings.fastrr_secret_key,
-        shiprocket_email: settings.shiprocket_email,
-        shiprocket_password: settings.shiprocket_password,
-        sms_fastrr_auth_token: settings.sms_fastrr_auth_token,
-        sms_fast2sms_api_key: settings.sms_fast2sms_api_key,
-        sms_2factor_api_key: settings.sms_2factor_api_key,
-        sms_twilio_sid: settings.sms_twilio_sid,
-        sms_twilio_token: settings.sms_twilio_token,
-        sms_twilio_from: settings.sms_twilio_from,
-      });
-      setTestSmsResult({
-        success: true,
-        message: res.message || `Test SMS dispatched to +91 ${clean}! Check your phone.`
-      });
-    } catch (err) {
-      setTestSmsResult({
-        success: false,
-        message: err.message || 'Failed to dispatch test SMS. Please check your API key.'
-      });
-    } finally {
-      setSendingTestSms(false);
-    }
   };
 
 
@@ -534,412 +487,299 @@ export default function AdminPaymentSettingsView() {
         </div>
         
         {/* Section 1: Fastrr Gateway Mode & Credentials */}
-        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Zap className="w-4 h-4 text-brand-primary" />
-              <span>1. Fastrr Checkout Engine Credentials</span>
+              <span>1. Checkout Engine & Gateway Credentials</span>
             </div>
-            <span className="text-[11px] text-brand-muted">Phase 5 Integration</span>
+            <span className="text-[11px] text-brand-muted">Shiprocket Fastrr & Razorpay</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Gateway Mode */}
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-bold text-brand-tertiary">Checkout Mode</label>
-              <div className="grid grid-cols-2 gap-3 max-w-md">
-                <button
-                  type="button"
-                  onClick={() => setSettings({ ...settings, gateway_mode: 'sandbox' })}
-                  className={`p-3 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all ${
-                    settings.gateway_mode === 'sandbox'
-                      ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
-                      : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  <span>Sandbox Simulation</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSettings({ ...settings, gateway_mode: 'live' })}
-                  className={`p-3 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all ${
-                    settings.gateway_mode === 'live'
-                      ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
-                      : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  <span>Live Production</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-brand-muted font-light">
-                {settings.gateway_mode === 'sandbox'
-                  ? 'Sandbox mode simulates 1-click address prefill, OTP verification, and UPI transactions seamlessly without charging real payment instruments.'
-                  : 'Live mode connects directly to Fastrr’s official checkout iframe and API endpoints.'}
-              </p>
-            </div>
-
-            {/* App ID */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">Fastrr App ID</label>
-              <input
-                type="text"
-                value={settings.fastrr_app_id || ''}
-                onChange={(e) => setSettings({ ...settings, fastrr_app_id: e.target.value })}
-                placeholder="vj_fastrr_app_live_xxxx"
-                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-              />
-            </div>
-
-            {/* Secret Key */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-brand-tertiary">Fastrr Secret Key</label>
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="text-[10px] text-brand-primary hover:underline flex items-center space-x-1"
-                >
-                  {showSecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  <span>{showSecret ? 'Hide' : 'Reveal'}</span>
-                </button>
-              </div>
-              <input
-                type={showSecret ? 'text' : 'password'}
-                value={settings.fastrr_secret_key || ''}
-                onChange={(e) => setSettings({ ...settings, fastrr_secret_key: e.target.value })}
-                placeholder="vj_fastrr_sec_live_xxxx"
-                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-              />
-            </div>
-
-            {/* Webhook Secret */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">Webhook Signing Secret</label>
-              <input
-                type="password"
-                value={settings.fastrr_webhook_secret || ''}
-                onChange={(e) => setSettings({ ...settings, fastrr_webhook_secret: e.target.value })}
-                placeholder="whsec_xxxx"
-                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-              />
-            </div>
-
-            {/* Live Webhook URL Callback Display */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">Webhook Callback URL (for Fastrr Dashboard)</label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={webhookUrl}
-                  className="w-full bg-gray-100 border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-muted select-all cursor-text"
-                />
-                <button
-                  type="button"
-                  onClick={copyWebhookUrl}
-                  className="p-2 rounded-xl border border-brand-border bg-white text-brand-tertiary hover:bg-brand-surface text-xs shrink-0 transition-all flex items-center space-x-1"
-                  title="Copy Webhook URL"
-                >
-                  {webhookCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Section 2: Checkout OTP & Real SMS Delivery Engine */}
-        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
-            <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
-              <Smartphone className="w-4 h-4 text-brand-primary" />
-              <span>2. Checkout OTP & Real SMS Delivery Engine</span>
-            </div>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-              settings.sms_provider === 'sandbox'
-                ? 'text-amber-700 bg-amber-50 border-amber-200'
-                : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-            }`}>
-              {settings.sms_provider === 'sandbox' ? '⚡ Sandbox Simulation (OTP: 123456)' : `📲 Live SMS Active (${settings.sms_provider})`}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* SMS Provider Selector */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">SMS Gateway Provider</label>
-              <select
-                value={settings.sms_provider || 'fastrr'}
-                onChange={(e) => setSettings({ ...settings, sms_provider: e.target.value })}
-                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold text-brand-tertiary focus:outline-none focus:border-brand-primary cursor-pointer"
+          {/* Checkout Engine Selector */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-brand-tertiary">Active Checkout Architecture</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, checkout_engine: 'shiprocket_fastrr' })}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  (settings.checkout_engine || 'shiprocket_fastrr') === 'shiprocket_fastrr'
+                    ? 'border-brand-primary bg-purple-50/60 ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] hover:bg-white'
+                }`}
               >
-                <option value="fastrr">Fastrr (Shiprocket Checkout) • Exactly like MadeWidLove</option>
-                <option value="fast2sms">Fast2SMS Gateway (Alternative India SMS)</option>
-                <option value="twofactor">2Factor.in (Alternative Indian OTP Gateway)</option>
-                <option value="twilio">Twilio SMS Gateway (Global Cellular Delivery)</option>
-                <option value="sandbox">Sandbox / Demo Simulation (Test Code 123456 • Zero SMS cost)</option>
-              </select>
-              <p className="text-[10.5px] text-brand-muted">
-                {settings.sms_provider === 'fastrr' && 'Shiprocket Fastrr sends real cellular SMS under registered telecom header FSTRR / SHPRKT and pre-fills delivery addresses from 50M+ Indian buyers.'}
-                {settings.sms_provider === 'fast2sms' && 'Fast2SMS delivers real cellular SMS directly to any Indian +91 number in 2–5 seconds with pre-approved OTP route.'}
-                {settings.sms_provider === 'twofactor' && '2Factor.in provides dedicated Indian OTP SMS infrastructure.'}
-                {settings.sms_provider === 'twilio' && 'Twilio sends global SMS via Twilio REST API.'}
-                {settings.sms_provider === 'sandbox' && '💡 No cellular SMS is sent. Test OTP is 123456 with 1-click Auto-Fill.'}
-              </p>
-            </div>
-
-            {/* Provider 1: Fastrr (Shiprocket Checkout) */}
-            {settings.sms_provider === 'fastrr' && (
-              <div className="space-y-3 md:col-span-2 p-4 rounded-xl bg-purple-50/50 border border-purple-200/80">
-                <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                    <span>Shiprocket Fastrr Integration Credentials</span>
-                  </div>
-                  <a
-                    href="https://app.shiprocket.in/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-brand-primary hover:underline flex items-center gap-1 font-semibold"
-                  >
-                    <span>Shiprocket Dashboard</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
+                    Shiprocket Fastrr (Recommended)
+                  </span>
+                  {(settings.checkout_engine || 'shiprocket_fastrr') === 'shiprocket_fastrr' && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-primary text-white font-bold">Selected</span>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Channel App ID / Store Slug</label>
-                    <input
-                      type="text"
-                      value={settings.fastrr_app_id || ''}
-                      onChange={(e) => setSettings({ ...settings, fastrr_app_id: e.target.value })}
-                      placeholder="e.g. valerie_jewels or App ID"
-                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-brand-muted mt-0.5">Your Fastrr merchant store identifier</p>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Secret Key / API Token</label>
-                    <input
-                      type="password"
-                      value={settings.fastrr_secret_key || ''}
-                      onChange={(e) => setSettings({ ...settings, fastrr_secret_key: e.target.value })}
-                      placeholder="vj_fastrr_sec_live_xxxx"
-                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-brand-muted mt-0.5">Found under Fastrr / Shiprocket Developer API settings</p>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-brand-tertiary">Shiprocket API User Email (Optional)</label>
-                    <input
-                      type="email"
-                      value={settings.shiprocket_email || ''}
-                      onChange={(e) => setSettings({ ...settings, shiprocket_email: e.target.value })}
-                      placeholder="api.user@valeriejewels.com"
-                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-semibold text-brand-tertiary">Shiprocket API User Password (Optional)</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowShiprocketPassword(!showShiprocketPassword)}
-                        className="text-[10px] text-brand-muted hover:text-brand-primary flex items-center gap-1"
-                      >
-                        {showShiprocketPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        <span>{showShiprocketPassword ? 'Hide' : 'Show'}</span>
-                      </button>
-                    </div>
-                    <input
-                      type={showShiprocketPassword ? "text" : "password"}
-                      value={settings.shiprocket_password || ''}
-                      onChange={(e) => setSettings({ ...settings, shiprocket_password: e.target.value })}
-                      placeholder="••••••••••••"
-                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-white/80 border border-purple-200/60 text-[11px] text-brand-tertiary">
-                  💡 <strong>How it works:</strong> When a customer clicks <em>ORDER NOW</em>, Fastrr connects directly with Shiprocket's Indian telecom infrastructure to dispatch the SMS OTP under sender <strong>FSTRR</strong> and pre-populates their saved address.
-                </div>
-              </div>
-            )}
-
-            {/* Provider 2: Fast2SMS */}
-            {settings.sms_provider === 'fast2sms' && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-brand-tertiary">Fast2SMS Authorization Key</label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowFast2SmsKey(!showFast2SmsKey)}
-                      className="text-[11px] text-brand-muted hover:text-brand-primary flex items-center gap-1 cursor-pointer"
-                    >
-                      {showFast2SmsKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                      <span>{showFast2SmsKey ? 'Hide' : 'Show Key'}</span>
-                    </button>
-                    <a
-                      href="https://www.fast2sms.com/dashboard/dev-api"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-brand-primary hover:underline flex items-center gap-1 font-medium"
-                    >
-                      <span>Open Fast2SMS Dev API</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  </div>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showFast2SmsKey ? "text" : "password"}
-                    value={settings.sms_fast2sms_api_key || ''}
-                    onChange={(e) => setSettings({ ...settings, sms_fast2sms_api_key: e.target.value })}
-                    placeholder="Paste Fast2SMS API Key from fast2sms.com > Dev API"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                  />
-                </div>
-                <p className="text-[10.5px] text-brand-muted">
-                  Log in to <strong>fast2sms.com</strong> → click <strong>Dev API</strong> in the left sidebar → copy the key under <strong>"YOUR API AUTHORIZATION KEY"</strong>.
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  Everlasting-style 1-Click checkout with pan-India address pre-fill (50M+ buyers) and instant Razorpay UPI/Card routing.
                 </p>
-                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
-                  <p className="font-semibold flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>TRAI / Fast2SMS Activation Requirement:</span>
-                  </p>
-                  <p className="text-amber-800 leading-relaxed">
-                    Under Indian telecom regulations, Fast2SMS requires newly registered accounts to complete a one-time <strong>₹100 wallet recharge</strong> on fast2sms.com or complete <strong>Website Verification</strong> under the <em>OTP Message</em> menu before API messages can be sent. Until recharged, the store gracefully uses instant test code <strong>123456</strong> so customers can still check out.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Provider 3: 2Factor.in */}
-            {settings.sms_provider === 'twofactor' && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-brand-tertiary">2Factor.in API Key</label>
-                  <a
-                    href="https://2factor.in/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-brand-primary hover:underline flex items-center gap-1"
-                  >
-                    <span>Get 2Factor Key</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-                </div>
-                <input
-                  type="password"
-                  value={settings.sms_2factor_api_key || ''}
-                  onChange={(e) => setSettings({ ...settings, sms_2factor_api_key: e.target.value })}
-                  placeholder="Paste 2Factor.in API Key"
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                />
-              </div>
-            )}
-
-            {/* Provider 4: Twilio */}
-            {settings.sms_provider === 'twilio' && (
-              <div className="space-y-2 md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-brand-tertiary">Twilio Account SID</label>
-                  <input
-                    type="text"
-                    value={settings.sms_twilio_sid || ''}
-                    onChange={(e) => setSettings({ ...settings, sms_twilio_sid: e.target.value })}
-                    placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-brand-tertiary">Twilio Auth Token</label>
-                  <input
-                    type="password"
-                    value={settings.sms_twilio_token || ''}
-                    onChange={(e) => setSettings({ ...settings, sms_twilio_token: e.target.value })}
-                    placeholder="Auth Token"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-brand-tertiary">Twilio Sender Number</label>
-                  <input
-                    type="text"
-                    value={settings.sms_twilio_from || ''}
-                    onChange={(e) => setSettings({ ...settings, sms_twilio_from: e.target.value })}
-                    placeholder="+1234567890"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Interactive Test SMS Diagnostic Tool */}
-          <div className="mt-2 p-4 rounded-xl bg-purple-50/60 border border-brand-primary/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-brand-primary flex items-center gap-1.5">
-                <Send className="w-3.5 h-3.5" />
-                <span>Test Real SMS Delivery to Your Mobile Number</span>
-              </span>
-              <span className="text-[10px] text-brand-muted">Instant verification test</span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="flex items-center border border-brand-border rounded-xl bg-white overflow-hidden flex-1 shadow-2xs">
-                <span className="px-3 py-2 bg-gray-50 border-r border-brand-border text-xs font-semibold text-brand-tertiary select-none">
-                  🇮🇳 +91
-                </span>
-                <input
-                  type="tel"
-                  maxLength={10}
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="Enter your 10-digit mobile number"
-                  className="flex-1 px-3 py-2 text-xs text-brand-tertiary focus:outline-none bg-transparent font-mono"
-                />
-              </div>
+              </button>
 
               <button
                 type="button"
-                disabled={sendingTestSms || testPhone.length !== 10}
-                onClick={handleSendTestSms}
-                className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 cursor-pointer shrink-0"
+                onClick={() => setSettings({ ...settings, checkout_engine: 'razorpay_direct' })}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  settings.checkout_engine === 'razorpay_direct'
+                    ? 'border-brand-primary bg-purple-50/60 ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] hover:bg-white'
+                }`}
               >
-                {sendingTestSms ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Send className="w-3 h-3" />
-                    <span>Send Test SMS Now</span>
-                  </>
-                )}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                    Direct Razorpay Standard
+                  </span>
+                  {settings.checkout_engine === 'razorpay_direct' && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-primary text-white font-bold">Selected</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  Direct official Razorpay Checkout SDK popup modal for instant UPI QR, PhonePe, GPay, NetBanking & Cards.
+                </p>
               </button>
             </div>
+          </div>
 
-            {testSmsResult && (
-              <div className={`p-2.5 rounded-xl text-xs font-medium flex items-center gap-2 animate-fade-in ${
-                testSmsResult.success 
-                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border border-rose-200 text-rose-800'
-              }`}>
-                {testSmsResult.success ? (
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                )}
-                <span>{testSmsResult.message}</span>
+          {/* Gateway Environment Mode */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-brand-tertiary">Environment Mode</label>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, gateway_mode: 'sandbox' })}
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  settings.gateway_mode === 'sandbox'
+                    ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span>Sandbox / Test Mode</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, gateway_mode: 'live' })}
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  settings.gateway_mode === 'live'
+                    ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span>Live Production</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-brand-muted font-light">
+              {settings.gateway_mode === 'sandbox'
+                ? 'Sandbox mode allows risk-free testing without debiting real bank accounts or customer wallets.'
+                : 'Live mode charges customer accounts via your production Razorpay & Shiprocket credentials.'}
+            </p>
+          </div>
+
+          {/* Grid of Credentials: Fastrr + Razorpay */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+
+            {/* Fastrr Credentials Box */}
+            <div className="p-4 rounded-xl bg-purple-50/40 border border-purple-200/70 space-y-3">
+              <div className="flex items-center justify-between border-b border-purple-200/50 pb-2">
+                <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                  Shiprocket Checkout (Fastrr) API Keys
+                </span>
+                <a
+                  href="https://checkout.shiprocket.in"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10.5px] text-brand-primary hover:underline flex items-center gap-1"
+                >
+                  Dashboard <ExternalLink className="w-2.5 h-2.5" />
+                </a>
               </div>
-            )}
+
+              {/* App ID */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr App ID</label>
+                <input
+                  type="text"
+                  value={settings.fastrr_app_id || ''}
+                  onChange={(e) => setSettings({ ...settings, fastrr_app_id: e.target.value })}
+                  placeholder="e.g. vj_fastrr_app_live_xxxx"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              {/* Secret Key */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Secret Key</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret(!showSecret)}
+                    className="text-[10px] text-brand-primary hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    {showSecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showSecret ? 'Hide' : 'Reveal'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showSecret ? 'text' : 'password'}
+                  value={settings.fastrr_secret_key || ''}
+                  onChange={(e) => setSettings({ ...settings, fastrr_secret_key: e.target.value })}
+                  placeholder="vj_fastrr_sec_xxxx"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              {/* Webhook Secret */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-brand-tertiary">Fastrr Webhook Signing Secret</label>
+                <input
+                  type="password"
+                  value={settings.fastrr_webhook_secret || ''}
+                  onChange={(e) => setSettings({ ...settings, fastrr_webhook_secret: e.target.value })}
+                  placeholder="whsec_xxxx"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+              </div>
+            </div>
+
+            {/* Razorpay Credentials Box */}
+            <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-200/70 space-y-3">
+              <div className="flex items-center justify-between border-b border-blue-200/50 pb-2">
+                <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                  Razorpay Payment Gateway API Keys
+                </span>
+                <a
+                  href="https://dashboard.razorpay.com/app/keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10.5px] text-blue-700 hover:underline flex items-center gap-1"
+                >
+                  Dashboard <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+
+              {/* Razorpay Key ID */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-brand-tertiary">Razorpay Key ID</label>
+                <input
+                  type="text"
+                  value={settings.razorpay_key_id || ''}
+                  onChange={(e) => setSettings({ ...settings, razorpay_key_id: e.target.value })}
+                  placeholder="rzp_live_xxxx or rzp_test_xxxx"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">Starts with <code className="font-mono bg-white px-1 rounded">rzp_live_</code> for live or <code className="font-mono bg-white px-1 rounded">rzp_test_</code> for testing.</p>
+              </div>
+
+              {/* Razorpay Key Secret */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-brand-tertiary">Razorpay Key Secret</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
+                    className="text-[10px] text-blue-700 hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    {showRazorpaySecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showRazorpaySecret ? 'Hide' : 'Reveal'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showRazorpaySecret ? 'text' : 'password'}
+                  value={settings.razorpay_key_secret || ''}
+                  onChange={(e) => setSettings({ ...settings, razorpay_key_secret: e.target.value })}
+                  placeholder="Enter your Razorpay Key Secret"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">Kept securely encrypted on the server; never exposed to customer browsers.</p>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-white/80 border border-blue-100 text-[10.5px] text-blue-800 leading-relaxed">
+                💡 <strong>Unified Settlement:</strong> Both Fastrr 1-Click and direct modal route all settlements to your registered Razorpay bank account.
+              </div>
+            </div>
+
+          </div>
+
+          {/* Live Webhook URL Callback Display */}
+          <div className="space-y-1 pt-1 border-t border-brand-border/40">
+            <label className="text-xs font-semibold text-brand-tertiary">Webhook Callback URL (for Shiprocket & Razorpay Webhooks)</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                readOnly
+                value={webhookUrl}
+                className="w-full bg-gray-100 border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-muted select-all cursor-text"
+              />
+              <button
+                type="button"
+                onClick={copyWebhookUrl}
+                className="p-2 rounded-xl border border-brand-border bg-white text-brand-tertiary hover:bg-brand-surface text-xs shrink-0 transition-all flex items-center space-x-1 cursor-pointer"
+                title="Copy Webhook URL"
+              >
+                {webhookCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[10.5px] text-brand-muted">
+              Add this webhook endpoint in your Razorpay Dashboard (under Settings → Webhooks) for payment confirmation events (<code className="font-mono text-[10px] bg-gray-100 px-1 rounded">order.paid</code>, <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">payment.captured</code>).
+            </p>
+          </div>
+
+        </div>
+
+        {/* Section 2: Fastrr Native Mobile OTP & Address Verification */}
+        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
+              <Smartphone className="w-4 h-4 text-brand-primary" />
+              <span>2. Fastrr Native Mobile OTP & Address Intelligence</span>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border text-emerald-700 bg-emerald-50 border-emerald-200 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>100% Native Fastrr OTP Active</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/70 space-y-1.5">
+              <div className="flex items-center gap-2 text-brand-primary font-bold text-xs">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Zero External SMS Fees</span>
+              </div>
+              <p className="text-[11px] text-brand-muted leading-relaxed">
+                Shiprocket Fastrr covers cellular SMS dispatch under telecom headers <strong>SHPRKT</strong> / <strong>FSTRR</strong>. No external SMS subscriptions, third-party gateways, or wallet recharges needed.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/70 space-y-1.5">
+              <div className="flex items-center gap-2 text-blue-700 font-bold text-xs">
+                <Sparkles className="w-4 h-4" />
+                <span>50M+ Shopper Network</span>
+              </div>
+              <p className="text-[11px] text-brand-muted leading-relaxed">
+                Once customer enters their 6-digit OTP, Fastrr automatically pre-fills saved delivery addresses, name, and email from over 50 million Indian shoppers in 1 click.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200/70 space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs">
+                <Lock className="w-4 h-4" />
+                <span>Pre-Approved TRAI DLT</span>
+              </div>
+              <p className="text-[11px] text-brand-muted leading-relaxed">
+                Fully compliant with Telecom Regulatory Authority of India (TRAI) regulations with pre-approved transactional OTP templates and high-priority cellular delivery.
+              </p>
+            </div>
           </div>
         </div>
 

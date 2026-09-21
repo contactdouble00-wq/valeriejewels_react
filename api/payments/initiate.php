@@ -258,7 +258,65 @@ try {
 
     $pdo->commit();
 
-    // Generate Fastrr checkout session payload
+    // Read active payment settings from database
+    $razorpayKeyId = '';
+    $razorpayKeySecret = '';
+    $fastrrAppId = '';
+    $isLive = false;
+
+    try {
+        $settingsStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $settingsStmt->execute();
+        $rawSettings = $settingsStmt->fetchColumn();
+        if ($rawSettings) {
+            $pSettings = json_decode($rawSettings, true) ?: [];
+            $razorpayKeyId = $pSettings['razorpay_key_id'] ?? '';
+            $razorpayKeySecret = $pSettings['razorpay_key_secret'] ?? '';
+            $fastrrAppId = $pSettings['fastrr_app_id'] ?? '';
+            $isLive = ($pSettings['gateway_mode'] ?? 'sandbox') === 'live';
+        }
+    } catch (Throwable $se) {
+        // Continue with defaults if settings table check fails
+    }
+
+    $razorpayOrderId = null;
+    if ($amountPaidUpfront > 0 && !empty($razorpayKeyId) && !empty($razorpayKeySecret)) {
+        // Create an official Razorpay Order via REST API
+        $amountInPaise = (int)round($amountPaidUpfront * 100);
+        $orderPayload = [
+            'amount'   => $amountInPaise,
+            'currency' => 'INR',
+            'receipt'  => $orderNumber,
+            'notes'    => [
+                'valerie_order_id' => (string)$orderId,
+                'customer_phone'   => $customerPhone,
+                'customer_name'    => $customerName,
+                'payment_type'     => $paymentType,
+            ],
+        ];
+
+        $ch = curl_init('https://api.razorpay.com/v1/orders');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $razorpayKeyId . ':' . $razorpayKeySecret);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderPayload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        $rpResponse = curl_exec($ch);
+        $rpHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($rpHttpCode === 200 && $rpResponse) {
+            $rpData = json_decode($rpResponse, true);
+            if (!empty($rpData['id'])) {
+                $razorpayOrderId = $rpData['id'];
+                $upStmt = $pdo->prepare("UPDATE orders SET fastrr_order_id = ? WHERE id = ?");
+                $upStmt->execute([$razorpayOrderId, $orderId]);
+            }
+        }
+    }
+
+    // Generate Fastrr & Razorpay checkout session payload
     $fastrrSession = [
         'order_id'               => $orderId,
         'order_number'           => $orderNumber,
@@ -266,6 +324,10 @@ try {
         'amount_payable_now'     => $amountPaidUpfront,
         'amount_due_on_delivery' => $amountDueOnDelivery,
         'total_amount'           => $totalAmount,
+        'currency'               => 'INR',
+        'razorpay_order_id'      => $razorpayOrderId,
+        'razorpay_key_id'        => $razorpayKeyId,
+        'fastrr_app_id'          => $fastrrAppId,
         'customer'               => [
             'name'  => $customerName,
             'email' => $customerEmail,
@@ -279,7 +341,7 @@ try {
             'pincode' => $pincode,
         ],
         'risk_tier'              => $fastrrRiskTier,
-        'sandbox'                => true,
+        'sandbox'                => !$isLive,
     ];
 
     ApiResponse::success($fastrrSession, 'Order initiated successfully', 201);

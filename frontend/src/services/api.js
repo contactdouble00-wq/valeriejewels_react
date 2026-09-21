@@ -532,6 +532,46 @@ export const apiService = {
     const result = await response.json();
     return result.data;
   },
+
+  /**
+   * Phase 5: Initiate Checkout & Fastrr/Razorpay Payment Session
+   */
+  async initiateCheckout(payload, token = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/payments/initiate.php`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Failed to initiate order session');
+    }
+    return result.data;
+  },
+
+  /**
+   * Phase 5: Verify Payment & Confirm Order
+   */
+  async verifyPayment(verificationData) {
+    const payload = typeof verificationData === 'string'
+      ? { order_number: verificationData, simulate_success: true }
+      : verificationData;
+
+    const response = await fetch(`${API_BASE_URL}/payments/verify.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Payment verification failed');
+    }
+    return result.data;
+  },
 };
 
 

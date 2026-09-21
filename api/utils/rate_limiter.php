@@ -49,17 +49,24 @@ class RateLimiter
     {
         try {
             $pdo = Database::getConnection();
+            $isSqlite = Database::getDriver() === 'sqlite';
             self::ensureTableExists($pdo);
 
             $ip = self::getClientIp();
             $key = $action . ':' . $ip;
 
             // 1. Purge expired records for this key
-            $purgeStmt = $pdo->prepare("DELETE FROM rate_limits WHERE rate_key = ? AND expires_at <= NOW()");
+            $purgeSql = $isSqlite
+                ? "DELETE FROM rate_limits WHERE rate_key = ? AND expires_at <= datetime('now')"
+                : "DELETE FROM rate_limits WHERE rate_key = ? AND expires_at <= NOW()";
+            $purgeStmt = $pdo->prepare($purgeSql);
             $purgeStmt->execute([$key]);
 
             // 2. Fetch active record
-            $fetchStmt = $pdo->prepare("SELECT id, hits, TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS remaining_seconds FROM rate_limits WHERE rate_key = ? AND expires_at > NOW() LIMIT 1");
+            $fetchSql = $isSqlite
+                ? "SELECT id, hits, CAST((strftime('%s', expires_at) - strftime('%s', 'now')) AS INTEGER) AS remaining_seconds FROM rate_limits WHERE rate_key = ? AND expires_at > datetime('now') LIMIT 1"
+                : "SELECT id, hits, TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS remaining_seconds FROM rate_limits WHERE rate_key = ? AND expires_at > NOW() LIMIT 1";
+            $fetchStmt = $pdo->prepare($fetchSql);
             $fetchStmt->execute([$key]);
             $record = $fetchStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -68,7 +75,6 @@ class RateLimiter
                 $retryAfter = max(1, (int)$record['remaining_seconds']);
 
                 if ($hits >= $maxAttempts) {
-                    // Set standard RFC rate limit headers
                     header('X-RateLimit-Limit: ' . $maxAttempts);
                     header('X-RateLimit-Remaining: 0');
                     header('Retry-After: ' . $retryAfter);
@@ -87,7 +93,10 @@ class RateLimiter
                 $remainingAttempts = max(0, $maxAttempts - ($hits + 1));
             } else {
                 // First hit in this time window
-                $insertStmt = $pdo->prepare("INSERT INTO rate_limits (rate_key, hits, expires_at) VALUES (?, 1, DATE_ADD(NOW(), INTERVAL ? SECOND))");
+                $insertSql = $isSqlite
+                    ? "INSERT INTO rate_limits (rate_key, hits, expires_at) VALUES (?, 1, datetime('now', '+' || ? || ' seconds'))"
+                    : "INSERT INTO rate_limits (rate_key, hits, expires_at) VALUES (?, 1, DATE_ADD(NOW(), INTERVAL ? SECOND))";
+                $insertStmt = $pdo->prepare($insertSql);
                 $insertStmt->execute([$key, $decaySeconds]);
                 $remainingAttempts = max(0, $maxAttempts - 1);
             }
@@ -176,7 +185,7 @@ class RateLimiter
     }
 
     /**
-     * Ensure rate_limits table exists in MySQL.
+     * Ensure rate_limits table exists.
      */
     private static function ensureTableExists(PDO $pdo): void
     {
@@ -184,16 +193,29 @@ class RateLimiter
             return;
         }
 
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS rate_limits (
-                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                rate_key VARCHAR(120) NOT NULL,
-                hits INT UNSIGNED DEFAULT 1,
-                expires_at DATETIME NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_rate_key_expires (rate_key, expires_at)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
+        if (Database::getDriver() === 'sqlite') {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS rate_limits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rate_key TEXT NOT NULL,
+                    hits INTEGER DEFAULT 1,
+                    expires_at TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_rate_key_expires ON rate_limits (rate_key, expires_at);
+            ");
+        } else {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS rate_limits (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    rate_key VARCHAR(120) NOT NULL,
+                    hits INT UNSIGNED DEFAULT 1,
+                    expires_at DATETIME NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_rate_key_expires (rate_key, expires_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
 
         self::$tableChecked = true;
     }

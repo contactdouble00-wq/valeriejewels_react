@@ -401,7 +401,23 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     setTimeout(() => setOtpResent(false), 3500);
   };
 
-  // Step 3: Place Order via API
+  // Helper to dynamically load official Razorpay Checkout SDK
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Step 3: Place Order via API & Gateway Engine
   const handlePlaceOrder = async (e) => {
     if (e) e.preventDefault();
 
@@ -439,7 +455,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
       const payload = {
         customer_name: name.trim(),
-        customer_email: email.trim() || `${phone}@valerieclient.in`,
+        customer_email: email.trim() || `${phone.replace(/\D/g, '')}@valerieclient.in`,
         customer_phone: phone.trim(),
         shipping_address_line1: addressLine1.trim(),
         shipping_address_line2: addressLine2.trim(),
@@ -451,8 +467,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         items: formattedItems,
       };
 
-      // 1. Send to Backend API
-      const initResult = await apiService.initiateCheckout(payload, token).catch(() => null);
+      // 1. Send Order Initiation to Backend
+      const initResult = await apiService.initiateCheckout(payload, token);
 
       const finalOrderNumber = initResult?.order_number || `VJ-${Date.now().toString().slice(-6)}`;
       const activeSplit = calcData?.payment_splits?.[paymentType];
@@ -473,13 +489,100 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         created_at: new Date().toISOString(),
       };
 
+      // Case A: 100% Cash on Delivery (Doorstep settlement)
+      if (paymentType === 'cod') {
+        setPlacedOrder(orderData);
+        clearCart();
+        setStep('confirmed');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Case B: Live Razorpay Gateway Triggering
+      const rzpKey = initResult?.razorpay_key_id;
+      if (rzpKey && rzpKey.trim() !== '') {
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          throw new Error('Payment gateway SDK could not be loaded. Please check your internet connection.');
+        }
+
+        const dueNowInPaise = Math.round(Number(initResult.amount_payable_now || orderData.amount_paid_upfront) * 100);
+
+        const rzpOptions = {
+          key: rzpKey,
+          amount: dueNowInPaise,
+          currency: initResult.currency || 'INR',
+          name: 'Valerie Jewels',
+          description: paymentType === 'partial'
+            ? `Partial COD Advance Deposit (${finalOrderNumber})`
+            : `Order ${finalOrderNumber}`,
+          image: '/valerie.png',
+          order_id: initResult.razorpay_order_id || undefined,
+          prefill: {
+            name: name.trim(),
+            email: email.trim() || `${phone.replace(/\D/g, '')}@valerieclient.in`,
+            contact: phone.trim(),
+          },
+          notes: {
+            order_number: finalOrderNumber,
+            payment_type: paymentType,
+            engine: paymentSettings.checkout_engine || 'shiprocket_fastrr',
+          },
+          theme: {
+            color: '#5B1E31',
+          },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+            },
+          },
+          handler: async (rpResponse) => {
+            setStep('processing');
+            try {
+              await apiService.verifyPayment({
+                order_number: finalOrderNumber,
+                order_id: initResult.order_id,
+                razorpay_payment_id: rpResponse.razorpay_payment_id,
+                razorpay_order_id: rpResponse.razorpay_order_id || initResult.razorpay_order_id,
+                razorpay_signature: rpResponse.razorpay_signature,
+              });
+
+              setPlacedOrder({
+                ...orderData,
+                payment_status: paymentType === 'partial' ? 'partial_paid' : 'paid',
+                transaction_id: rpResponse.razorpay_payment_id,
+              });
+              clearCart();
+              setStep('confirmed');
+            } catch (verErr) {
+              setSubmitError(verErr.message || 'Payment confirmation failed. If debited, your order will sync automatically via webhook.');
+              setStep('details_payment');
+            } finally {
+              setIsSubmitting(false);
+            }
+          },
+        };
+
+        const rzpInstance = new window.Razorpay(rzpOptions);
+        rzpInstance.on('payment.failed', (failResp) => {
+          setIsSubmitting(false);
+          setSubmitError(failResp.error?.description || 'Payment was cancelled or unsuccessful. Please try again.');
+        });
+        rzpInstance.open();
+        return;
+      }
+
+      // Case C: Sandbox Mode Simulation (when testing before live credentials are entered)
       setPlacedOrder(orderData);
       setStep('processing');
 
-      // Simulate Fastrr 1-Click Verification / Processing
       setTimeout(async () => {
         try {
-          await apiService.verifyPayment(finalOrderNumber, true).catch(() => {});
+          await apiService.verifyPayment({
+            order_number: finalOrderNumber,
+            order_id: initResult?.order_id,
+            simulate_success: true,
+          }).catch(() => {});
         } catch (e) {}
 
         clearCart();
