@@ -271,9 +271,9 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               partial: {
                 enabled: paymentSettings.partial_cod_enabled,
                 title: 'Partial COD (Smart Split)',
-                badge: `Pay ₹${paymentSettings.partial_advance} Deposit Now, Rest on Delivery`,
-                amount_due_now: Math.min(paymentSettings.partial_advance || 150, finalTot),
-                amount_due_on_delivery: Math.max(0, finalTot - (paymentSettings.partial_advance || 150)),
+                badge: `Pay ₹${paymentSettings.partial_advance ?? 199} Deposit Now, Rest on Delivery`,
+                amount_due_now: Math.min(Number(paymentSettings.partial_advance) || 199, finalTot),
+                amount_due_on_delivery: Math.max(0, finalTot - (Number(paymentSettings.partial_advance) || 199)),
               },
               cod: {
                 enabled: paymentSettings.cod_available,
@@ -1369,12 +1369,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div>
                         <p className="text-xs font-bold text-gray-900">Partial COD</p>
                         <p className="text-[10.5px] text-gray-500">
-                          Pay Balance ₹{Math.max(0, finalTotal - (paymentSettings.partial_advance || 150)).toLocaleString('en-IN')}.00 at Delivery
+                          Pay Balance ₹{(calcData?.payment_splits?.partial?.amount_due_on_delivery ?? Math.max(0, finalTotal - (Number(paymentSettings.partial_advance) || 199))).toLocaleString('en-IN')}.00 at Delivery
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-extrabold text-gray-900">₹{paymentSettings.partial_advance || 150}.00</span>
+                      <span className="text-xs font-extrabold text-gray-900">
+                        ₹{(calcData?.payment_splits?.partial?.amount_due_now ?? Math.min(Number(paymentSettings.partial_advance) || 199, finalTotal)).toLocaleString('en-IN')}.00
+                      </span>
                       <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>
@@ -1501,8 +1503,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <span>Shipping</span>
                       <span className="font-bold uppercase text-[10px]">FREE</span>
                     </div>
+                    {paymentType === 'partial' && (
+                      <div className="flex justify-between text-purple-700 font-semibold text-xs">
+                        <span>Balance Due on Delivery</span>
+                        <span>₹{dueOnDelivery.toLocaleString('en-IN')}.00</span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-2 border-t border-gray-200 font-extrabold text-sm text-gray-900">
-                      <span>Amount Payable Now</span>
+                      <span>{paymentType === 'partial' ? 'Token Deposit Payable Now' : 'Amount Payable Now'}</span>
                       <span className="text-brand-primary">₹{dueNow.toLocaleString('en-IN')}.00</span>
                     </div>
                   </div>
@@ -1636,7 +1644,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     {paymentType === 'full_prepaid'
                       ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')}`
                       : paymentType === 'partial'
-                      ? `PAY ₹${paymentSettings.partial_advance || 150} DEPOSIT`
+                      ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')} DEPOSIT`
                       : `CONFIRM COD ORDER`}
                   </span>
                 </>

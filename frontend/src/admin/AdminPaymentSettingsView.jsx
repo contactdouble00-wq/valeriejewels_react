@@ -36,6 +36,8 @@ export default function AdminPaymentSettingsView() {
   // 1-Click Operations state
   const [togglingMethod, setTogglingMethod] = useState(null);
   const [instantSuccessMsg, setInstantSuccessMsg] = useState(null);
+  const [partialAdvanceInput, setPartialAdvanceInput] = useState('199');
+  const [updatingPartialAmount, setUpdatingPartialAmount] = useState(false);
 
   // Configuration state
   const [settings, setSettings] = useState({
@@ -74,11 +76,47 @@ export default function AdminPaymentSettingsView() {
       const data = await adminApi.getPaymentSettings();
       if (data) {
         setSettings((prev) => ({ ...prev, ...data }));
+        if (data.partial_advance !== undefined && data.partial_advance !== null) {
+          setPartialAdvanceInput(String(data.partial_advance));
+        }
       }
     } catch (err) {
       setError('Failed to load payment settings. Using local fallback.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdatePartialAdvance = async (newAmount) => {
+    const numeric = Math.round(Number(newAmount));
+    if (isNaN(numeric) || numeric < 1) {
+      setError('Please enter a valid partial advance token deposit (minimum ₹1).');
+      return;
+    }
+
+    setUpdatingPartialAmount(true);
+    setError(null);
+
+    const updatedSettings = {
+      ...settings,
+      partial_advance: numeric,
+    };
+
+    setSettings(updatedSettings);
+    setPartialAdvanceInput(String(numeric));
+
+    try {
+      const updated = await adminApi.updatePaymentSettings(updatedSettings);
+      if (updated) {
+        setSettings((prev) => ({ ...prev, ...updated }));
+        setPartialAdvanceInput(String(updated.partial_advance ?? numeric));
+      }
+      setInstantSuccessMsg(`Partial COD advance deposit set to ₹${numeric} (Live updated on checkout & product pages)!`);
+      setTimeout(() => setInstantSuccessMsg(null), 4000);
+    } catch (err) {
+      setError(err.message || 'Failed to update partial payment amount');
+    } finally {
+      setUpdatingPartialAmount(false);
     }
   };
 
@@ -90,6 +128,7 @@ export default function AdminPaymentSettingsView() {
       const updated = await adminApi.updatePaymentSettings(settings);
       if (updated) {
         setSettings((prev) => ({ ...prev, ...updated }));
+        setPartialAdvanceInput(String(updated.partial_advance ?? settings.partial_advance));
       }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -378,8 +417,74 @@ export default function AdminPaymentSettingsView() {
                 </div>
 
                 <p className="text-[11px] text-brand-muted leading-relaxed">
-                  Requires ₹{settings.partial_advance} UPI token deposit now + remaining on delivery. Cuts RTO fake orders by 70%+.
+                  Requires <strong className="text-brand-tertiary font-mono">₹{settings.partial_advance}</strong> UPI token deposit now + remaining on delivery. Cuts RTO fake orders by 70%+.
                 </p>
+
+                {/* Interactive Partial Advance Amount Controller */}
+                <div className="p-2.5 rounded-xl bg-purple-50/80 border border-purple-100/90 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10.5px] font-bold text-brand-tertiary uppercase tracking-wider">
+                      Advance Token Deposit
+                    </span>
+                    <span className="text-xs font-mono font-extrabold text-brand-primary">
+                      ₹{settings.partial_advance}
+                    </span>
+                  </div>
+
+                  {/* Preset Pills */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {[99, 149, 199, 249, 299].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleUpdatePartialAdvance(preset)}
+                        disabled={updatingPartialAmount}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                          Number(settings.partial_advance) === preset
+                            ? 'bg-brand-primary text-white shadow-2xs'
+                            : 'bg-white text-brand-tertiary border border-gray-200 hover:border-brand-primary/50'
+                        }`}
+                      >
+                        ₹{preset}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Input & Instant Set Button */}
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1 text-[11px] font-bold text-brand-muted">₹</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5000"
+                        value={partialAdvanceInput}
+                        onChange={(e) => setPartialAdvanceInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleUpdatePartialAdvance(partialAdvanceInput);
+                          }
+                        }}
+                        placeholder="Custom amount"
+                        className="w-full bg-white border border-brand-border rounded-lg pl-6 pr-2 py-1 text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={updatingPartialAmount || !partialAdvanceInput || Number(partialAdvanceInput) === Number(settings.partial_advance)}
+                      onClick={() => handleUpdatePartialAdvance(partialAdvanceInput)}
+                      className="px-2.5 py-1 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-[10.5px] font-bold transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1 shrink-0"
+                    >
+                      {updatingPartialAmount ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Save className="w-3 h-3" />
+                      )}
+                      <span>Set</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-brand-border/40 mt-3 flex items-center justify-between">
@@ -914,22 +1019,75 @@ export default function AdminPaymentSettingsView() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Advance Deposit Amount */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-tertiary">Partial COD Advance Deposit (₹)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-xs font-bold text-brand-muted">₹</span>
-                <input
-                  type="number"
-                  min="50"
-                  max="1000"
-                  value={settings.partial_advance}
-                  onChange={(e) => setSettings({ ...settings, partial_advance: parseFloat(e.target.value) || 199 })}
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-brand-tertiary"
-                />
+            <div className="space-y-2 p-3.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-brand-tertiary">Partial COD Advance Deposit (₹)</label>
+                <span className="text-xs font-mono font-extrabold text-brand-primary">₹{settings.partial_advance}</span>
               </div>
-              <p className="text-[10.5px] text-brand-muted font-light">
-                Initial deposit collected via UPI now. Remainder collected on delivery.
+              <p className="text-[10.5px] text-brand-muted font-light leading-snug">
+                Initial deposit collected via UPI now to guarantee delivery dispatch. Remainder collected at doorstep.
               </p>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <span className="text-[10px] text-brand-muted font-medium">Quick Presets:</span>
+                {[99, 149, 199, 249, 299].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleUpdatePartialAdvance(preset)}
+                    disabled={updatingPartialAmount}
+                    className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      Number(settings.partial_advance) === preset
+                        ? 'bg-brand-primary text-white shadow-2xs'
+                        : 'bg-white text-brand-tertiary border border-gray-200 hover:border-brand-primary/50'
+                    }`}
+                  >
+                    ₹{preset}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input & Instant Update */}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-2 text-xs font-bold text-brand-muted">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5000"
+                    value={partialAdvanceInput}
+                    onChange={(e) => {
+                      setPartialAdvanceInput(e.target.value);
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val) && val > 0) {
+                        setSettings({ ...settings, partial_advance: val });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleUpdatePartialAdvance(partialAdvanceInput);
+                      }
+                    }}
+                    placeholder="Enter deposit amount"
+                    className="w-full bg-white border border-brand-border rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={updatingPartialAmount || !partialAdvanceInput || Number(partialAdvanceInput) === Number(settings.partial_advance)}
+                  onClick={() => handleUpdatePartialAdvance(partialAdvanceInput)}
+                  className="px-3 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+                >
+                  {updatingPartialAmount ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>Update Amount</span>
+                </button>
+              </div>
             </div>
 
             {/* Full COD Handling Fee */}

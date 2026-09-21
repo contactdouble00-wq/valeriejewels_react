@@ -822,7 +822,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               )}
               {selectedOrder.payment_type === 'partial' && (
                 <span className="font-semibold text-brand-tertiary block mt-1">
-                  Refund Amount: ₹{Number(selectedOrder.amount_paid_upfront).toLocaleString('en-IN')} (₹199 Upfront Token)
+                  Refund Amount: ₹{Number(selectedOrder.amount_paid_upfront).toLocaleString('en-IN')} (₹{Number(selectedOrder.amount_paid_upfront).toLocaleString('en-IN')} Upfront Token)
                 </span>
               )}
             </p>

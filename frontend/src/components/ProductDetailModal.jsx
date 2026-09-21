@@ -36,6 +36,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     return {
       cod_available: true,
       partial_cod_enabled: true,
+      partial_advance: 199,
       online_payment_enabled: true,
       prepaid_discount: 50,
     };
@@ -779,7 +780,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     {paySettings.cod_available
                       ? 'ORDER NOW - CASH ON DELIVERY'
                       : paySettings.partial_cod_enabled
-                      ? 'ORDER NOW - PARTIAL COD'
+                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 199})`
                       : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                   </span>
                 </div>
@@ -1217,7 +1218,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         {paySettings.cod_available
                           ? 'ORDER NOW - CASH ON DELIVERY'
                           : paySettings.partial_cod_enabled
-                          ? 'ORDER NOW - PARTIAL COD'
+                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 199})`
                           : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                       </span>
                     </div>
@@ -1268,7 +1269,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       }${
                         paySettings.online_payment_enabled !== false && (paySettings.cod_available || paySettings.partial_cod_enabled) ? ' & ' : ''
                       }${
-                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? 'Partial COD' : '')
+                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? `Partial COD (₹${paySettings.partial_advance || 199})` : '')
                       } Available`}
                     </span>
                   </p>

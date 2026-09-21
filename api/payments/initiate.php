@@ -163,23 +163,52 @@ try {
     $shippingFee    = $isFreeShipping ? 0.0 : 99.0;
     $totalAmount    = round(max(0, ($subtotal - $discountAmount) + $shippingFee), 2);
 
+    // Load active payment settings from database
+    $payConfig = [
+        'online_payment_enabled' => true,
+        'prepaid_discount'       => 50.0,
+        'partial_cod_enabled'    => true,
+        'partial_advance'        => 199.0,
+        'cod_available'          => true,
+        'cod_fee'                => 0.0,
+        'gateway_mode'           => 'sandbox',
+        'razorpay_key_id'        => '',
+        'razorpay_key_secret'    => '',
+        'fastrr_app_id'          => '',
+    ];
+    try {
+        $settingsStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $settingsStmt->execute();
+        $rawSettings = $settingsStmt->fetchColumn();
+        if ($rawSettings) {
+            $parsedSettings = json_decode($rawSettings, true);
+            if (is_array($parsedSettings)) {
+                $payConfig = array_merge($payConfig, $parsedSettings);
+            }
+        }
+    } catch (Throwable $se) {}
+
     // Split logic
     $amountPaidUpfront = 0.0;
     $amountDueOnDelivery = $totalAmount;
 
     if ($paymentType === 'full_prepaid') {
-        // ₹50 instant prepaid discount incentive
-        $prepaidDiscount = min(50.0, $totalAmount);
+        // Dynamic instant prepaid discount incentive
+        $prepaidDiscount = min((float)($payConfig['prepaid_discount'] ?? 50.0), $totalAmount);
         $totalAmount = round(max(0, $totalAmount - $prepaidDiscount), 2);
         $discountAmount += $prepaidDiscount;
         $amountPaidUpfront = $totalAmount;
         $amountDueOnDelivery = 0.0;
     } elseif ($paymentType === 'partial') {
-        $deposit = min(199.0, $totalAmount);
+        // Dynamic partial token advance configured by admin
+        $configuredAdvance = max(1.0, (float)($payConfig['partial_advance'] ?? 199.0));
+        $deposit = min($configuredAdvance, $totalAmount);
         $amountPaidUpfront = $deposit;
         $amountDueOnDelivery = round(max(0, $totalAmount - $deposit), 2);
     } else {
         // COD
+        $codFee = (float)($payConfig['cod_fee'] ?? 0.0);
+        $totalAmount = round($totalAmount + $codFee, 2);
         $amountPaidUpfront = 0.0;
         $amountDueOnDelivery = $totalAmount;
     }
@@ -258,26 +287,11 @@ try {
 
     $pdo->commit();
 
-    // Read active payment settings from database
-    $razorpayKeyId = '';
-    $razorpayKeySecret = '';
-    $fastrrAppId = '';
-    $isLive = false;
-
-    try {
-        $settingsStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
-        $settingsStmt->execute();
-        $rawSettings = $settingsStmt->fetchColumn();
-        if ($rawSettings) {
-            $pSettings = json_decode($rawSettings, true) ?: [];
-            $razorpayKeyId = $pSettings['razorpay_key_id'] ?? '';
-            $razorpayKeySecret = $pSettings['razorpay_key_secret'] ?? '';
-            $fastrrAppId = $pSettings['fastrr_app_id'] ?? '';
-            $isLive = ($pSettings['gateway_mode'] ?? 'sandbox') === 'live';
-        }
-    } catch (Throwable $se) {
-        // Continue with defaults if settings table check fails
-    }
+    // Active payment & gateway credentials from payConfig
+    $razorpayKeyId     = $payConfig['razorpay_key_id'] ?? '';
+    $razorpayKeySecret = $payConfig['razorpay_key_secret'] ?? '';
+    $fastrrAppId       = $payConfig['fastrr_app_id'] ?? '';
+    $isLive            = ($payConfig['gateway_mode'] ?? 'sandbox') === 'live';
 
     $razorpayOrderId = null;
     if ($amountPaidUpfront > 0 && !empty($razorpayKeyId) && !empty($razorpayKeySecret)) {

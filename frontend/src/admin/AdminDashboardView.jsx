@@ -167,7 +167,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             {kpis.rto_cancellation_rate}%
           </div>
           <div className="text-[11px] text-brand-muted">
-            Controlled via ₹199 token deposit model
+            Controlled via Smart Partial COD deposit model
           </div>
         </div>
       </div>
