@@ -83,8 +83,8 @@ try {
 
     $jwtSecret = $config['jwt']['secret'] ?? 'valerie_default_secret_key_2026';
     
-    // Strict 30-minute session lifetime for admin (1800s) vs customers (7 days)
-    $expiresIn = in_array($user['role'], ['admin', 'staff'], true) ? 1800 : (86400 * 7);
+    // Removed 30-minute auto-logout session lifetime (extended persistent session: 30 days)
+    $expiresIn = 86400 * 30;
 
     $now = time();
     $payload = [

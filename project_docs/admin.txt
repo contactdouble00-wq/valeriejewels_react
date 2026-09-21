@@ -25,7 +25,7 @@ Entered in the Valerie Jewels Admin login screen:
    Password: Admin@Valerie2026!
    * Security Note: 5 consecutive failed login attempts will lock out
      the account / IP for 15 minutes (HTTP 429 Too Many Requests).
-   * Session lifetime is 30 minutes.
+   * Session lifetime: Persistent (30-minute auto logout removed).
 =====================================================
 http://valeriejewels.in/?preview=vj2026#catalog
 start api
