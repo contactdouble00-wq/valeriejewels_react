@@ -500,6 +500,26 @@ export const apiService = {
   },
 
   /**
+   * Official Shiprocket Fastrr: Create Access Token Session
+   */
+  async createFastrrSession({ items, couponCode = '', discountAmount = 0 }) {
+    const response = await fetch(`${API_BASE_URL}/fastrr/create_session.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items,
+        coupon_code: couponCode,
+        discount_amount: discountAmount,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Failed to initiate Fastrr Checkout session');
+    }
+    return result.data;
+  },
+
+  /**
    * Server-side Checkout Calculation
    */
   async calculateCheckout({ items, couponCode }) {
@@ -574,5 +594,4 @@ export const apiService = {
   },
 };
 
-
-
+export default apiService;
