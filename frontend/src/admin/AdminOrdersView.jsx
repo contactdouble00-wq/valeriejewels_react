@@ -18,7 +18,8 @@ import {
   Send,
   Clock,
   Sparkles,
-  SendHorizontal
+  SendHorizontal,
+  Trash2
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -55,6 +56,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+
+  // Delete Order Dialog
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isStaff = currentUser?.role === 'staff';
 
@@ -152,6 +158,30 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Failed to dispatch email');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const openDeleteModal = (order) => {
+    setOrderToDelete(order);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    try {
+      setDeleting(true);
+      await adminApi.deleteOrder(orderToDelete.id);
+      showToast(`Order #${orderToDelete.order_number} deleted successfully`);
+      setOrders((prev) => prev.filter((o) => o.id !== orderToDelete.id));
+      if (selectedOrder && (selectedOrder.id === orderToDelete.id || String(selectedOrder.id) === String(orderToDelete.id))) {
+        setSelectedOrder(null);
+      }
+      setDeleteModalOpen(false);
+      setOrderToDelete(null);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete order');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -484,10 +514,20 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </button>
                         <button
                           onClick={() => inspectOrder(ord.id)}
-                          className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs"
+                          className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs cursor-pointer"
                         >
                           Inspect
                         </button>
+                        {!isStaff && (
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(ord)}
+                            title="Delete Order Permanently"
+                            className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-600 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -766,6 +806,29 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 )}
               </div>
             )}
+
+            {/* Delete Order Action (Admin Only) */}
+            <div className="pt-4 border-t border-brand-border flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold text-rose-700">Delete Order Record</div>
+                <div className="text-[10px] text-brand-muted">Permanently removes this order and tracking history</div>
+              </div>
+
+              {isStaff ? (
+                <span className="text-[10px] text-brand-muted bg-gray-100 px-2 py-1 rounded">
+                  Admin Privilege Required
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openDeleteModal(selectedOrder)}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Order</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -980,6 +1043,70 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
               >
                 {cancelling ? 'Processing Refund...' : 'Execute Refund & Restock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE ORDER PERMANENT CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {deleteModalOpen && orderToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center space-x-3 text-rose-600">
+              <div className="p-2.5 bg-rose-50 rounded-2xl border border-rose-100">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                  Delete Order Permanently
+                </h3>
+                <span className="text-[11px] text-brand-muted">Action cannot be undone</span>
+              </div>
+            </div>
+
+            <div className="bg-[#FAF8FC] rounded-2xl p-4 border border-brand-border space-y-2 text-xs">
+              <div className="flex justify-between items-center pb-2 border-b border-brand-border/60">
+                <span className="text-brand-muted">Order Number:</span>
+                <span className="font-mono font-bold text-brand-primary">#{orderToDelete.order_number}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-brand-border/60">
+                <span className="text-brand-muted">Customer:</span>
+                <span className="font-semibold text-brand-tertiary">{orderToDelete.customer_name}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-brand-border/60">
+                <span className="text-brand-muted">Total Amount:</span>
+                <span className="font-bold text-brand-tertiary">₹{Number(orderToDelete.total_amount).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-brand-muted">Current Status:</span>
+                <span className="font-semibold uppercase text-[10px] tracking-wider text-brand-primary">{orderToDelete.order_status}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-rose-700/90 leading-relaxed bg-rose-50/60 p-3 rounded-xl border border-rose-100">
+              Are you sure you want to permanently delete this order? All associated line items, dispatch events, and email logs will be purged from the database.
+            </p>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => { setDeleteModalOpen(false); setOrderToDelete(null); }}
+                disabled={deleting}
+                className="px-4 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteOrder}
+                disabled={deleting}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{deleting ? 'Deleting Order...' : 'Confirm Delete'}</span>
               </button>
             </div>
           </div>

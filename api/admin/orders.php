@@ -234,6 +234,76 @@ if ($method === 'GET') {
 $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 $action = $_GET['action'] ?? ($input['action'] ?? '');
 
+// Handle Order Deletion (DELETE or POST?action=delete)
+$isDeleteAction = ($method === 'DELETE')
+    || ($method === 'POST' && in_array($action, ['delete', 'delete_order'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_order'], true))
+    || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
+
+if ($isDeleteAction) {
+    if ($adminUser['role'] !== 'admin') {
+        ApiResponse::error('Permission Denied: Only administrators can delete orders.', 403);
+    }
+
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid Order ID is required for deletion', 422);
+    }
+
+    // Verify order exists
+    $stmt = $pdo->prepare("SELECT id, order_number, customer_name, customer_email, total_amount, order_status FROM orders WHERE id = ?");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        ApiResponse::error('Order not found or has already been deleted', 404);
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // 1. Delete associated tracking events
+        $delTrk = $pdo->prepare("DELETE FROM order_tracking_events WHERE order_id = ?");
+        $delTrk->execute([$orderId]);
+
+        // 2. Delete associated email logs
+        $delEmails = $pdo->prepare("DELETE FROM email_logs WHERE order_id = ?");
+        $delEmails->execute([$orderId]);
+
+        // 3. Delete associated order items
+        $delItems = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
+        $delItems->execute([$orderId]);
+
+        // 4. Delete the order record itself
+        $delOrder = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+        $delOrder->execute([$orderId]);
+
+        // 5. Audit trail in admin activity log
+        AdminAuth::logActivity($adminUser['id'], 'admin_delete_order', 'order', $orderId, [
+            'order_number'  => $order['order_number'],
+            'customer_name' => $order['customer_name'],
+            'customer_email'=> $order['customer_email'],
+            'total_amount'  => $order['total_amount'],
+            'order_status'  => $order['order_status'],
+        ]);
+
+        $pdo->commit();
+
+        ApiResponse::success([
+            'order_id'     => $orderId,
+            'order_number' => $order['order_number'],
+            'deleted'      => true,
+        ], "Order #{$order['order_number']} deleted successfully.");
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Failed to delete order: ' . $e->getMessage());
+        ApiResponse::error('Failed to delete order: ' . $e->getMessage(), 500);
+    }
+}
+
 // Handle Order Status Update (e.g. mark shipped, delivered, etc.)
 if ($action === 'update_status') {
     $orderId = (int)($input['order_id'] ?? 0);

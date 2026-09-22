@@ -331,6 +331,19 @@ export const adminApi = {
     return res.data;
   },
 
+  async deleteOrder(orderId) {
+    const res = await request(`/admin/orders.php?action=delete&id=${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'delete',
+        order_id: orderId,
+        id: orderId,
+        _method: 'DELETE',
+      }),
+    });
+    return res.data;
+  },
+
   // Customers & RTO
   async getCustomers(params = {}) {
     const qs = new URLSearchParams(params).toString();
