@@ -843,17 +843,115 @@ export default function AdminPaymentSettingsView() {
         </div>
 
         {/* Section 2: Fastrr Native Mobile OTP & Address Verification */}
-        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Smartphone className="w-4 h-4 text-brand-primary" />
-              <span>2. Fastrr Native Mobile OTP & Address Intelligence</span>
+              <span>2. Mobile OTP & Address Verification</span>
             </div>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border text-emerald-700 bg-emerald-50 border-emerald-200 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>100% Native Fastrr OTP Active</span>
+              <span>
+                {settings.sms_provider === 'fast2sms'
+                  ? 'Fast2SMS Cellular Active'
+                  : settings.sms_provider === 'twofactor'
+                  ? '2Factor Cellular Active'
+                  : 'Fastrr 1-Click Verification Active'}
+              </span>
             </span>
           </div>
+
+          {/* SMS Provider Selection */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-brand-tertiary">SMS & OTP Delivery Provider</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, sms_provider: 'fastrr' })}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  (settings.sms_provider || 'fastrr') === 'fastrr'
+                    ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                    Fastrr Instant
+                  </span>
+                  {(settings.sms_provider || 'fastrr') === 'fastrr' && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-brand-primary text-white font-bold">Selected</span>
+                  )}
+                </div>
+                <p className="text-[10.5px] leading-tight">Instant 1-Click Auto-Fill (code 123456). Zero SMS costs or DLT delays.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, sms_provider: 'fast2sms' })}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  settings.sms_provider === 'fast2sms'
+                    ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold">Fast2SMS (India)</span>
+                  {settings.sms_provider === 'fast2sms' && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-brand-primary text-white font-bold">Selected</span>
+                  )}
+                </div>
+                <p className="text-[10.5px] leading-tight">Sends real cellular SMS OTPs to Indian mobile numbers via Fast2SMS API.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, sms_provider: 'twofactor' })}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  settings.sms_provider === 'twofactor'
+                    ? 'border-brand-primary bg-purple-50 text-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                    : 'border-brand-border bg-[#FAF8FC] text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold">2Factor.in (India)</span>
+                  {settings.sms_provider === 'twofactor' && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-brand-primary text-white font-bold">Selected</span>
+                  )}
+                </div>
+                <p className="text-[10.5px] leading-tight">Dedicated Indian transactional SMS OTP gateway with TRAI DLT routing.</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Conditional API Key inputs */}
+          {settings.sms_provider === 'fast2sms' && (
+            <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2 animate-fade-in">
+              <label className="text-xs font-bold text-brand-tertiary">Fast2SMS Authorization API Key</label>
+              <input
+                type="text"
+                value={settings.fast2sms_api_key || ''}
+                onChange={(e) => setSettings({ ...settings, fast2sms_api_key: e.target.value })}
+                placeholder="Enter your Fast2SMS API Key"
+                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+              />
+              <p className="text-[10.5px] text-brand-muted">Get your key from <a href="https://www.fast2sms.com" target="_blank" rel="noreferrer" className="text-brand-primary underline">fast2sms.com</a> → Dev API.</p>
+            </div>
+          )}
+
+          {settings.sms_provider === 'twofactor' && (
+            <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2 animate-fade-in">
+              <label className="text-xs font-bold text-brand-tertiary">2Factor.in API Key</label>
+              <input
+                type="text"
+                value={settings.twofactor_api_key || ''}
+                onChange={(e) => setSettings({ ...settings, twofactor_api_key: e.target.value })}
+                placeholder="Enter your 2Factor.in API Key"
+                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+              />
+              <p className="text-[10.5px] text-brand-muted">Get your key from <a href="https://2factor.in" target="_blank" rel="noreferrer" className="text-brand-primary underline">2factor.in</a> dashboard.</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
             <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/70 space-y-1.5">
@@ -862,7 +960,7 @@ export default function AdminPaymentSettingsView() {
                 <span>Zero External SMS Fees</span>
               </div>
               <p className="text-[11px] text-brand-muted leading-relaxed">
-                Shiprocket Fastrr covers cellular SMS dispatch under telecom headers <strong>SHPRKT</strong> / <strong>FSTRR</strong>. No external SMS subscriptions, third-party gateways, or wallet recharges needed.
+                In Fastrr Instant Verification mode, 1-Click Auto-Fill (code 123456) lets shoppers proceed without third-party wallet top-ups or DLT delays.
               </p>
             </div>
 

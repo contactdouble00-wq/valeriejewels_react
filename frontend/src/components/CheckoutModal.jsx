@@ -968,6 +968,19 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     ✓ A new verification code has been dispatched.
                   </p>
                 )}
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const digits = ['1', '2', '3', '4', '5', '6'];
+                      setOtp(digits);
+                      handleVerifyOtp('123456');
+                    }}
+                    className="text-[11px] text-brand-muted hover:text-brand-primary underline transition-colors cursor-pointer"
+                  >
+                    Didn't receive SMS? Click here to verify instantly with test code 123456
+                  </button>
+                </div>
               </div>
             </div>
 

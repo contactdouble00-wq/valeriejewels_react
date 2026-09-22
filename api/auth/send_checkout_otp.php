@@ -104,9 +104,7 @@ try {
         'demo_otp'         => (!$isLiveDelivery) ? $otpCode : null,
         'message'          => $isLiveDelivery
             ? "Real SMS OTP dispatched to +91 {$cleanPhone}."
-            : ($isSandbox 
-                ? "Sandbox Mode: Use test OTP 123456 (or click Auto-Fill)." 
-                : "SMS Gateway Error: " . ($smsResult['message'] ?? 'Failed') . ". Fallback test code 123456 available.")
+            : ($smsResult['message'] ?? "Instant Verification: Enter code 123456 or click Auto-Fill to continue.")
     ], 'OTP processed.');
 
 } catch (Exception $e) {
