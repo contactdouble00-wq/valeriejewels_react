@@ -172,12 +172,13 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       setDeleting(true);
       await adminApi.deleteOrder(orderToDelete.id);
       showToast(`Order #${orderToDelete.order_number} deleted successfully`);
-      setOrders((prev) => prev.filter((o) => o.id !== orderToDelete.id));
+      setOrders((prev) => prev.filter((o) => o.id !== orderToDelete.id && String(o.id) !== String(orderToDelete.id)));
       if (selectedOrder && (selectedOrder.id === orderToDelete.id || String(selectedOrder.id) === String(orderToDelete.id))) {
         setSelectedOrder(null);
       }
       setDeleteModalOpen(false);
       setOrderToDelete(null);
+      loadOrders();
     } catch (err) {
       showToast(err.message || 'Failed to delete order');
     } finally {
@@ -518,16 +519,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         >
                           Inspect
                         </button>
-                        {!isStaff && (
-                          <button
-                            type="button"
-                            onClick={() => openDeleteModal(ord)}
-                            title="Delete Order Permanently"
-                            className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-600 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(ord)}
+                          title="Delete Order Permanently"
+                          className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-600 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -807,27 +807,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               </div>
             )}
 
-            {/* Delete Order Action (Admin Only) */}
+            {/* Delete Order Action */}
             <div className="pt-4 border-t border-brand-border flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-rose-700">Delete Order Record</div>
                 <div className="text-[10px] text-brand-muted">Permanently removes this order and tracking history</div>
               </div>
 
-              {isStaff ? (
-                <span className="text-[10px] text-brand-muted bg-gray-100 px-2 py-1 rounded">
-                  Admin Privilege Required
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openDeleteModal(selectedOrder)}
-                  className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Order</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => openDeleteModal(selectedOrder)}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Order</span>
+              </button>
             </div>
           </div>
         </div>

@@ -241,10 +241,6 @@ $isDeleteAction = ($method === 'DELETE')
     || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
 
 if ($isDeleteAction) {
-    if ($adminUser['role'] !== 'admin') {
-        ApiResponse::error('Permission Denied: Only administrators can delete orders.', 403);
-    }
-
     $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
     if ($orderId <= 0) {
         ApiResponse::error('Valid Order ID is required for deletion', 422);
