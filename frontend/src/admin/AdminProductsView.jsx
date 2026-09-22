@@ -3,8 +3,9 @@ import {
   Plus, Search, Filter, Copy, Trash2, Edit2, Star,
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
-  ChevronUp, Sparkles, Film, Play,
+  ChevronUp, Sparkles, Film, Play, Eye,
 } from 'lucide-react';
+import ProductAssuranceModal from './ProductAssuranceModal';
 import {
   DndContext,
   closestCenter,
@@ -128,6 +129,7 @@ export default function AdminProductsView({ currentUser }) {
   const [toastMessage, setToastMessage] = useState('');
   const [seoOpen, setSeoOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
+  const [assuranceProduct, setAssuranceProduct] = useState(null);
   const csvImportRef = useRef(null);
   const isStaff = currentUser?.role === 'staff';
 
@@ -137,6 +139,19 @@ export default function AdminProductsView({ currentUser }) {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  // ── Open Product Visual Assurance Modal ────────────────────────────────────
+  const handleOpenAssurance = async (product) => {
+    setAssuranceProduct(product);
+    try {
+      const full = await adminApi.getProduct(product.id);
+      if (full && full.id === product.id) {
+        setAssuranceProduct((curr) => (curr && curr.id === product.id ? full : curr));
+      }
+    } catch {
+      // Keep initial product if background fetch fails
+    }
   };
 
   // ── Load categories for dynamic dropdown ──────────────────────────────────
@@ -604,27 +619,36 @@ export default function AdminProductsView({ currentUser }) {
                             const thumbUrl = normalizeMediaUrl(rawThumb);
                             const isThumbVideo = isVideoMedia(thumbUrl);
 
-                            if (isThumbVideo) {
-                              return (
-                                <div className="w-12 h-12 rounded-xl bg-[#181420] text-brand-primary flex flex-col items-center justify-center shrink-0 border border-brand-border relative overflow-hidden">
-                                  <Play className="w-4 h-4 fill-white text-white" />
-                                  <span className="text-[7px] font-bold text-white uppercase tracking-tighter mt-0.5">REEL</span>
-                                </div>
-                              );
-                            }
                             return (
-                              <img
-                                src={thumbUrl || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80'}
-                                alt={p.name}
-                                onError={(e) => {
-                                  if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
-                                    e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
-                                  } else {
-                                    e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80';
-                                  }
-                                }}
-                                className="w-12 h-12 rounded-xl object-cover border border-brand-border shrink-0"
-                              />
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAssurance(p)}
+                                className="relative group cursor-pointer rounded-xl overflow-hidden shrink-0 border border-brand-border focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                title="Click to view product image (Visual Assurance)"
+                              >
+                                {isThumbVideo ? (
+                                  <div className="w-12 h-12 rounded-xl bg-[#181420] text-brand-primary flex flex-col items-center justify-center relative overflow-hidden">
+                                    <Play className="w-4 h-4 fill-white text-white" />
+                                    <span className="text-[7px] font-bold text-white uppercase tracking-tighter mt-0.5">REEL</span>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={thumbUrl || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80'}
+                                    alt={p.name}
+                                    onError={(e) => {
+                                      if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                                        e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                                      } else {
+                                        e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80';
+                                      }
+                                    }}
+                                    className="w-12 h-12 rounded-xl object-cover group-hover:scale-105 transition-transform duration-200"
+                                  />
+                                )}
+                                <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <Eye className="w-4 h-4 drop-shadow-sm" />
+                                </div>
+                              </button>
                             );
                           })()}
                           <div className="min-w-0 max-w-xs">
@@ -713,6 +737,14 @@ export default function AdminProductsView({ currentUser }) {
                       </td>
 
                       <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAssurance(p)}
+                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors cursor-pointer"
+                          title="View Product Image (Assurance Preview)"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(p)}
                           className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors"
@@ -1206,6 +1238,17 @@ export default function AdminProductsView({ currentUser }) {
           </div>
         </div>
       )}
+
+      {/* Product Assurance Lightbox Modal */}
+      <ProductAssuranceModal
+        isOpen={Boolean(assuranceProduct)}
+        item={assuranceProduct}
+        onClose={() => setAssuranceProduct(null)}
+        onEdit={(prod) => {
+          setAssuranceProduct(null);
+          handleOpenEdit(prod);
+        }}
+      />
     </div>
   );
 }

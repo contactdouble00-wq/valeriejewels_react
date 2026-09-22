@@ -7,15 +7,12 @@ import { normalizeProductMedia, normalizeMediaUrl } from '../utils/mediaUtils';
 
 function getApiBaseUrl() {
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-    if (!isLocal) {
-      const envUrl = import.meta.env.VITE_API_BASE_URL;
-      if (envUrl && envUrl.startsWith('https://')) {
-        return envUrl.replace(/\/+$/, '');
-      }
-      return '/api';
+    const envUrl = import.meta.env.VITE_API_BASE_URL;
+    if (envUrl && envUrl.startsWith('https://')) {
+      return envUrl.replace(/\/+$/, '');
     }
+    // Always use /api in browser so Vite dev proxy or web server routes to backend seamlessly
+    return '/api';
   }
   const rawUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
   return rawUrl.replace(/\/+$/, '');

@@ -21,6 +21,8 @@ import {
   SendHorizontal
 } from 'lucide-react';
 import { adminApi } from './adminApi';
+import ProductAssuranceModal from './ProductAssuranceModal';
+import { normalizeMediaUrl } from '../utils/mediaUtils';
 
 export default function AdminOrdersView({ currentUser, initialSelectedOrderId }) {
   const [orders, setOrders] = useState([]);
@@ -33,6 +35,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [assuranceItem, setAssuranceItem] = useState(null);
 
   // Status transition state
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -339,25 +342,73 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               ) : (
                 orders.map((ord) => (
                   <tr key={ord.id} className="hover:bg-[#FAF8FC] transition-colors">
-                    {/* Order Number & Tags */}
+                    {/* Order Number & Item Preview */}
                     <td className="py-3.5 px-4">
-                      <div className="font-mono font-bold text-brand-tertiary">
-                        #{ord.order_number}
+                      <div className="flex items-start space-x-3">
+                        {ord.first_item_image ? (
+                          <button
+                            type="button"
+                            onClick={() => setAssuranceItem({
+                              product_name: ord.first_item_name,
+                              sku: ord.first_item_sku,
+                              slug: ord.first_item_slug,
+                              primary_image: ord.first_item_image,
+                              order_number: ord.order_number,
+                              customer_name: ord.customer_name,
+                              total_price: ord.total_amount,
+                              is_jhumka_box: Number(ord.has_jhumka_box) > 0,
+                            })}
+                            className="relative group shrink-0 rounded-xl overflow-hidden border border-brand-border cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                            title="Click to view product image (Assurance Preview)"
+                          >
+                            <img
+                              src={normalizeMediaUrl(ord.first_item_image)}
+                              alt={ord.first_item_name || 'Ordered item'}
+                              className="w-11 h-11 object-cover group-hover:scale-105 transition-transform duration-200"
+                              onError={(e) => {
+                                if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                                  e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                                } else {
+                                  e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Eye className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
+                        ) : null}
+
+                        <div className="min-w-0">
+                          <div className="font-mono font-bold text-brand-tertiary flex items-center space-x-1">
+                            <span>#{ord.order_number}</span>
+                          </div>
+                          {ord.first_item_name && (
+                            <div className="text-[11px] font-medium text-brand-tertiary truncate max-w-[170px]" title={ord.first_item_name}>
+                              {ord.first_item_name}
+                            </div>
+                          )}
+                          <div className="text-[10px] text-brand-muted">
+                            {new Date(ord.created_at).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            {Number(ord.items_count) > 1 && (
+                              <span className="ml-1.5 px-1.5 py-0.2 bg-gray-100 text-gray-700 rounded font-semibold text-[9px]">
+                                +{Number(ord.items_count) - 1} more
+                              </span>
+                            )}
+                          </div>
+                          {Number(ord.has_jhumka_box) > 0 && (
+                            <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 mt-1">
+                              <Flame className="w-2.5 h-2.5 text-amber-600" />
+                              <span>📦 Jhumka Ad Order</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-brand-muted">
-                        {new Date(ord.created_at).toLocaleDateString('en-IN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
-                      {Number(ord.has_jhumka_box) > 0 && (
-                        <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 mt-1">
-                          <Flame className="w-2.5 h-2.5 text-amber-600" />
-                          <span>📦 Jhumka Ad Order</span>
-                        </span>
-                      )}
                     </td>
 
                     {/* Customer Info */}
@@ -404,6 +455,25 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
+                        {ord.first_item_image && (
+                          <button
+                            type="button"
+                            onClick={() => setAssuranceItem({
+                              product_name: ord.first_item_name,
+                              sku: ord.first_item_sku,
+                              slug: ord.first_item_slug,
+                              primary_image: ord.first_item_image,
+                              order_number: ord.order_number,
+                              customer_name: ord.customer_name,
+                              total_price: ord.total_amount,
+                              is_jhumka_box: Number(ord.has_jhumka_box) > 0,
+                            })}
+                            title="View Product Image (Assurance Preview)"
+                            className="p-1.5 rounded-xl bg-gray-100 hover:bg-brand-primary hover:text-white border border-brand-border text-brand-muted hover:text-white transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => openEmailModal(ord)}
                           title="Send Branded Customer Email"
@@ -488,35 +558,89 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 Items Ordered ({selectedOrder.items?.length || 0})
               </div>
               <div className="divide-y divide-brand-border/60 border border-brand-border rounded-2xl p-2 bg-white">
-                {selectedOrder.items?.map((item) => (
-                  <div key={item.id} className="p-3 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={
-                          item.primary_image ||
-                          'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80'
-                        }
-                        alt={item.product_name}
-                        className="w-12 h-12 rounded-xl object-cover border border-brand-border shrink-0"
-                      />
-                      <div>
-                        <div className="font-semibold text-brand-tertiary">{item.product_name}</div>
-                        <div className="text-[10px] text-brand-muted">
-                          Qty: {item.quantity} × ₹{Number(item.unit_price).toLocaleString('en-IN')}
+                {selectedOrder.items?.map((item) => {
+                  const itemPayload = {
+                    product_name: item.product_name,
+                    sku: item.sku,
+                    slug: item.slug,
+                    primary_image: item.primary_image,
+                    quantity: item.quantity,
+                    variant_title: item.variant_title,
+                    unit_price: item.unit_price,
+                    total_price: item.total_price,
+                    order_number: selectedOrder.order_number,
+                    customer_name: selectedOrder.customer_name,
+                    is_jhumka_box: Number(item.is_jhumka_box) > 0,
+                  };
+
+                  return (
+                    <div key={item.id} className="p-3 flex items-center justify-between text-xs hover:bg-[#FAF8FC] rounded-xl transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => setAssuranceItem(itemPayload)}
+                          className="relative group shrink-0 rounded-xl overflow-hidden border border-brand-border cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                          title="Click to view high-resolution product image for assurance"
+                        >
+                          <img
+                            src={
+                              item.primary_image ? normalizeMediaUrl(item.primary_image) :
+                              'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80'
+                            }
+                            alt={item.product_name}
+                            className="w-12 h-12 rounded-xl object-cover group-hover:scale-105 transition-transform duration-200"
+                            onError={(e) => {
+                              if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                                e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                              } else {
+                                e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                              }
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Eye className="w-4 h-4 drop-shadow-sm" />
+                          </div>
+                        </button>
+
+                        <div>
+                          <div className="font-semibold text-brand-tertiary flex items-center space-x-2">
+                            <span>{item.product_name}</span>
+                            {item.sku && (
+                              <span className="font-mono text-[9px] text-brand-muted bg-gray-100 px-1.5 py-0.2 rounded">
+                                {item.sku}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-brand-muted mt-0.5">
+                            Qty: {item.quantity} × ₹{Number(item.unit_price).toLocaleString('en-IN')}
+                            {item.variant_title && <span className="ml-1.5 text-brand-tertiary">• {item.variant_title}</span>}
+                          </div>
+                          {Number(item.is_jhumka_box) > 0 && (
+                            <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded mt-0.5 inline-block">
+                              🔥 Signature Jhumka Box
+                            </span>
+                          )}
                         </div>
-                        {Number(item.is_jhumka_box) > 0 && (
-                          <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded mt-0.5 inline-block">
-                            🔥 Signature Jhumka Box
-                          </span>
-                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setAssuranceItem(itemPayload)}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-brand-primary hover:text-white text-[11px] font-semibold text-brand-tertiary transition-colors cursor-pointer"
+                          title="Inspect product photo for packing assurance"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>View Image</span>
+                        </button>
+
+                        <div className="font-bold text-brand-tertiary font-mono">
+                          ₹{Number(item.total_price).toLocaleString('en-IN')}
+                        </div>
                       </div>
                     </div>
-
-                    <div className="font-bold text-brand-tertiary font-mono">
-                      ₹{Number(item.total_price).toLocaleString('en-IN')}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -861,6 +985,13 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           </div>
         </div>
       )}
+
+      {/* Product Visual Assurance Modal */}
+      <ProductAssuranceModal
+        isOpen={Boolean(assuranceItem)}
+        item={assuranceItem}
+        onClose={() => setAssuranceItem(null)}
+      />
     </div>
   );
 }

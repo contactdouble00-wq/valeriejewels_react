@@ -139,8 +139,11 @@ if ($method === 'GET') {
 
         // Fetch items
         $itemStmt = $pdo->prepare("
-            SELECT oi.*, p.slug, p.category_id,
-                   (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1) AS primary_image,
+            SELECT oi.*, p.slug, p.category_id, p.sku,
+                   COALESCE(
+                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
+                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+                   ) AS primary_image,
                    CASE WHEN p.sku LIKE 'VJ-JHM%' OR p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1) THEN 1 ELSE 0 END AS is_jhumka_box
             FROM order_items oi
             LEFT JOIN products p ON oi.product_id = p.id
@@ -202,6 +205,13 @@ if ($method === 'GET') {
         SELECT 
             o.*,
             (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS items_count,
+            (SELECT oi.product_name FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_name,
+            (SELECT p.sku FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_sku,
+            (SELECT p.slug FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_slug,
+            (SELECT COALESCE(
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+            ) FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_image,
             EXISTS (
                 SELECT 1 FROM order_items oi 
                 JOIN products p ON oi.product_id = p.id 
