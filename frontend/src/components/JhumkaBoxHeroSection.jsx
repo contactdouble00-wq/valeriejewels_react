@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart } from 'lucide-react';
+import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, Film } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -124,6 +124,12 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     -{discount}%
                   </span>
                 )}
+                {Boolean(box.video_url || (Array.isArray(box?.images) && box.images.some(img => img.media_type === 'video' || (typeof (img.image_url || img.url) === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(img.image_url || img.url))))) && (
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm flex items-center gap-1 w-fit">
+                    <Film className="w-2.5 h-2.5 text-amber-300" />
+                    <span>Reel</span>
+                  </span>
+                )}
               </div>
 
               {/* Floating Wishlist Heart Button */}
@@ -145,7 +151,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
 
               {/* Product Image: 1:1 Balanced Square Ratio */}
               <div
-                onClick={() => onOpenPdp && onOpenPdp(box.slug)}
+                onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
                 className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer"
               >
                 <img
@@ -186,7 +192,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     <span>{box.category_name || 'Curated Bestseller'}</span>
                   </div>
                   <h3
-                    onClick={() => onOpenPdp && onOpenPdp(box.slug)}
+                    onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
                     className="font-sans text-xs sm:text-[14.5px] font-semibold text-brand-tertiary line-clamp-2 hover:text-brand-primary cursor-pointer leading-snug"
                     title={box.name}
                   >
@@ -227,7 +233,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   {/* Desktop Actions (Preserved Exactly) */}
                   <div className="hidden sm:flex items-center gap-1.5 pt-0.5">
                     <button
-                      onClick={() => onOpenPdp && onOpenPdp(box.slug)}
+                      onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
                       className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-tertiary text-[11px] font-semibold transition-colors flex items-center justify-center shrink-0"
                       title="View Details"
                       aria-label="View Details"

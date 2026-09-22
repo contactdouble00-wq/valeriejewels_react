@@ -20,6 +20,8 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     short_description,
   } = product;
 
+  const hasVideo = Boolean(video_url) || (Array.isArray(product?.images) && product.images.some(img => img.media_type === 'video' || (typeof (img.image_url || img.url) === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(img.image_url || img.url))));
+
   return (
     <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
       <div>
@@ -54,7 +56,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
                 Best Seller
               </span>
             )}
-            {Boolean(video_url) && (
+            {hasVideo && (
               <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm flex items-center gap-1 w-fit">
                 <Film className="w-2.5 h-2.5 text-amber-300" />
                 <span>Reel</span>
@@ -95,7 +97,10 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
         </div>
 
         {/* Product Meta */}
-        <div className="mt-2.5 sm:mt-4 space-y-1 sm:space-y-1.5">
+        <div 
+          onClick={() => onQuickView(product)}
+          className="mt-2.5 sm:mt-4 space-y-1 sm:space-y-1.5 cursor-pointer"
+        >
           {/* Rating */}
           <div className="flex items-center space-x-1 text-amber-500">
             {[...Array(5)].map((_, i) => (
@@ -106,7 +111,10 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
           {/* Product Name */}
           <h3
-            onClick={() => onQuickView(product)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickView(product);
+            }}
             className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug"
           >
             {name}

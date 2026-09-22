@@ -304,7 +304,10 @@ export default function FestivalOfferSection({
                   >
                     <div>
                       {/* Image Frame */}
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30">
+                      <div 
+                        onClick={() => onQuickView && onQuickView(product)}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-black/30 cursor-pointer"
+                      >
                         <img
                           src={img}
                           alt={product.name}

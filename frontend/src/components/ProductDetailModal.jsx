@@ -4,7 +4,7 @@ import {
   Sparkles, Check, ChevronRight, ChevronLeft, Share2, HelpCircle, AlertCircle,
   Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Film, Zap
 } from 'lucide-react';
-import { normalizeMediaUrl } from '../utils/mediaUtils';
+import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
@@ -208,67 +208,131 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const activePrice = selectedVariant?.price || product?.price || 0;
   const activeMrp = selectedVariant?.mrp || product?.mrp || 0;
 
-  // Build unified media items (High-Res 3:4 Images + 9:16 Vertical Video Reels)
+  // Build unified media items:
+  // When product video is available, user sees the video of the product FIRST, then other product photos.
+  // When product video is unavailable, product images are shown as it is.
   const mediaItems = useMemo(() => {
-    let list = [];
-    if (product?.images && product.images.length > 0) {
-      list = product.images.map((img, idx) => {
-        const rawUrl = typeof img === 'string' ? img : (img.image_url || img.url);
-        const url = normalizeMediaUrl(rawUrl);
-        const isVideo = img.media_type === 'video' || (typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url));
-        return {
-          id: img.id || `media-${idx}`,
-          url,
-          alt: img.alt_text || product.name,
-          type: isVideo ? 'video' : 'image',
-          is_primary: img.is_primary ?? (idx === 0 ? 1 : 0),
-        };
-      });
-    } else if (product?.primary_image) {
-      const normPri = normalizeMediaUrl(product.primary_image);
-      const isPriVideo = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(normPri);
-      list = [
+    if (!product) {
+      return [
         {
-          id: 'primary-0',
-          url: normPri,
-          alt: product.name,
-          type: isPriVideo ? 'video' : 'image',
+          id: 'fallback-0',
+          url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=1200&h=1600&q=85',
+          alt: 'Valerie Jewels',
+          type: 'image',
           is_primary: 1,
         },
       ];
     }
 
-    // Seamlessly include product video_url if not already in list
-    if (product?.video_url) {
-      const normVid = normalizeMediaUrl(product.video_url);
-      if (!list.some((m) => m.url === normVid)) {
-        const vidObj = {
-          id: 'product-reel',
-          url: normVid,
-          alt: `${product.name} Reel Showcase`,
-          type: 'video',
-          is_primary: 0,
-        };
-        if (list.length > 1) {
-          list.splice(1, 0, vidObj);
-        } else {
-          list.push(vidObj);
-        }
+    // 1. Process all raw image/media items from product
+    let rawList = [];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      rawList = product.images
+        .map((img, idx) => {
+          const rawUrl = typeof img === 'string' ? img : (img.image_url || img.url);
+          if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === '' || rawUrl === 'null' || rawUrl === 'undefined') {
+            return null;
+          }
+          const url = normalizeMediaUrl(rawUrl);
+          const isVideo = isVideoMedia(img) || isVideoMedia(url);
+          return {
+            id: img.id || `media-${idx}`,
+            url,
+            alt: img.alt_text || product.name,
+            type: isVideo ? 'video' : 'image',
+            is_primary: img.is_primary ?? (idx === 0 ? 1 : 0),
+            display_order: img.display_order ?? idx,
+          };
+        })
+        .filter(Boolean);
+    } else if (product.primary_image) {
+      const rawPri = product.primary_image;
+      if (typeof rawPri === 'string' && rawPri.trim() !== '' && rawPri !== 'null' && rawPri !== 'undefined') {
+        const normPri = normalizeMediaUrl(rawPri);
+        const isPriVideo = isVideoMedia(normPri);
+        rawList = [
+          {
+            id: 'primary-0',
+            url: normPri,
+            alt: product.name,
+            type: isPriVideo ? 'video' : 'image',
+            is_primary: 1,
+            display_order: 0,
+          },
+        ];
       }
     }
 
-    return list.length > 0
-      ? list
-      : [
-          {
-            id: 'fallback-0',
-            url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=1200&h=1600&q=85',
-            alt: product?.name,
-            type: 'image',
-            is_primary: 1,
-          },
-        ];
+    // 2. Identify video from product.video_url if available
+    const rawVideoUrl = product.video_url && typeof product.video_url === 'string' && product.video_url.trim() !== '' && product.video_url !== 'null' && product.video_url !== 'undefined'
+      ? product.video_url.trim()
+      : null;
+    const normVideoUrl = rawVideoUrl ? normalizeMediaUrl(rawVideoUrl) : null;
+
+    // 3. Separate into videos and photos (images)
+    const videos = [];
+    const photos = [];
+
+    // If explicit video_url exists, make it the main first video
+    if (normVideoUrl) {
+      videos.push({
+        id: 'product-video-main',
+        url: normVideoUrl,
+        alt: `${product.name} Reel Showcase`,
+        type: 'video',
+        is_primary: 0,
+      });
+    }
+
+    // Add remaining items from rawList
+    for (const item of rawList) {
+      if (item.type === 'video') {
+        // Prevent adding duplicate if this video matches normVideoUrl
+        if (!normVideoUrl || item.url !== normVideoUrl) {
+          videos.push(item);
+        }
+      } else {
+        photos.push(item);
+      }
+    }
+
+    // Preserve original photo ordering (primary photo first, then display_order)
+    photos.sort((a, b) => {
+      if (b.is_primary !== a.is_primary) return (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0);
+      return (a.display_order ?? 0) - (b.display_order ?? 0);
+    });
+
+    // 4. If product video is available: video of the product FIRST, then other product photos!
+    // If product video is unavailable: show product images as it is!
+    let finalList = [];
+    if (videos.length > 0) {
+      finalList = [...videos, ...photos];
+    } else {
+      finalList = photos;
+    }
+
+    // Fallback if empty
+    if (finalList.length === 0) {
+      finalList = [
+        {
+          id: 'fallback-0',
+          url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=1200&h=1600&q=85',
+          alt: product.name || 'Valerie Jewels',
+          type: 'image',
+          is_primary: 1,
+        },
+      ];
+    }
+
+    return finalList;
   }, [product]);
+
+  // List of indices for photo-only slides (used for zoom lightbox navigation)
+  const photoIndices = useMemo(() => {
+    return mediaItems
+      .map((item, idx) => (item.type !== 'video' ? idx : null))
+      .filter((idx) => idx !== null);
+  }, [mediaItems]);
 
   const activeMedia = mediaItems[selectedMediaIndex] || mediaItems[0];
 
@@ -1370,12 +1434,17 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             <X className="w-6 h-6 stroke-[2]" />
           </button>
 
-          {mediaItems.filter(m => m.type !== 'video').length > 1 && (
+          {photoIndices.length > 1 && (
             <>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaItems.length - 1));
+                  const currentPos = photoIndices.indexOf(selectedMediaIndex);
+                  if (currentPos > 0) {
+                    setSelectedMediaIndex(photoIndices[currentPos - 1]);
+                  } else {
+                    setSelectedMediaIndex(photoIndices[photoIndices.length - 1]);
+                  }
                 }}
                 className="absolute left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all hover:scale-105 active:scale-95 cursor-pointer z-50 shadow-lg"
                 title="Previous photo"
@@ -1385,7 +1454,12 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedMediaIndex((prev) => (prev < mediaItems.length - 1 ? prev + 1 : 0));
+                  const currentPos = photoIndices.indexOf(selectedMediaIndex);
+                  if (currentPos >= 0 && currentPos < photoIndices.length - 1) {
+                    setSelectedMediaIndex(photoIndices[currentPos + 1]);
+                  } else {
+                    setSelectedMediaIndex(photoIndices[0]);
+                  }
                 }}
                 className="absolute right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all hover:scale-105 active:scale-95 cursor-pointer z-50 shadow-lg"
                 title="Next photo"
@@ -1405,7 +1479,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               className="max-w-full max-h-[82vh] object-contain rounded-2xl shadow-2xl"
             />
             <div className="mt-3 text-center text-xs text-white/75 font-mono tracking-wider">
-              {product.name} • {selectedMediaIndex + 1} of {mediaItems.length}
+              {product.name} • {Math.max(1, photoIndices.indexOf(selectedMediaIndex) + 1)} of {photoIndices.length} photos
             </div>
           </div>
         </div>
