@@ -85,7 +85,6 @@ async function request(endpoint, options = {}) {
       }
       throw new Error(errorMessage);
     }
-
     return data;
   } catch (err) {
     console.error(`Admin API Error [${endpoint}]:`, err);
