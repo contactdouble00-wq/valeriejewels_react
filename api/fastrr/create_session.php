@@ -35,11 +35,25 @@ try {
         }
     } catch (Exception $e) {}
 
-    $apiKey = trim($settings['fastrr_app_id'] ?? 'TAlJIqacN8rB0njv');
-    $secretKey = trim($settings['fastrr_secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0');
+    $apiKey = trim($settings['fastrr_app_id'] ?? '');
+    $secretKey = trim($settings['fastrr_secret_key'] ?? '');
 
-    if (empty($apiKey) || empty($secretKey)) {
-        ApiResponse::error('Shiprocket Fastrr API credentials not configured.', 500);
+    // Ensure valid Fastrr credentials (override placeholder store name if previously saved)
+    if (empty($apiKey) || $apiKey === 'valeriejewels' || strlen($apiKey) < 10) {
+        $apiKey = 'TAlJIqacN8rB0njv';
+    }
+    if (empty($secretKey) || strlen($secretKey) < 10) {
+        $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+    }
+
+    // Auto-sync into database
+    if (($settings['fastrr_app_id'] ?? '') !== $apiKey || ($settings['fastrr_secret_key'] ?? '') !== $secretKey) {
+        $settings['fastrr_app_id'] = $apiKey;
+        $settings['fastrr_secret_key'] = $secretKey;
+        try {
+            $upd = $pdo->prepare("REPLACE INTO `site_settings` (`key`, `value`) VALUES ('payment_settings', ?)");
+            $upd->execute([json_encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) {}
     }
 
     $formattedItems = [];

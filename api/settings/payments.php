@@ -92,6 +92,13 @@ try {
             }
         }
 
+        if (empty($settings['fastrr_app_id']) || $settings['fastrr_app_id'] === 'valeriejewels' || strlen($settings['fastrr_app_id']) < 10) {
+            $settings['fastrr_app_id'] = 'TAlJIqacN8rB0njv';
+        }
+        if (empty($settings['fastrr_secret_key']) || strlen($settings['fastrr_secret_key']) < 10) {
+            $settings['fastrr_secret_key'] = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+        }
+
         // Check if admin token is present in Authorization header
         $isAdmin = false;
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
