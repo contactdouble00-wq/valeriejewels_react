@@ -91,7 +91,6 @@ async function request(endpoint, options = {}) {
     throw err;
   }
 }
-
 export const adminApi = {
   // Auth
   async login(email, password) {
@@ -105,7 +104,6 @@ export const adminApi = {
     }
     return res.data;
   },
-
   async logout() {
     try {
       await request('/auth/logout.php', { method: 'POST' });
@@ -116,7 +114,6 @@ export const adminApi = {
       localStorage.removeItem('valerie_admin_user');
     }
   },
-
   getCurrentUser() {
     try {
       const stored = localStorage.getItem('valerie_admin_user');
