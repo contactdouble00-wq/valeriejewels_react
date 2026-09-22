@@ -132,7 +132,16 @@ try {
 
     // Fastrr API error detail
     $errMsg = $decoded['error']['message'] ?? $decoded['message'] ?? $curlErr ?? "HTTP {$httpCode} error initiating Fastrr checkout.";
-    ApiResponse::error($errMsg, 502, ['fastrr_raw' => $decoded]);
+    ApiResponse::error($errMsg, 502, [
+        'fastrr_raw' => $decoded,
+        'debug'      => [
+            'hmac'          => $hmac,
+            'api_key'       => $apiKey,
+            'secret_length' => strlen($secretKey),
+            'secret_prefix' => substr($secretKey, 0, 4),
+            'json'          => $jsonPayload
+        ]
+    ]);
 
 } catch (Throwable $e) {
     ApiResponse::error('Checkout session creation failed: ' . $e->getMessage(), 500);
