@@ -34,7 +34,6 @@ async function request(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
     headers['X-Admin-Token'] = token;
   }
-
   // If body is not FormData, add Content-Type: application/json
   if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -58,7 +57,6 @@ async function request(endpoint, options = {}) {
         localStorage.removeItem('valerie_admin_token');
         localStorage.removeItem('valerie_admin_user');
       }
-
       // Robust extraction of user-friendly error message
       let errorMessage = data.message || data.error;
       if (!errorMessage && Array.isArray(data.errors) && data.errors.length > 0) {
@@ -66,7 +64,6 @@ async function request(endpoint, options = {}) {
           ? data.errors[0]
           : (data.errors[0]?.message || JSON.stringify(data.errors[0]));
       }
-
       // If server returned plain text or HTML, extract message
       if (!errorMessage && rawText) {
         const stripped = rawText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
@@ -79,7 +76,6 @@ async function request(endpoint, options = {}) {
           }
         }
       }
-
       if (!errorMessage) {
         if (response.status === 500) {
           errorMessage = 'The server encountered an error processing this request (HTTP 500). Please check server logs.';
@@ -87,7 +83,6 @@ async function request(endpoint, options = {}) {
           errorMessage = `Request failed with status ${response.status}`;
         }
       }
-
       throw new Error(errorMessage);
     }
 
