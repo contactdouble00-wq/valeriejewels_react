@@ -12,6 +12,7 @@ $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
+try {
 // Handle GET: List, Single Order, or Email Template Preview
 if ($method === 'GET') {
     $action = $_GET['action'] ?? '';
@@ -249,24 +250,45 @@ if ($action === 'update_status') {
         ':id'      => $orderId,
     ]);
 
-    // Insert tracking event
+    // Insert tracking event (resilient across schema variations)
     $eventDesc = !empty($customMessage) 
         ? $customMessage 
         : 'Order status manual update via administrative panel by ' . $adminUser['name'];
         
-    $eventStmt = $pdo->prepare("
-        INSERT INTO order_tracking_events (order_id, status_milestone, title, description, location, courier_partner, awb_code)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ");
-    $eventStmt->execute([
-        $orderId,
-        $newStatus,
-        ucwords(str_replace('_', ' ', $newStatus)) . ' by Admin Concierge',
-        $eventDesc,
-        'Mumbai Central Hub',
-        $courier,
-        $awbCode ?: null,
-    ]);
+    try {
+        $eventStmt = $pdo->prepare("
+            INSERT INTO order_tracking_events (order_id, status, status_milestone, title, description, location, courier_partner, awb_code, occurred_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $eventStmt->execute([
+            $orderId,
+            $newStatus,
+            $newStatus,
+            ucwords(str_replace('_', ' ', $newStatus)) . ' by Admin Concierge',
+            $eventDesc,
+            'Mumbai Central Hub',
+            $courier,
+            $awbCode ?: null,
+            date('Y-m-d H:i:s'),
+        ]);
+    } catch (Throwable $trkErr) {
+        try {
+            $eventStmt = $pdo->prepare("
+                INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $eventStmt->execute([
+                $orderId,
+                $newStatus,
+                ucwords(str_replace('_', ' ', $newStatus)) . ' by Admin Concierge',
+                $eventDesc,
+                'Mumbai Central Hub',
+                date('Y-m-d H:i:s'),
+            ]);
+        } catch (Throwable $fallbackErr) {
+            error_log('Tracking event insertion warning: ' . $fallbackErr->getMessage());
+        }
+    }
 
     // Send corresponding customer notification email based on new status
     $emailSendResult = null;
@@ -404,20 +426,22 @@ if ($action === 'cancel_refund') {
 
     $pdo->beginTransaction();
     try {
+        $now = date('Y-m-d H:i:s');
         $upd = $pdo->prepare("
             UPDATE orders SET 
                 order_status = 'cancelled',
                 payment_status = CASE WHEN :ref > 0 THEN 'refunded' ELSE payment_status END,
                 cancellation_reason = :reason,
                 refund_amount = :ref_amt,
-                cancelled_at = NOW()
+                cancelled_at = :cancelled_at
             WHERE id = :id
         ");
         $upd->execute([
-            ':ref'     => $refundAmount,
-            ':reason'  => $reason,
-            ':ref_amt' => $refundAmount,
-            ':id'      => $orderId,
+            ':ref'          => $refundAmount,
+            ':reason'       => $reason,
+            ':ref_amt'      => $refundAmount,
+            ':cancelled_at' => $now,
+            ':id'           => $orderId,
         ]);
 
         // Restock inventory
@@ -430,15 +454,32 @@ if ($action === 'cancel_refund') {
             $restockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
         }
 
-        // Add tracking milestone
-        $trkStmt = $pdo->prepare("
-            INSERT INTO order_tracking_events (order_id, status_milestone, title, description, location)
-            VALUES (?, 'cancelled', 'Order Cancelled & Refund Initiated', ?, 'Mumbai Admin Hub')
-        ");
-        $trkStmt->execute([
-            $orderId,
-            "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund.",
-        ]);
+        // Add tracking milestone (compatible with MySQL and SQLite columns)
+        try {
+            $trkStmt = $pdo->prepare("
+                INSERT INTO order_tracking_events (order_id, status, status_milestone, title, description, location, occurred_at)
+                VALUES (?, 'cancelled', 'cancelled', 'Order Cancelled & Refund Initiated', ?, 'Mumbai Admin Hub', ?)
+            ");
+            $trkStmt->execute([
+                $orderId,
+                "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund.",
+                $now,
+            ]);
+        } catch (Throwable $te) {
+            try {
+                $trkStmt = $pdo->prepare("
+                    INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+                    VALUES (?, 'cancelled', 'Order Cancelled & Refund Initiated', ?, 'Mumbai Admin Hub', ?)
+                ");
+                $trkStmt->execute([
+                    $orderId,
+                    "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund.",
+                    $now,
+                ]);
+            } catch (Throwable $te2) {
+                error_log('Tracking event insertion warning: ' . $te2->getMessage());
+            }
+        }
 
         AdminAuth::logActivity($adminUser['id'], 'admin_cancel_refund', 'order', $orderId, [
             'refund_amount' => $refundAmount,
@@ -467,3 +508,8 @@ if ($action === 'cancel_refund') {
 }
 
 ApiResponse::error('Invalid request action or method', 400);
+
+} catch (Throwable $e) {
+    error_log('orders.php error: ' . $e->getMessage());
+    ApiResponse::handleDatabaseException($e, 'Failed to process order request');
+}

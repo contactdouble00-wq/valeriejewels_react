@@ -154,11 +154,25 @@ class Database {
             // Always ensure default admin account exists
             self::seedAdminUser($pdo);
 
-            // Ensure pairs_count column exists in products table
-            try {
-                $pdo->exec("ALTER TABLE `products` ADD COLUMN `pairs_count` INT UNSIGNED DEFAULT NULL AFTER `stock_quantity`");
-            } catch (Throwable $e) {
-                // Column already exists or already migrated
+            // Ensure pairs_count and SEO/video columns exist in products table
+            $productCols = [
+                "ALTER TABLE `products` ADD COLUMN `pairs_count` INT UNSIGNED DEFAULT NULL AFTER `stock_quantity`",
+                "ALTER TABLE `products` ADD COLUMN `meta_title` VARCHAR(255) DEFAULT NULL AFTER `is_active`",
+                "ALTER TABLE `products` ADD COLUMN `meta_description` TEXT DEFAULT NULL AFTER `meta_title`",
+                "ALTER TABLE `products` ADD COLUMN `video_url` VARCHAR(255) DEFAULT NULL AFTER `meta_description`",
+            ];
+            foreach ($productCols as $sql) {
+                try { $pdo->exec($sql); } catch (Throwable $e) {}
+            }
+
+            // Ensure order_tracking_events columns exist in MySQL
+            $trackingCols = [
+                "ALTER TABLE `order_tracking_events` ADD COLUMN `status_milestone` VARCHAR(50) DEFAULT 'confirmed' AFTER `status`",
+                "ALTER TABLE `order_tracking_events` ADD COLUMN `courier_partner` VARCHAR(80) DEFAULT NULL AFTER `location`",
+                "ALTER TABLE `order_tracking_events` ADD COLUMN `awb_code` VARCHAR(100) DEFAULT NULL AFTER `courier_partner`",
+            ];
+            foreach ($trackingCols as $sql) {
+                try { $pdo->exec($sql); } catch (Throwable $e) {}
             }
 
             // Ensure site_settings table exists
@@ -423,6 +437,9 @@ class Database {
                 "ALTER TABLE orders ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
                 "ALTER TABLE order_items ADD COLUMN variant_id INTEGER DEFAULT NULL",
                 "ALTER TABLE order_tracking_events ADD COLUMN status TEXT DEFAULT 'confirmed'",
+                "ALTER TABLE order_tracking_events ADD COLUMN status_milestone TEXT DEFAULT 'confirmed'",
+                "ALTER TABLE order_tracking_events ADD COLUMN courier_partner TEXT DEFAULT NULL",
+                "ALTER TABLE order_tracking_events ADD COLUMN awb_code TEXT DEFAULT NULL",
                 "ALTER TABLE order_tracking_events ADD COLUMN occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP",
             ];
 

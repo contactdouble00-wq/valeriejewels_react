@@ -47,14 +47,51 @@ async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}${separator}_t=${Date.now()}`;
   try {
     const response = await fetch(url, { ...options, headers, cache: 'no-store' });
-    const data = await response.json().catch(() => ({}));
+    let data = {};
+    let rawText = '';
+    try {
+      rawText = await response.text();
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = {};
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
         localStorage.removeItem('valerie_admin_token');
         localStorage.removeItem('valerie_admin_user');
       }
-      throw new Error(data.message || `Request failed with status ${response.status}`);
+
+      // Robust extraction of user-friendly error message
+      let errorMessage = data.message || data.error;
+      if (!errorMessage && Array.isArray(data.errors) && data.errors.length > 0) {
+        errorMessage = typeof data.errors[0] === 'string'
+          ? data.errors[0]
+          : (data.errors[0]?.message || JSON.stringify(data.errors[0]));
+      }
+
+      // If server returned plain text or HTML, extract message
+      if (!errorMessage && rawText) {
+        const stripped = rawText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+        if (stripped && stripped.length < 250) {
+          errorMessage = stripped;
+        } else if (stripped) {
+          const match = stripped.match(/(?:Fatal error|Exception|Error|Notice|Warning):\s*([^.\n]+)/i);
+          if (match && match[1]) {
+            errorMessage = match[1].trim();
+          }
+        }
+      }
+
+      if (!errorMessage) {
+        if (response.status === 500) {
+          errorMessage = 'The server encountered an error processing this request (HTTP 500). Please check server logs.';
+        } else {
+          errorMessage = `Request failed with status ${response.status}`;
+        }
+      }
+
+      throw new Error(errorMessage);
     }
 
     return data;
@@ -331,16 +368,17 @@ export const adminApi = {
   },
 
   async updateCoupon(couponData) {
-    const res = await request('/admin/coupons.php', {
-      method: 'PUT',
-      body: JSON.stringify(couponData),
+    const res = await request('/admin/coupons.php?action=update', {
+      method: 'POST',
+      body: JSON.stringify({ ...couponData, action: 'update', _method: 'PUT' }),
     });
     return res.data;
   },
 
   async deleteCoupon(couponId) {
-    const res = await request(`/admin/coupons.php?id=${couponId}`, {
-      method: 'DELETE',
+    const res = await request(`/admin/coupons.php?action=delete&id=${couponId}`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id: couponId, _method: 'DELETE' }),
     });
     return res.data;
   },

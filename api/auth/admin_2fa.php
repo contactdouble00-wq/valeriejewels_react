@@ -22,18 +22,31 @@ $action = $input['action'] ?? ($_GET['action'] ?? '');
 
 $pdo = Database::getConnection();
 
-// Ensure admin_otp_tokens table exists
-$pdo->exec("
-    CREATE TABLE IF NOT EXISTS admin_otp_tokens (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id BIGINT(20) UNSIGNED NOT NULL,
-        otp_hash VARCHAR(64) NOT NULL,
-        expires_at DATETIME NOT NULL,
-        used TINYINT(1) DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-");
+// Ensure admin_otp_tokens table exists with driver-compatible syntax
+if (Database::getDriver() === 'sqlite') {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS admin_otp_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            otp_hash TEXT NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    ");
+} else {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS admin_otp_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id BIGINT(20) UNSIGNED NOT NULL,
+            otp_hash VARCHAR(64) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user_id (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+}
 
 $configFile = dirname(__DIR__) . '/config/config.php';
 $config = file_exists($configFile) ? require $configFile : require dirname(__DIR__) . '/config/config.sample.php';
@@ -77,9 +90,10 @@ if ($action === 'send_otp') {
     // Invalidate prior unused OTPs for this user
     $pdo->prepare("DELETE FROM admin_otp_tokens WHERE user_id = ?")->execute([$user['id']]);
 
-    // Store new OTP hash with MySQL-native expiry (10 mins)
-    $pdo->prepare("INSERT INTO admin_otp_tokens (user_id, otp_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))")
-        ->execute([$user['id'], $hash]);
+    // Store new OTP hash with portable expiry (10 mins)
+    $expiresAt = date('Y-m-d H:i:s', time() + 600);
+    $pdo->prepare("INSERT INTO admin_otp_tokens (user_id, otp_hash, expires_at) VALUES (?, ?, ?)")
+        ->execute([$user['id'], $hash, $expiresAt]);
 
     ApiResponse::success([
         'pending_user_id'    => (int)$user['id'],
@@ -102,12 +116,13 @@ if ($action === 'verify_otp') {
         ApiResponse::error('Invalid OTP format. Must be 6 digits.', 422);
     }
 
+    $now = date('Y-m-d H:i:s');
     $stmt = $pdo->prepare("
         SELECT * FROM admin_otp_tokens
-        WHERE user_id = ? AND used = 0 AND expires_at > NOW()
+        WHERE user_id = ? AND used = 0 AND expires_at > ?
         ORDER BY id DESC LIMIT 1
     ");
-    $stmt->execute([$pendingUserId]);
+    $stmt->execute([$pendingUserId, $now]);
     $tokenRecord = $stmt->fetch();
 
     if (!$tokenRecord) {

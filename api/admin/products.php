@@ -12,6 +12,7 @@ $pdo = Database::getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
+try {
 // Handle GET: List, Detail, or CSV Export
 if ($method === 'GET') {
     // ─────────────────────────────────────────────────────────────────────────
@@ -267,8 +268,17 @@ if ($action === 'duplicate') {
         ApiResponse::error('Original product not found', 404);
     }
 
-    $newSlug = $orig['slug'] . '-copy-' . time();
-    $newSku = $orig['sku'] . '-CPY';
+    $suffix = rand(100, 999);
+    $newSku = $orig['sku'] . '-CPY-' . $suffix;
+    while ((int)$pdo->query("SELECT COUNT(*) FROM products WHERE sku = " . $pdo->quote($newSku))->fetchColumn() > 0) {
+        $suffix = rand(100, 999);
+        $newSku = $orig['sku'] . '-CPY-' . $suffix;
+    }
+
+    $newSlug = $orig['slug'] . '-copy-' . time() . '-' . rand(10, 99);
+    while ((int)$pdo->query("SELECT COUNT(*) FROM products WHERE slug = " . $pdo->quote($newSlug))->fetchColumn() > 0) {
+        $newSlug = $orig['slug'] . '-copy-' . time() . '-' . rand(100, 999);
+    }
     $newName = $orig['name'] . ' (Copy)';
 
     $insStmt = $pdo->prepare("
@@ -406,6 +416,15 @@ if ($isUpdateAction) {
         ApiResponse::error('Permission Denied: Staff accounts cannot modify product pricing or MRP.', 403);
     }
 
+    $newSku = trim($input['sku'] ?? ($orig['sku'] ?? ''));
+    if (!empty($newSku) && $newSku !== ($orig['sku'] ?? '')) {
+        $skuCheck = $pdo->prepare("SELECT id FROM products WHERE sku = ? AND id != ? LIMIT 1");
+        $skuCheck->execute([$newSku, $id]);
+        if ($skuCheck->fetch()) {
+            ApiResponse::error("SKU '{$newSku}' is already assigned to another product. Please choose a unique SKU.", 409);
+        }
+    }
+
     $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
 
     $stmt = $pdo->prepare("
@@ -501,9 +520,22 @@ if ($method === 'POST') {
         ApiResponse::error('Name, SKU, and positive price are required', 422);
     }
 
+    // Check for SKU collision on create
+    $skuCheck = $pdo->prepare("SELECT id FROM products WHERE sku = ? LIMIT 1");
+    $skuCheck->execute([$sku]);
+    if ($skuCheck->fetch()) {
+        ApiResponse::error("A product with SKU '{$sku}' already exists. Please choose a unique SKU.", 409);
+    }
+
     $slug = trim($input['slug'] ?? '');
     if (empty($slug)) {
         $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name)) . '-' . rand(100, 999);
+    } else {
+        $slugCheck = $pdo->prepare("SELECT id FROM products WHERE slug = ? LIMIT 1");
+        $slugCheck->execute([$slug]);
+        if ($slugCheck->fetch()) {
+            $slug .= '-' . rand(100, 999);
+        }
     }
 
     $pairsCount = isset($input['pairs_count']) && $input['pairs_count'] !== '' ? (int)$input['pairs_count'] : null;
@@ -566,4 +598,11 @@ if ($method === 'POST') {
     AdminAuth::logActivity($adminUser['id'], 'create_product', 'product', $newId, ['name' => $name, 'sku' => $sku]);
 
     ApiResponse::success(['id' => $newId, 'name' => $name, 'slug' => $slug], 'Product created successfully', 201);
+}
+
+ApiResponse::error('Invalid request action or method', 400);
+
+} catch (Throwable $e) {
+    error_log('products.php error: ' . $e->getMessage());
+    ApiResponse::handleDatabaseException($e, 'Failed to process product request');
 }

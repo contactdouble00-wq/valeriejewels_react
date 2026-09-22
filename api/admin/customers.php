@@ -10,6 +10,8 @@ $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
+try {
+
 if ($method === 'GET') {
     $search = trim($_GET['search'] ?? '');
     $rtoBlocked = isset($_GET['is_blocked_rto']) ? (int)$_GET['is_blocked_rto'] : null;
@@ -81,3 +83,8 @@ if ($action === 'toggle_rto_block') {
 }
 
 ApiResponse::error('Invalid action or method', 400);
+
+} catch (Throwable $e) {
+    error_log('customers.php error: ' . $e->getMessage());
+    ApiResponse::handleDatabaseException($e, 'Failed to process customer request');
+}

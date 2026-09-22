@@ -64,17 +64,19 @@ class ShiprocketService
                     courier_name           = :courier,
                     tracking_url           = :turl,
                     estimated_delivery_date= :edate,
-                    updated_at             = NOW()
+                    updated_at             = :updated_at
                 WHERE id = :id
             ");
+            $now = date('Y-m-d H:i:s');
             $upStmt->execute([
-                ':s_oid'   => $shiprocketOrderId,
-                ':s_sid'   => $shiprocketShipmentId,
-                ':awb'     => $awbCode,
-                ':courier' => $courierName,
-                ':turl'    => $trackingUrl,
-                ':edate'   => $estimatedDate,
-                ':id'      => $orderId,
+                ':s_oid'      => $shiprocketOrderId,
+                ':s_sid'      => $shiprocketShipmentId,
+                ':awb'        => $awbCode,
+                ':courier'    => $courierName,
+                ':turl'       => $trackingUrl,
+                ':edate'      => $estimatedDate,
+                ':updated_at' => $now,
+                ':id'         => $orderId,
             ]);
 
             // Record tracking events if none exist
@@ -83,23 +85,25 @@ class ShiprocketService
             if ((int)$evStmt->fetchColumn() === 0) {
                 $insEv = $pdo->prepare("
                     INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-                    VALUES (:order_id, :status, :title, :desc, :loc, NOW())
+                    VALUES (:order_id, :status, :title, :desc, :loc, :occurred_at)
                 ");
                 
                 $insEv->execute([
-                    ':order_id' => $orderId,
-                    ':status'   => 'confirmed',
-                    ':title'    => 'Order Verified & Confirmed',
-                    ':desc'     => 'Payment verified. Jewelry order allocated for quality inspection.',
-                    ':loc'      => 'Mumbai Fulfillment Atelier',
+                    ':order_id'    => $orderId,
+                    ':status'      => 'confirmed',
+                    ':title'       => 'Order Verified & Confirmed',
+                    ':desc'        => 'Payment verified. Jewelry order allocated for quality inspection.',
+                    ':loc'         => 'Mumbai Fulfillment Atelier',
+                    ':occurred_at' => $now,
                 ]);
 
                 $insEv->execute([
-                    ':order_id' => $orderId,
-                    ':status'   => 'processing',
-                    ':title'    => 'Handcrafted & Packed with Anti-Tarnish Seal',
-                    ':desc'     => 'Jewelry piece secured in luxury velvet pouch and tamper-evident packaging.',
-                    ':loc'      => 'Mumbai Fulfillment Atelier',
+                    ':order_id'    => $orderId,
+                    ':status'      => 'processing',
+                    ':title'       => 'Handcrafted & Packed with Anti-Tarnish Seal',
+                    ':desc'        => 'Jewelry piece secured in luxury velvet pouch and tamper-evident packaging.',
+                    ':loc'         => 'Mumbai Fulfillment Atelier',
+                    ':occurred_at' => $now,
                 ]);
             }
 
@@ -142,8 +146,9 @@ class ShiprocketService
             throw new Exception("Order not found");
         }
 
-        $upStmt = $pdo->prepare("UPDATE orders SET order_status = :status, updated_at = NOW() WHERE id = :id");
-        $upStmt->execute([':status' => $newStatus, ':id' => $orderId]);
+        $now = date('Y-m-d H:i:s');
+        $upStmt = $pdo->prepare("UPDATE orders SET order_status = :status, updated_at = :updated_at WHERE id = :id");
+        $upStmt->execute([':status' => $newStatus, ':updated_at' => $now, ':id' => $orderId]);
 
         $statusTitles = [
             'confirmed'        => ['Order Verified & Confirmed', 'Payment verified. Allocated for atelier processing.'],
@@ -161,14 +166,15 @@ class ShiprocketService
 
         $evStmt = $pdo->prepare("
             INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-            VALUES (:order_id, :status, :title, :desc, :loc, NOW())
+            VALUES (:order_id, :status, :title, :desc, :loc, :occurred_at)
         ");
         $evStmt->execute([
-            ':order_id' => $orderId,
-            ':status'   => $newStatus,
-            ':title'    => $title,
-            ':desc'     => $desc,
-            ':loc'      => $loc,
+            ':order_id'    => $orderId,
+            ':status'      => $newStatus,
+            ':title'       => $title,
+            ':desc'        => $desc,
+            ':loc'         => $loc,
+            ':occurred_at' => $now,
         ]);
 
         return [

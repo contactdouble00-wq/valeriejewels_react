@@ -89,6 +89,7 @@ try {
     $paidUpfront   = (float)$order['amount_paid_upfront'];
     $refundAmount  = round($paidUpfront, 2);
     $newPaymentStatus = ($refundAmount > 0) ? 'refunded' : $order['payment_status'];
+    $now = date('Y-m-d H:i:s');
 
     // Update order
     $upStmt = $pdo->prepare("
@@ -96,15 +97,17 @@ try {
         SET order_status        = 'cancelled',
             payment_status      = :payment_status,
             refund_amount       = :refund_amount,
-            cancelled_at        = NOW(),
+            cancelled_at        = :cancelled_at,
             cancellation_reason = :reason,
-            updated_at          = NOW()
+            updated_at          = :updated_at
         WHERE id = :id
     ");
     $upStmt->execute([
         ':payment_status' => $newPaymentStatus,
         ':refund_amount'  => $refundAmount,
+        ':cancelled_at'   => $now,
         ':reason'         => $reason,
+        ':updated_at'     => $now,
         ':id'             => $order['id'],
     ]);
 
@@ -113,31 +116,41 @@ try {
         ? "Order cancelled by customer. A full refund of ₹" . number_format($refundAmount, 2) . " has been scheduled to the original payment source (3-5 banking days)."
         : "Cash on Delivery order cancelled by customer. No upfront payment was collected.";
 
-    $evStmt = $pdo->prepare("
-        INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-        VALUES (:order_id, 'cancelled', 'Order Cancelled by Customer', :desc, 'Valerie Support Atelier', NOW())
-    ");
-    $evStmt->execute([
-        ':order_id' => $order['id'],
-        ':desc'     => $evDesc,
-    ]);
+    try {
+        $evStmt = $pdo->prepare("
+            INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+            VALUES (:order_id, 'cancelled', 'Order Cancelled by Customer', :desc, 'Valerie Support Atelier', :occurred_at)
+        ");
+        $evStmt->execute([
+            ':order_id'    => $order['id'],
+            ':desc'        => $evDesc,
+            ':occurred_at' => $now,
+        ]);
+    } catch (Throwable $evErr) {
+        error_log('Cancel tracking event warning: ' . $evErr->getMessage());
+    }
 
     // If an admin performed this, log it in admin_activity_log
     if ($authUser && in_array($authUser['role'], ['admin', 'staff'], true)) {
-        $logStmt = $pdo->prepare("
-            INSERT INTO admin_activity_log (admin_id, action, target_entity, target_id, details, ip_address, created_at)
-            VALUES (:admin_id, 'cancel_order', 'orders', :order_id, :details, :ip, NOW())
-        ");
-        $logStmt->execute([
-            ':admin_id' => (int)$authUser['id'],
-            ':order_id' => (string)$order['id'],
-            ':details'  => json_encode([
-                'order_number'  => $order['order_number'],
-                'reason'        => $reason,
-                'refund_amount' => $refundAmount,
-            ]),
-            ':ip'       => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
-        ]);
+        try {
+            $logStmt = $pdo->prepare("
+                INSERT INTO admin_activity_log (admin_id, action, target_entity, target_id, details, ip_address, created_at)
+                VALUES (:admin_id, 'cancel_order', 'orders', :order_id, :details, :ip, :created_at)
+            ");
+            $logStmt->execute([
+                ':admin_id'   => (int)$authUser['id'],
+                ':order_id'   => (string)$order['id'],
+                ':details'    => json_encode([
+                    'order_number'  => $order['order_number'],
+                    'reason'        => $reason,
+                    'refund_amount' => $refundAmount,
+                ]),
+                ':ip'         => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+                ':created_at' => $now,
+            ]);
+        } catch (Throwable $logErr) {
+            error_log('Admin activity log warning: ' . $logErr->getMessage());
+        }
     }
 
     $pdo->commit();

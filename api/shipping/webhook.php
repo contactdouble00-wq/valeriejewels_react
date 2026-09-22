@@ -86,18 +86,20 @@ try {
         ApiResponse::error('Order not found for given AWB/order reference', 404);
     }
 
+    $now = date('Y-m-d H:i:s');
     // Update orders record
     $upStmt = $pdo->prepare("
         UPDATE orders 
         SET order_status = :status,
             courier_name = COALESCE(:courier, courier_name),
-            updated_at   = NOW()
+            updated_at   = :updated_at
         WHERE id = :id
     ");
     $upStmt->execute([
-        ':status'  => $mappedStatus,
-        ':courier' => !empty($courierName) ? $courierName : null,
-        ':id'      => $order['id'],
+        ':status'     => $mappedStatus,
+        ':courier'    => !empty($courierName) ? $courierName : null,
+        ':updated_at' => $now,
+        ':id'         => $order['id'],
     ]);
 
     // Insert tracking milestone
@@ -107,14 +109,15 @@ try {
 
     $evStmt = $pdo->prepare("
         INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-        VALUES (:order_id, :status, :title, :desc, :loc, NOW())
+        VALUES (:order_id, :status, :title, :desc, :loc, :occurred_at)
     ");
     $evStmt->execute([
-        ':order_id' => $order['id'],
-        ':status'   => $mappedStatus,
-        ':title'    => $title,
-        ':desc'     => $desc,
-        ':loc'      => $loc,
+        ':order_id'    => $order['id'],
+        ':status'      => $mappedStatus,
+        ':title'       => $title,
+        ':desc'        => $desc,
+        ':loc'         => $loc,
+        ':occurred_at' => $now,
     ]);
 
     // Phase 7: If newly shipped, dispatch idempotent shipping email

@@ -13,17 +13,18 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $action = $_GET['action'] ?? ($input['action'] ?? '');
 
+try {
 // ─────────────────────────────────────────────────────────────────────────────
-// GET — List all categories with product counts
+// GET — List all categories with product counts (ANSI SQL / ONLY_FULL_GROUP_BY safe)
 // ─────────────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
     $stmt = $pdo->query("
         SELECT 
-            c.*,
+            c.id, c.name, c.slug, c.description, c.image_url, c.display_order, c.is_active, c.created_at,
             COUNT(p.id) AS product_count
         FROM categories c
         LEFT JOIN products p ON p.category_id = c.id AND p.is_active = 1
-        GROUP BY c.id
+        GROUP BY c.id, c.name, c.slug, c.description, c.image_url, c.display_order, c.is_active, c.created_at
         ORDER BY c.display_order ASC, c.name ASC
     ");
     $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -203,4 +204,11 @@ if ($action === 'toggle_active') {
     AdminAuth::logActivity($adminUser['id'], 'toggle_category_active', 'category', $id, ['is_active' => $isActive]);
 
     ApiResponse::success(['id' => $id, 'is_active' => $isActive], 'Category visibility updated');
+}
+
+ApiResponse::error('Invalid request action or method', 400);
+
+} catch (Throwable $e) {
+    error_log('categories.php error: ' . $e->getMessage());
+    ApiResponse::handleDatabaseException($e, 'Failed to process category request');
 }
