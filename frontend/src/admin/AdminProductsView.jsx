@@ -24,7 +24,7 @@ import { adminApi } from './adminApi';
 import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 
 // ─── Sortable Media Tile (Balanced 1:1 Square & Reels Support) ──────────
-function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
+function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id || `media-${index}` });
 
@@ -87,8 +87,17 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary }) {
         <GripVertical className="w-3.5 h-3.5 text-white" />
       </div>
 
-      {/* Hover overlay: Set Primary + Remove */}
-      <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 z-20">
+      {/* Hover overlay: View + Set Primary + Remove */}
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 z-20">
+        <button
+          type="button"
+          onClick={() => onPreview && onPreview(item)}
+          className="text-[9px] font-bold text-white hover:text-purple-200 bg-white/20 hover:bg-brand-primary px-2 py-0.5 rounded cursor-pointer flex items-center space-x-0.5"
+          title="View full image in assurance lightbox"
+        >
+          <Eye className="w-3 h-3 mr-0.5" />
+          <span>View</span>
+        </button>
         {!isPrimary && !isVideo && (
           <button
             type="button"
@@ -653,7 +662,19 @@ export default function AdminProductsView({ currentUser }) {
                           })()}
                           <div className="min-w-0 max-w-xs">
                             <div className="font-semibold text-brand-tertiary truncate" title={p.name}>{p.name}</div>
-                            <div className="text-[10px] text-brand-muted font-mono">{p.sku}</div>
+                            <div className="flex items-center space-x-2 mt-0.5">
+                              <span className="text-[10px] text-brand-muted font-mono">{p.sku}</span>
+                              <span className="text-gray-300">•</span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAssurance(p)}
+                                className="inline-flex items-center space-x-1 text-[11px] font-semibold text-brand-primary hover:text-brand-primary-hover hover:underline cursor-pointer"
+                                title="View product image (Assurance Preview)"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>View Image</span>
+                              </button>
+                            </div>
                             {p.video_url && (
                               <span className="inline-flex items-center space-x-1 text-[9px] text-brand-primary mt-0.5">
                                 <Video className="w-2.5 h-2.5" />
@@ -736,18 +757,19 @@ export default function AdminProductsView({ currentUser }) {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+                      <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => handleOpenAssurance(p)}
-                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors cursor-pointer"
+                          className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer mr-1"
                           title="View Product Image (Assurance Preview)"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Image</span>
                         </button>
                         <button
                           onClick={() => handleOpenEdit(p)}
-                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors"
+                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors cursor-pointer"
                           title="Edit Product"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -1051,6 +1073,13 @@ export default function AdminProductsView({ currentUser }) {
                             index={idx}
                             onRemove={handleRemoveImage}
                             onSetPrimary={handleSetPrimary}
+                            onPreview={(mediaItem) => {
+                              const mediaUrl = typeof mediaItem === 'string' ? mediaItem : (mediaItem.image_url || mediaItem.url);
+                              handleOpenAssurance({
+                                ...editingProduct,
+                                primary_image: mediaUrl,
+                              });
+                            }}
                           />
                         ))}
                       </div>

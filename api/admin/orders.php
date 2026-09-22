@@ -152,10 +152,14 @@ if ($method === 'GET') {
         $itemStmt->execute([$id]);
         $order['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Fetch tracking events
-        $trkStmt = $pdo->prepare("SELECT * FROM order_tracking_events WHERE order_id = ? ORDER BY event_time DESC");
-        $trkStmt->execute([$id]);
-        $order['tracking_events'] = $trkStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Fetch tracking events safely (ordered by latest event)
+        try {
+            $trkStmt = $pdo->prepare("SELECT * FROM order_tracking_events WHERE order_id = ? ORDER BY id DESC");
+            $trkStmt->execute([$id]);
+            $order['tracking_events'] = $trkStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $order['tracking_events'] = [];
+        }
 
         ApiResponse::success($order, 'Order retrieved successfully');
     }
