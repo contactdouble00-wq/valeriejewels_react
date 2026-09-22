@@ -56,41 +56,10 @@ export default function CartDrawer({ onProceedToCheckout }) {
     return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
   }, []);
 
-  const [isInitiatingFastrr, setIsInitiatingFastrr] = useState(false);
-
-  const handleOrderNowClick = async (e) => {
+  const handleOrderNowClick = (e) => {
     if (e) {
       try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
     }
-
-    setIsInitiatingFastrr(true);
-    try {
-      const session = await apiService.createFastrrSession({
-        items: cartItems.map((item) => ({
-          id: item.id,
-          variant_id: item.variant_id || item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.images?.[0] || item.image || '',
-        })),
-        couponCode: '',
-        discountAmount: 0,
-      });
-
-      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
-        window.HeadlessCheckout.addToCart(e, session.token, {
-          fallbackUrl: window.location.href,
-        });
-        closeCart();
-        return;
-      }
-    } catch (err) {
-      console.warn('Fastrr official session fallback to internal modal:', err);
-    } finally {
-      setIsInitiatingFastrr(false);
-    }
-
     closeCart();
     if (onProceedToCheckout) {
       onProceedToCheckout();
@@ -355,36 +324,26 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 </button>
               </div>
 
-              {/* Primary 1-Click Fastrr Checkout Action (Shiprocket Fastrr Official Iframe) */}
+              {/* Primary 1-Click Checkout Action (Valerie Jewels Format - Everlasting Style) */}
               <button
-                disabled={isInitiatingFastrr}
                 onClick={handleOrderNowClick}
-                className="w-full py-3.5 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-lg transition-all cursor-pointer group disabled:opacity-75"
+                className="w-full py-3.5 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-lg transition-all cursor-pointer group"
               >
-                {isInitiatingFastrr ? (
-                  <div className="flex items-center gap-2 py-1">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="font-caps tracking-wider uppercase font-bold text-xs">Opening Fastrr 1-Click...</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
-                      <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
-                      <span>
-                        {paySettings.cod_available
-                          ? 'ORDER NOW - CASH ON DELIVERY'
-                          : paySettings.partial_cod_enabled
-                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 199})`
-                          : 'ORDER NOW - 1-CLICK PAY ONLINE'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-purple-200 font-medium mt-0.5">
-                      {paySettings.online_payment_enabled !== false
-                        ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + a free gift`
-                        : '◆ Fastrr 1-Click Doorstep Express Delivery'}
-                    </span>
-                  </>
-                )}
+                <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
+                  <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
+                  <span>
+                    {paySettings.cod_available
+                      ? 'ORDER NOW - CASH ON DELIVERY'
+                      : paySettings.partial_cod_enabled
+                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
+                      : 'ORDER NOW - 1-CLICK PAY ONLINE'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-purple-200 font-medium mt-0.5">
+                  {paySettings.online_payment_enabled !== false
+                    ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + a free gift`
+                    : '◆ Fast 1-Click Doorstep Express Delivery'}
+                </span>
               </button>
 
               {/* Trust badges footer */}

@@ -1,4 +1,3 @@
-import UnderDevelopmentGate, { DevPreviewFloatingBadge } from './components/UnderDevelopmentGate';
 import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
@@ -959,36 +958,6 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 }
 
 export default function App() {
-  const checkIsPreview = () => {
-    try {
-      if (typeof window === 'undefined') return false;
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return true;
-      }
-      const urlParams = new URLSearchParams(window.location.search);
-      if (
-        urlParams.get('preview') === 'vj2026' ||
-        urlParams.get('preview') === 'true' ||
-        urlParams.get('bypass') === 'true' ||
-        urlParams.get('preview') === 'valerie'
-      ) {
-        localStorage.setItem('vj_preview_mode', 'true');
-        return true;
-      }
-      if (window.location.hash.includes('preview')) {
-        localStorage.setItem('vj_preview_mode', 'true');
-        return true;
-      }
-      if (localStorage.getItem('valerie_admin_token')) {
-        return true;
-      }
-      return localStorage.getItem('vj_preview_mode') === 'true';
-    } catch {
-      return false;
-    }
-  };
-
-  const [isPreview, setIsPreview] = useState(checkIsPreview);
   const evaluateRoute = () => {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
     const hash = window.location.hash;
@@ -1066,9 +1035,6 @@ export default function App() {
     };
   }, []);
 
-  if (currentRoute !== 'admin' && !isPreview) {
-    return React.createElement(UnderDevelopmentGate, { onUnlock: () => setIsPreview(true) });
-  }
 
   if (currentRoute === 'admin') {
     return (
@@ -1178,12 +1144,7 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            {isPreview && React.createElement(DevPreviewFloatingBadge, {
-              onLock: () => {
-                try { localStorage.removeItem('vj_preview_mode'); } catch (e) {}
-                setIsPreview(false);
-              }
-            })}
+
             <StorefrontContent
               initialCategory={initialCategory}
               initialSearchQuery={initialSearchQuery}

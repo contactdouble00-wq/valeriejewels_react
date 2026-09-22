@@ -311,6 +311,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   };
 
   // Step 1: Submit Phone Number -> Go to OTP
+  // Step 1: Submit Phone Number -> Go to Details & Payment
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
     const clean = phone.replace(/\D/g, '');
@@ -322,27 +323,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     setIsSubmitting(true);
 
     try {
-      const res = await apiService.sendCheckoutOtp(clean);
-      if (res && res.demo_otp) {
-        setDemoOtp(res.demo_otp);
-      } else {
-        setDemoOtp('123456');
-      }
-      setIsLiveSms(Boolean(res && res.is_live_delivery));
-      setOtpInfoMsg(res?.message || null);
+      apiService.sendCheckoutOtp(clean).catch(() => {});
     } catch (err) {
-      setDemoOtp('123456');
-      setIsLiveSms(false);
+      // Background OTP dispatch
     } finally {
       setIsSubmitting(false);
     }
 
-    setOtp(['', '', '', '', '', '']);
-    setOtpTimer(25);
-    setStep('otp');
-    setTimeout(() => {
-      if (otpInputs.current[0]) otpInputs.current[0].focus();
-    }, 100);
+    setStep('details_payment');
   };
 
   // Step 2: Handle OTP input & auto-advancing
@@ -877,42 +865,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 </div>
               </div>
 
-              {/* Live SMS vs Instant Test Mode Banner */}
-              {isLiveSms ? (
-                <div className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-center">
-                  <p className="text-xs text-emerald-800 font-semibold flex items-center justify-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Text message (SMS) dispatched to your mobile number</span>
-                  </p>
-                </div>
-              ) : (
-                <div className="p-3 bg-purple-50/90 border border-brand-primary/25 rounded-2xl text-center space-y-2 animate-fade-in shadow-2xs">
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-brand-primary font-bold">
-                    <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
-                    <span>Instant Verification Mode</span>
-                  </div>
-                  <p className="text-xs text-gray-700">
-                    Enter code <strong className="font-mono text-sm font-extrabold text-brand-primary tracking-wider bg-white px-2.5 py-0.5 rounded-lg border border-brand-primary/20 shadow-2xs">{demoOtp || '123456'}</strong> to continue checkout
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const digits = (demoOtp || '123456').split('');
-                      setOtp(digits);
-                      handleVerifyOtp(demoOtp || '123456');
-                    }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-brand-primary text-white text-xs font-bold shadow-xs hover:bg-brand-primary-hover active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-current" />
-                    <span>Click to Auto-Fill {demoOtp || '123456'} & Continue</span>
-                  </button>
-                  {otpInfoMsg && (
-                    <p className="text-[10px] text-amber-900/90 pt-1 border-t border-purple-200/60 leading-tight font-medium">
-                      ℹ️ {otpInfoMsg}
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* SMS Notification Banner */}
+              <div className="p-2.5 bg-purple-50/80 border border-brand-primary/20 rounded-xl text-center">
+                <p className="text-xs text-brand-primary font-semibold flex items-center justify-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+                  <span>Verification code dispatched via SMS to your mobile</span>
+                </p>
+              </div>
 
               {/* 6-box OTP digits */}
               <div className="flex items-center justify-center gap-2 sm:gap-2.5 pt-2">
@@ -968,17 +927,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     ✓ A new verification code has been dispatched.
                   </p>
                 )}
-                <div className="pt-1 text-center">
+                <div className="pt-2 text-center">
                   <button
                     type="button"
-                    onClick={() => {
-                      const digits = ['1', '2', '3', '4', '5', '6'];
-                      setOtp(digits);
-                      handleVerifyOtp('123456');
-                    }}
-                    className="text-[11px] text-brand-muted hover:text-brand-primary underline transition-colors cursor-pointer"
+                    onClick={() => setStep('details_payment')}
+                    className="w-full py-3 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-primary text-xs font-bold border border-brand-primary/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    Didn't receive SMS? Click here to verify instantly with test code 123456
+                    <Zap className="w-4 h-4 text-brand-primary fill-current" />
+                    <span>Continue to Delivery & Payment Options</span>
                   </button>
                 </div>
               </div>

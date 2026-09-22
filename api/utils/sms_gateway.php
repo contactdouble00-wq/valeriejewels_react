@@ -37,8 +37,8 @@ class SmsGateway {
         }
 
         // 1. Fast2SMS Provider (Popular Indian SMS API)
-        $fast2smsKey = trim($settings['fast2sms_api_key'] ?? (getenv('FAST2SMS_API_KEY') ?: ''));
-        if ($smsProvider === 'fast2sms' && !empty($fast2smsKey)) {
+        $fast2smsKey = trim($settings['fast2sms_api_key'] ?? $settings['sms_fast2sms_api_key'] ?? (getenv('FAST2SMS_API_KEY') ?: ''));
+        if (!empty($fast2smsKey)) {
             return self::sendViaFast2SMS($cleanPhone, $otp, $fast2smsKey);
         }
 
