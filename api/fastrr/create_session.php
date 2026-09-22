@@ -35,18 +35,11 @@ try {
         }
     } catch (Exception $e) {}
 
-    $apiKey = trim($settings['fastrr_app_id'] ?? '');
-    $secretKey = trim($settings['fastrr_secret_key'] ?? '');
+    // Ensure valid Fastrr credentials
+    $apiKey = 'TAlJIqacN8rB0njv';
+    $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
 
-    // Ensure valid Fastrr credentials (override placeholder store name if previously saved)
-    if (empty($apiKey) || $apiKey === 'valeriejewels' || strlen($apiKey) < 10) {
-        $apiKey = 'TAlJIqacN8rB0njv';
-    }
-    if (empty($secretKey) || strlen($secretKey) < 10) {
-        $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
-    }
-
-    // Auto-sync into database
+    // Auto-sync into database so site_settings stays updated
     if (($settings['fastrr_app_id'] ?? '') !== $apiKey || ($settings['fastrr_secret_key'] ?? '') !== $secretKey) {
         $settings['fastrr_app_id'] = $apiKey;
         $settings['fastrr_secret_key'] = $secretKey;
