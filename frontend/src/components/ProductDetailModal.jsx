@@ -336,6 +336,40 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   const activeMedia = mediaItems[selectedMediaIndex] || mediaItems[0];
 
+  const handleAttachVideo = (el, viewType) => {
+    if (viewType === 'desktop') {
+      videoRefDesktop.current = el;
+    } else {
+      videoRefMobile.current = el;
+    }
+    if (!el) return;
+
+    // Direct DOM-level property assignment to guarantee bypass of browser autoplay policies
+    el.defaultMuted = true;
+    el.muted = isMuted;
+    el.playsInline = true;
+
+    // Immediately trigger playback
+    const startPlay = () => {
+      el.muted = isMuted;
+      const p = el.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          // If browser blocked with sound, force mute and retry instantly
+          el.muted = true;
+          setIsMuted(true);
+          el.play().then(() => {
+            setIsPlaying(true);
+          }).catch(() => {});
+        });
+      }
+    };
+
+    startPlay();
+  };
+
   const toggleMute = (e) => {
     e?.stopPropagation?.();
     const next = !isMuted;
@@ -360,8 +394,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     if (!activeVid) return;
 
     if (activeVid.paused) {
-      activeVid.play().catch(() => {});
-      setIsPlaying(true);
+      activeVid.play().then(() => setIsPlaying(true)).catch(() => {});
     } else {
       activeVid.pause();
       setIsPlaying(false);
@@ -380,16 +413,22 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         if (inactiveVid) {
           inactiveVid.pause();
           inactiveVid.muted = true;
-          inactiveVid.currentTime = 0;
         }
 
-        // Play only the active video element
+        // Play only the active video element with direct DOM-level unblocking
         if (activeVid) {
-          activeVid.currentTime = 0;
+          activeVid.defaultMuted = true;
           activeVid.muted = isMuted;
-          activeVid.play().catch(() => {});
+          const p = activeVid.play();
+          if (p !== undefined) {
+            p.then(() => setIsPlaying(true)).catch(() => {
+              activeVid.muted = true;
+              setIsMuted(true);
+              activeVid.play().then(() => setIsPlaying(true)).catch(() => {});
+            });
+          }
         }
-      }, 60);
+      }, 50);
       return () => clearTimeout(timer);
     } else {
       // If active media is an image, ensure all video streams are halted and muted
@@ -402,7 +441,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         videoRefDesktop.current.muted = true;
       }
     }
-  }, [selectedMediaIndex, activeMedia, isDesktop, isMuted]);
+  }, [selectedMediaIndex, activeMedia?.url, isDesktop, isMuted]);
 
   // Clean up and stop video audio when modal unmounts
   useEffect(() => {
@@ -507,18 +546,36 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     onClick={togglePlay}
                     className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                   >
-                    {/* Full-bleed Vertical Video Reel that fills the square player (only mounted on mobile viewport) */}
-                    {!isDesktop && (
-                      <video
-                        ref={videoRefMobile}
-                        src={activeMedia.url}
-                        muted={isMuted}
-                        autoPlay
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover rounded-2xl"
-                      />
-                    )}
+                    {/* Full-bleed Vertical Video Reel that fills the square player */}
+                    <video
+                      key={`video-mobile-${activeMedia.url}`}
+                      ref={(el) => handleAttachVideo(el, 'mobile')}
+                      src={activeMedia.url}
+                      muted={isMuted}
+                      defaultMuted
+                      autoPlay
+                      loop
+                      playsInline
+                      preload="auto"
+                      onLoadedMetadata={(e) => {
+                        const v = e.currentTarget;
+                        v.defaultMuted = true;
+                        v.muted = isMuted;
+                        const p = v.play();
+                        if (p !== undefined) {
+                          p.then(() => setIsPlaying(true)).catch(() => {
+                            v.muted = true;
+                            setIsMuted(true);
+                            v.play().then(() => setIsPlaying(true)).catch(() => {});
+                          });
+                        }
+                      }}
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => {
+                        if (!isDesktop) setIsPlaying(false);
+                      }}
+                      className="w-full h-full object-cover rounded-2xl"
+                    />
 
                     {/* Floating REEL / Try-on Tag */}
                     <div className="absolute top-3 left-3 z-20 pointer-events-none">
@@ -981,18 +1038,36 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       onClick={togglePlay}
                       className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                     >
-                      {/* Full-bleed Vertical Reel Player (only mounted on desktop viewport) */}
-                      {isDesktop && (
-                        <video
-                          ref={videoRefDesktop}
-                          src={activeMedia.url}
-                          muted={isMuted}
-                          autoPlay
-                          loop
-                          playsInline
-                          className="w-full h-full object-cover rounded-3xl shadow-xl"
-                        />
-                      )}
+                      {/* Full-bleed Vertical Reel Player */}
+                      <video
+                        key={`video-desktop-${activeMedia.url}`}
+                        ref={(el) => handleAttachVideo(el, 'desktop')}
+                        src={activeMedia.url}
+                        muted={isMuted}
+                        defaultMuted
+                        autoPlay
+                        loop
+                        playsInline
+                        preload="auto"
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget;
+                          v.defaultMuted = true;
+                          v.muted = isMuted;
+                          const p = v.play();
+                          if (p !== undefined) {
+                            p.then(() => setIsPlaying(true)).catch(() => {
+                              v.muted = true;
+                              setIsMuted(true);
+                              v.play().then(() => setIsPlaying(true)).catch(() => {});
+                            });
+                          }
+                        }}
+                        onPlay={() => setIsPlaying(true)}
+                        onPause={() => {
+                          if (isDesktop) setIsPlaying(false);
+                        }}
+                        className="w-full h-full object-cover rounded-3xl shadow-xl"
+                      />
 
                       {/* Floating REEL Tag */}
                       <div className="absolute top-4 left-4 z-20 pointer-events-none">

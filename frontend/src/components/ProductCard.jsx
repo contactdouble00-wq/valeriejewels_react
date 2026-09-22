@@ -20,10 +20,36 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     short_description,
   } = product;
 
-  const hasVideo = Boolean(video_url) || (Array.isArray(product?.images) && product.images.some(img => img.media_type === 'video' || (typeof (img.image_url || img.url) === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(img.image_url || img.url))));
+  const [isHovered, setIsHovered] = React.useState(false);
+  const cardVideoRef = React.useRef(null);
+
+  const cardVideoUrl = React.useMemo(() => {
+    if (video_url) return normalizeMediaUrl(video_url);
+    if (Array.isArray(product?.images)) {
+      const vid = product.images.find(img => img.media_type === 'video' || (typeof (img.image_url || img.url) === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(img.image_url || img.url)));
+      if (vid) return normalizeMediaUrl(vid.image_url || vid.url);
+    }
+    return null;
+  }, [video_url, product?.images]);
+
+  const hasVideo = Boolean(cardVideoUrl);
+
+  React.useEffect(() => {
+    if (!cardVideoRef.current) return;
+    if (isHovered && hasVideo) {
+      cardVideoRef.current.currentTime = 0;
+      cardVideoRef.current.play().catch(() => {});
+    } else {
+      cardVideoRef.current.pause();
+    }
+  }, [isHovered, hasVideo]);
 
   return (
-    <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
+    <div 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative"
+    >
       <div>
         {/* Product Image Stage: Crisp 1:1 Square Ratio - perfectly balanced without vertical stretching */}
         <div 
@@ -40,12 +66,25 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
                 e.target.src = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
               }
             }}
-            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+            className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 ${hasVideo && isHovered ? 'opacity-0' : 'opacity-100'}`}
             loading="lazy"
           />
 
+          {/* Hover Video Reel Preview for Desktop */}
+          {hasVideo && cardVideoUrl && (
+            <video
+              ref={cardVideoRef}
+              src={cardVideoUrl}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
+
           {/* Badges Overlay */}
-          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 z-10">
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 z-10 pointer-events-none">
             {discount_percentage > 0 && (
               <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold bg-emerald-100 text-emerald-800 shadow-sm w-fit">
                 {discount_percentage}% OFF

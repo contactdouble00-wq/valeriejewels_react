@@ -101,7 +101,10 @@ try {
             p.is_anti_tarnish,
             p.material,
             p.is_bestseller,
-            p.video_url,
+            COALESCE(
+                p.video_url,
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND (image_url LIKE '%.mp4%' OR image_url LIKE '%.webm%' OR image_url LIKE '%.mov%' OR image_url LIKE '%video_%') LIMIT 1)
+            ) AS video_url,
             p.created_at,
             ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage,
             COALESCE(

@@ -125,6 +125,15 @@ try {
     }
     unset($img);
 
+    if (empty($product['video_url'])) {
+        foreach ($images as $img) {
+            if (!empty($img['image_url']) && (preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $img['image_url']) || str_contains($img['image_url'], 'video_'))) {
+                $product['video_url'] = $img['image_url'];
+                break;
+            }
+        }
+    }
+
     if (!empty($product['video_url'])) {
         $product['video_url'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $product['video_url']);
     }

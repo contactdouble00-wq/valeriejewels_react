@@ -71,10 +71,10 @@ export const SEED_PRODUCTS = [
     material: 'Brass Alloy with 18K Micro Gold Polish & Handset Seed Pearls',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85',
-    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-woman-trying-on-jewelry-43407-large.mp4',
+    video_url: '/api/uploads/sample_jewelry_reel_1.mp4',
     images: [
       { id: 1, image_url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
-      { id: 'reel-1', image_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-woman-trying-on-jewelry-43407-large.mp4', is_primary: 0, media_type: 'video' },
+      { id: 'reel-1', image_url: '/api/uploads/sample_jewelry_reel_1.mp4', is_primary: 0, media_type: 'video' },
       { id: 2, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
     ],
     variants: [
@@ -100,10 +100,10 @@ export const SEED_PRODUCTS = [
     material: 'Hand-Glazed Meenakari Enamel & Seed Pearl Clusters',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1200&h=1600&q=85',
-    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-showing-a-diamond-ring-43406-large.mp4',
+    video_url: '/api/uploads/sample_jewelry_reel_2.mp4',
     images: [
       { id: 3, image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
-      { id: 'reel-2', image_url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-showing-a-diamond-ring-43406-large.mp4', is_primary: 0, media_type: 'video' },
+      { id: 'reel-2', image_url: '/api/uploads/sample_jewelry_reel_2.mp4', is_primary: 0, media_type: 'video' },
       { id: 4, image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
     ],
     variants: [
@@ -128,9 +128,11 @@ export const SEED_PRODUCTS = [
     material: 'Handset Jadau Kundan & 18K Micro Gold Polish',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1629224316810-9d8805b95e76?auto=format&fit=crop&w=800&q=80',
+    video_url: '/api/uploads/sample_jewelry_reel_1.mp4',
     images: [
-      { id: 5, image_url: 'https://images.unsplash.com/photo-1629224316810-9d8805b95e76?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
-      { id: 6, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80', is_primary: 0 },
+      { id: 5, image_url: 'https://images.unsplash.com/photo-1629224316810-9d8805b95e76?auto=format&fit=crop&w=800&q=80', is_primary: 1, media_type: 'image' },
+      { id: 'reel-3', image_url: '/api/uploads/sample_jewelry_reel_1.mp4', is_primary: 0, media_type: 'video' },
+      { id: 6, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 4, title: 'Royal Heritage Kundan', sku: 'VJ-JHM-003-RGL', option1_value: 'Royal Kundan', price: '1399.00', mrp: '2799.00', stock_quantity: 95 },
@@ -154,9 +156,11 @@ export const SEED_PRODUCTS = [
     material: '18K Gold PVD Stainless Steel (100% Anti-Tarnish & Waterproof)',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80',
+    video_url: '/api/uploads/sample_jewelry_reel_2.mp4',
     images: [
-      { id: 7, image_url: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
-      { id: 8, image_url: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80', is_primary: 0 },
+      { id: 7, image_url: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80', is_primary: 1, media_type: 'image' },
+      { id: 'reel-4', image_url: '/api/uploads/sample_jewelry_reel_2.mp4', is_primary: 0, media_type: 'video' },
+      { id: 8, image_url: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 5, title: '18K Yellow Gold Polish', sku: 'VJ-JHM-004-YGD', option1_value: 'Yellow Gold', price: '999.00', mrp: '1999.00', stock_quantity: 100 },
@@ -181,9 +185,11 @@ export const SEED_PRODUCTS = [
     material: '18K Gold Plated Stainless Steel (Anti-Tarnish)',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
+    video_url: '/api/uploads/sample_jewelry_reel_1.mp4',
     images: [
-      { id: 9, image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
-      { id: 10, image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=800&q=80', is_primary: 0 },
+      { id: 9, image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80', is_primary: 1, media_type: 'image' },
+      { id: 'reel-5', image_url: '/api/uploads/sample_jewelry_reel_1.mp4', is_primary: 0, media_type: 'video' },
+      { id: 10, image_url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=800&q=80', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 7, title: '16 Inch (Classic)', sku: 'VJ-NCK-001-16', option1_value: '16 Inch', price: '899.00', mrp: '1299.00', stock_quantity: 35 },
@@ -208,8 +214,10 @@ export const SEED_PRODUCTS = [
     material: '18K PVD Gold Plating (Waterproof)',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80',
+    video_url: '/api/uploads/sample_jewelry_reel_2.mp4',
     images: [
-      { id: 11, image_url: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
+      { id: 11, image_url: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=800&q=80', is_primary: 1, media_type: 'image' },
+      { id: 'reel-6', image_url: '/api/uploads/sample_jewelry_reel_2.mp4', is_primary: 0, media_type: 'video' },
     ],
     variants: [
       { id: 9, title: 'Standard Layered', sku: 'VJ-NCK-005-STD', option1_value: 'Standard', price: '1099.00', mrp: '1599.00', stock_quantity: 35 },

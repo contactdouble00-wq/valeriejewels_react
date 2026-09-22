@@ -436,11 +436,11 @@ class Database {
 
             // Auto-migrate any legacy /uploads/ paths to /api/uploads/ in SQLite database
             try {
-                $migratedUploads = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key = 'uploads_path_migrated_v2'")->fetchColumn();
+                $migratedUploads = $pdo->query("SELECT value FROM site_settings WHERE key = 'uploads_path_migrated_v2'")->fetchColumn();
                 if ($migratedUploads !== '1') {
                     $pdo->exec("UPDATE product_images SET image_url = REPLACE(image_url, '/uploads/', '/api/uploads/') WHERE image_url LIKE '%/uploads/%' AND image_url NOT LIKE '%/api/uploads/%'");
                     $pdo->exec("UPDATE products SET video_url = REPLACE(video_url, '/uploads/', '/api/uploads/') WHERE video_url LIKE '%/uploads/%' AND video_url NOT LIKE '%/api/uploads/%'");
-                    $pdo->exec("UPDATE site_settings SET setting_value = REPLACE(setting_value, '/uploads/', '/api/uploads/') WHERE setting_value LIKE '%/uploads/%' AND setting_value NOT LIKE '%/api/uploads/%'");
+                    $pdo->exec("UPDATE site_settings SET value = REPLACE(value, '/uploads/', '/api/uploads/') WHERE value LIKE '%/uploads/%' AND value NOT LIKE '%/api/uploads/%'");
 
                     // Fix primary image for products where video was wrongly assigned as is_primary = 1
                     $allProductIds = $pdo->query("SELECT id FROM products")->fetchAll(PDO::FETCH_COLUMN);
@@ -456,11 +456,20 @@ class Database {
                             }
                         }
                     }
-                    $pdo->exec("INSERT OR REPLACE INTO site_settings (setting_key, setting_value) VALUES ('uploads_path_migrated_v2', '1')");
+                    $pdo->exec("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('uploads_path_migrated_v2', '1')");
                 }
             } catch (Throwable $me) {
                 error_log('Uploads migration notice: ' . $me->getMessage());
             }
+
+            // Ensure demo showcase videos are populated for sample products with local verified reels
+            try {
+                $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_1.mp4' WHERE id = 1 OR slug LIKE '%royal-noor%' OR sku = 'VJ-BX-001' OR video_url LIKE '%mixkit%'");
+                $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_2.mp4' WHERE id = 2 OR slug LIKE '%gulabi-mehal%' OR sku = 'VJ-BX-002'");
+                $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_1.mp4' WHERE id = 3 OR slug LIKE '%shahi-kundan%' OR sku = 'VJ-BX-003'");
+                $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_2.mp4' WHERE id = 4 OR slug LIKE '%roohani%' OR sku = 'VJ-BX-004'");
+                $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_1.mp4' WHERE id = 5 OR slug LIKE '%aurelia%' OR sku = 'VJ-NK-001'");
+            } catch (Throwable $e) {}
 
             self::seedAdminUser($pdo);
             self::seedDefaultSiteSettings($pdo);

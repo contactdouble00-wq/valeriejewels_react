@@ -33,13 +33,15 @@ export function isVideoMedia(item) {
   if (!item) return false;
   if (typeof item === 'object' && item.media_type === 'video') return true;
   const url = typeof item === 'string' ? item : (item.image_url || item.url || '');
-  return typeof url === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
+  if (!url || typeof url !== 'string') return false;
+  return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url) || url.includes('/video_') || url.includes('video_');
 }
 
 /**
  * Normalizes a product object's media properties
  * - Ensures all image_urls use /api/uploads/
  * - Prevents primary_image from being a video when photo images exist
+ * - Ensures video_url is populated if images contains a video
  */
 export function normalizeProductMedia(product) {
   if (!product || typeof product !== 'object') return product;
@@ -85,6 +87,14 @@ export function normalizeProductMedia(product) {
       const firstPhoto = p.images.find((img) => !isVideoMedia(img));
       if (firstPhoto) {
         p.primary_image = firstPhoto.image_url || firstPhoto.url;
+      }
+    }
+
+    // If video_url is empty, check if images contains a video reel
+    if (!p.video_url) {
+      const firstVideo = p.images.find((img) => isVideoMedia(img));
+      if (firstVideo) {
+        p.video_url = normalizeMediaUrl(firstVideo.image_url || firstVideo.url);
       }
     }
   }
