@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Sparkles, Heart, Film } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Heart, Film } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { normalizeMediaUrl } from '../utils/mediaUtils';
 
@@ -20,9 +20,6 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     short_description,
   } = product;
 
-  const [isHovered, setIsHovered] = React.useState(false);
-  const cardVideoRef = React.useRef(null);
-
   const cardVideoUrl = React.useMemo(() => {
     if (video_url) return normalizeMediaUrl(video_url);
     if (Array.isArray(product?.images)) {
@@ -34,28 +31,21 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
   const hasVideo = Boolean(cardVideoUrl);
 
-  React.useEffect(() => {
-    if (!cardVideoRef.current) return;
-    if (isHovered && hasVideo) {
-      cardVideoRef.current.currentTime = 0;
-      cardVideoRef.current.play().catch(() => {});
-    } else {
-      cardVideoRef.current.pause();
+  const handleStageClick = () => {
+    if (onQuickView) {
+      onQuickView(product);
     }
-  }, [isHovered, hasVideo]);
+  };
 
   return (
-    <div 
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative"
-    >
+    <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
       <div>
-        {/* Product Image Stage: Crisp 1:1 Square Ratio - perfectly balanced without vertical stretching */}
+        {/* Product Image Stage: Crisp 1:1 Square Ratio - clicking views product */}
         <div 
-          onClick={() => onQuickView(product)}
-          className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer"
+          onClick={handleStageClick}
+          className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer group/stage select-none"
         >
+          {/* Main Photo */}
           <img
             src={normalizeMediaUrl(primary_image) || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'}
             alt={name}
@@ -66,22 +56,9 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
                 e.target.src = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
               }
             }}
-            className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 ${hasVideo && isHovered ? 'opacity-0' : 'opacity-100'}`}
+            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
             loading="lazy"
           />
-
-          {/* Hover Video Reel Preview for Desktop */}
-          {hasVideo && cardVideoUrl && (
-            <video
-              ref={cardVideoRef}
-              src={cardVideoUrl}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-            />
-          )}
 
           {/* Badges Overlay */}
           <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 z-10 pointer-events-none">
@@ -119,20 +96,6 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           >
             <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
           </button>
-
-          {/* Quick View Hover Button (Desktop only, mobile taps open directly) */}
-          <div className="hidden sm:flex absolute inset-0 bg-brand-tertiary/10 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center p-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickView(product);
-              }}
-              className="px-4 py-2 rounded-xl bg-white text-brand-tertiary text-xs font-caps tracking-wider uppercase font-semibold shadow-luxury flex items-center space-x-1.5 hover:bg-brand-primary hover:text-white transition-all transform translate-y-2 group-hover:translate-y-0"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Quick View</span>
-            </button>
-          </div>
         </div>
 
         {/* Product Meta */}

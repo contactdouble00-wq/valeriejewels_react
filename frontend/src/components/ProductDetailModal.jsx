@@ -542,69 +542,71 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 onTouchEnd={handleTouchEnd}
               >
                 {activeMedia.type === 'video' ? (
-                  <div 
-                    onClick={togglePlay}
-                    className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
-                  >
-                    {/* Full-bleed Vertical Video Reel that fills the square player */}
-                    <video
-                      key={`video-mobile-${activeMedia.url}`}
-                      ref={(el) => handleAttachVideo(el, 'mobile')}
-                      src={activeMedia.url}
-                      muted={isMuted}
-                      defaultMuted
-                      autoPlay
-                      loop
-                      playsInline
-                      preload="auto"
-                      onLoadedMetadata={(e) => {
-                        const v = e.currentTarget;
-                        v.defaultMuted = true;
-                        v.muted = isMuted;
-                        const p = v.play();
-                        if (p !== undefined) {
-                          p.then(() => setIsPlaying(true)).catch(() => {
-                            v.muted = true;
-                            setIsMuted(true);
-                            v.play().then(() => setIsPlaying(true)).catch(() => {});
-                          });
-                        }
-                      }}
-                      onPlay={() => setIsPlaying(true)}
-                      onPause={() => {
-                        if (!isDesktop) setIsPlaying(false);
-                      }}
-                      className="w-full h-full object-cover rounded-2xl"
-                    />
-
-                    {/* Floating REEL / Try-on Tag */}
-                    <div className="absolute top-3 left-3 z-20 pointer-events-none">
-                      <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
-                        <Film className="w-3 h-3 text-amber-300" />
-                        <span>Live Try-On Reel</span>
-                      </span>
-                    </div>
-
-                    {/* Audio Mute/Unmute Toggle */}
-                    <button
-                      type="button"
-                      onClick={toggleMute}
-                      className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md active:scale-90"
-                      title={isMuted ? 'Unmute video audio' : 'Mute audio'}
-                      aria-label="Toggle audio mute"
+                  !isDesktop ? (
+                    <div 
+                      onClick={togglePlay}
+                      className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                     >
-                      {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-                    </button>
+                      {/* Full-bleed Vertical Video Reel that fills the square player */}
+                      <video
+                        key={`video-mobile-${activeMedia.url}`}
+                        ref={(el) => handleAttachVideo(el, 'mobile')}
+                        src={activeMedia.url}
+                        muted={isMuted}
+                        defaultMuted
+                        autoPlay
+                        loop
+                        playsInline
+                        preload="auto"
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget;
+                          v.defaultMuted = true;
+                          v.muted = isMuted;
+                          const p = v.play();
+                          if (p !== undefined) {
+                            p.then(() => setIsPlaying(true)).catch(() => {
+                              v.muted = true;
+                              setIsMuted(true);
+                              v.play().then(() => setIsPlaying(true)).catch(() => {});
+                            });
+                          }
+                        }}
+                        onPlay={() => setIsPlaying(true)}
+                        onPause={() => {
+                          if (!isDesktop) setIsPlaying(false);
+                        }}
+                        className="w-full h-full object-cover rounded-2xl"
+                      />
 
-                    {/* Play/Pause Overlay */}
-                    {!isPlaying && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
-                        <div className="w-12 h-12 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xl">
-                          <Play className="w-6 h-6 fill-current ml-0.5" />
-                        </div>
+                      {/* Floating REEL / Try-on Tag */}
+                      <div className="absolute top-3 left-3 z-20 pointer-events-none">
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
+                          <Film className="w-3 h-3 text-amber-300" />
+                          <span>Live Try-On Reel</span>
+                        </span>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Audio Mute/Unmute Toggle */}
+                      <button
+                        type="button"
+                        onClick={toggleMute}
+                        className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md active:scale-90"
+                        title={isMuted ? 'Unmute video audio' : 'Mute audio'}
+                        aria-label="Toggle audio mute"
+                      >
+                        {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                      </button>
+
+                      {/* Play/Pause Overlay */}
+                      {!isPlaying && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
+                          <div className="w-12 h-12 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xl">
+                            <Play className="w-6 h-6 fill-current ml-0.5" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null
                 ) : (
                   <div 
                     onClick={() => setLightboxOpen(true)}
@@ -1034,69 +1036,71 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   style={{ aspectRatio: '1 / 1', minHeight: '380px' }}
                 >
                   {activeMedia.type === 'video' ? (
-                    <div 
-                      onClick={togglePlay}
-                      className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
-                    >
-                      {/* Full-bleed Vertical Reel Player */}
-                      <video
-                        key={`video-desktop-${activeMedia.url}`}
-                        ref={(el) => handleAttachVideo(el, 'desktop')}
-                        src={activeMedia.url}
-                        muted={isMuted}
-                        defaultMuted
-                        autoPlay
-                        loop
-                        playsInline
-                        preload="auto"
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget;
-                          v.defaultMuted = true;
-                          v.muted = isMuted;
-                          const p = v.play();
-                          if (p !== undefined) {
-                            p.then(() => setIsPlaying(true)).catch(() => {
-                              v.muted = true;
-                              setIsMuted(true);
-                              v.play().then(() => setIsPlaying(true)).catch(() => {});
-                            });
-                          }
-                        }}
-                        onPlay={() => setIsPlaying(true)}
-                        onPause={() => {
-                          if (isDesktop) setIsPlaying(false);
-                        }}
-                        className="w-full h-full object-cover rounded-3xl shadow-xl"
-                      />
-
-                      {/* Floating REEL Tag */}
-                      <div className="absolute top-4 left-4 z-20 pointer-events-none">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1.5 shadow-lg">
-                          <Film className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Live Try-On Reel</span>
-                        </span>
-                      </div>
-
-                      {/* Audio Mute/Unmute Toggle */}
-                      <button
-                        type="button"
-                        onClick={toggleMute}
-                        className="absolute bottom-4 left-4 z-20 p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md hover:scale-105 active:scale-95 cursor-pointer"
-                        title={isMuted ? 'Unmute video audio' : 'Mute audio'}
-                        aria-label="Toggle audio mute"
+                    isDesktop ? (
+                      <div 
+                        onClick={togglePlay}
+                        className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer select-none bg-black overflow-hidden"
                       >
-                        {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-                      </button>
+                        {/* Full-bleed Vertical Reel Player */}
+                        <video
+                          key={`video-desktop-${activeMedia.url}`}
+                          ref={(el) => handleAttachVideo(el, 'desktop')}
+                          src={activeMedia.url}
+                          muted={isMuted}
+                          defaultMuted
+                          autoPlay
+                          loop
+                          playsInline
+                          preload="auto"
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            v.defaultMuted = true;
+                            v.muted = isMuted;
+                            const p = v.play();
+                            if (p !== undefined) {
+                              p.then(() => setIsPlaying(true)).catch(() => {
+                                v.muted = true;
+                                setIsMuted(true);
+                                v.play().then(() => setIsPlaying(true)).catch(() => {});
+                              });
+                            }
+                          }}
+                          onPlay={() => setIsPlaying(true)}
+                          onPause={() => {
+                            if (isDesktop) setIsPlaying(false);
+                          }}
+                          className="w-full h-full object-cover rounded-3xl shadow-xl"
+                        />
 
-                      {/* Play/Pause Overlay */}
-                      {!isPlaying && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
-                          <div className="w-14 h-14 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xl">
-                            <Play className="w-7 h-7 fill-current ml-0.5" />
-                          </div>
+                        {/* Floating REEL Tag */}
+                        <div className="absolute top-4 left-4 z-20 pointer-events-none">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1.5 shadow-lg">
+                            <Film className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Live Try-On Reel</span>
+                          </span>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Audio Mute/Unmute Toggle */}
+                        <button
+                          type="button"
+                          onClick={toggleMute}
+                          className="absolute bottom-4 left-4 z-20 p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-all shadow-md hover:scale-105 active:scale-95 cursor-pointer"
+                          title={isMuted ? 'Unmute video audio' : 'Mute audio'}
+                          aria-label="Toggle audio mute"
+                        >
+                          {isMuted ? <VolumeX className="w-4 h-4 text-white/90" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                        </button>
+
+                        {/* Play/Pause Overlay */}
+                        {!isPlaying && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-2xs pointer-events-none">
+                            <div className="w-14 h-14 rounded-full bg-white/95 text-brand-tertiary flex items-center justify-center shadow-xl">
+                              <Play className="w-7 h-7 fill-current ml-0.5" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : null
                   ) : (
                     <div 
                       onClick={() => setLightboxOpen(true)}
