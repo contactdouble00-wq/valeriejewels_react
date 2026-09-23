@@ -504,82 +504,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
         const dueNowInPaise = Math.round(Number(initResult.amount_payable_now || orderData.amount_paid_upfront) * 100);
 
-        const effectiveDirectApp = (directApp === 'gpay' || directApp === 'google_pay')
-          ? 'google_pay'
-          : directApp;
-
-        // Targeted direct Intent configuration (instantly triggers GPay, PhonePe, Paytm, BHIM or targeted instrument)
-        const rzpConfig = effectiveDirectApp ? {
-          display: {
-            blocks: {
-              upi: {
-                name: 'Pay with ' + (effectiveDirectApp === 'google_pay' ? 'Google Pay' : effectiveDirectApp === 'phonepe' ? 'PhonePe' : effectiveDirectApp === 'paytm' ? 'Paytm' : effectiveDirectApp === 'bhim' ? 'BHIM' : 'UPI'),
-                instruments: [
-                  {
-                    method: 'upi',
-                    flows: ['intent', 'qr'],
-                    apps: effectiveDirectApp !== 'others' ? [effectiveDirectApp] : undefined,
-                  }
-                ]
-              }
-            },
-            sequence: ['block.upi'],
-            preferences: {
-              show_default_blocks: true
-            }
-          }
-        } : (targetMethod === 'upi' ? {
-          display: {
-            blocks: {
-              upi: {
-                name: 'Pay via UPI',
-                instruments: [
-                  {
-                    method: 'upi',
-                    flows: ['intent', 'qr'],
-                  }
-                ]
-              }
-            },
-            sequence: ['block.upi'],
-            preferences: {
-              show_default_blocks: true
-            }
-          }
-        } : targetMethod === 'card' ? {
-          display: {
-            blocks: {
-              card: {
-                name: 'Credit or Debit Card',
-                instruments: [{ method: 'card' }]
-              }
-            },
-            sequence: ['block.card'],
-            preferences: { show_default_blocks: false }
-          }
-        } : targetMethod === 'netbanking' ? {
-          display: {
-            blocks: {
-              netbanking: {
-                name: 'Net Banking',
-                instruments: [{ method: 'netbanking' }]
-              }
-            },
-            sequence: ['block.netbanking'],
-            preferences: { show_default_blocks: false }
-          }
-        } : targetMethod === 'wallet' ? {
-          display: {
-            blocks: {
-              wallet: {
-                name: 'Wallets',
-                instruments: [{ method: 'wallet' }]
-              }
-            },
-            sequence: ['block.wallet'],
-            preferences: { show_default_blocks: false }
-          }
-        } : undefined);
+        const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
         const rzpOptions = {
           key: rzpKey,
@@ -593,17 +518,16 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           order_id: initResult.razorpay_order_id || undefined,
           prefill: {
             name: name.trim(),
-            email: email.trim() || `${phone.replace(/\D/g, '')}@valerieclient.in`,
-            contact: phone.trim(),
+            email: email.trim() || `${cleanPhone}@valerieclient.in`,
+            contact: cleanPhone,
             method: targetMethod === 'card' ? 'card' : targetMethod === 'netbanking' ? 'netbanking' : targetMethod === 'wallet' ? 'wallet' : 'upi',
             ...(targetMethod === 'upi' && upiIdInput.trim() ? { vpa: upiIdInput.trim() } : {}),
           },
-          config: rzpConfig,
           notes: {
             order_number: finalOrderNumber,
             payment_type: targetPaymentType,
             engine: paymentSettings.checkout_engine || 'shiprocket_fastrr',
-            upi_app: effectiveDirectApp || selectedUpiApp,
+            upi_app: directApp || selectedUpiApp,
           },
           theme: {
             color: '#5B1E31',
