@@ -153,6 +153,7 @@ try {
             'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : ($current['fastrr_secret_key'] ?? ''),
             'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : ($current['fastrr_webhook_secret'] ?? ''),
             'razorpay_key_id'       => isset($data['razorpay_key_id']) ? trim($data['razorpay_key_id']) : ($current['razorpay_key_id'] ?? ''),
+            'razorpay_key_secret'   => !empty($data['razorpay_key_secret']) ? trim($data['razorpay_key_secret']) : ($current['razorpay_key_secret'] ?? ''),
             'sms_provider'          => in_array($data['sms_provider'] ?? '', ['fastrr', 'fast2sms', 'twofactor', 'twilio', 'sandbox']) ? $data['sms_provider'] : ($current['sms_provider'] ?? 'fastrr'),
             'fast2sms_api_key'      => !empty($data['fast2sms_api_key']) ? trim($data['fast2sms_api_key']) : ($current['fast2sms_api_key'] ?? ''),
             'twofactor_api_key'     => !empty($data['twofactor_api_key']) ? trim($data['twofactor_api_key']) : ($current['twofactor_api_key'] ?? ''),

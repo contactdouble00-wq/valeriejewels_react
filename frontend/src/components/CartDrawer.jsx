@@ -49,11 +49,21 @@ export default function CartDrawer({ onProceedToCheckout }) {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    apiService.getPaymentSettings().then((data) => {
+      if (isMounted && data) {
+        setPaySettings((prev) => ({ ...prev, ...data }));
+      }
+    }).catch(() => {});
+
     const onSettingsUpdate = (e) => {
       if (e.detail) setPaySettings((prev) => ({ ...prev, ...e.detail }));
     };
     window.addEventListener('valerie_payment_settings_updated', onSettingsUpdate);
-    return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
+    };
   }, []);
 
   const [isInitiatingFastrr, setIsInitiatingFastrr] = useState(false);
@@ -63,6 +73,16 @@ export default function CartDrawer({ onProceedToCheckout }) {
       try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
     }
 
+    // 1. If active engine is direct Razorpay standard (bypassing Fastrr), launch internal luxury checkout immediately
+    if (paySettings?.checkout_engine === 'razorpay_direct') {
+      closeCart();
+      if (onProceedToCheckout) {
+        onProceedToCheckout();
+      }
+      return;
+    }
+
+    // 2. Otherwise attempt Shiprocket Fastrr 1-Click checkout
     setIsInitiatingFastrr(true);
     try {
       const session = await apiService.createFastrrSession({
@@ -91,6 +111,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
       setIsInitiatingFastrr(false);
     }
 
+    // Fallback if Fastrr session could not be created or token was missing
     closeCart();
     if (onProceedToCheckout) {
       onProceedToCheckout();

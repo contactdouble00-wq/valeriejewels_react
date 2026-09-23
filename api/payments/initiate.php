@@ -316,6 +316,7 @@ try {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderPayload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $rpResponse = curl_exec($ch);
         $rpHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);

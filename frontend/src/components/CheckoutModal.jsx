@@ -118,7 +118,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
   const [paymentType, setPaymentType] = useState('full_prepaid');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi'); // 'upi' | 'card' | 'netbanking' | 'wallet' | 'paylater' | 'partial_cod' | 'cod'
-  const [selectedUpiApp, setSelectedUpiApp] = useState('gpay');
+  const [selectedUpiApp, setSelectedUpiApp] = useState('google_pay');
   const [showUpiInput, setShowUpiInput] = useState(false);
   const [upiIdInput, setUpiIdInput] = useState('');
 
@@ -406,8 +406,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   };
 
   // Step 3: Place Order via API & Gateway Engine
-  const handlePlaceOrder = async (e) => {
-    if (e) e.preventDefault();
+  const handlePlaceOrder = async (e, options = {}) => {
+    if (e && e.preventDefault) e.preventDefault();
 
     if (!name.trim() || !addressLine1.trim() || pincode.trim().length < 6) {
       setIsAddressModalOpen(true);
@@ -417,6 +417,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
     setIsSubmitting(true);
     setSubmitError(null);
+
+    const targetPaymentType = options.paymentType || paymentType;
+    const targetMethod = options.method || selectedPaymentMethod;
+    const directApp = options.directUpiApp || null;
 
     try {
       // Save address locally for instant future prefill
@@ -450,7 +454,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         city: city.trim(),
         state: state.trim(),
         pincode: pincode.trim(),
-        payment_type: paymentType,
+        payment_type: targetPaymentType,
         coupon_code: couponApplied ? couponCode : '',
         items: formattedItems,
       };
@@ -459,7 +463,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       const initResult = await apiService.initiateCheckout(payload, token);
 
       const finalOrderNumber = initResult?.order_number || `VJ-${Date.now().toString().slice(-6)}`;
-      const activeSplit = calcData?.payment_splits?.[paymentType];
+      const activeSplit = calcData?.payment_splits?.[targetPaymentType];
 
       const orderData = {
         id: initResult?.order_id || Date.now(),
@@ -467,8 +471,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         total_amount: activeSplit?.amount_due_now !== undefined ? activeSplit.amount_due_now : calcData?.final_total,
         amount_paid_upfront: activeSplit?.amount_due_now || 0,
         amount_due_on_delivery: activeSplit?.amount_due_on_delivery || 0,
-        payment_type: paymentType,
-        payment_status: paymentType === 'cod' ? 'pending' : 'paid',
+        payment_type: targetPaymentType,
+        payment_status: targetPaymentType === 'cod' ? 'pending' : 'paid',
         shipping_name: name.trim(),
         shipping_phone: phone.trim(),
         shipping_address_line1: addressLine1.trim(),
@@ -478,7 +482,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       };
 
       // Case A: 100% Cash on Delivery (Doorstep settlement)
-      if (paymentType === 'cod') {
+      if (targetPaymentType === 'cod') {
         setPlacedOrder(orderData);
         clearCart();
         setStep('confirmed');
@@ -494,14 +498,95 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           throw new Error('Payment gateway SDK could not be loaded. Please check your internet connection.');
         }
 
+        if (rzpKey.startsWith('rzp_live_') && !initResult?.razorpay_order_id) {
+          throw new Error('Secure Razorpay Order ID could not be generated. Please verify your Razorpay API Secret in Admin Settings.');
+        }
+
         const dueNowInPaise = Math.round(Number(initResult.amount_payable_now || orderData.amount_paid_upfront) * 100);
+
+        const effectiveDirectApp = (directApp === 'gpay' || directApp === 'google_pay')
+          ? 'google_pay'
+          : directApp;
+
+        // Targeted direct Intent configuration (instantly triggers GPay, PhonePe, Paytm, BHIM or targeted instrument)
+        const rzpConfig = effectiveDirectApp ? {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay with ' + (effectiveDirectApp === 'google_pay' ? 'Google Pay' : effectiveDirectApp === 'phonepe' ? 'PhonePe' : effectiveDirectApp === 'paytm' ? 'Paytm' : effectiveDirectApp === 'bhim' ? 'BHIM' : 'UPI'),
+                instruments: [
+                  {
+                    method: 'upi',
+                    flows: ['intent', 'qr'],
+                    apps: effectiveDirectApp !== 'others' ? [effectiveDirectApp] : undefined,
+                  }
+                ]
+              }
+            },
+            sequence: ['block.upi'],
+            preferences: {
+              show_default_blocks: false
+            }
+          }
+        } : (targetMethod === 'upi' ? {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay via UPI',
+                instruments: [
+                  {
+                    method: 'upi',
+                    flows: ['intent', 'qr'],
+                  }
+                ]
+              }
+            },
+            sequence: ['block.upi'],
+            preferences: {
+              show_default_blocks: false
+            }
+          }
+        } : targetMethod === 'card' ? {
+          display: {
+            blocks: {
+              card: {
+                name: 'Credit or Debit Card',
+                instruments: [{ method: 'card' }]
+              }
+            },
+            sequence: ['block.card'],
+            preferences: { show_default_blocks: false }
+          }
+        } : targetMethod === 'netbanking' ? {
+          display: {
+            blocks: {
+              netbanking: {
+                name: 'Net Banking',
+                instruments: [{ method: 'netbanking' }]
+              }
+            },
+            sequence: ['block.netbanking'],
+            preferences: { show_default_blocks: false }
+          }
+        } : targetMethod === 'wallet' ? {
+          display: {
+            blocks: {
+              wallet: {
+                name: 'Wallets',
+                instruments: [{ method: 'wallet' }]
+              }
+            },
+            sequence: ['block.wallet'],
+            preferences: { show_default_blocks: false }
+          }
+        } : undefined);
 
         const rzpOptions = {
           key: rzpKey,
           amount: dueNowInPaise,
           currency: initResult.currency || 'INR',
           name: 'Valerie Jewels',
-          description: paymentType === 'partial'
+          description: targetPaymentType === 'partial'
             ? `Partial COD Advance Deposit (${finalOrderNumber})`
             : `Order ${finalOrderNumber}`,
           image: '/valerie.png',
@@ -510,11 +595,15 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             name: name.trim(),
             email: email.trim() || `${phone.replace(/\D/g, '')}@valerieclient.in`,
             contact: phone.trim(),
+            method: targetMethod === 'card' ? 'card' : targetMethod === 'netbanking' ? 'netbanking' : targetMethod === 'wallet' ? 'wallet' : 'upi',
+            ...(targetMethod === 'upi' && upiIdInput.trim() ? { vpa: upiIdInput.trim() } : {}),
           },
+          config: rzpConfig,
           notes: {
             order_number: finalOrderNumber,
-            payment_type: paymentType,
+            payment_type: targetPaymentType,
             engine: paymentSettings.checkout_engine || 'shiprocket_fastrr',
+            upi_app: effectiveDirectApp || selectedUpiApp,
           },
           theme: {
             color: '#5B1E31',
@@ -523,6 +612,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             ondismiss: () => {
               setIsSubmitting(false);
             },
+            backdropclose: false,
+            escape: true,
+          },
+          retry: {
+            enabled: true,
+            max_count: 3,
           },
           handler: async (rpResponse) => {
             setStep('processing');
@@ -537,7 +632,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
               setPlacedOrder({
                 ...orderData,
-                payment_status: paymentType === 'partial' ? 'partial_paid' : 'paid',
+                payment_status: targetPaymentType === 'partial' ? 'partial_paid' : 'paid',
                 transaction_id: rpResponse.razorpay_payment_id,
               });
               clearCart();
@@ -615,84 +710,96 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   // Dynamic calculation for green savings banner (e.g. ₹900.00 saved so far)
   const totalSavings = Math.max(150, totalMrp - dueNow + (calcData?.discount_amount || 0));
 
-  // Everlasting UPI Apps Grid
+  // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop)
   const UPI_APPS = [
     {
-      id: 'gpay',
+      id: 'google_pay',
+      razorpayApp: 'google_pay',
       name: 'Google Pay',
       hasCashback: false,
       icon: (
-        <svg viewBox="0 0 48 48" className="w-6 h-6">
-          <path fill="#4285F4" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.7-.4-3.9z"/>
-          <path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/>
-          <path fill="#FBBC05" d="M24 44c5.2 0 10-1.9 13.6-5.1l-6.3-5.2c-2 1.4-4.5 2.3-7.3 2.3-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.4 16.2 44 24 44z"/>
-          <path fill="#EA4335" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.3 5.2C41.2 35.3 44 30 44 24c0-1.3-.1-2.7-.4-3.9z"/>
+        <svg viewBox="0 0 48 48" className="w-8 h-8" fill="none">
+          <path fill="#4285F4" d="M23.9 19.5c0-1.2-.1-2.4-.3-3.5H12v6.7h6.7c-.3 1.6-1.2 3-2.6 3.9v3.3h4.2c2.4-2.2 3.6-5.5 3.6-10.4z"/>
+          <path fill="#34A853" d="M12 31.6c3.4 0 6.2-1.1 8.3-3.1l-4.2-3.3c-1.1.8-2.6 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5.1H1v3.4c2.1 4.1 6.4 6.9 11 6.9z"/>
+          <path fill="#FBBC05" d="M5.2 21.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3v-3.4H1C.4 14.6 0 16.3 0 18s.4 3.4 1 4.7l4.2-3.4z"/>
+          <path fill="#EA4335" d="M12 10.4c1.8 0 3.5.6 4.8 1.9l3.6-3.6C18.2 6.6 15.4 5.5 12 5.5 7.4 5.5 3.1 8.3 1 12.4l4.2 3.4c.9-3 3.6-5.4 6.8-5.4z"/>
         </svg>
       )
     },
     {
       id: 'phonepe',
+      razorpayApp: 'phonepe',
       name: 'PhonePe',
       hasCashback: false,
       icon: (
-        <div className="w-6 h-6 rounded-full bg-[#5f259f] flex items-center justify-center text-white font-bold text-xs shadow-2xs">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#5f259f] flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-xs">
           पे
         </div>
       )
     },
     {
       id: 'paytm',
+      razorpayApp: 'paytm',
       name: 'Paytm',
       hasCashback: true,
       icon: (
-        <div className="px-1 py-0.5 rounded bg-sky-50 border border-sky-200">
-          <span className="text-[9px] font-black text-[#002e6e] tracking-tight">Paytm</span>
-        </div>
-      )
-    },
-    {
-      id: 'cred',
-      name: 'CRED UPI',
-      hasCashback: true,
-      icon: (
-        <div className="w-6 h-6 rounded-lg bg-black text-white flex items-center justify-center font-serif text-xs font-bold shadow-2xs">
-          <ShieldCheck className="w-4 h-4 text-white" />
+        <div className="flex items-center tracking-tight font-black text-xs sm:text-sm">
+          <span className="text-[#002e6e]">Pay</span>
+          <span className="text-[#00baf2]">tm</span>
         </div>
       )
     },
     {
       id: 'bhim',
+      razorpayApp: 'bhim',
       name: 'BHIM',
       hasCashback: false,
       icon: (
-        <div className="flex items-center space-x-0.5">
-          <span className="text-[10px] font-black italic tracking-tighter text-[#1f892b]">BH</span>
-          <span className="text-[10px] font-black italic tracking-tighter text-[#0f54a2]">IM</span>
+        <div className="flex flex-col items-center justify-center leading-none">
+          <div className="flex items-center text-xs font-black italic tracking-tighter">
+            <span className="text-[#108A44]">BH</span>
+            <span className="text-[#09579F]">IM</span>
+          </div>
+          <span className="text-[5px] font-bold text-gray-400 tracking-tighter uppercase mt-0.5 scale-90 whitespace-nowrap">
+            BHARAT INTERFACE
+          </span>
         </div>
       )
     },
     {
       id: 'others',
+      razorpayApp: 'others',
       name: 'Others',
       hasCashback: false,
       icon: (
-        <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center text-[10px] font-bold">
-          +10
+        <div className="flex flex-col items-center justify-center">
+          <div className="flex items-center -space-x-1.5">
+            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[7px] text-white font-bold border border-white">
+              ₹
+            </div>
+            <div className="w-4 h-4 rounded-full bg-[#5f259f] flex items-center justify-center text-[7px] text-white font-bold border border-white">
+              पे
+            </div>
+            <div className="w-4 h-4 rounded-full bg-[#00baf2] flex items-center justify-center text-[6px] text-white font-bold border border-white">
+              tm
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-gray-700 mt-0.5">+10</span>
         </div>
       )
     },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F4F4F6] flex flex-col font-sans overflow-y-auto min-h-screen select-none animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-[#F4F4F6] flex flex-col font-sans select-none animate-fade-in overflow-hidden">
       
       {/* Centered responsive container (edge-to-edge on mobile, sleek app layout on desktop) */}
-      <div className="w-full max-w-lg mx-auto flex-1 flex flex-col bg-[#F4F4F6] min-h-screen relative shadow-sm border-x border-gray-200/60">
+      <div className="w-full max-w-lg mx-auto flex-1 flex flex-col h-full bg-[#F4F4F6] relative shadow-sm border-x border-gray-200/60 overflow-hidden">
 
         {/* ══════════════════════════════════════════════════════════════
             1. MINIMAL LUXURY HEADER (Matching everlasting.shop)
         ══════════════════════════════════════════════════════════════ */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-200/90 px-4 h-14 flex items-center justify-between shrink-0 shadow-2xs">
+        <header className="shrink-0 bg-white border-b border-gray-200/90 px-4 h-14 flex items-center justify-between shadow-2xs z-30">
           <button
             type="button"
             onClick={handleAttemptClose}
@@ -742,17 +849,22 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
         {/* Global Error Notice */}
         {submitError && (
-          <div className="m-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2 animate-fade-in">
+          <div className="m-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2 animate-fade-in shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{submitError}</span>
           </div>
         )}
 
         {/* ══════════════════════════════════════════════════════════════
+            SCROLLABLE BODY WRAPPER FOR ALL CHECKOUT STEPS
+        ══════════════════════════════════════════════════════════════ */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+
+        {/* ══════════════════════════════════════════════════════════════
             STEP 1: FULL SCREEN PHONE VERIFICATION
         ══════════════════════════════════════════════════════════════ */}
         {step === 'phone' && (
-          <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between animate-fade-in">
+          <div className="p-4 sm:p-6 min-h-full flex flex-col justify-between animate-fade-in">
             <div className="space-y-5 pt-2">
               <div className="text-center space-y-1">
                 <h2 className="text-base sm:text-lg font-bold text-gray-900">
@@ -1073,311 +1185,298 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               </div>
             </div>
 
-            {/* 4. Pay via / UPI & Payment Options Card (Screenshots 1 & 2) */}
-            <div className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-3.5">
+            {/* 4. Pay via / UPI & Payment Options Card (Exact Everlasting Design) */}
+            <div className="space-y-2">
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Pay via</h3>
-                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                  <Zap className="w-3.5 h-3.5 text-blue-500 fill-blue-500" />
+                <h3 className="text-base font-bold text-gray-900">Pay via</h3>
+                <p className="text-xs text-gray-600 flex items-center gap-1.5 mt-0.5">
+                  <Zap className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
                   <span>Enjoy fast delivery on all prepaid orders.</span>
                 </p>
               </div>
 
-              {/* UPI Payment Box */}
-              <div
-                onClick={() => {
-                  setPaymentType('full_prepaid');
-                  setSelectedPaymentMethod('upi');
-                }}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
-                  paymentType === 'full_prepaid' && selectedPaymentMethod === 'upi'
-                    ? 'border-brand-primary bg-purple-50/20 ring-2 ring-brand-primary/20'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50 shadow-2xs">
-                      <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
-                    </div>
-                    <span className="text-xs font-bold text-gray-900">UPI payment</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-extrabold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </div>
-                </div>
-
-                {/* Green Discount Badge */}
-                <div>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E6F8EB] text-emerald-800 text-[11px] font-semibold border border-emerald-200">
-                    <Percent className="w-3 h-3 text-emerald-600" />
-                    <span>Pay online and save ₹{prepaidDiscount}</span>
-                  </span>
-                </div>
-
-                {/* UPI Apps Grid (Google Pay, PhonePe, Paytm, CRED, BHIM, Others) */}
-                <div className="grid grid-cols-6 gap-2 pt-1">
-                  {UPI_APPS.map((app) => (
-                    <button
-                      key={app.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedUpiApp(app.id);
-                        setSelectedPaymentMethod('upi');
-                        setPaymentType('full_prepaid');
-                      }}
-                      className={`flex flex-col items-center p-1.5 rounded-xl border transition-all cursor-pointer relative ${
-                        selectedUpiApp === app.id && selectedPaymentMethod === 'upi'
-                          ? 'border-brand-primary bg-purple-50/60 ring-2 ring-brand-primary/30 shadow-2xs'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      {app.hasCashback && (
-                        <span className="absolute -top-2 inset-x-0 mx-auto w-fit px-1 py-0.2 rounded text-[7px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase">
-                          Cashback
-                        </span>
-                      )}
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mt-1">
-                        {app.icon}
-                      </div>
-                      <span className="text-[9px] font-medium text-gray-700 truncate w-full text-center mt-1">
-                        {app.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Add UPI ID Toggle */}
-                <div className="pt-1 text-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowUpiInput(!showUpiInput);
-                    }}
-                    className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
-                  >
-                    {showUpiInput ? 'Cancel UPI ID' : 'Add UPI ID'}
-                  </button>
-                  {showUpiInput && (
-                    <div className="pt-2 flex items-center gap-2 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="text"
-                        value={upiIdInput}
-                        onChange={(e) => setUpiIdInput(e.target.value)}
-                        placeholder="Enter UPI ID (e.g. mobile@upi)"
-                        className="flex-1 px-3 py-2 rounded-xl border border-gray-300 text-xs font-mono focus:border-brand-primary focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaymentType('full_prepaid');
-                          setSelectedPaymentMethod('upi');
-                          setShowUpiInput(false);
-                        }}
-                        className="px-3.5 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Other Payment Methods List (Screenshot 1) */}
-              <div className="space-y-2.5 pt-2 border-t border-gray-150">
+              {/* Unified White Card matching everlasting.shop */}
+              <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
                 
-                {/* Credit/Debit Card */}
+                {/* 1. UPI Payment Section */}
+                <div className="p-4 space-y-3">
+                  <div
+                    onClick={() => {
+                      setPaymentType('full_prepaid');
+                      setSelectedPaymentMethod('upi');
+                    }}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
+                        <Smartphone className="w-4 h-4 text-gray-700" />
+                        <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">UPI payment</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
+                      <span className="text-sm font-bold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </div>
+                  </div>
+
+                  {/* Green Discount Pill Badge */}
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E7F8EE] text-[#0A803D] text-xs font-bold border border-[#0A803D]/20">
+                      <Percent className="w-3.5 h-3.5 text-[#0A803D]" />
+                      <span>Pay online and save ₹{prepaidDiscount}</span>
+                    </span>
+                  </div>
+
+                  {/* 5 UPI Apps Grid (Google Pay, PhonePe, Paytm, BHIM, Others) */}
+                  <div className="grid grid-cols-5 gap-2 pt-1">
+                    {UPI_APPS.map((app) => {
+                      const isThisLoading = isSubmitting && selectedUpiApp === app.razorpayApp;
+                      return (
+                        <button
+                          key={app.id}
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUpiApp(app.razorpayApp);
+                            setSelectedPaymentMethod('upi');
+                            setPaymentType('full_prepaid');
+                            // DIRECT APP LAUNCH: clicking Google Pay or PhonePe directly opens that payment app!
+                            handlePlaceOrder(null, {
+                              directUpiApp: app.razorpayApp,
+                              method: 'upi',
+                              paymentType: 'full_prepaid',
+                            });
+                          }}
+                          className={`flex flex-col items-center justify-between p-2 h-20 rounded-2xl border transition-all cursor-pointer relative bg-white active:scale-95 ${
+                            isThisLoading
+                              ? 'border-[#0A803D] ring-2 ring-[#0A803D]/20 bg-green-50/20'
+                              : 'border-gray-200/90 hover:border-gray-300'
+                          }`}
+                        >
+                          {app.hasCashback && (
+                            <span className="absolute -top-2 inset-x-0 mx-auto w-fit px-1.5 py-0.2 rounded-full text-[7.5px] font-bold text-[#0A803D] bg-[#E7F8EE] border border-[#0A803D]/30 uppercase leading-none">
+                              Cashback
+                            </span>
+                          )}
+                          <div className="w-full flex-1 flex items-center justify-center">
+                            {isThisLoading ? (
+                              <div className="w-5 h-5 border-2 border-[#0A803D] border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              app.icon
+                            )}
+                          </div>
+                          <span className="text-[10px] font-medium text-gray-600 truncate w-full text-center mt-0.5">
+                            {app.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add UPI ID Toggle */}
+                  <div className="pt-0.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowUpiInput(!showUpiInput)}
+                      className="text-xs font-semibold text-brand-primary hover:underline cursor-pointer"
+                    >
+                      {showUpiInput ? 'Cancel UPI ID' : 'Add UPI ID'}
+                    </button>
+                    {showUpiInput && (
+                      <div className="pt-2 flex items-center gap-2 animate-fade-in">
+                        <input
+                          type="text"
+                          value={upiIdInput}
+                          onChange={(e) => setUpiIdInput(e.target.value)}
+                          placeholder="Enter UPI ID (e.g. mobile@upi)"
+                          className="flex-1 px-3 py-2 rounded-xl border border-gray-300 text-xs font-mono focus:border-brand-primary focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={() => {
+                            setSelectedPaymentMethod('upi');
+                            setPaymentType('full_prepaid');
+                            setShowUpiInput(false);
+                            handlePlaceOrder(null, {
+                              method: 'upi',
+                              paymentType: 'full_prepaid',
+                            });
+                          }}
+                          className="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                          Pay
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dashed line divider */}
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 2. Credit/Debit Card */}
                 <div
                   onClick={() => {
-                    setPaymentType('full_prepaid');
                     setSelectedPaymentMethod('card');
+                    setPaymentType('full_prepaid');
+                    handlePlaceOrder(null, { method: 'card', paymentType: 'full_prepaid' });
                   }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    paymentType === 'full_prepaid' && selectedPaymentMethod === 'card'
-                      ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
+                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
                       <CreditCard className="w-4 h-4 text-gray-700" />
-                      <Zap className="w-2.5 h-2.5 text-blue-500 fill-blue-500 absolute -top-1 -right-1" />
+                      <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Credit/Debit Card</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#E6F8EB] text-emerald-800 text-[9.5px] font-semibold">
-                        <Percent className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Save ₹{prepaidDiscount}</span>
-                      </span>
+                      <div className="mt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
+                          <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
+                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-extrabold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
                 </div>
 
-                {/* Net Banking */}
+                {/* Dashed line divider */}
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 3. Net Banking */}
                 <div
                   onClick={() => {
-                    setPaymentType('full_prepaid');
                     setSelectedPaymentMethod('netbanking');
+                    setPaymentType('full_prepaid');
+                    handlePlaceOrder(null, { method: 'netbanking', paymentType: 'full_prepaid' });
                   }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    paymentType === 'full_prepaid' && selectedPaymentMethod === 'netbanking'
-                      ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
+                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
                       <Landmark className="w-4 h-4 text-gray-700" />
-                      <Zap className="w-2.5 h-2.5 text-blue-500 fill-blue-500 absolute -top-1 -right-1" />
+                      <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Net Banking</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#E6F8EB] text-emerald-800 text-[9.5px] font-semibold">
-                        <Percent className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Save ₹{prepaidDiscount}</span>
-                      </span>
+                      <div className="mt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
+                          <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
+                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-extrabold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
                 </div>
 
-                {/* Wallets */}
+                {/* Dashed line divider */}
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 4. Wallets */}
                 <div
                   onClick={() => {
-                    setPaymentType('full_prepaid');
                     setSelectedPaymentMethod('wallet');
+                    setPaymentType('full_prepaid');
+                    handlePlaceOrder(null, { method: 'wallet', paymentType: 'full_prepaid' });
                   }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    paymentType === 'full_prepaid' && selectedPaymentMethod === 'wallet'
-                      ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
+                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
                       <Wallet className="w-4 h-4 text-gray-700" />
-                      <Zap className="w-2.5 h-2.5 text-blue-500 fill-blue-500 absolute -top-1 -right-1" />
+                      <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Wallets</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#E6F8EB] text-emerald-800 text-[9.5px] font-semibold">
-                        <Percent className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Save ₹{prepaidDiscount}</span>
-                      </span>
+                      <div className="mt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
+                          <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
+                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-extrabold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
                 </div>
 
-                {/* Pay Later */}
-                <div
-                  onClick={() => {
-                    setPaymentType('full_prepaid');
-                    setSelectedPaymentMethod('paylater');
-                  }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    paymentType === 'full_prepaid' && selectedPaymentMethod === 'paylater'
-                      ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
-                      <Clock className="w-4 h-4 text-gray-700" />
-                      <Zap className="w-2.5 h-2.5 text-blue-500 fill-blue-500 absolute -top-1 -right-1" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-900">Pay Later</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#E6F8EB] text-emerald-800 text-[9.5px] font-semibold">
-                        <Percent className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Save ₹{prepaidDiscount}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-extrabold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Partial COD */}
+                {/* 5. Partial COD (if enabled) */}
                 {paymentSettings.partial_cod_enabled && (
-                  <div
-                    onClick={() => {
-                      setPaymentType('partial');
-                      setSelectedPaymentMethod('partial_cod');
-                    }}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      paymentType === 'partial'
-                        ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
-                        <Banknote className="w-4 h-4 text-gray-700" />
+                  <>
+                    <div className="border-t border-dashed border-gray-200 mx-4" />
+                    <div
+                      onClick={() => {
+                        setPaymentType('partial');
+                        setSelectedPaymentMethod('partial_cod');
+                        handlePlaceOrder(null, { method: 'partial_cod', paymentType: 'partial' });
+                      }}
+                      className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
+                          <Banknote className="w-4 h-4 text-gray-700" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">Partial COD</p>
+                          <p className="text-[10.5px] text-gray-500">
+                            Pay Balance ₹{(calcData?.payment_splits?.partial?.amount_due_on_delivery ?? Math.max(0, finalTotal - (Number(paymentSettings.partial_advance) || 199))).toLocaleString('en-IN')}.00 at Delivery
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-900">Partial COD</p>
-                        <p className="text-[10.5px] text-gray-500">
-                          Pay Balance ₹{(calcData?.payment_splits?.partial?.amount_due_on_delivery ?? Math.max(0, finalTotal - (Number(paymentSettings.partial_advance) || 199))).toLocaleString('en-IN')}.00 at Delivery
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-900">
+                          ₹{(calcData?.payment_splits?.partial?.amount_due_now ?? Math.min(Number(paymentSettings.partial_advance) || 199, finalTotal)).toLocaleString('en-IN')}.00
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-extrabold text-gray-900">
-                        ₹{(calcData?.payment_splits?.partial?.amount_due_now ?? Math.min(Number(paymentSettings.partial_advance) || 199, finalTotal)).toLocaleString('en-IN')}.00
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </div>
+                  </>
                 )}
 
-                {/* Full COD (if enabled) */}
+                {/* 6. Cash on Delivery (if enabled) */}
                 {paymentSettings.cod_available && (
-                  <div
-                    onClick={() => {
-                      setPaymentType('cod');
-                      setSelectedPaymentMethod('cod');
-                    }}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      paymentType === 'cod'
-                        ? 'border-brand-primary bg-purple-50/40 ring-1 ring-brand-primary'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
-                        <Banknote className="w-4 h-4 text-gray-700" />
+                  <>
+                    <div className="border-t border-dashed border-gray-200 mx-4" />
+                    <div
+                      onClick={() => {
+                        setPaymentType('cod');
+                        setSelectedPaymentMethod('cod');
+                        handlePlaceOrder(null, { method: 'cod', paymentType: 'cod' });
+                      }}
+                      className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
+                          <Banknote className="w-4 h-4 text-gray-700" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">Cash on Delivery (Full COD)</p>
+                          <p className="text-[10.5px] text-gray-500">Pay full amount at doorstep</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-900">Cash on Delivery (Full COD)</p>
-                        <p className="text-[10.5px] text-gray-500">Pay full amount at doorstep</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-900">₹{finalTotal.toLocaleString('en-IN')}.00</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-extrabold text-gray-900">₹{finalTotal.toLocaleString('en-IN')}.00</span>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </div>
+                  </>
                 )}
 
               </div>
@@ -1579,11 +1678,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           </div>
         )}
 
+        </div>
+
         {/* ══════════════════════════════════════════════════════════════
-            STICKY BOTTOM ACTION BAR (Step 3: Details & Payment)
+            DOCKED BOTTOM ACTION BAR (Step 3: Details & Payment)
+            Always 100% visible on Mobile & Desktop above home indicator
         ══════════════════════════════════════════════════════════════ */}
         {step === 'details_payment' && (
-          <div className="sticky bottom-0 z-40 bg-white/98 backdrop-blur-md border-t border-gray-200/90 px-4 py-3 shadow-2xl flex items-center justify-between shrink-0">
+          <div className="shrink-0 z-40 bg-white/98 backdrop-blur-md border-t border-gray-200/90 px-4 py-3.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] shadow-2xl flex items-center justify-between">
             <div>
               <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">TO PAY</span>
               <div className="flex items-baseline gap-1.5">

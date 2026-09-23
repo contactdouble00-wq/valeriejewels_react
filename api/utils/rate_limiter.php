@@ -11,7 +11,6 @@ require_once __DIR__ . '/response.php';
 class RateLimiter
 {
     private static bool $tableChecked = false;
-
     /**
      * Resolve the true client IP address, accounting for reverse proxies & Cloudflare.
      */
@@ -23,7 +22,6 @@ class RateLimiter
             'HTTP_CLIENT_IP',
             'REMOTE_ADDR',
         ];
-
         foreach ($headers as $header) {
             if (!empty($_SERVER[$header])) {
                 $ips = explode(',', $_SERVER[$header]);
@@ -33,10 +31,8 @@ class RateLimiter
                 }
             }
         }
-
         return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     }
-
     /**
      * Enforce rate limit for a specific action and client IP.
      * Halts execution with HTTP 429 if the limit is exceeded.

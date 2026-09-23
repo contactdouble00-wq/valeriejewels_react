@@ -427,10 +427,15 @@ export const apiService = {
    */
   async getPaymentSettings() {
     try {
-      const response = await fetch(`${API_BASE_URL}/settings/payments.php`);
+      const response = await fetch(`${API_BASE_URL}/settings/payments.php?_t=${Date.now()}`);
       if (response.ok) {
         const result = await response.json();
-        if (result.data) return result.data;
+        if (result.data) {
+          try {
+            localStorage.setItem('valerie_payment_settings_cache', JSON.stringify(result.data));
+          } catch (_) {}
+          return result.data;
+        }
       }
     } catch (err) {
       console.warn('API getPaymentSettings fallback to defaults:', err);
