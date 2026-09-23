@@ -525,7 +525,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             },
             sequence: ['block.upi'],
             preferences: {
-              show_default_blocks: false
+              show_default_blocks: true
             }
           }
         } : (targetMethod === 'upi' ? {
@@ -543,7 +543,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             },
             sequence: ['block.upi'],
             preferences: {
-              show_default_blocks: false
+              show_default_blocks: true
             }
           }
         } : targetMethod === 'card' ? {

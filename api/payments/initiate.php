@@ -12,8 +12,8 @@ require_once dirname(__DIR__) . '/config/database.php';
 
 handleCors();
 
-// Anti card-testing & bot rate limit: 15 checkouts per 10 minutes per IP
-RateLimiter::check('payment_initiate', 15, 600);
+// Anti card-testing & bot rate limit: relaxed to 60 checkouts per 10 minutes per IP for active checkout & QA testing
+RateLimiter::check('payment_initiate', 60, 600);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ApiResponse::error('Method not allowed. Use POST.', 405);

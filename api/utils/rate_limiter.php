@@ -82,7 +82,6 @@ class RateLimiter
                     );
                     exit;
                 }
-
                 // Increment hit counter
                 $updateStmt = $pdo->prepare("UPDATE rate_limits SET hits = hits + 1 WHERE id = ?");
                 $updateStmt->execute([$record['id']]);
