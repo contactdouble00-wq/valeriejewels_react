@@ -36,6 +36,10 @@ $items         = $input['items'] ?? [];
 // Basic validation
 $errors = [];
 if (empty($customerName))  $errors['customer_name']  = 'Customer name is required';
+if (empty($customerEmail) && !empty($customerPhone)) {
+    $cleanP = preg_replace('/\D/', '', $customerPhone);
+    $customerEmail = ($cleanP ?: 'guest') . '@valerieclient.in';
+}
 if (empty($customerEmail)) $errors['customer_email'] = 'Valid email is required';
 if (empty($customerPhone)) $errors['customer_phone'] = 'Mobile phone number is required';
 if (empty($addressLine1))  $errors['shipping_address_line1'] = 'Address is required';

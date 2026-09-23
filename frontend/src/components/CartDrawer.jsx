@@ -87,12 +87,12 @@ export default function CartDrawer({ onProceedToCheckout }) {
     try {
       const session = await apiService.createFastrrSession({
         items: cartItems.map((item) => ({
-          id: item.id,
-          variant_id: item.variant_id || item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.images?.[0] || item.image || '',
+          id: item.productId || item.bundleId || item.id || 1,
+          variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
+          name: item.name || 'Valerie Fine Jewelry',
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          image: item.image || item.images?.[0] || '',
         })),
         couponCode: '',
         discountAmount: 0,
@@ -101,6 +101,10 @@ export default function CartDrawer({ onProceedToCheckout }) {
       if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
         window.HeadlessCheckout.addToCart(e, session.token, {
           fallbackUrl: window.location.href,
+        }, (res) => {
+          if (res?.exitCheckout) {
+            setIsInitiatingFastrr(false);
+          }
         });
         closeCart();
         return;

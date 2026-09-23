@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Clean Razorpay Test</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h2>Clean Razorpay Checkout Test</h2>
+  <button id="payCleanBtn" style="padding: 12px 24px; font-size: 16px; background: #5B1E31; color: white; border: none; border-radius: 8px; cursor: pointer;">Open Clean Razorpay</button>
+  <div id="logs" style="margin-top: 20px; white-space: pre-wrap; font-family: monospace; background: #f0f0f0; padding: 10px;"></div>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById('logs').textContent += msg + '\n';
+      console.log(msg);
+    };
+
+    document.getElementById('payCleanBtn').onclick = async () => {
+      log('Initiating checkout order on valeriejewels.in...');
+      try {
+        const res = await fetch('https://valeriejewels.in/api/payments/initiate.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: 'Jayesh Patel',
+            customer_email: 'customer@valeriejewels.in',
+            customer_phone: '9876543210',
+            shipping_address_line1: 'Patel Chowk',
+            city: 'Rajkot',
+            state: 'Gujarat',
+            pincode: '360002',
+            payment_type: 'full_prepaid',
+            items: [{ id: 20, quantity: 1 }]
+          })
+        });
+        const data = await res.json();
+        log('Initiate response: ' + JSON.stringify(data));
+
+        if (!data.success) {
+          log('Failed to initiate: ' + data.message);
+          return;
+        }
+
+        const initResult = data.data;
+        const options = {
+          key: initResult.razorpay_key_id,
+          amount: Math.round(initResult.amount_payable_now * 100),
+          currency: initResult.currency || 'INR',
+          name: 'Valerie Jewels',
+          description: 'Order ' + initResult.order_number,
+          order_id: initResult.razorpay_order_id,
+          prefill: {
+            name: 'Jayesh Patel',
+            email: 'customer@valeriejewels.in',
+            contact: '9876543210'
+          },
+          theme: {
+            color: '#5B1E31'
+          },
+          handler: (resp) => {
+            log('Payment success: ' + JSON.stringify(resp));
+          }
+        };
+
+        log('Opening Razorpay Clean...');
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (resp) => {
+          log('Payment failed: ' + JSON.stringify(resp));
+        });
+        rzp.open();
+      } catch (e) {
+        log('Error: ' + e.message);
+      }
+    };
+  </script>
+</body>
+</html>

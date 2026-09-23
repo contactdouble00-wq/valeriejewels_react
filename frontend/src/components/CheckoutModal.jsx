@@ -405,6 +405,64 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     });
   };
 
+  // Shiprocket Fastrr 1-Click Checkout Engine
+  const handlePayWithFastrr = async (e, preferredApp = null) => {
+    if (e && e.preventDefault) {
+      try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+    }
+
+    if (preferredApp) {
+      setSelectedUpiApp(preferredApp);
+    }
+    setSelectedPaymentMethod('upi');
+    setPaymentType('full_prepaid');
+
+    // Attempt Fastrr 1-Click first if active engine is not direct Razorpay
+    if (paymentSettings?.checkout_engine !== 'razorpay_direct') {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      try {
+        const formattedItems = cartItems.map((item) => ({
+          id: item.productId || item.bundleId || item.id || 1,
+          variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
+          name: item.name || 'Valerie Fine Jewelry',
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          image: item.image || item.images?.[0] || '',
+        }));
+
+        const session = await apiService.createFastrrSession({
+          items: formattedItems,
+          couponCode: couponApplied ? couponCode : '',
+          discountAmount: prepaidDiscount,
+        });
+
+        if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
+          window.HeadlessCheckout.addToCart(e, session.token, {
+            fallbackUrl: window.location.href,
+          }, (res) => {
+            if (res?.exitCheckout) {
+              setIsSubmitting(false);
+            }
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Fastrr session failed, falling back to Razorpay standard:', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
+    // Graceful fallback to Razorpay
+    handlePlaceOrder(null, {
+      method: 'upi',
+      paymentType: 'full_prepaid',
+    });
+  };
+
   // Step 3: Place Order via API & Gateway Engine
   const handlePlaceOrder = async (e, options = {}) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -520,8 +578,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             name: name.trim(),
             email: email.trim() || `${cleanPhone}@valerieclient.in`,
             contact: cleanPhone,
-            method: targetMethod === 'card' ? 'card' : targetMethod === 'netbanking' ? 'netbanking' : targetMethod === 'wallet' ? 'wallet' : 'upi',
-            ...(targetMethod === 'upi' && upiIdInput.trim() ? { vpa: upiIdInput.trim() } : {}),
+            ...(targetMethod === 'card' ? { method: 'card' } : {}),
+            ...(targetMethod === 'netbanking' ? { method: 'netbanking' } : {}),
+            ...(targetMethod === 'wallet' ? { method: 'wallet' } : {}),
+            ...(targetMethod === 'upi' && upiIdInput.trim() ? { method: 'upi', vpa: upiIdInput.trim() } : {}),
           },
           notes: {
             order_number: finalOrderNumber,
@@ -1153,6 +1213,17 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     </span>
                   </div>
 
+                  {/* 1-Click Fastrr Instant UPI CTA Button */}
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={(e) => handlePayWithFastrr(e)}
+                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Zap className="w-4 h-4 text-amber-300 fill-amber-300 animate-pulse" />
+                    <span>⚡ 1-Click Fastrr UPI (Google Pay • PhonePe • Paytm)</span>
+                  </button>
+
                   {/* 5 UPI Apps Grid (Google Pay, PhonePe, Paytm, BHIM, Others) */}
                   <div className="grid grid-cols-5 gap-2 pt-1">
                     {UPI_APPS.map((app) => {
@@ -1164,15 +1235,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                           disabled={isSubmitting}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedUpiApp(app.razorpayApp);
-                            setSelectedPaymentMethod('upi');
-                            setPaymentType('full_prepaid');
-                            // DIRECT APP LAUNCH: clicking Google Pay or PhonePe directly opens that payment app!
-                            handlePlaceOrder(null, {
-                              directUpiApp: app.razorpayApp,
-                              method: 'upi',
-                              paymentType: 'full_prepaid',
-                            });
+                            handlePayWithFastrr(e, app.razorpayApp);
                           }}
                           className={`flex flex-col items-center justify-between p-2 h-20 rounded-2xl border transition-all cursor-pointer relative bg-white active:scale-95 ${
                             isThisLoading
