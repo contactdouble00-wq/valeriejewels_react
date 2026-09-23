@@ -4,3 +4,11 @@ admin panel = https://valeriejewels.in/#vj-manage-x1126
 
 admin email - admin@valeriejewels.com
 admin password - Admin@Valerie2026!
+
+backend
+cd "d:\Agency stuff\valeriejewels_react"
+php -S localhost:8000 -t api
+
+Frontend
+cd "d:\Agency stuff\valeriejewels_react\frontend"
+npm run dev

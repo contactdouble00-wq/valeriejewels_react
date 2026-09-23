@@ -56,10 +56,41 @@ export default function CartDrawer({ onProceedToCheckout }) {
     return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
   }, []);
 
-  const handleOrderNowClick = (e) => {
+  const [isInitiatingFastrr, setIsInitiatingFastrr] = useState(false);
+
+  const handleOrderNowClick = async (e) => {
     if (e) {
       try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
     }
+
+    setIsInitiatingFastrr(true);
+    try {
+      const session = await apiService.createFastrrSession({
+        items: cartItems.map((item) => ({
+          id: item.id,
+          variant_id: item.variant_id || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.images?.[0] || item.image || '',
+        })),
+        couponCode: '',
+        discountAmount: 0,
+      });
+
+      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
+        window.HeadlessCheckout.addToCart(e, session.token, {
+          fallbackUrl: window.location.href,
+        });
+        closeCart();
+        return;
+      }
+    } catch (err) {
+      console.warn('Fastrr official session fallback to internal modal:', err);
+    } finally {
+      setIsInitiatingFastrr(false);
+    }
+
     closeCart();
     if (onProceedToCheckout) {
       onProceedToCheckout();
