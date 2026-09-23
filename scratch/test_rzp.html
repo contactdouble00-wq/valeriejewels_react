@@ -55,6 +55,26 @@
             contact: '9876543210',
             method: 'upi'
           },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'Pay with Google Pay',
+                  instruments: [
+                    {
+                      method: 'upi',
+                      flows: ['intent', 'qr'],
+                      apps: ['google_pay']
+                    }
+                  ]
+                }
+              },
+              sequence: ['block.upi'],
+              preferences: {
+                show_default_blocks: true
+              }
+            }
+          },
           handler: (resp) => {
             log('Payment success: ' + JSON.stringify(resp));
           }
