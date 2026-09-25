@@ -112,10 +112,18 @@ if ($appEnv) {
     $config['app']['env'] = $appEnv;
 }
 
-// Fastrr production credentials
-$config['fastrr']['app_id'] = getenv('FASTRR_APP_ID') ?: ($config['fastrr']['app_id'] ?: 'TAlJIqacN8rB0njv');
-$config['fastrr']['secret_key'] = getenv('FASTRR_SECRET_KEY') ?: ($config['fastrr']['secret_key'] ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0');
-$config['fastrr']['webhook_secret'] = getenv('FASTRR_WEBHOOK_SECRET') ?: ($config['fastrr']['webhook_secret'] ?? '');
+// Fastrr Credentials - strictly loaded from environment variables
+$fastrrAppId = getenv('FASTRR_APP_ID') ?: ($_ENV['FASTRR_APP_ID'] ?? ($_SERVER['FASTRR_APP_ID'] ?? ''));
+$fastrrSecretKey = getenv('FASTRR_SECRET_KEY') ?: ($_ENV['FASTRR_SECRET_KEY'] ?? ($_SERVER['FASTRR_SECRET_KEY'] ?? ''));
+$fastrrWebhookSecret = getenv('FASTRR_WEBHOOK_SECRET') ?: ($_ENV['FASTRR_WEBHOOK_SECRET'] ?? ($_SERVER['FASTRR_WEBHOOK_SECRET'] ?? ''));
+
+if (empty($fastrrAppId) || empty($fastrrSecretKey)) {
+    error_log('[CRITICAL] Fastrr credentials missing: FASTRR_APP_ID or FASTRR_SECRET_KEY is not defined in environment variables or .env file.');
+}
+
+$config['fastrr']['app_id'] = $fastrrAppId;
+$config['fastrr']['secret_key'] = $fastrrSecretKey;
+$config['fastrr']['webhook_secret'] = $fastrrWebhookSecret;
 $config['fastrr']['sandbox'] = false;
 
 return $config;

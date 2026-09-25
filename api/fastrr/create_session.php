@@ -35,19 +35,14 @@ try {
         }
     } catch (Exception $e) {}
 
-    // Load credentials from config / environment with DB override
+    // Load credentials strictly from environment / config
     $config = require dirname(__DIR__) . '/config/config.php';
-    $apiKey = !empty($settings['fastrr_app_id']) ? $settings['fastrr_app_id'] : ($config['fastrr']['app_id'] ?? 'TAlJIqacN8rB0njv');
-    $secretKey = !empty($settings['fastrr_secret_key']) ? $settings['fastrr_secret_key'] : ($config['fastrr']['secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0');
+    $apiKey = getenv('FASTRR_APP_ID') ?: (!empty($config['fastrr']['app_id']) ? $config['fastrr']['app_id'] : ($settings['fastrr_app_id'] ?? ''));
+    $secretKey = getenv('FASTRR_SECRET_KEY') ?: (!empty($config['fastrr']['secret_key']) ? $config['fastrr']['secret_key'] : ($settings['fastrr_secret_key'] ?? ''));
 
-    // Auto-sync into database so site_settings stays updated
-    if (($settings['fastrr_app_id'] ?? '') !== $apiKey || ($settings['fastrr_secret_key'] ?? '') !== $secretKey) {
-        $settings['fastrr_app_id'] = $apiKey;
-        $settings['fastrr_secret_key'] = $secretKey;
-        try {
-            $upd = $pdo->prepare("REPLACE INTO `site_settings` (`key`, `value`) VALUES ('payment_settings', ?)");
-            $upd->execute([json_encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
-        } catch (Throwable $e) {}
+    if (empty($apiKey) || empty($secretKey)) {
+        error_log('[CRITICAL] Fastrr Session: Cannot create checkout session. FASTRR_APP_ID or FASTRR_SECRET_KEY is missing from environment.');
+        ApiResponse::error('Fastrr checkout is temporarily unconfigured. Please configure FASTRR_APP_ID and FASTRR_SECRET_KEY in environment.', 503);
     }
 
     // Dynamic payment settings from database

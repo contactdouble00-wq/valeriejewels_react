@@ -15,9 +15,9 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $defaultSettings = [
     'gateway_mode'          => 'live', // 'sandbox' | 'live'
     'checkout_engine'       => 'shiprocket_fastrr', // 'shiprocket_fastrr' | 'razorpay_direct'
-    'fastrr_app_id'         => 'TAlJIqacN8rB0njv',
-    'fastrr_secret_key'     => 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
-    'fastrr_webhook_secret' => '',
+    'fastrr_app_id'         => getenv('FASTRR_APP_ID') ?: '',
+    'fastrr_secret_key'     => getenv('FASTRR_SECRET_KEY') ?: '',
+    'fastrr_webhook_secret' => getenv('FASTRR_WEBHOOK_SECRET') ?: '',
     'razorpay_key_id'       => '',
     'razorpay_key_secret'   => '',
     'sms_provider'          => 'fastrr', // 'fastrr' | 'fast2sms' | 'twofactor' | 'twilio' | 'sandbox'
@@ -92,11 +92,11 @@ try {
             }
         }
 
-        if (empty($settings['fastrr_app_id']) || $settings['fastrr_app_id'] === 'valeriejewels' || strlen($settings['fastrr_app_id']) < 10) {
-            $settings['fastrr_app_id'] = 'TAlJIqacN8rB0njv';
+        if (empty($settings['fastrr_app_id'])) {
+            $settings['fastrr_app_id'] = getenv('FASTRR_APP_ID') ?: '';
         }
-        if (empty($settings['fastrr_secret_key']) || strlen($settings['fastrr_secret_key']) < 10) {
-            $settings['fastrr_secret_key'] = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+        if (empty($settings['fastrr_secret_key'])) {
+            $settings['fastrr_secret_key'] = getenv('FASTRR_SECRET_KEY') ?: '';
         }
 
         // Check if admin token is present in Authorization header

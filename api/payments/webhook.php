@@ -25,9 +25,13 @@ if (!$data) {
 
 // Fetch fastrr config and site settings
 $config = require dirname(__DIR__) . '/config/config.php';
-$secretKey = $config['fastrr']['secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
-$webhookSecret = $config['fastrr']['webhook_secret'] ?? '';
+$secretKey = getenv('FASTRR_SECRET_KEY') ?: ($config['fastrr']['secret_key'] ?? '');
+$webhookSecret = getenv('FASTRR_WEBHOOK_SECRET') ?: ($config['fastrr']['webhook_secret'] ?? '');
 $isSandbox = !empty($config['fastrr']['sandbox']);
+
+if (empty($secretKey)) {
+    error_log('[CRITICAL] Fastrr Webhook: FASTRR_SECRET_KEY is missing from environment. Webhook signatures cannot be verified.');
+}
 
 try {
     $pdo = Database::getConnection();

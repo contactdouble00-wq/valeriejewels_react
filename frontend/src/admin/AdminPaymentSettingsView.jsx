@@ -43,9 +43,9 @@ export default function AdminPaymentSettingsView() {
   const [settings, setSettings] = useState({
     gateway_mode: 'live',
     checkout_engine: 'shiprocket_fastrr',
-    fastrr_app_id: 'TAlJIqacN8rB0njv',
-    fastrr_secret_key: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
-    fastrr_webhook_secret: 'vj_fastrr_whsec_test',
+    fastrr_app_id: '',
+    fastrr_secret_key: '',
+    fastrr_webhook_secret: '',
     razorpay_key_id: '',
     razorpay_key_secret: '',
     sms_provider: 'fastrr',
