@@ -681,8 +681,17 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
   const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const activeSplit = calcData?.payment_splits?.[paymentType];
-  const dueNow = activeSplit?.amount_due_now ?? calcData?.final_total ?? 0;
-  const dueOnDelivery = activeSplit?.amount_due_on_delivery ?? 0;
+  const partialAdvanceAmount = Number(paymentSettings.partial_advance) || 100;
+  const dueNow = paymentType === 'partial'
+    ? (activeSplit?.amount_due_now !== undefined ? activeSplit.amount_due_now : Math.min(partialAdvanceAmount, finalTotal))
+    : paymentType === 'cod'
+    ? 0
+    : (activeSplit?.amount_due_now ?? (calcData?.final_total ? Math.max(0, calcData.final_total - prepaidDiscount) : 0));
+  const dueOnDelivery = paymentType === 'partial'
+    ? (activeSplit?.amount_due_on_delivery !== undefined ? activeSplit.amount_due_on_delivery : Math.max(0, finalTotal - partialAdvanceAmount))
+    : paymentType === 'cod'
+    ? finalTotal
+    : 0;
 
   // Exact Everlasting Savings calculation
   const totalMrp = calcData?.total_mrp || cartItems.reduce((acc, item) => acc + (item.mrp || Math.round(item.price * 1.5)) * item.quantity, 0);
@@ -1310,9 +1319,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   onClick={() => {
                     setSelectedPaymentMethod('card');
                     setPaymentType('full_prepaid');
-                    handlePlaceOrder(null, { method: 'card', paymentType: 'full_prepaid' });
                   }}
-                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                  className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'card' && paymentType === 'full_prepaid'
+                      ? 'bg-purple-50/60 border-l-4 border-brand-primary'
+                      : 'hover:bg-gray-50/60'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
@@ -1332,7 +1344,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
                     <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      selectedPaymentMethod === 'card' && paymentType === 'full_prepaid'
+                        ? 'border-brand-primary bg-brand-primary text-white'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedPaymentMethod === 'card' && paymentType === 'full_prepaid' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
                   </div>
                 </div>
 
@@ -1344,9 +1362,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   onClick={() => {
                     setSelectedPaymentMethod('netbanking');
                     setPaymentType('full_prepaid');
-                    handlePlaceOrder(null, { method: 'netbanking', paymentType: 'full_prepaid' });
                   }}
-                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                  className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'netbanking' && paymentType === 'full_prepaid'
+                      ? 'bg-purple-50/60 border-l-4 border-brand-primary'
+                      : 'hover:bg-gray-50/60'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
@@ -1366,7 +1387,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
                     <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      selectedPaymentMethod === 'netbanking' && paymentType === 'full_prepaid'
+                        ? 'border-brand-primary bg-brand-primary text-white'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedPaymentMethod === 'netbanking' && paymentType === 'full_prepaid' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
                   </div>
                 </div>
 
@@ -1378,9 +1405,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   onClick={() => {
                     setSelectedPaymentMethod('wallet');
                     setPaymentType('full_prepaid');
-                    handlePlaceOrder(null, { method: 'wallet', paymentType: 'full_prepaid' });
                   }}
-                  className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                  className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'wallet' && paymentType === 'full_prepaid'
+                      ? 'bg-purple-50/60 border-l-4 border-brand-primary'
+                      : 'hover:bg-gray-50/60'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
@@ -1400,7 +1430,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
                     <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      selectedPaymentMethod === 'wallet' && paymentType === 'full_prepaid'
+                        ? 'border-brand-primary bg-brand-primary text-white'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedPaymentMethod === 'wallet' && paymentType === 'full_prepaid' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
                   </div>
                 </div>
 
@@ -1412,26 +1448,46 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       onClick={() => {
                         setPaymentType('partial');
                         setSelectedPaymentMethod('partial_cod');
-                        handlePlaceOrder(null, { method: 'partial_cod', paymentType: 'partial' });
                       }}
-                      className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                      className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
+                        paymentType === 'partial'
+                          ? 'bg-purple-50/70 border-l-4 border-brand-primary ring-1 ring-brand-primary/20'
+                          : 'hover:bg-gray-50/60'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
-                          <Banknote className="w-4 h-4 text-gray-700" />
+                        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
+                          paymentType === 'partial'
+                            ? 'bg-brand-primary text-white border-brand-primary'
+                            : 'border-gray-200 bg-gray-50 text-gray-700'
+                        }`}>
+                          <Banknote className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-900">Partial COD</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-gray-900">Partial COD</p>
+                            {paymentType === 'partial' && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-brand-primary text-white uppercase tracking-wider">
+                                Selected
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10.5px] text-gray-500">
-                            Pay Balance ₹{(calcData?.payment_splits?.partial?.amount_due_on_delivery ?? Math.max(0, finalTotal - (Number(paymentSettings.partial_advance) || 199))).toLocaleString('en-IN')}.00 at Delivery
+                            Pay ₹{partialAdvanceAmount}.00 Token Deposit Now • Balance ₹{Math.max(0, finalTotal - partialAdvanceAmount).toLocaleString('en-IN')}.00 on Delivery
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-900">
-                          ₹{(calcData?.payment_splits?.partial?.amount_due_now ?? Math.min(Number(paymentSettings.partial_advance) || 199, finalTotal)).toLocaleString('en-IN')}.00
+                        <span className="text-xs font-bold text-brand-primary">
+                          ₹{partialAdvanceAmount}.00
                         </span>
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          paymentType === 'partial'
+                            ? 'border-brand-primary bg-brand-primary text-white'
+                            : 'border-gray-300'
+                        }`}>
+                          {paymentType === 'partial' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
                       </div>
                     </div>
                   </>
@@ -1445,13 +1501,20 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       onClick={() => {
                         setPaymentType('cod');
                         setSelectedPaymentMethod('cod');
-                        handlePlaceOrder(null, { method: 'cod', paymentType: 'cod' });
                       }}
-                      className="p-4 flex items-center justify-between hover:bg-gray-50/60 transition-colors cursor-pointer"
+                      className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
+                        paymentType === 'cod'
+                          ? 'bg-purple-50/60 border-l-4 border-brand-primary'
+                          : 'hover:bg-gray-50/60'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 shrink-0">
-                          <Banknote className="w-4 h-4 text-gray-700" />
+                        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
+                          paymentType === 'cod'
+                            ? 'bg-brand-primary text-white border-brand-primary'
+                            : 'border-gray-200 bg-gray-50 text-gray-700'
+                        }`}>
+                          <Banknote className="w-4 h-4" />
                         </div>
                         <div>
                           <p className="text-xs font-bold text-gray-900">Cash on Delivery (Full COD)</p>
@@ -1460,7 +1523,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-gray-900">₹{finalTotal.toLocaleString('en-IN')}.00</span>
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          paymentType === 'cod'
+                            ? 'border-brand-primary bg-brand-primary text-white'
+                            : 'border-gray-300'
+                        }`}>
+                          {paymentType === 'cod' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
                       </div>
                     </div>
                   </>
@@ -1674,12 +1743,19 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         {step === 'details_payment' && (
           <div className="shrink-0 z-40 bg-white/98 backdrop-blur-md border-t border-gray-200/90 px-4 py-3.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] shadow-2xl flex items-center justify-between">
             <div>
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">TO PAY</span>
-              <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
+                {paymentType === 'partial' ? 'ADVANCE TO PAY' : paymentType === 'cod' ? 'TO PAY NOW' : 'TO PAY'}
+              </span>
+              <div className="flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-base sm:text-lg font-black text-gray-900 font-mono">
-                  ₹{dueNow.toLocaleString('en-IN')}.00
+                  ₹{Math.round(dueNow).toLocaleString('en-IN')}.00
                 </span>
-                {totalSavings > 0 && (
+                {paymentType === 'partial' && (
+                  <span className="text-[10.5px] text-purple-700 font-semibold block">
+                    (₹{Math.round(dueOnDelivery).toLocaleString('en-IN')} on delivery)
+                  </span>
+                )}
+                {paymentType === 'full_prepaid' && totalSavings > 0 && (
                   <span className="text-[10.5px] text-emerald-600 font-bold">
                     Save ₹{totalSavings}
                   </span>
@@ -1690,7 +1766,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={handlePlaceOrder}
+              onClick={(e) => handlePlaceOrder(e, { method: selectedPaymentMethod, paymentType })}
               className="py-3.5 px-6 sm:px-8 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.98] text-white text-xs font-caps tracking-widest uppercase font-bold shadow-lg transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
@@ -1702,7 +1778,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     {paymentType === 'full_prepaid'
                       ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')}`
                       : paymentType === 'partial'
-                      ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')} DEPOSIT`
+                      ? `PAY ₹${Math.round(dueNow).toLocaleString('en-IN')} ADVANCE`
                       : `CONFIRM COD ORDER`}
                   </span>
                 </>
