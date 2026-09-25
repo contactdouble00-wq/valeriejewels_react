@@ -112,9 +112,11 @@ if ($appEnv) {
     $config['app']['env'] = $appEnv;
 }
 
-// Fastrr sandbox credentials for testing
-$config['fastrr']['app_id'] = getenv('FASTRR_APP_ID') ?: ($config['fastrr']['app_id'] ?: 'vj_fastrr_app_test');
-$config['fastrr']['secret_key'] = getenv('FASTRR_SECRET_KEY') ?: ($config['fastrr']['secret_key'] ?: 'vj_fastrr_secret_test_2026');
-$config['fastrr']['sandbox'] = true;
+// Fastrr production credentials
+$config['fastrr']['app_id'] = getenv('FASTRR_APP_ID') ?: ($config['fastrr']['app_id'] ?: 'TAlJIqacN8rB0njv');
+$config['fastrr']['secret_key'] = getenv('FASTRR_SECRET_KEY') ?: ($config['fastrr']['secret_key'] ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0');
+$config['fastrr']['webhook_secret'] = getenv('FASTRR_WEBHOOK_SECRET') ?: ($config['fastrr']['webhook_secret'] ?? '');
+$config['fastrr']['sandbox'] = false;
 
 return $config;
+

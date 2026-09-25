@@ -508,6 +508,7 @@ export const apiService = {
    * Official Shiprocket Fastrr: Create Access Token Session
    */
   async createFastrrSession({ items, couponCode = '', discountAmount = 0 }) {
+    console.log('[Fastrr] Requesting checkout session for items:', items);
     const response = await fetch(`${API_BASE_URL}/fastrr/create_session.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -519,8 +520,10 @@ export const apiService = {
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
+      console.error('[Fastrr] Session creation failed:', result);
       throw new Error(result.message || 'Failed to initiate Fastrr Checkout session');
     }
+    console.log('[Fastrr] Session created successfully. Token:', result.data?.token);
     return result.data;
   },
 

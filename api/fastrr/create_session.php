@@ -35,9 +35,10 @@ try {
         }
     } catch (Exception $e) {}
 
-    // Ensure valid Fastrr credentials
-    $apiKey = 'TAlJIqacN8rB0njv';
-    $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+    // Load credentials from config / environment with DB override
+    $config = require dirname(__DIR__) . '/config/config.php';
+    $apiKey = !empty($settings['fastrr_app_id']) ? $settings['fastrr_app_id'] : ($config['fastrr']['app_id'] ?? 'TAlJIqacN8rB0njv');
+    $secretKey = !empty($settings['fastrr_secret_key']) ? $settings['fastrr_secret_key'] : ($config['fastrr']['secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0');
 
     // Auto-sync into database so site_settings stays updated
     if (($settings['fastrr_app_id'] ?? '') !== $apiKey || ($settings['fastrr_secret_key'] ?? '') !== $secretKey) {
@@ -48,6 +49,11 @@ try {
             $upd->execute([json_encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
         } catch (Throwable $e) {}
     }
+
+    // Dynamic payment settings from database
+    $partialCodEnabled = isset($settings['partial_cod_enabled']) ? (bool)$settings['partial_cod_enabled'] : true;
+    $partialAdvance    = isset($settings['partial_advance']) ? (int)$settings['partial_advance'] : 100;
+    $codAvailable      = isset($settings['cod_available']) ? (bool)$settings['cod_available'] : false;
 
     $formattedItems = [];
     $totalAmount = 0.0;
@@ -77,9 +83,16 @@ try {
     }
 
     $cartData = [
-        'items'             => $formattedItems,
-        'custom_attributes' => (object)[],
-        'mobile_app'        => false
+        'items'               => $formattedItems,
+        'custom_attributes'   => [
+            'partial_cod_enabled' => $partialCodEnabled,
+            'partial_advance'     => $partialAdvance,
+            'cod_available'       => $codAvailable,
+        ],
+        'partial_cod_enabled' => $partialCodEnabled,
+        'partial_advance'     => $partialAdvance,
+        'cod_available'       => $codAvailable,
+        'mobile_app'          => false
     ];
 
     // Optional coupon discount
@@ -97,6 +110,16 @@ try {
         'redirect_url' => 'https://valeriejewels.in/#checkout-success',
         'timestamp'    => gmdate('Y-m-d\TH:i:s.u\Z')
     ];
+
+    // Clear logging for outgoing session payload
+    error_log(sprintf(
+        "[Fastrr Checkout] Outgoing session payload: items=%d, partial_cod_enabled=%s, partial_advance=%d, cod_available=%s",
+        count($formattedItems),
+        $partialCodEnabled ? 'true' : 'false',
+        $partialAdvance,
+        $codAvailable ? 'true' : 'false'
+    ));
+
 
     $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES);
     $hmac = base64_encode(hash_hmac('sha256', $jsonPayload, $secretKey, true));

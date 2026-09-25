@@ -23,17 +23,43 @@ if (!$data) {
     ApiResponse::error('Invalid JSON payload', 400);
 }
 
-// Fetch fastrr config
+// Fetch fastrr config and site settings
 $config = require dirname(__DIR__) . '/config/config.php';
-$secretKey = $config['fastrr']['secret_key'] ?? '';
+$secretKey = $config['fastrr']['secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+$webhookSecret = $config['fastrr']['webhook_secret'] ?? '';
 $isSandbox = !empty($config['fastrr']['sandbox']);
 
-// Verify signature if provided or in production
-$signature = $_SERVER['HTTP_X_FASTRR_SIGNATURE'] ?? $_SERVER['X_FASTRR_SIGNATURE'] ?? null;
+try {
+    $pdo = Database::getConnection();
+    $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+    $stmt->execute();
+    $raw = $stmt->fetchColumn();
+    if ($raw) {
+        $settings = json_decode($raw, true) ?: [];
+        if (!empty($settings['fastrr_secret_key'])) {
+            $secretKey = $settings['fastrr_secret_key'];
+        }
+        if (!empty($settings['fastrr_webhook_secret'])) {
+            $webhookSecret = $settings['fastrr_webhook_secret'];
+        }
+    }
+} catch (Throwable $e) {}
 
-if (!empty($secretKey) && !empty($signature)) {
-    $expectedSignature = hash_hmac('sha256', $rawPayload, $secretKey);
-    if (!hash_equals($expectedSignature, $signature)) {
+// Verify signature if provided or in production
+$signature = $_SERVER['HTTP_X_FASTRR_SIGNATURE'] ?? $_SERVER['X_FASTRR_SIGNATURE'] ?? $_SERVER['HTTP_X_SHIPROCKET_SIGNATURE'] ?? null;
+
+if (!empty($signature)) {
+    $expectedHex = hash_hmac('sha256', $rawPayload, $secretKey);
+    $expectedB64 = base64_encode(hash_hmac('sha256', $rawPayload, $secretKey, true));
+    $isValid = hash_equals($expectedHex, $signature) || hash_equals($expectedB64, $signature);
+
+    if (!$isValid && !empty($webhookSecret)) {
+        $isValid = hash_equals(hash_hmac('sha256', $rawPayload, $webhookSecret), $signature)
+                || hash_equals(base64_encode(hash_hmac('sha256', $rawPayload, $webhookSecret, true)), $signature);
+    }
+
+    if (!$isValid) {
+        error_log("[Fastrr Webhook] Signature verification failed. Received: " . substr($signature, 0, 16) . "...");
         ApiResponse::error('Invalid webhook signature', 401);
     }
 } elseif (!$isSandbox && empty($signature)) {
@@ -41,7 +67,10 @@ if (!empty($secretKey) && !empty($signature)) {
 }
 
 try {
-    $pdo = Database::getConnection();
+    if (!isset($pdo)) {
+        $pdo = Database::getConnection();
+    }
+
 
     $event        = $data['event'] ?? 'payment.success';
     $orderNumber  = $data['order_number'] ?? ($data['data']['order_number'] ?? null);
