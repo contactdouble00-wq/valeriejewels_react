@@ -86,14 +86,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
   // Contact & Address Fields
   const [phone, setPhone] = useState('');
-  const [name, setName] = useState('Jayeshbhai Patel');
-  const [email, setEmail] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [deliveryEta, setDeliveryEta] = useState('3–5 Days');
+  const [name, setName] = useState('Ananya Verma');
+  const [email, setEmail] = useState('ananya.verma@example.com');
+  const [addressLine1, setAddressLine1] = useState('Flat 402, Royal Palms Apartments');
+  const [addressLine2, setAddressLine2] = useState('100 Feet Road, Indiranagar');
+  const [city, setCity] = useState('Bengaluru');
+  const [state, setState] = useState('Karnataka');
+  const [pincode, setPincode] = useState('560038');
+  const [deliveryEta, setDeliveryEta] = useState('3–4 Days');
 
   // Modal / Drawer to Change Delivery Address
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -188,23 +188,39 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         const saved = localStorage.getItem('valerie_saved_checkout_address');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed.name) setName(parsed.name);
-          if (parsed.email) setEmail(parsed.email);
-          if (parsed.phone) setPhone(parsed.phone);
-          if (parsed.addressLine1) setAddressLine1(parsed.addressLine1);
-          if (parsed.addressLine2) setAddressLine2(parsed.addressLine2);
-          if (parsed.city) setCity(parsed.city);
-          if (parsed.state) setState(parsed.state);
-          if (parsed.pincode) setPincode(parsed.pincode);
+          const isWarehouse = parsed.addressLine1?.includes('Momai') ||
+                              parsed.name?.includes('Jayeshbhai') ||
+                              parsed.addressLine1?.includes('Valerie Jewels') ||
+                              parsed.addressLine2?.includes('Harighawa') ||
+                              parsed.city?.includes('Rajkot');
+          if (!isWarehouse && parsed.name && parsed.addressLine1) {
+            if (parsed.name) setName(parsed.name);
+            if (parsed.email) setEmail(parsed.email);
+            if (parsed.phone) setPhone(parsed.phone);
+            if (parsed.addressLine1) setAddressLine1(parsed.addressLine1);
+            if (parsed.addressLine2) setAddressLine2(parsed.addressLine2);
+            if (parsed.city) setCity(parsed.city);
+            if (parsed.state) setState(parsed.state);
+            if (parsed.pincode) setPincode(parsed.pincode);
+          } else {
+            try { localStorage.removeItem('valerie_saved_checkout_address'); } catch (e) {}
+            setName('Ananya Verma');
+            setAddressLine1('Flat 402, Royal Palms Apartments');
+            setAddressLine2('100 Feet Road, Indiranagar');
+            setCity('Bengaluru');
+            setState('Karnataka');
+            setPincode('560038');
+            setEmail('ananya.verma@example.com');
+          }
         } else {
-          // Realistic default prefill matching fastrr address directory for instant checkout
-          setName('Jayeshbhai Patel');
-          setAddressLine1('Valerie Jewels, Ground Floor 001, Opp Momai Tea Stall');
-          setAddressLine2('Patel Chowk, Harighawa Main Road, Near Ahir Chowk');
-          setCity('Rajkot');
-          setState('Gujarat');
-          setPincode('360002');
-          setEmail('customer@valeriejewels.in');
+          // Neutral dummy customer prefill for Fastrr 1-Click checkout to protect warehouse privacy
+          setName('Ananya Verma');
+          setAddressLine1('Flat 402, Royal Palms Apartments');
+          setAddressLine2('100 Feet Road, Indiranagar');
+          setCity('Bengaluru');
+          setState('Karnataka');
+          setPincode('560038');
+          setEmail('ananya.verma@example.com');
         }
       } catch (e) {}
     }
@@ -590,7 +606,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             upi_app: directApp || selectedUpiApp,
           },
           theme: {
-            color: '#5B1E31',
+            color: '#8366B0',
           },
           modal: {
             ondismiss: () => {
@@ -1831,7 +1847,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Jayeshbhai Patel"
+                  placeholder="e.g. Ananya Verma"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
                 />
               </div>
@@ -1865,7 +1881,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   type="text"
                   value={addressLine2}
                   onChange={(e) => setAddressLine2(e.target.value)}
-                  placeholder="e.g. Near Ahir Chowk, MG Road"
+                  placeholder="e.g. Near Indiranagar Club, 100 Feet Road"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
                 />
               </div>
