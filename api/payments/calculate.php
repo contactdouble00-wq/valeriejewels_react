@@ -151,22 +151,18 @@ try {
         }
     }
 
-    // Shipping calculation (Threshold: ₹999)
-    $freeShippingThreshold = 999.0;
-    $isFreeShipping = ($subtotal - $discountAmount) >= $freeShippingThreshold;
-    $shippingFee    = $isFreeShipping ? 0.0 : 99.0;
-
-    $finalTotal = round(max(0, ($subtotal - $discountAmount) + $shippingFee), 2);
+    // Net cart amount after coupons
+    $netSubtotal = round(max(0.0, $subtotal - $discountAmount), 2);
     $totalSavings = round(($totalMrp - $subtotal) + $discountAmount, 2);
 
     // Load dynamic payment settings from database if configured
     $payConfig = [
         'online_payment_enabled' => true,
         'prepaid_discount'    => 50.0,
-        'partial_advance'     => 199.0,
+        'partial_advance'     => 100.0,
         'partial_cod_enabled' => true,
         'cod_fee'             => 0.0,
-        'cod_available'       => true,
+        'cod_available'       => false,
     ];
     try {
         $settStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
@@ -180,18 +176,34 @@ try {
         }
     } catch (Exception $e) {}
 
-    // Smart Payment Split calculations per Fastrr specifications
-    // 1. Prepaid incentive: instant discount for 100% upfront UPI/Cards
-    $prepaidIncentiveDiscount = min((float)$payConfig['prepaid_discount'], $finalTotal);
-    $prepaidTotal = round(max(0, $finalTotal - $prepaidIncentiveDiscount), 2);
-
-    // 2. Partial COD (Smart RTO Protection): upfront deposit, remainder on delivery
-    $partialDeposit = min((float)$payConfig['partial_advance'], $finalTotal);
-    $partialDueOnDelivery = round(max(0, $finalTotal - $partialDeposit), 2);
-
-    // 3. Full COD: 100% on delivery with optional COD handling fee
+    // Delivery / Shipping Rules:
+    // 1. Prepaid Orders: 100% FREE DELIVERY (₹0 shipping fee across India)
+    // 2. Partial COD Orders: 100% FREE DELIVERY (₹0 shipping fee across India)
+    // 3. Full Cash on Delivery (COD): Standard shipping applies (Free on >= ₹999, else ₹99)
+    $freeShippingThreshold = 999.0;
+    $codShippingFee = ($netSubtotal >= $freeShippingThreshold) ? 0.0 : 99.0;
     $codFee = (float)($payConfig['cod_fee'] ?? 0.0);
-    $codDueOnDelivery = round($finalTotal + $codFee, 2);
+
+    // 1. Prepaid Calculation
+    // Free delivery: shipping fee = 0
+    // Instant discount: flat ₹50 (or configured prepaid_discount), but cannot discount below ₹1.00 min gateway transaction
+    $maxPrepaidDiscount = (float)($payConfig['prepaid_discount'] ?? 50.0);
+    $prepaidIncentiveDiscount = 0.0;
+    if ($netSubtotal > 1.0) {
+        $prepaidIncentiveDiscount = min($maxPrepaidDiscount, round($netSubtotal - 1.0, 2));
+    }
+    $prepaidTotal = ($netSubtotal > 0.0) ? round(max(1.0, $netSubtotal - $prepaidIncentiveDiscount), 2) : 0.0;
+
+    // 2. Partial COD Calculation
+    // Free delivery: shipping fee = 0
+    // Upfront deposit: min($partialAdvance, $netSubtotal) with min ₹1
+    $configuredAdvance = (float)($payConfig['partial_advance'] ?? 100.0);
+    $partialDeposit = ($netSubtotal > 0.0) ? round(min($configuredAdvance, $netSubtotal), 2) : 0.0;
+    $partialDueOnDelivery = round(max(0.0, $netSubtotal - $partialDeposit), 2);
+
+    // 3. Full COD Calculation
+    // Standard shipping applies if < 999 + optional COD fee
+    $codTotal = round($netSubtotal + $codShippingFee + $codFee, 2);
 
     $calculation = [
         'items'                   => $recalculatedItems,
@@ -200,33 +212,40 @@ try {
         'total_mrp'               => round($totalMrp, 2),
         'discount_amount'         => round($discountAmount, 2),
         'total_savings'           => $totalSavings,
-        'shipping_fee'            => round($shippingFee, 2),
-        'is_free_shipping'        => $isFreeShipping,
-        'final_total'             => $finalTotal,
+        'shipping_fee'            => 0.0, // Free on default active checkout methods (prepaid & partial COD)
+        'cod_shipping_fee'        => $codShippingFee,
+        'is_free_shipping'        => true,
+        'final_total'             => $netSubtotal,
         'applied_coupon'          => $appliedCoupon,
         'payment_splits' => [
             'full_prepaid' => [
                 'enabled'               => (bool)($payConfig['online_payment_enabled'] ?? true),
                 'title'                 => 'Prepaid (UPI / Cards / NetBanking)',
-                'badge'                 => 'Save ₹' . round($prepaidIncentiveDiscount) . ' Extra Instant Discount',
+                'badge'                 => $prepaidIncentiveDiscount > 0 ? ('Save ₹' . round($prepaidIncentiveDiscount) . ' Extra Instant Discount') : 'Free Delivery Included',
                 'incentive_discount'    => $prepaidIncentiveDiscount,
+                'shipping_fee'          => 0.0,
+                'is_free_shipping'      => true,
                 'amount_due_now'        => $prepaidTotal,
                 'amount_due_on_delivery'=> 0.0,
             ],
             'partial' => [
                 'enabled'               => (bool)$payConfig['partial_cod_enabled'],
                 'title'                 => 'Partial COD (Smart Split)',
-                'badge'                 => 'Pay ₹' . round($partialDeposit) . ' Deposit Now, Rest on Delivery',
+                'badge'                 => 'Free Delivery • Pay ₹' . round($partialDeposit) . ' Deposit Now',
+                'shipping_fee'          => 0.0,
+                'is_free_shipping'      => true,
                 'amount_due_now'        => $partialDeposit,
                 'amount_due_on_delivery'=> $partialDueOnDelivery,
             ],
             'cod' => [
                 'enabled'               => (bool)$payConfig['cod_available'],
                 'title'                 => 'Cash on Delivery (Full COD)',
-                'badge'                 => $codFee > 0 ? ('₹' . round($codFee) . ' COD Handling Fee') : 'Pay Full Cash at Doorstep',
+                'badge'                 => $codShippingFee > 0 ? '₹99 Delivery Fee' : ($codFee > 0 ? ('₹' . round($codFee) . ' COD Fee') : 'Pay Full Cash at Doorstep'),
+                'shipping_fee'          => $codShippingFee,
+                'is_free_shipping'      => ($codShippingFee === 0.0),
                 'cod_fee'               => $codFee,
                 'amount_due_now'        => 0.0,
-                'amount_due_on_delivery'=> $codDueOnDelivery,
+                'amount_due_on_delivery'=> $codTotal,
             ],
         ],
     ];

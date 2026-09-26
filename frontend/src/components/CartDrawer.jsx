@@ -176,7 +176,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
               {isFreeShipping ? (
                 <span className="font-semibold text-emerald-700 flex items-center space-x-1.5 text-[11px] sm:text-xs">
                   <Sparkles className="w-3.5 h-3.5 text-brand-gold shrink-0" />
-                  <span>You've unlocked <strong>FREE Express Shipping</strong>!</span>
+                  <span><strong>FREE Express Shipping</strong> on Prepaid & Partial COD!</span>
                 </span>
               ) : (
                 <span className="text-brand-muted font-light text-[11px] sm:text-xs">

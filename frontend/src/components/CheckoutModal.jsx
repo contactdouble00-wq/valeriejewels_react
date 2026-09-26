@@ -268,7 +268,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
           const disc = couponApplied ? Math.min(subtotal * 0.1, 200) : 0;
           const finalTot = Math.max(0, subtotal - disc);
-          const prepDisc = Math.min(paymentSettings.prepaid_discount || 50, finalTot);
+          const maxPrepDisc = Number(paymentSettings.prepaid_discount ?? 50);
+          const prepDisc = finalTot > 1 ? Math.min(maxPrepDisc, finalTot - 1) : 0;
+          const prepaidDueNow = finalTot > 0 ? Math.max(1, finalTot - prepDisc) : 0;
+          const advanceConf = Number(paymentSettings.partial_advance ?? 100);
+          const partialDeposit = finalTot > 0 ? Math.min(advanceConf, finalTot) : 0;
+          const partialBalance = Math.max(0, finalTot - partialDeposit);
+          const codShipping = finalTot >= 999 ? 0 : 99;
+          const codFee = Number(paymentSettings.cod_fee ?? 0);
           setCalcData({
             subtotal,
             total_mrp: cartItems.reduce((acc, item) => acc + (item.mrp || Math.round(item.price * 1.5)) * item.quantity, 0),
@@ -276,27 +283,31 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             final_total: finalTot,
             is_free_shipping: true,
             shipping_fee: 0,
+            cod_shipping_fee: codShipping,
             payment_splits: {
               full_prepaid: {
                 title: 'Prepaid (UPI / Cards / NetBanking)',
-                badge: `Save ₹${prepDisc} Extra Instant Discount`,
+                badge: prepDisc > 0 ? `Save ₹${prepDisc} Extra Instant Discount` : 'Free Delivery Included',
                 incentive_discount: prepDisc,
-                amount_due_now: Math.max(0, finalTot - prepDisc),
+                shipping_fee: 0,
+                amount_due_now: prepaidDueNow,
                 amount_due_on_delivery: 0,
               },
               partial: {
                 enabled: paymentSettings.partial_cod_enabled,
                 title: 'Partial COD (Smart Split)',
-                badge: `Pay ₹${paymentSettings.partial_advance ?? 199} Deposit Now, Rest on Delivery`,
-                amount_due_now: Math.min(Number(paymentSettings.partial_advance) || 199, finalTot),
-                amount_due_on_delivery: Math.max(0, finalTot - (Number(paymentSettings.partial_advance) || 199)),
+                badge: `Pay ₹${partialDeposit} Deposit Now, Rest on Delivery`,
+                shipping_fee: 0,
+                amount_due_now: partialDeposit,
+                amount_due_on_delivery: partialBalance,
               },
               cod: {
                 enabled: paymentSettings.cod_available,
                 title: 'Cash on Delivery (Full COD)',
-                badge: paymentSettings.cod_fee > 0 ? `₹${paymentSettings.cod_fee} COD Fee` : 'Pay Full Cash at Doorstep',
+                badge: codShipping > 0 ? `₹${codShipping} Delivery Fee` : (codFee > 0 ? `₹${codFee} COD Fee` : 'Pay Full Cash at Doorstep'),
+                shipping_fee: codShipping,
                 amount_due_now: 0,
-                amount_due_on_delivery: finalTot + (paymentSettings.cod_fee || 0),
+                amount_due_on_delivery: finalTot + codShipping + codFee,
               },
             },
           });
@@ -761,28 +772,51 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   if (!isOpen) return null;
 
   const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
-  const activeSplit = calcData?.payment_splits?.[paymentType];
-  const partialAdvanceAmount = Number(paymentSettings.partial_advance) || 100;
-  const dueNow = paymentType === 'partial'
-    ? (activeSplit?.amount_due_now !== undefined ? activeSplit.amount_due_now : Math.min(partialAdvanceAmount, finalTotal))
-    : paymentType === 'cod'
-    ? 0
-    : (activeSplit?.amount_due_now ?? (calcData?.final_total ? Math.max(0, calcData.final_total - prepaidDiscount) : 0));
-  const dueOnDelivery = paymentType === 'partial'
-    ? (activeSplit?.amount_due_on_delivery !== undefined ? activeSplit.amount_due_on_delivery : Math.max(0, finalTotal - partialAdvanceAmount))
-    : paymentType === 'cod'
-    ? finalTotal
-    : 0;
 
-  // Exact Everlasting Savings calculation
+  // Exact Order Calculations & Payment Splits
   const totalMrp = calcData?.total_mrp || cartItems.reduce((acc, item) => acc + (item.mrp || Math.round(item.price * 1.5)) * item.quantity, 0);
   const subtotal = calcData?.subtotal || cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const finalTotal = calcData?.final_total || subtotal;
-  const prepaidDiscount = paymentSettings.prepaid_discount || 150;
-  const prepaidAmountDue = Math.max(0, finalTotal - prepaidDiscount);
+  const finalTotal = calcData?.final_total !== undefined ? calcData.final_total : subtotal;
+
+  const prepaidSplit = calcData?.payment_splits?.full_prepaid;
+  const partialSplit = calcData?.payment_splits?.partial;
+  const codSplit     = calcData?.payment_splits?.cod;
+
+  const maxPrepaidDiscount = Number(paymentSettings.prepaid_discount ?? 50);
+  const prepaidDiscount = prepaidSplit?.incentive_discount !== undefined 
+    ? prepaidSplit.incentive_discount 
+    : (finalTotal > 1 ? Math.min(maxPrepaidDiscount, finalTotal - 1) : 0);
+
+  const prepaidAmountDue = prepaidSplit?.amount_due_now !== undefined
+    ? prepaidSplit.amount_due_now
+    : (finalTotal > 0 ? Math.max(1, finalTotal - prepaidDiscount) : 0);
+
+  const configuredPartialAdvance = Number(paymentSettings.partial_advance ?? 100);
+  const partialDeposit = partialSplit?.amount_due_now !== undefined
+    ? partialSplit.amount_due_now
+    : (finalTotal > 0 ? Math.min(configuredPartialAdvance, finalTotal) : 0);
+  const partialBalance = partialSplit?.amount_due_on_delivery !== undefined
+    ? partialSplit.amount_due_on_delivery
+    : Math.max(0, finalTotal - partialDeposit);
+
+  const codTotal = codSplit?.amount_due_on_delivery !== undefined
+    ? codSplit.amount_due_on_delivery
+    : (finalTotal + (finalTotal >= 999 ? 0 : 99) + Number(paymentSettings.cod_fee ?? 0));
+
+  const dueNow = paymentType === 'partial'
+    ? partialDeposit
+    : paymentType === 'cod'
+    ? 0
+    : prepaidAmountDue;
+
+  const dueOnDelivery = paymentType === 'partial'
+    ? partialBalance
+    : paymentType === 'cod'
+    ? codTotal
+    : 0;
 
   // Dynamic calculation for green savings banner (e.g. ₹900.00 saved so far)
-  const totalSavings = Math.max(150, totalMrp - dueNow + (calcData?.discount_amount || 0));
+  const totalSavings = Math.max(0, totalMrp - dueNow + (calcData?.discount_amount || 0));
 
   // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop)
   const UPI_APPS = [
@@ -1299,7 +1333,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E7F8EE] text-[#0A803D] text-xs font-bold border border-[#0A803D]/20">
                       <Percent className="w-3.5 h-3.5 text-[#0A803D]" />
-                      <span>Pay online and save ₹{prepaidDiscount}</span>
+                      <span>{prepaidDiscount > 0 ? `Pay online and save ₹${prepaidDiscount}` : 'Free Delivery Included'}</span>
                     </span>
                   </div>
 
@@ -1417,14 +1451,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                       selectedPaymentMethod === 'card' && paymentType === 'full_prepaid'
                         ? 'border-brand-primary bg-brand-primary text-white'
@@ -1460,14 +1494,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                       selectedPaymentMethod === 'netbanking' && paymentType === 'full_prepaid'
                         ? 'border-brand-primary bg-brand-primary text-white'
@@ -1503,14 +1537,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>Save ₹{Math.min(100, prepaidDiscount)}</span>
+                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
-                    <span className="text-xs font-bold text-gray-900">₹{(prepaidAmountDue + Math.max(0, prepaidDiscount - 100)).toLocaleString('en-IN')}.00</span>
+                    <span className="text-xs font-bold text-gray-900">₹{prepaidAmountDue.toLocaleString('en-IN')}.00</span>
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                       selectedPaymentMethod === 'wallet' && paymentType === 'full_prepaid'
                         ? 'border-brand-primary bg-brand-primary text-white'
@@ -1554,13 +1588,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                             )}
                           </div>
                           <p className="text-[10.5px] text-gray-500">
-                            Pay ₹{partialAdvanceAmount}.00 Token Deposit Now • Balance ₹{Math.max(0, finalTotal - partialAdvanceAmount).toLocaleString('en-IN')}.00 on Delivery
+                            Pay ₹{partialDeposit}.00 Token Deposit Now • Balance ₹{partialBalance.toLocaleString('en-IN')}.00 on Delivery
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-brand-primary">
-                          ₹{partialAdvanceAmount}.00
+                          ₹{partialDeposit}.00
                         </span>
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                           paymentType === 'partial'
@@ -1599,11 +1633,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-gray-900">Cash on Delivery (Full COD)</p>
-                          <p className="text-[10.5px] text-gray-500">Pay full amount at doorstep</p>
+                          <p className="text-[10.5px] text-gray-500">
+                            {finalTotal < 999 ? 'Standard delivery fee of ₹99 applies' : 'Free delivery at doorstep'}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-900">₹{finalTotal.toLocaleString('en-IN')}.00</span>
+                        <span className="text-xs font-bold text-gray-900">₹{codTotal.toLocaleString('en-IN')}.00</span>
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                           paymentType === 'cod'
                             ? 'border-brand-primary bg-brand-primary text-white'
@@ -1698,7 +1734,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                         <span>- ₹{calcData?.discount_amount || 0}</span>
                       </div>
                     )}
-                    {paymentType === 'full_prepaid' && (
+                    {paymentType === 'full_prepaid' && prepaidDiscount > 0 && (
                       <div className="flex justify-between text-emerald-700 font-semibold">
                         <span>Prepaid Instant Discount</span>
                         <span>- ₹{prepaidDiscount}</span>
@@ -1706,7 +1742,9 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     )}
                     <div className="flex justify-between text-emerald-700">
                       <span>Shipping</span>
-                      <span className="font-bold uppercase text-[10px]">FREE</span>
+                      <span className="font-bold uppercase text-[10px]">
+                        {paymentType === 'cod' && finalTotal < 999 ? '₹99.00' : 'FREE'}
+                      </span>
                     </div>
                     {paymentType === 'partial' && (
                       <div className="flex justify-between text-purple-700 font-semibold text-xs">

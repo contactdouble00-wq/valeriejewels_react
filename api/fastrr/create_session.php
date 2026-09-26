@@ -92,10 +92,15 @@ try {
     $couponCode = trim($input['coupon_code'] ?? '');
     $discountAmount = (float)($input['discount_amount'] ?? 0);
     if (!empty($couponCode) && $discountAmount > 0) {
-        $cartData['cart_discount'] = [
-            'coupon_code' => $couponCode,
-            'amount'      => round($discountAmount, 2)
-        ];
+        if ($discountAmount >= $totalAmount) {
+            $discountAmount = max(0.0, $totalAmount - 1.0);
+        }
+        if ($discountAmount > 0) {
+            $cartData['cart_discount'] = [
+                'coupon_code' => $couponCode,
+                'amount'      => round($discountAmount, 2)
+            ];
+        }
     }
 
     $payload = [

@@ -145,14 +145,12 @@ export function CartProvider({ children }) {
   const totalMrp = cartItems.reduce((sum, item) => sum + (item.mrp || item.price) * item.quantity, 0);
   const totalSavings = Math.max(0, totalMrp - subtotal);
 
-  const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-  const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const freeShippingProgress = Math.min(
-    100,
-    Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100)
-  );
-  const shippingFee = itemCount > 0 ? (isFreeShipping ? 0 : 99) : 0;
-  const grandTotal = subtotal + shippingFee;
+  // Delivery Policy: 100% Free delivery on Prepaid and Partial COD orders
+  const isFreeShipping = true;
+  const freeShippingRemaining = 0;
+  const freeShippingProgress = 100;
+  const shippingFee = 0;
+  const grandTotal = subtotal;
 
   return (
     <CartContext.Provider

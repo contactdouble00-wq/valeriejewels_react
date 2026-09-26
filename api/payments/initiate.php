@@ -162,18 +162,16 @@ try {
         }
     }
 
-    // Shipping calculation
-    $isFreeShipping = ($subtotal - $discountAmount) >= 999.0;
-    $shippingFee    = $isFreeShipping ? 0.0 : 99.0;
-    $totalAmount    = round(max(0, ($subtotal - $discountAmount) + $shippingFee), 2);
+    // Net cart amount after coupons
+    $netSubtotal = round(max(0.0, $subtotal - $discountAmount), 2);
 
     // Load active payment settings from database
     $payConfig = [
         'online_payment_enabled' => true,
         'prepaid_discount'       => 50.0,
         'partial_cod_enabled'    => true,
-        'partial_advance'        => 199.0,
-        'cod_available'          => true,
+        'partial_advance'        => 100.0,
+        'cod_available'          => false,
         'cod_fee'                => 0.0,
         'gateway_mode'           => 'sandbox',
         'razorpay_key_id'        => '',
@@ -192,27 +190,43 @@ try {
         }
     } catch (Throwable $se) {}
 
+    // Delivery / Shipping Rules:
+    // 1. Prepaid Orders: 100% FREE DELIVERY (₹0 shipping fee across India)
+    // 2. Partial COD Orders: 100% FREE DELIVERY (₹0 shipping fee across India)
+    // 3. Full Cash on Delivery (COD): Standard shipping applies (Free on >= ₹999, else ₹99)
+    $freeShippingThreshold = 999.0;
+    $codShippingFee = ($netSubtotal >= $freeShippingThreshold) ? 0.0 : 99.0;
+    $codFee = (float)($payConfig['cod_fee'] ?? 0.0);
+
     // Split logic
     $amountPaidUpfront = 0.0;
-    $amountDueOnDelivery = $totalAmount;
+    $amountDueOnDelivery = 0.0;
+    $shippingFee = 0.0;
 
     if ($paymentType === 'full_prepaid') {
-        // Dynamic instant prepaid discount incentive
-        $prepaidDiscount = min((float)($payConfig['prepaid_discount'] ?? 50.0), $totalAmount);
-        $totalAmount = round(max(0, $totalAmount - $prepaidDiscount), 2);
+        // Free delivery on prepaid: ₹0 shipping
+        $shippingFee = 0.0;
+        $maxPrepaidDiscount = (float)($payConfig['prepaid_discount'] ?? 50.0);
+        $prepaidDiscount = 0.0;
+        if ($netSubtotal > 1.0) {
+            $prepaidDiscount = min($maxPrepaidDiscount, round($netSubtotal - 1.0, 2));
+        }
+        $totalAmount = ($netSubtotal > 0.0) ? round(max(1.0, $netSubtotal - $prepaidDiscount), 2) : 0.0;
         $discountAmount += $prepaidDiscount;
         $amountPaidUpfront = $totalAmount;
         $amountDueOnDelivery = 0.0;
     } elseif ($paymentType === 'partial') {
-        // Dynamic partial token advance configured by admin
-        $configuredAdvance = max(1.0, (float)($payConfig['partial_advance'] ?? 199.0));
-        $deposit = min($configuredAdvance, $totalAmount);
+        // Free delivery on partial COD: ₹0 shipping
+        $shippingFee = 0.0;
+        $totalAmount = $netSubtotal;
+        $configuredAdvance = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
+        $deposit = ($totalAmount > 0.0) ? round(min($configuredAdvance, $totalAmount), 2) : 0.0;
         $amountPaidUpfront = $deposit;
-        $amountDueOnDelivery = round(max(0, $totalAmount - $deposit), 2);
+        $amountDueOnDelivery = round(max(0.0, $totalAmount - $deposit), 2);
     } else {
-        // COD
-        $codFee = (float)($payConfig['cod_fee'] ?? 0.0);
-        $totalAmount = round($totalAmount + $codFee, 2);
+        // Full COD
+        $shippingFee = $codShippingFee;
+        $totalAmount = round($netSubtotal + $shippingFee + $codFee, 2);
         $amountPaidUpfront = 0.0;
         $amountDueOnDelivery = $totalAmount;
     }
