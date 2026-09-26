@@ -96,12 +96,18 @@ class SmsGateway {
             ];
         }
 
+        $errMsg = is_array($decoded['message'] ?? null)
+            ? implode(', ', $decoded['message'])
+            : ($decoded['message'] ?? 'Could not dispatch cellular SMS.');
+
+        error_log("[SmsGateway] Fast2SMS dispatch failed (HTTP $httpCode): " . $errMsg);
+
         return [
-            'success'  => true,
+            'success'  => false,
             'is_live'  => false,
-            'provider' => 'fast2sms_fallback',
-            'otp'      => '123456',
-            'message'  => "Fast2SMS Error: " . ($decoded['message'][0] ?? 'Could not dispatch cellular SMS. Use code 123456.'),
+            'provider' => 'fast2sms',
+            'otp'      => null,
+            'message'  => "Fast2SMS Gateway Error: " . $errMsg,
             'raw'      => $decoded
         ];
     }

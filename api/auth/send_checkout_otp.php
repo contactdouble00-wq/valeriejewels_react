@@ -65,6 +65,14 @@ try {
         $otpCode = '123456';
     }
 
+    error_log(sprintf(
+        "[SendOtp] Mobile=%s, Provider=%s, Live=%s, Msg=%s",
+        $cleanPhone,
+        $smsResult['provider'] ?? 'unknown',
+        $isLiveDelivery ? 'true' : 'false',
+        $smsResult['message'] ?? 'none'
+    ));
+
     $now = time();
     $expiresAt = $now + 600; // 10 minutes
 

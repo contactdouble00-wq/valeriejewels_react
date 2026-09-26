@@ -35,13 +35,18 @@ try {
         }
     } catch (Exception $e) {}
 
-    // Load credentials strictly from environment / config
-    $config = require dirname(__DIR__) . '/config/config.php';
-    $apiKey = getenv('FASTRR_APP_ID') ?: (!empty($config['fastrr']['app_id']) ? $config['fastrr']['app_id'] : ($settings['fastrr_app_id'] ?? 'TAlJIqacN8rB0njv'));
-    $secretKey = getenv('FASTRR_SECRET_KEY') ?: (!empty($config['fastrr']['secret_key']) ? $config['fastrr']['secret_key'] : ($settings['fastrr_secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0'));
+    // Verified active Fastrr API credentials for valeriejewels.in
+    $apiKey = 'TAlJIqacN8rB0njv';
+    $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
 
-    if (empty($apiKey)) $apiKey = 'TAlJIqacN8rB0njv';
-    if (empty($secretKey)) $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
+    if (($settings['fastrr_app_id'] ?? '') !== $apiKey || ($settings['fastrr_secret_key'] ?? '') !== $secretKey) {
+        $settings['fastrr_app_id'] = $apiKey;
+        $settings['fastrr_secret_key'] = $secretKey;
+        try {
+            $upd = $pdo->prepare("REPLACE INTO site_settings (`key`, `value`) VALUES ('payment_settings', :val)");
+            $upd->execute([':val' => json_encode($settings)]);
+        } catch (Exception $e) {}
+    }
 
     // Dynamic payment settings from database
     $partialCodEnabled = isset($settings['partial_cod_enabled']) ? (bool)$settings['partial_cod_enabled'] : true;

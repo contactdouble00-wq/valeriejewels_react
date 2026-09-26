@@ -145,7 +145,6 @@ try {
             ':updated_at'       => date('Y-m-d H:i:s'),
             ':id'               => $order['id'],
         ]);
-
         // Phase 7: Send idempotent order confirmation email
         try {
             MailerService::sendOrderConfirmation((int)$order['id']);
