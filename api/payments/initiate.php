@@ -173,10 +173,10 @@ try {
         'partial_advance'        => 100.0,
         'cod_available'          => false,
         'cod_fee'                => 0.0,
-        'gateway_mode'           => 'sandbox',
-        'razorpay_key_id'        => '',
-        'razorpay_key_secret'    => '',
-        'fastrr_app_id'          => '',
+        'gateway_mode'           => 'live',
+        'razorpay_key_id'        => 'rzp_live_Tf7Bar4fWloC2y',
+        'razorpay_key_secret'    => 'u8xu0HfY01b0wkwWwiYfEBRN',
+        'fastrr_app_id'          => 'TAlJIqacN8rB0njv',
     ];
     try {
         $settingsStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
@@ -189,6 +189,13 @@ try {
             }
         }
     } catch (Throwable $se) {}
+
+    if (empty($payConfig['razorpay_key_id'])) {
+        $payConfig['razorpay_key_id'] = 'rzp_live_Tf7Bar4fWloC2y';
+    }
+    if (empty($payConfig['razorpay_key_secret'])) {
+        $payConfig['razorpay_key_secret'] = 'u8xu0HfY01b0wkwWwiYfEBRN';
+    }
 
     // Delivery / Shipping Rules:
     // 1. Prepaid Orders: 100% FREE DELIVERY (₹0 shipping fee across India)

@@ -903,7 +903,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     {paySettings.cod_available
                       ? 'ORDER NOW - CASH ON DELIVERY'
                       : paySettings.partial_cod_enabled
-                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 199})`
+                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
                       : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                   </span>
                 </div>
@@ -1361,7 +1361,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         {paySettings.cod_available
                           ? 'ORDER NOW - CASH ON DELIVERY'
                           : paySettings.partial_cod_enabled
-                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 199})`
+                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
                           : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                       </span>
                     </div>

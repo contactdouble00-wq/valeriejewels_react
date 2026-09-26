@@ -143,6 +143,19 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       return;
     }
 
+    // Direct checkout engine check (native modal by default or when razorpay_direct is active)
+    try {
+      const cached = localStorage.getItem('valerie_payment_settings_cache');
+      const settings = cached ? JSON.parse(cached) : null;
+      if (!settings || settings?.checkout_engine === 'razorpay_direct' || settings?.checkout_engine !== 'shiprocket_fastrr') {
+        setIsCheckoutOpen(true);
+        return;
+      }
+    } catch (_) {
+      setIsCheckoutOpen(true);
+      return;
+    }
+
     try {
       const formattedItems = items.map((item) => ({
         id: item.productId || item.bundleId || item.id || 1,

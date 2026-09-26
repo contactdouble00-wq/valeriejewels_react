@@ -14,12 +14,12 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $defaultSettings = [
     'gateway_mode'          => 'live', // 'sandbox' | 'live'
-    'checkout_engine'       => 'shiprocket_fastrr', // 'shiprocket_fastrr' | 'razorpay_direct'
-    'fastrr_app_id'         => getenv('FASTRR_APP_ID') ?: '',
-    'fastrr_secret_key'     => getenv('FASTRR_SECRET_KEY') ?: '',
+    'checkout_engine'       => 'razorpay_direct', // 'razorpay_direct' (native working checkout) | 'shiprocket_fastrr'
+    'fastrr_app_id'         => getenv('FASTRR_APP_ID') ?: 'TAlJIqacN8rB0njv',
+    'fastrr_secret_key'     => getenv('FASTRR_SECRET_KEY') ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
     'fastrr_webhook_secret' => getenv('FASTRR_WEBHOOK_SECRET') ?: '',
-    'razorpay_key_id'       => '',
-    'razorpay_key_secret'   => '',
+    'razorpay_key_id'       => getenv('RAZORPAY_KEY_ID') ?: 'rzp_live_Tf7Bar4fWloC2y',
+    'razorpay_key_secret'   => getenv('RAZORPAY_KEY_SECRET') ?: 'u8xu0HfY01b0wkwWwiYfEBRN',
     'sms_provider'          => 'fastrr', // 'fastrr' | 'fast2sms' | 'twofactor' | 'twilio' | 'sandbox'
     'fast2sms_api_key'      => '',
     'twofactor_api_key'     => '',
@@ -28,10 +28,10 @@ $defaultSettings = [
     'prepaid_gift_subtitle' => 'Included complimentary with all prepaid orders',
     'online_payment_enabled'=> true,
     'partial_cod_enabled'   => true,
-    'partial_advance'       => 199,
+    'partial_advance'       => 100,
     'cod_fee'               => 0,
-    'cod_available'         => true,
-    'shiprocket_email'           => getenv('SHIPROCKET_EMAIL') ?: '',
+    'cod_available'         => false,
+    'shiprocket_email'           => getenv('SHIPROCKET_EMAIL') ?: 'yashpatel6855+api@gmail.com',
     'shiprocket_password'        => getenv('SHIPROCKET_PASSWORD') ?: '',
     'shiprocket_pickup_location' => getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Primary',
     'shiprocket_auto_sync'       => true,
@@ -96,11 +96,28 @@ try {
             }
         }
 
+        // Auto-switch to razorpay_direct as requested to restore original working payment methods
+        if (empty($settings['checkout_engine']) || $settings['checkout_engine'] === 'shiprocket_fastrr') {
+            $settings['checkout_engine'] = 'razorpay_direct';
+            $settings['partial_advance'] = 100;
+            $settings['cod_available']   = false;
+            try {
+                $upStmt = $pdo->prepare("REPLACE INTO `site_settings` (`key`, `value`) VALUES ('payment_settings', :val)");
+                $upStmt->execute([':val' => json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+            } catch (Throwable $e) {}
+        }
+
+        if (empty($settings['razorpay_key_id'])) {
+            $settings['razorpay_key_id'] = 'rzp_live_Tf7Bar4fWloC2y';
+        }
+        if (empty($settings['razorpay_key_secret'])) {
+            $settings['razorpay_key_secret'] = 'u8xu0HfY01b0wkwWwiYfEBRN';
+        }
         if (empty($settings['fastrr_app_id'])) {
-            $settings['fastrr_app_id'] = getenv('FASTRR_APP_ID') ?: '';
+            $settings['fastrr_app_id'] = getenv('FASTRR_APP_ID') ?: 'TAlJIqacN8rB0njv';
         }
         if (empty($settings['fastrr_secret_key'])) {
-            $settings['fastrr_secret_key'] = getenv('FASTRR_SECRET_KEY') ?: '';
+            $settings['fastrr_secret_key'] = getenv('FASTRR_SECRET_KEY') ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
         }
 
         // Check if admin token is present in Authorization header

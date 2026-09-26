@@ -73,7 +73,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
     online_payment_enabled: true,
     partial_cod_enabled: true,
-    partial_advance: 150,
+    partial_advance: 100,
     cod_fee: 0,
     cod_available: false,
     checkout_banner_text: 'GET A FREE ZIRCON NECKLACE WORTH RS.1499 WHEN YOU PAY ONLINE',
@@ -338,7 +338,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   };
 
   // Step 1: Submit Phone Number -> Go to OTP
-  // Step 1: Submit Phone Number -> Go to OTP Verification
+  // Step 1: Submit Phone Number -> Go to Details & Payment
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
     const clean = phone.replace(/\D/g, '');
@@ -347,8 +347,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       return;
     }
     setSubmitError(null);
-    setIsSubmitting(true);
 
+    // When razorpay_direct is active (or by default), immediately show payment methods
+    if (paymentSettings?.checkout_engine === 'razorpay_direct' || paymentSettings?.checkout_engine !== 'shiprocket_fastrr') {
+      setStep('details_payment');
+      return;
+    }
+
+    setIsSubmitting(true);
     // 1. Attempt official Shiprocket Fastrr 1-Click checkout first
     try {
       const formattedItems = cartItems.map((item) => ({
@@ -380,29 +386,11 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       }
     } catch (err) {
       console.warn('Fastrr session failed in modal, falling back to manual verification:', err);
-    }
-
-    // 2. Fallback to server-side OTP if Fastrr popup is unavailable
-    try {
-      const res = await apiService.sendCheckoutOtp(clean);
-      if (res?.demo_otp) {
-        setDemoOtp(res.demo_otp);
-      }
-      setIsLiveSms(Boolean(res?.is_live_delivery));
-      setOtpTimer(25);
-      setOtp(['', '', '', '', '', '']);
-      setOtpResent(false);
-      setStep('otp');
-    } catch (err) {
-      setDemoOtp('123456');
-      setIsLiveSms(false);
-      setOtpTimer(25);
-      setOtp(['', '', '', '', '', '']);
-      setOtpResent(false);
-      setStep('otp');
     } finally {
       setIsSubmitting(false);
     }
+
+    setStep('details_payment');
   };
 
   // Step 2: Handle OTP input & auto-advancing
@@ -509,49 +497,58 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     setSelectedPaymentMethod('upi');
     setPaymentType('full_prepaid');
 
-    // Attempt Fastrr 1-Click first if active engine is not direct Razorpay
-    if (paymentSettings?.checkout_engine !== 'razorpay_direct') {
-      setIsSubmitting(true);
-      setSubmitError(null);
+    // Direct Razorpay Payment Route (default)
+    if (paymentSettings?.checkout_engine === 'razorpay_direct' || paymentSettings?.checkout_engine !== 'shiprocket_fastrr') {
+      handlePlaceOrder(null, {
+        method: 'upi',
+        paymentType: 'full_prepaid',
+        directUpiApp: preferredApp,
+      });
+      return;
+    }
 
-      try {
-        const formattedItems = cartItems.map((item) => ({
-          id: item.productId || item.bundleId || item.id || 1,
-          variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
-          name: item.name || 'Valerie Fine Jewelry',
-          price: item.price || 0,
-          quantity: item.quantity || 1,
-          image: item.image || item.images?.[0] || '',
-        }));
+    // Only if explicitly configured to use shiprocket_fastrr
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-        const session = await apiService.createFastrrSession({
-          items: formattedItems,
-          couponCode: couponApplied ? couponCode : '',
-          discountAmount: prepaidDiscount,
+    try {
+      const formattedItems = cartItems.map((item) => ({
+        id: item.productId || item.bundleId || item.id || 1,
+        variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
+        name: item.name || 'Valerie Fine Jewelry',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.image || item.images?.[0] || '',
+      }));
+
+      const session = await apiService.createFastrrSession({
+        items: formattedItems,
+        couponCode: couponApplied ? couponCode : '',
+        discountAmount: prepaidDiscount,
+      });
+
+      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
+        window.HeadlessCheckout.addToCart(e, session.token, {
+          fallbackUrl: window.location.href,
+        }, (res) => {
+          if (res?.exitCheckout) {
+            setIsSubmitting(false);
+          }
         });
-
-        if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
-          window.HeadlessCheckout.addToCart(e, session.token, {
-            fallbackUrl: window.location.href,
-          }, (res) => {
-            if (res?.exitCheckout) {
-              setIsSubmitting(false);
-            }
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Fastrr session failed, falling back to Razorpay standard:', err);
-      } finally {
         setIsSubmitting(false);
+        return;
       }
+    } catch (err) {
+      console.warn('Fastrr session failed, falling back to Razorpay standard:', err);
+    } finally {
+      setIsSubmitting(false);
     }
 
     // Graceful fallback to Razorpay
     handlePlaceOrder(null, {
       method: 'upi',
       paymentType: 'full_prepaid',
+      directUpiApp: preferredApp,
     });
   };
 

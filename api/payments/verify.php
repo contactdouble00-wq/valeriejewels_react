@@ -56,6 +56,9 @@ try {
         $rawS = $secretStmt->fetchColumn();
         $pSettings = $rawS ? json_decode($rawS, true) : [];
         $rpSecret = $pSettings['razorpay_key_secret'] ?? '';
+        if (empty($rpSecret)) {
+            $rpSecret = 'u8xu0HfY01b0wkwWwiYfEBRN';
+        }
 
         $verified = false;
         if (!empty($rpSecret)) {
