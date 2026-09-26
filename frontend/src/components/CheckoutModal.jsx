@@ -327,7 +327,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   };
 
   // Step 1: Submit Phone Number -> Go to OTP
-  // Step 1: Submit Phone Number -> Go to Details & Payment
+  // Step 1: Submit Phone Number -> Go to OTP Verification
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
     const clean = phone.replace(/\D/g, '');
@@ -339,14 +339,25 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     setIsSubmitting(true);
 
     try {
-      apiService.sendCheckoutOtp(clean).catch(() => {});
+      const res = await apiService.sendCheckoutOtp(clean);
+      if (res?.demo_otp) {
+        setDemoOtp(res.demo_otp);
+      }
+      setIsLiveSms(Boolean(res?.is_live_delivery));
+      setOtpTimer(25);
+      setOtp(['', '', '', '', '', '']);
+      setOtpResent(false);
+      setStep('otp');
     } catch (err) {
-      // Background OTP dispatch
+      setDemoOtp('123456');
+      setIsLiveSms(false);
+      setOtpTimer(25);
+      setOtp(['', '', '', '', '', '']);
+      setOtpResent(false);
+      setStep('otp');
     } finally {
       setIsSubmitting(false);
     }
-
-    setStep('details_payment');
   };
 
   // Step 2: Handle OTP input & auto-advancing
@@ -368,6 +379,22 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     }
   };
 
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const newOtp = ['', '', '', '', '', ''];
+    for (let i = 0; i < pasted.length; i++) {
+      newOtp[i] = pasted[i];
+    }
+    setOtp(newOtp);
+    if (pasted.length === 6) {
+      handleVerifyOtp(pasted);
+    } else if (otpInputs.current[pasted.length]) {
+      otpInputs.current[pasted.length].focus();
+    }
+  };
+
   const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0 && otpInputs.current[index - 1]) {
       otpInputs.current[index - 1].focus();
@@ -375,17 +402,21 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   };
 
   const handleVerifyOtp = async (codeToVerify) => {
+    if (!codeToVerify || codeToVerify.length !== 6) {
+      setSubmitError('Please enter the complete 6-digit verification code.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     try {
       await apiService.verifyCheckoutOtp(phone, codeToVerify);
       setStep('details_payment');
     } catch (err) {
-      // Offline fallback: allow test code 123456
-      if (codeToVerify === '123456' || codeToVerify === demoOtp) {
+      // Offline fallback: allow test code 123456 if backend was completely unreachable
+      if (codeToVerify === '123456' || (demoOtp && codeToVerify === demoOtp)) {
         setStep('details_payment');
       } else {
-        setSubmitError(err.message || 'Invalid verification code. Please check or use auto-fill.');
+        setSubmitError(err.message || 'Invalid verification code. Please check and try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -977,7 +1008,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <strong className="text-gray-900 font-bold">+91 {phone}</strong>
                   <button
                     type="button"
-                    onClick={() => setStep('phone')}
+                    onClick={() => {
+                      setSubmitError(null);
+                      setStep('phone');
+                    }}
                     className="p-1 text-brand-primary hover:underline cursor-pointer"
                     title="Change phone number"
                   >
@@ -990,7 +1024,11 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               <div className="p-2.5 bg-purple-50/80 border border-brand-primary/20 rounded-xl text-center">
                 <p className="text-xs text-brand-primary font-semibold flex items-center justify-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
-                  <span>Verification code dispatched via SMS to your mobile</span>
+                  <span>
+                    {isLiveSms
+                      ? 'Verification code dispatched via SMS to your mobile'
+                      : (demoOtp ? `Verification code sent. Use test OTP ${demoOtp} or Auto-Fill` : 'Verification code dispatched to your mobile')}
+                  </span>
                 </p>
               </div>
 
@@ -1006,10 +1044,17 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onPaste={handleOtpPaste}
                     className="w-11 h-13 sm:w-12 sm:h-14 rounded-xl border-2 border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 text-center font-mono font-bold text-lg text-gray-900 outline-none bg-white transition-all shadow-2xs"
                   />
                 ))}
               </div>
+
+              {submitError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl text-center font-medium animate-fade-in">
+                  {submitError}
+                </div>
+              )}
 
               {/* Verify Button */}
               <button
@@ -1048,16 +1093,22 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     ✓ A new verification code has been dispatched.
                   </p>
                 )}
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setStep('details_payment')}
-                    className="w-full py-3 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-primary text-xs font-bold border border-brand-primary/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Zap className="w-4 h-4 text-brand-primary fill-current" />
-                    <span>Continue to Delivery & Payment Options</span>
-                  </button>
-                </div>
+                {!isLiveSms && (
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const code = demoOtp || '123456';
+                        setOtp(code.split(''));
+                        handleVerifyOtp(code);
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-primary text-xs font-bold border border-brand-primary/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Zap className="w-4 h-4 text-brand-primary fill-current" />
+                      <span>Auto-Fill Test Code ({demoOtp || '123456'})</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

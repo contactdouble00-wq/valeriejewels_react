@@ -474,10 +474,13 @@ export const apiService = {
         body: JSON.stringify({ phone }),
       });
       const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to dispatch verification code');
+      }
       return data.data || { mode: 'sandbox', demo_otp: '123456' };
     } catch (err) {
       console.warn('sendCheckoutOtp fallback:', err);
-      return { mode: 'sandbox', demo_otp: '123456', message: 'Sandbox test OTP is 123456' };
+      return { mode: 'sandbox', demo_otp: '123456', message: err.message || 'Sandbox test OTP is 123456' };
     }
   },
 
@@ -485,23 +488,16 @@ export const apiService = {
    * Verify Checkout OTP
    */
   async verifyCheckoutOtp(phone, otp) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify_checkout_otp.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'OTP verification failed');
-      }
-      return data.data || { verified: true };
-    } catch (err) {
-      if (otp === '123456' || otp.length === 6) {
-        return { verified: true };
-      }
-      throw err;
+    const response = await fetch(`${API_BASE_URL}/auth/verify_checkout_otp.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Incorrect OTP code. Please enter the 6-digit code received on your phone.');
     }
+    return data.data || { verified: true };
   },
 
   /**
