@@ -123,7 +123,6 @@ try {
             $paidUpfront = 0.0;
             $dueOnDelivery = (float)$order['total_amount'];
         }
-
         $updateSql = "
             UPDATE orders 
             SET payment_status = :payment_status,

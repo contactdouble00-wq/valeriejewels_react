@@ -338,6 +338,40 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     setSubmitError(null);
     setIsSubmitting(true);
 
+    // 1. Attempt official Shiprocket Fastrr 1-Click checkout first
+    try {
+      const formattedItems = cartItems.map((item) => ({
+        id: item.productId || item.bundleId || item.id || 1,
+        variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
+        name: item.name || 'Valerie Fine Jewelry',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.image || item.images?.[0] || '',
+      }));
+
+      const session = await apiService.createFastrrSession({
+        items: formattedItems,
+        couponCode: couponApplied ? couponCode : '',
+        discountAmount: prepaidDiscount,
+      });
+
+      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
+        window.HeadlessCheckout.addToCart(e, session.token, {
+          fallbackUrl: window.location.href,
+        }, (res) => {
+          if (res?.exitCheckout) {
+            setIsSubmitting(false);
+          }
+        });
+        setIsSubmitting(false);
+        onClose();
+        return;
+      }
+    } catch (err) {
+      console.warn('Fastrr session failed in modal, falling back to manual verification:', err);
+    }
+
+    // 2. Fallback to server-side OTP if Fastrr popup is unavailable
     try {
       const res = await apiService.sendCheckoutOtp(clean);
       if (res?.demo_otp) {

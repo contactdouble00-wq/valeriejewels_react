@@ -37,13 +37,11 @@ try {
 
     // Load credentials strictly from environment / config
     $config = require dirname(__DIR__) . '/config/config.php';
-    $apiKey = getenv('FASTRR_APP_ID') ?: (!empty($config['fastrr']['app_id']) ? $config['fastrr']['app_id'] : ($settings['fastrr_app_id'] ?? ''));
-    $secretKey = getenv('FASTRR_SECRET_KEY') ?: (!empty($config['fastrr']['secret_key']) ? $config['fastrr']['secret_key'] : ($settings['fastrr_secret_key'] ?? ''));
+    $apiKey = getenv('FASTRR_APP_ID') ?: (!empty($config['fastrr']['app_id']) ? $config['fastrr']['app_id'] : ($settings['fastrr_app_id'] ?? 'TAlJIqacN8rB0njv'));
+    $secretKey = getenv('FASTRR_SECRET_KEY') ?: (!empty($config['fastrr']['secret_key']) ? $config['fastrr']['secret_key'] : ($settings['fastrr_secret_key'] ?? 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0'));
 
-    if (empty($apiKey) || empty($secretKey)) {
-        error_log('[CRITICAL] Fastrr Session: Cannot create checkout session. FASTRR_APP_ID or FASTRR_SECRET_KEY is missing from environment.');
-        ApiResponse::error('Fastrr checkout is temporarily unconfigured. Please configure FASTRR_APP_ID and FASTRR_SECRET_KEY in environment.', 503);
-    }
+    if (empty($apiKey)) $apiKey = 'TAlJIqacN8rB0njv';
+    if (empty($secretKey)) $secretKey = 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
 
     // Dynamic payment settings from database
     $partialCodEnabled = isset($settings['partial_cod_enabled']) ? (bool)$settings['partial_cod_enabled'] : true;

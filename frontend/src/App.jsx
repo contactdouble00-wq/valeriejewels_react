@@ -108,6 +108,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
   // Cart actions from context
   const {
+    cartItems,
     itemCount,
     openCart,
     addToCart,
@@ -130,6 +131,50 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
     openWishlist,
     wishlistCount
   } = useWishlist();
+
+  // Official Shiprocket Fastrr 1-Click Checkout Trigger
+  const handleTriggerFastrr = async (itemsOverride = null, event = null) => {
+    let items = itemsOverride;
+    if (!items || items.length === 0) {
+      items = cartItems;
+    }
+    if (!items || items.length === 0) {
+      openCart();
+      return;
+    }
+
+    try {
+      const formattedItems = items.map((item) => ({
+        id: item.productId || item.bundleId || item.id || 1,
+        variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
+        name: item.name || 'Valerie Fine Jewelry',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.image || (Array.isArray(item.images) ? (item.images[0]?.image_url || item.images[0]?.url || item.images[0]) : '') || '',
+      }));
+
+      const session = await apiService.createFastrrSession({
+        items: formattedItems,
+        couponCode: '',
+        discountAmount: 0,
+      });
+
+      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
+        window.HeadlessCheckout.addToCart(event, session.token, {
+          fallbackUrl: window.location.href,
+        }, (res) => {
+          if (res?.exitCheckout) {
+            console.log('[Fastrr] Customer closed checkout popup');
+          }
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn('[Fastrr] Session creation or popup launch failed, fallback to internal modal:', err);
+    }
+
+    setIsCheckoutOpen(true);
+  };
 
   const reloadData = async () => {
     try {
@@ -589,7 +634,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             <JhumkaBoxHeroSection
               products={jhumkaBoxes}
               onOpenPdp={(slug, box) => openPdp(slug, box)}
-              onOpenCheckout={() => setIsCheckoutOpen(true)}
+              onOpenCheckout={() => handleTriggerFastrr()}
             />
           </div>
         )}
@@ -771,14 +816,23 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             addToCart(product, variant, 1, true);
           }}
           onBuyNow={(product, variant) => {
+            const price = variant && variant.price ? Number(variant.price) : Number(product.price);
+            const item = {
+              productId: product.id,
+              variantId: variant ? variant.id : null,
+              name: `${product.name}${variant ? ` - ${variant.option1_value || variant.title}` : ''}`,
+              price,
+              quantity: 1,
+              image: product.primary_image || (product.images && (product.images[0]?.image_url || product.images[0]?.url || product.images[0])) || '',
+            };
             addToCart(product, variant, 1, false);
-            setIsCheckoutOpen(true);
+            handleTriggerFastrr([item]);
           }}
         />
       )}
 
       {/* Slide-out Cart Drawer */}
-      <CartDrawer onProceedToCheckout={() => setIsCheckoutOpen(true)} />
+      <CartDrawer onProceedToCheckout={() => handleTriggerFastrr()} />
 
       {/* Slide-out Wishlist Drawer */}
       <WishlistDrawer onSelectProduct={(item) => openPdp(item.slug, item)} />
