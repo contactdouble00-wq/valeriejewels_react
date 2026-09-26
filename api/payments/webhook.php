@@ -153,6 +153,14 @@ try {
             // Log silently
         }
 
+        // Phase 8: Automatically push confirmed order to Shiprocket panel
+        try {
+            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+            ShiprocketService::createShipment((int)$order['id']);
+        } catch (Throwable $e) {
+            error_log('[Shiprocket] Webhook auto-sync error: ' . $e->getMessage());
+        }
+
         ApiResponse::success([
             'order_id'               => $order['id'],
             'order_number'           => $order['order_number'],

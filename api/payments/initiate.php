@@ -349,6 +349,19 @@ try {
         }
     }
 
+    // Auto-create order in Shiprocket for 100% Cash on Delivery orders
+    if ($paymentType === 'cod') {
+        try {
+            $upStmt = $pdo->prepare("UPDATE orders SET order_status = 'confirmed' WHERE id = ?");
+            $upStmt->execute([$orderId]);
+
+            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+            ShiprocketService::createShipment($orderId);
+        } catch (Throwable $se) {
+            error_log('[Shiprocket] COD auto-sync error: ' . $se->getMessage());
+        }
+    }
+
     // Generate Fastrr & Razorpay checkout session payload
     $fastrrSession = [
         'order_id'               => $orderId,

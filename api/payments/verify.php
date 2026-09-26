@@ -96,6 +96,14 @@ try {
             try {
                 MailerService::sendOrderConfirmation((int)$order['id']);
             } catch (Throwable $e) {}
+
+            // Auto-create order in Shiprocket panel (handles Prepaid and Partial COD)
+            try {
+                require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+                ShiprocketService::createShipment((int)$order['id']);
+            } catch (Throwable $e) {
+                error_log('[Shiprocket] Auto-sync error on verify: ' . $e->getMessage());
+            }
         } else {
             ApiResponse::error('Payment signature verification failed', 400);
         }
