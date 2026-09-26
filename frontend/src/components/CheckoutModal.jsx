@@ -1024,11 +1024,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               <div className="p-2.5 bg-purple-50/80 border border-brand-primary/20 rounded-xl text-center">
                 <p className="text-xs text-brand-primary font-semibold flex items-center justify-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
-                  <span>
-                    {isLiveSms
-                      ? 'Verification code dispatched via SMS to your mobile'
-                      : (demoOtp ? `Verification code sent. Use test OTP ${demoOtp} or Auto-Fill` : 'Verification code dispatched to your mobile')}
-                  </span>
+                  <span>Verification code dispatched via SMS to your mobile</span>
                 </p>
               </div>
 
@@ -1092,22 +1088,6 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <p className="text-[11px] text-emerald-600 font-semibold animate-fade-in">
                     ✓ A new verification code has been dispatched.
                   </p>
-                )}
-                {!isLiveSms && (
-                  <div className="pt-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const code = demoOtp || '123456';
-                        setOtp(code.split(''));
-                        handleVerifyOtp(code);
-                      }}
-                      className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-primary text-xs font-bold border border-brand-primary/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Zap className="w-4 h-4 text-brand-primary fill-current" />
-                      <span>Auto-Fill Test Code ({demoOtp || '123456'})</span>
-                    </button>
-                  </div>
                 )}
               </div>
             </div>
