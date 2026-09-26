@@ -110,7 +110,7 @@ try {
 
     $payload = [
         'cart_data'    => $cartData,
-        'redirect_url' => 'https://valeriejewels.in/#checkout-success',
+        'redirect_url' => 'https://valeriejewels.in/',
         'timestamp'    => gmdate('Y-m-d\TH:i:s.u\Z')
     ];
 
