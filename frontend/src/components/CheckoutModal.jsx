@@ -62,8 +62,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   const { user, token } = useAuth();
 
   // Fastrr Checkout Step Sequence:
-  // 'phone' -> 'otp' -> 'details_payment' -> 'processing' -> 'confirmed'
-  const [step, setStep] = useState('phone');
+  // 'details_payment' (direct) | 'phone' -> 'otp' (held for now)
+  const [step, setStep] = useState('details_payment');
 
   // Fastrr dynamic settings loaded from backend / cache
   const [paymentSettings, setPaymentSettings] = useState({
@@ -86,13 +86,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
 
   // Contact & Address Fields
   const [phone, setPhone] = useState('');
-  const [name, setName] = useState('Ananya Verma');
-  const [email, setEmail] = useState('ananya.verma@example.com');
-  const [addressLine1, setAddressLine1] = useState('Flat 402, Royal Palms Apartments');
-  const [addressLine2, setAddressLine2] = useState('100 Feet Road, Indiranagar');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
-  const [pincode, setPincode] = useState('560038');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [deliveryEta, setDeliveryEta] = useState('3–4 Days');
 
   // Modal / Drawer to Change Delivery Address
@@ -170,18 +170,22 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   // 2. Load Saved or Authenticated Customer Data
   useEffect(() => {
     if (!isOpen) {
-      setStep('phone');
+      setStep('details_payment');
       setShowExitIntent(false);
       setIsAddressModalOpen(false);
       return;
     }
 
+    let hasValidSaved = false;
     if (user) {
       if (user.name) setName(user.name);
       if (user.email) setEmail(user.email);
       if (user.phone) {
         const clean = user.phone.replace(/\D/g, '').slice(-10);
         setPhone(clean);
+      }
+      if (user.address || user.addressLine1) {
+        hasValidSaved = true;
       }
     } else {
       try {
@@ -193,7 +197,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                               parsed.addressLine1?.includes('Valerie Jewels') ||
                               parsed.addressLine2?.includes('Harighawa') ||
                               parsed.city?.includes('Rajkot');
-          if (!isWarehouse && parsed.name && parsed.addressLine1) {
+          if (!isWarehouse && parsed.name && parsed.addressLine1 && parsed.phone) {
             if (parsed.name) setName(parsed.name);
             if (parsed.email) setEmail(parsed.email);
             if (parsed.phone) setPhone(parsed.phone);
@@ -202,27 +206,17 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             if (parsed.city) setCity(parsed.city);
             if (parsed.state) setState(parsed.state);
             if (parsed.pincode) setPincode(parsed.pincode);
+            hasValidSaved = true;
           } else {
             try { localStorage.removeItem('valerie_saved_checkout_address'); } catch (e) {}
-            setName('Ananya Verma');
-            setAddressLine1('Flat 402, Royal Palms Apartments');
-            setAddressLine2('100 Feet Road, Indiranagar');
-            setCity('Bengaluru');
-            setState('Karnataka');
-            setPincode('560038');
-            setEmail('ananya.verma@example.com');
           }
-        } else {
-          // Neutral dummy customer prefill for Fastrr 1-Click checkout to protect warehouse privacy
-          setName('Ananya Verma');
-          setAddressLine1('Flat 402, Royal Palms Apartments');
-          setAddressLine2('100 Feet Road, Indiranagar');
-          setCity('Bengaluru');
-          setState('Karnataka');
-          setPincode('560038');
-          setEmail('ananya.verma@example.com');
         }
       } catch (e) {}
+    }
+
+    // If customer has no address / mobile saved yet, auto-open address drawer
+    if (!hasValidSaved && (!name || !addressLine1 || !phone)) {
+      setIsAddressModalOpen(true);
     }
   }, [user, isOpen]);
 
@@ -532,9 +526,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
   const handlePlaceOrder = async (e, options = {}) => {
     if (e && e.preventDefault) e.preventDefault();
 
-    if (!name.trim() || !addressLine1.trim() || pincode.trim().length < 6) {
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (!name.trim() || !cleanPhone || cleanPhone.length !== 10 || !addressLine1.trim() || pincode.trim().length < 6) {
       setIsAddressModalOpen(true);
-      setSubmitError('Please complete your full delivery address and 6-digit pincode.');
+      setSubmitError('Please complete your name, 10-digit mobile number, delivery address, and 6-digit pincode.');
       return;
     }
 
@@ -1224,16 +1219,21 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 </button>
               </div>
 
-              {name && addressLine1 ? (
+              {name && addressLine1 && phone ? (
                 <div className="space-y-1 text-xs text-gray-700 leading-relaxed pt-0.5">
-                  <p className="font-bold text-gray-900 text-[13px]">{name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-gray-900 text-[13px]">{name}</p>
+                    <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full font-mono">
+                      +91 {phone.replace(/\D/g, '').slice(-10)}
+                    </span>
+                  </div>
                   <p className="text-gray-600 leading-snug">
                     {addressLine1}{addressLine2 ? `, ${addressLine2}` : ''}, {city ? `${city}, ` : ''}{state ? `${state}, ` : ''}{pincode}
                   </p>
                   <div className="flex items-center gap-3 pt-1 text-gray-500 text-[11px]">
                     <span className="flex items-center gap-1">
                       <Phone className="w-3 h-3 text-gray-400" />
-                      <span>{phone}</span>
+                      <span className="font-mono">+91 {phone.replace(/\D/g, '').slice(-10)}</span>
                     </span>
                     {email && (
                       <span className="flex items-center gap-1">
@@ -1244,7 +1244,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   </div>
                   <div className="pt-2 flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
                     <Truck className="w-3.5 h-3.5" />
-                    <span>Free shipping for you</span>
+                    <span>Free express shipping for you</span>
                   </div>
                 </div>
               ) : (
@@ -1252,9 +1252,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <button
                     type="button"
                     onClick={() => setIsAddressModalOpen(true)}
-                    className="w-full py-2.5 px-4 rounded-xl border border-dashed border-brand-primary text-brand-primary font-bold text-xs hover:bg-purple-50 transition-colors cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-brand-primary bg-purple-50/50 text-brand-primary font-bold text-xs hover:bg-purple-50 transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    + Add Delivery Address
+                    <MapPin className="w-4 h-4" />
+                    <span>+ Add Mobile Number & Delivery Address</span>
                   </button>
                 </div>
               )}
@@ -1925,10 +1926,38 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!name.trim() || !addressLine1.trim() || pincode.trim().length < 6) {
-                  setSubmitError('Please complete name, address line, and 6-digit pincode.');
+                const cleanP = phone.replace(/\D/g, '').slice(-10);
+                if (!name.trim()) {
+                  setSubmitError('Please enter your full name.');
                   return;
                 }
+                if (!cleanP || cleanP.length !== 10) {
+                  setSubmitError('Please enter a valid 10-digit mobile number.');
+                  return;
+                }
+                if (!addressLine1.trim()) {
+                  setSubmitError('Please enter your flat, house no., or building name.');
+                  return;
+                }
+                if (pincode.trim().length < 6) {
+                  setSubmitError('Please enter a valid 6-digit pincode.');
+                  return;
+                }
+
+                // Immediately persist to localStorage for future 1-click orders
+                try {
+                  localStorage.setItem('valerie_saved_checkout_address', JSON.stringify({
+                    name: name.trim(),
+                    email: email.trim(),
+                    phone: cleanP,
+                    addressLine1: addressLine1.trim(),
+                    addressLine2: addressLine2.trim(),
+                    city: city.trim(),
+                    state: state.trim(),
+                    pincode: pincode.trim(),
+                  }));
+                } catch (err) {}
+
                 setSubmitError(null);
                 setIsAddressModalOpen(false);
               }}
@@ -1941,13 +1970,34 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ananya Verma"
+                  placeholder="e.g. Priya Sharma"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Email (for invoice) *</label>
+                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                  Mobile Number * <span className="text-[10px] text-gray-400 font-normal lowercase">(for delivery updates & tracking)</span>
+                </label>
+                <div className="flex items-center border border-gray-300 rounded-xl bg-white overflow-hidden focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
+                  <div className="flex items-center space-x-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-800 select-none">
+                    <span className="text-sm">🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10-digit mobile number"
+                    className="flex-1 px-3.5 py-2.5 text-xs font-mono font-medium text-gray-900 focus:outline-none bg-transparent placeholder:font-normal placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Email (for invoice)</label>
                 <input
                   type="email"
                   value={email}
