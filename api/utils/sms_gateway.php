@@ -39,7 +39,7 @@ class SmsGateway {
         // 1. Fast2SMS Provider (Popular Indian SMS API)
         $fast2smsKey = trim($settings['fast2sms_api_key'] ?? $settings['sms_fast2sms_api_key'] ?? (getenv('FAST2SMS_API_KEY') ?: ''));
         if (!empty($fast2smsKey)) {
-            return self::sendViaFast2SMS($cleanPhone, $otp, $fast2smsKey);
+            return self::sendViaFast2SMS($cleanPhone, $otp, $fast2smsKey, $settings);
         }
 
         // 2. 2Factor.in Provider (India Dedicated OTP Gateway)
@@ -70,9 +70,64 @@ class SmsGateway {
     }
 
     /**
-     * Fast2SMS Quick OTP Gateway (India)
+     * Fast2SMS Official OTP Gateway (India)
+     * Supports both new Fast2SMS OTP API (POST /dev/otp/send) and legacy Bulk V2
      */
-    private static function sendViaFast2SMS(string $phone, string $otp, string $apiKey): array {
+    private static function sendViaFast2SMS(string $phone, string $otp, string $apiKey, array $settings = []): array {
+        $otpId = trim($settings['fast2sms_otp_id'] ?? (getenv('FAST2SMS_OTP_ID') ?: ''));
+
+        // 1. Official Fast2SMS New OTP API (POST https://www.fast2sms.com/dev/otp/send)
+        if (!empty($otpId)) {
+            $payload = [
+                'mobile'     => $phone,
+                'otp_id'     => $otpId,
+                'otp'        => $otp,
+                'otp_length' => 6,
+                'otp_expiry' => 10,
+            ];
+            $jsonPayload = json_encode($payload);
+
+            $ch = curl_init('https://www.fast2sms.com/dev/otp/send');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'authorization: ' . $apiKey,
+                'accept: application/json',
+                'content-type: application/json',
+                'Content-Length: ' . strlen($jsonPayload)
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $decoded = json_decode($response, true);
+            if ($httpCode === 200 && (!empty($decoded['return']) || !empty($decoded['success']))) {
+                return [
+                    'success'  => true,
+                    'is_live'  => true,
+                    'provider' => 'fast2sms_otp_api',
+                    'message'  => "Real cellular SMS OTP dispatched to +91 {$phone} via Fast2SMS.",
+                    'raw'      => $decoded
+                ];
+            }
+
+            $errMsg = $decoded['message'] ?? "Fast2SMS OTP API returned HTTP $httpCode.";
+            error_log("[SmsGateway] Fast2SMS new OTP API failed (HTTP $httpCode): " . $errMsg);
+
+            return [
+                'success'  => false,
+                'is_live'  => false,
+                'provider' => 'fast2sms_otp_api',
+                'otp'      => null,
+                'message'  => "Fast2SMS OTP Error: " . $errMsg,
+                'raw'      => $decoded
+            ];
+        }
+
+        // 2. Legacy Bulk V2 route fallback
         $url = "https://www.fast2sms.com/dev/bulkV2?authorization=" . urlencode($apiKey) .
                "&route=otp&variables_values=" . urlencode($otp) .
                "&flash=0&numbers=" . urlencode($phone);
