@@ -14,7 +14,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $defaultSettings = [
     'gateway_mode'          => 'live', // 'sandbox' | 'live'
-    'checkout_engine'       => 'razorpay_direct', // 'razorpay_direct' (native working checkout) | 'shiprocket_fastrr'
+    'checkout_engine'       => 'shiprocket_fastrr', // 'shiprocket_fastrr' (official 1-click Fastrr) | 'razorpay_direct'
     'fastrr_app_id'         => getenv('FASTRR_APP_ID') ?: 'TAlJIqacN8rB0njv',
     'fastrr_secret_key'     => getenv('FASTRR_SECRET_KEY') ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
     'fastrr_webhook_secret' => getenv('FASTRR_WEBHOOK_SECRET') ?: '',
@@ -96,11 +96,9 @@ try {
             }
         }
 
-        // Auto-switch to razorpay_direct as requested to restore original working payment methods
-        if (empty($settings['checkout_engine']) || $settings['checkout_engine'] === 'shiprocket_fastrr') {
-            $settings['checkout_engine'] = 'razorpay_direct';
-            $settings['partial_advance'] = 100;
-            $settings['cod_available']   = false;
+        // Ensure active checkout_engine is shiprocket_fastrr
+        if (empty($settings['checkout_engine']) || $settings['checkout_engine'] === 'razorpay_direct') {
+            $settings['checkout_engine'] = 'shiprocket_fastrr';
             try {
                 $upStmt = $pdo->prepare("REPLACE INTO `site_settings` (`key`, `value`) VALUES ('payment_settings', :val)");
                 $upStmt->execute([':val' => json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);

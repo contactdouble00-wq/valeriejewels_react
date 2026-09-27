@@ -143,18 +143,15 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       return;
     }
 
-    // Direct checkout engine check (native modal by default or when razorpay_direct is active)
+    // Direct checkout engine check (only bypass Fastrr if explicitly configured to razorpay_direct)
     try {
       const cached = localStorage.getItem('valerie_payment_settings_cache');
       const settings = cached ? JSON.parse(cached) : null;
-      if (!settings || settings?.checkout_engine === 'razorpay_direct' || settings?.checkout_engine !== 'shiprocket_fastrr') {
+      if (settings && settings?.checkout_engine === 'razorpay_direct') {
         setIsCheckoutOpen(true);
         return;
       }
-    } catch (_) {
-      setIsCheckoutOpen(true);
-      return;
-    }
+    } catch (_) {}
 
     try {
       const formattedItems = items.map((item) => ({
