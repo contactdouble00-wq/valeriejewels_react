@@ -6,7 +6,7 @@
  */
 
 if (!ob_get_level()) {
-    ob_start();
+    ob_start(); 
 }
 
 class ApiResponse {
