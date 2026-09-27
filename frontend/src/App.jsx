@@ -32,6 +32,7 @@ import WishlistToast from './components/WishlistToast';
 import MobileSidebarDrawer from './components/MobileSidebarDrawer';
 import AuthModal from './components/AuthModal';
 import CheckoutModal from './components/CheckoutModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import OrderTrackingModal from './components/OrderTrackingModal';
 import JhumkaBoxHeroSection from './components/JhumkaBoxHeroSection';
 import NotFoundPage from './components/NotFoundPage';
@@ -875,11 +876,13 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       <WishlistToast />
 
       {/* Fastrr 1-Click Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        onTrackOrder={(orderNum) => openTracking(orderNum)}
-      />
+      <ErrorBoundary onReset={() => setIsCheckoutOpen(false)}>
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          onTrackOrder={(orderNum) => openTracking(orderNum)}
+        />
+      </ErrorBoundary>
 
       {/* Authentication Modal */}
       <AuthModal onOpenTracking={(orderNum) => openTracking(orderNum)} />

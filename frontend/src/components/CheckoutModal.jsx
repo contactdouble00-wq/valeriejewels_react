@@ -30,7 +30,8 @@ import {
   ExternalLink,
   Landmark,
   Wallet,
-  User
+  User,
+  MapPin
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -1224,7 +1225,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="flex items-center justify-between">
                     <p className="font-bold text-gray-900 text-[13px]">{name}</p>
                     <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full font-mono">
-                      +91 {phone.replace(/\D/g, '').slice(-10)}
+                      +91 {(phone || '').replace(/\D/g, '').slice(-10)}
                     </span>
                   </div>
                   <p className="text-gray-600 leading-snug">
@@ -1233,7 +1234,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div className="flex items-center gap-3 pt-1 text-gray-500 text-[11px]">
                     <span className="flex items-center gap-1">
                       <Phone className="w-3 h-3 text-gray-400" />
-                      <span className="font-mono">+91 {phone.replace(/\D/g, '').slice(-10)}</span>
+                      <span className="font-mono">+91 {(phone || '').replace(/\D/g, '').slice(-10)}</span>
                     </span>
                     {email && (
                       <span className="flex items-center gap-1">
