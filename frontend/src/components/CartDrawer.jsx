@@ -74,7 +74,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
     }
 
     // 1. If active engine is direct Razorpay standard (bypassing Fastrr), launch internal luxury checkout immediately
-    if (paySettings?.checkout_engine === 'razorpay_direct') {
+    if (paySettings?.checkout_engine === 'razorpay_direct' || paySettings?.checkout_engine !== 'shiprocket_fastrr') {
       closeCart();
       if (onProceedToCheckout) {
         onProceedToCheckout();

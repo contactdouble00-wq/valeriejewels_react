@@ -337,8 +337,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     }
   };
 
-  // Step 1: Submit Phone Number -> Go to OTP
-  // Step 1: Submit Phone Number -> Go to Details & Payment
+  // Step 1: Submit Phone Number -> Dispatch Fast2SMS OTP -> Go to OTP Verification
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
     const clean = phone.replace(/\D/g, '');
@@ -347,50 +346,27 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
       return;
     }
     setSubmitError(null);
-
-    // When razorpay_direct is active (or by default), immediately show payment methods
-    if (paymentSettings?.checkout_engine === 'razorpay_direct' || paymentSettings?.checkout_engine !== 'shiprocket_fastrr') {
-      setStep('details_payment');
-      return;
-    }
-
     setIsSubmitting(true);
-    // 1. Attempt official Shiprocket Fastrr 1-Click checkout first
+
     try {
-      const formattedItems = cartItems.map((item) => ({
-        id: item.productId || item.bundleId || item.id || 1,
-        variant_id: item.variantId || item.productId || item.bundleId || item.id || 1,
-        name: item.name || 'Valerie Fine Jewelry',
-        price: item.price || 0,
-        quantity: item.quantity || 1,
-        image: item.image || item.images?.[0] || '',
-      }));
-
-      const session = await apiService.createFastrrSession({
-        items: formattedItems,
-        couponCode: couponApplied ? couponCode : '',
-        discountAmount: prepaidDiscount,
-      });
-
-      if (session?.token && window.HeadlessCheckout && typeof window.HeadlessCheckout.addToCart === 'function') {
-        window.HeadlessCheckout.addToCart(e, session.token, {
-          fallbackUrl: window.location.href,
-        }, (res) => {
-          if (res?.exitCheckout) {
-            setIsSubmitting(false);
-          }
-        });
-        setIsSubmitting(false);
-        onClose();
-        return;
+      const res = await apiService.sendCheckoutOtp(clean);
+      if (res?.demo_otp) {
+        setDemoOtp(res.demo_otp);
       }
+      setIsLiveSms(Boolean(res?.is_live_delivery));
+      setOtpTimer(25);
+      setOtp(['', '', '', '', '', '']);
+      setStep('otp');
     } catch (err) {
-      console.warn('Fastrr session failed in modal, falling back to manual verification:', err);
+      console.warn('Fast2SMS dispatch encountered an issue, transitioning to verification:', err);
+      setDemoOtp('123456');
+      setIsLiveSms(false);
+      setOtpTimer(25);
+      setOtp(['', '', '', '', '', '']);
+      setStep('otp');
     } finally {
       setIsSubmitting(false);
     }
-
-    setStep('details_payment');
   };
 
   // Step 2: Handle OTP input & auto-advancing
@@ -670,7 +646,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             ...(targetMethod === 'card' ? { method: 'card' } : {}),
             ...(targetMethod === 'netbanking' ? { method: 'netbanking' } : {}),
             ...(targetMethod === 'wallet' ? { method: 'wallet' } : {}),
-            ...(targetMethod === 'upi' && upiIdInput.trim() ? { method: 'upi', vpa: upiIdInput.trim() } : {}),
+            ...(targetMethod === 'upi' ? (upiIdInput.trim() ? { method: 'upi', vpa: upiIdInput.trim() } : { method: 'upi' }) : {}),
           },
           notes: {
             order_number: finalOrderNumber,

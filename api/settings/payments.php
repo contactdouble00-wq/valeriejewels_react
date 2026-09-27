@@ -14,7 +14,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $defaultSettings = [
     'gateway_mode'          => 'live', // 'sandbox' | 'live'
-    'checkout_engine'       => 'shiprocket_fastrr', // 'shiprocket_fastrr' (official 1-click Fastrr) | 'razorpay_direct'
+    'checkout_engine'       => 'razorpay_direct', // 'razorpay_direct' (native Valerie checkout with direct Razorpay & Fast2SMS) | 'shiprocket_fastrr'
     'fastrr_app_id'         => getenv('FASTRR_APP_ID') ?: 'TAlJIqacN8rB0njv',
     'fastrr_secret_key'     => getenv('FASTRR_SECRET_KEY') ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0',
     'fastrr_webhook_secret' => getenv('FASTRR_WEBHOOK_SECRET') ?: '',
@@ -97,9 +97,9 @@ try {
             }
         }
 
-        // Ensure active checkout_engine is shiprocket_fastrr
-        if (empty($settings['checkout_engine']) || $settings['checkout_engine'] === 'razorpay_direct') {
-            $settings['checkout_engine'] = 'shiprocket_fastrr';
+        // Active checkout_engine is razorpay_direct (direct Razorpay + Fast2SMS, bypassing Fastrr)
+        if (empty($settings['checkout_engine']) || $settings['checkout_engine'] === 'shiprocket_fastrr') {
+            $settings['checkout_engine'] = 'razorpay_direct';
             try {
                 $upStmt = $pdo->prepare("REPLACE INTO `site_settings` (`key`, `value`) VALUES ('payment_settings', :val)");
                 $upStmt->execute([':val' => json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
@@ -168,7 +168,7 @@ try {
 
         $merged = array_merge($current, [
             'gateway_mode'          => in_array($data['gateway_mode'] ?? '', ['sandbox', 'live']) ? $data['gateway_mode'] : $current['gateway_mode'],
-            'checkout_engine'       => in_array($data['checkout_engine'] ?? '', ['shiprocket_fastrr', 'razorpay_direct']) ? $data['checkout_engine'] : ($current['checkout_engine'] ?? 'shiprocket_fastrr'),
+            'checkout_engine'       => in_array($data['checkout_engine'] ?? '', ['shiprocket_fastrr', 'razorpay_direct']) ? $data['checkout_engine'] : ($current['checkout_engine'] ?? 'razorpay_direct'),
             'fastrr_app_id'         => isset($data['fastrr_app_id']) ? trim($data['fastrr_app_id']) : ($current['fastrr_app_id'] ?? ''),
             'fastrr_secret_key'     => !empty($data['fastrr_secret_key']) ? trim($data['fastrr_secret_key']) : ($current['fastrr_secret_key'] ?? ''),
             'fastrr_webhook_secret' => !empty($data['fastrr_webhook_secret']) ? trim($data['fastrr_webhook_secret']) : ($current['fastrr_webhook_secret'] ?? ''),

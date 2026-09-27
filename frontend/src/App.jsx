@@ -143,15 +143,18 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       return;
     }
 
-    // Direct checkout engine check (only bypass Fastrr if explicitly configured to razorpay_direct)
+    // Direct checkout engine check (bypasses Fastrr and uses native Valerie Checkout + Fast2SMS + Razorpay)
     try {
       const cached = localStorage.getItem('valerie_payment_settings_cache');
       const settings = cached ? JSON.parse(cached) : null;
-      if (settings && settings?.checkout_engine === 'razorpay_direct') {
+      if (!settings || settings?.checkout_engine === 'razorpay_direct' || settings?.checkout_engine !== 'shiprocket_fastrr') {
         setIsCheckoutOpen(true);
         return;
       }
-    } catch (_) {}
+    } catch (_) {
+      setIsCheckoutOpen(true);
+      return;
+    }
 
     try {
       const formattedItems = items.map((item) => ({
