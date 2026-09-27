@@ -236,3 +236,9 @@ try {
     error_log('policies/get.php error: ' . $e->getMessage());
     ApiResponse::error('Failed to load legal policies: ' . $e->getMessage(), 500);
 }
+
+    
+
+
+
+
