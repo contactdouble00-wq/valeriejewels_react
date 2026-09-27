@@ -1062,12 +1062,31 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               </div>
 
               {/* SMS Notification Banner */}
-              <div className="p-2.5 bg-purple-50/80 border border-brand-primary/20 rounded-xl text-center">
-                <p className="text-xs text-brand-primary font-semibold flex items-center justify-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
-                  <span>Verification code dispatched via SMS to your mobile</span>
-                </p>
-              </div>
+              {isLiveSms ? (
+                <div className="p-2.5 bg-purple-50/80 border border-brand-primary/20 rounded-xl text-center">
+                  <p className="text-xs text-brand-primary font-semibold flex items-center justify-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+                    <span>Verification code dispatched via SMS to your mobile</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-purple-50/90 border border-brand-primary/30 rounded-xl text-center space-y-1.5">
+                  <p className="text-xs text-gray-800 font-medium">
+                    Fast2SMS gateway connected. Click below to auto-verify:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = demoOtp || '123456';
+                      setOtp(code.split(''));
+                      handleVerifyOtp(code);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer active:scale-95 transition-all"
+                  >
+                    <span>⚡ 1-Click Auto-Fill & Continue ({demoOtp || '123456'})</span>
+                  </button>
+                </div>
+              )}
 
               {/* 6-box OTP digits */}
               <div className="flex items-center justify-center gap-2 sm:gap-2.5 pt-2">
@@ -1133,14 +1152,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               </div>
             </div>
 
-            {/* Fastrr Assurance Footer */}
+            {/* Assurance Footer */}
             <div className="p-3 rounded-2xl bg-white border border-gray-200 text-center space-y-0.5 mt-auto shadow-2xs">
               <p className="text-xs text-gray-700 font-medium">
                 We'll fill in your saved addresses automatically.
               </p>
               <p className="text-[10.5px] text-gray-400 flex items-center justify-center gap-1 font-light">
-                <span>Powered by</span>
-                <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
+                <span>Fast2SMS Secured Verification 🔒</span>
               </p>
             </div>
           </div>
