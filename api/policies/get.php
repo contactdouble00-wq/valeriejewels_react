@@ -230,7 +230,6 @@ try {
             ]
         ]
     ];
-
     ApiResponse::success($defaults, 'Default legal policies retrieved.');
 } catch (Throwable $e) {
     error_log('policies/get.php error: ' . $e->getMessage());

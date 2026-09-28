@@ -20,7 +20,9 @@ import {
   Smartphone,
   CheckCircle2,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  PackageCheck,
+  MapPin
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -31,6 +33,9 @@ export default function AdminPaymentSettingsView() {
   const [error, setError] = useState(null);
   const [showSecret, setShowSecret] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  const [showShiprocketPass, setShowShiprocketPass] = useState(false);
+  const [testingShiprocket, setTestingShiprocket] = useState(false);
+  const [shiprocketTestResult, setShiprocketTestResult] = useState(null);
   const [webhookCopied, setWebhookCopied] = useState(false);
 
   // 1-Click Operations state
@@ -58,6 +63,10 @@ export default function AdminPaymentSettingsView() {
     partial_advance: 100,
     cod_fee: 0,
     cod_available: true,
+    shiprocket_email: '',
+    shiprocket_password: '',
+    shiprocket_pickup_location: 'Primary',
+    shiprocket_auto_sync: true,
     checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     exit_intent_enabled: true,
     exit_intent_title: 'Wait! Are you sure you want to exit?',
@@ -65,6 +74,29 @@ export default function AdminPaymentSettingsView() {
     testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
     testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
   });
+
+  const handleTestShiprocket = async () => {
+    setTestingShiprocket(true);
+    setShiprocketTestResult(null);
+    try {
+      const res = await adminApi.testShiprocketConnection({
+        email: settings.shiprocket_email || '',
+        password: settings.shiprocket_password || '',
+      });
+      setShiprocketTestResult(res);
+      if (res?.success) {
+        setInstantSuccessMsg('Shiprocket connection verified successfully!');
+        setTimeout(() => setInstantSuccessMsg(null), 4000);
+      }
+    } catch (err) {
+      setShiprocketTestResult({
+        success: false,
+        message: err.message || 'Connection test failed',
+      });
+    } finally {
+      setTestingShiprocket(false);
+    }
+  };
 
   useEffect(() => {
     loadSettings();
@@ -1210,12 +1242,204 @@ export default function AdminPaymentSettingsView() {
           </div>
         </div>
 
-        {/* Section 5: 1-Click Fastrr Modal Branding & Conversion Messaging */}
+        {/* Section 5: Shiprocket Logistics & Automated Fulfillment (Live Order Sync & Partial COD Invoicing) */}
+        <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
+              <Truck className="w-4 h-4 text-brand-primary" />
+              <span>5. Shiprocket Logistics & Automated Fulfillment</span>
+            </div>
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
+              settings.shiprocket_auto_sync !== false
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-gray-100 text-gray-600 border-gray-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${settings.shiprocket_auto_sync !== false ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+              <span>{settings.shiprocket_auto_sync !== false ? 'Auto-Sync Active' : 'Auto-Sync Paused'}</span>
+            </span>
+          </div>
+
+          <p className="text-xs text-brand-muted leading-relaxed">
+            When a buyer clicks "Buy Now" and completes payment (Prepaid or Partial COD token deposit), the order is automatically pushed directly to your live <strong>Shiprocket dashboard</strong> with an auto-generated shipment, pickup manifest, and tracking link.
+          </p>
+
+          {/* Credentials Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Shiprocket Email */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-brand-tertiary">Shiprocket Registered Email</label>
+              <input
+                type="email"
+                value={settings.shiprocket_email || ''}
+                onChange={(e) => setSettings({ ...settings, shiprocket_email: e.target.value })}
+                placeholder="e.g. shipping@valeriejewels.in"
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary"
+              />
+              <p className="text-[10.5px] text-brand-muted">Used to authenticate with Shiprocket API v2.</p>
+            </div>
+
+            {/* Shiprocket Password */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-brand-tertiary">Shiprocket API Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowShiprocketPass(!showShiprocketPass)}
+                  className="text-[10.5px] text-brand-primary hover:underline flex items-center space-x-1 cursor-pointer"
+                >
+                  {showShiprocketPass ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{showShiprocketPass ? 'Hide' : 'Reveal'}</span>
+                </button>
+              </div>
+              <input
+                type={showShiprocketPass ? 'text' : 'password'}
+                value={settings.shiprocket_password || ''}
+                onChange={(e) => setSettings({ ...settings, shiprocket_password: e.target.value })}
+                placeholder="••••••••••••"
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+              />
+              <p className="text-[10.5px] text-brand-muted">Kept securely encrypted. Never exposed to customers.</p>
+            </div>
+
+            {/* Pickup Location */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-brand-tertiary">Pickup Location Nickname</label>
+              <input
+                type="text"
+                value={settings.shiprocket_pickup_location || 'Primary'}
+                onChange={(e) => setSettings({ ...settings, shiprocket_pickup_location: e.target.value })}
+                placeholder="e.g. Primary or Warehouse 1"
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary"
+              />
+              <p className="text-[10.5px] text-brand-muted">Must match a verified pickup address configured in your Shiprocket panel.</p>
+            </div>
+
+            {/* Auto-Sync Toggle & Test Button */}
+            <div className="space-y-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between p-2.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
+                <div>
+                  <span className="text-xs font-bold text-brand-tertiary block">Instant Auto-Sync Orders</span>
+                  <span className="text-[10.5px] text-brand-muted">Push orders to Shiprocket right upon payment</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.shiprocket_auto_sync !== false}
+                  onChange={(e) => setSettings({ ...settings, shiprocket_auto_sync: e.target.checked })}
+                  className="w-4 h-4 accent-brand-primary cursor-pointer shrink-0 ml-2"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={testingShiprocket}
+                  onClick={handleTestShiprocket}
+                  className="w-full py-2 px-3 rounded-xl bg-purple-100 hover:bg-purple-200 text-brand-primary text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {testingShiprocket ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Testing Shiprocket Connection...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      <span>Test Shiprocket Connection</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Result Display */}
+          {shiprocketTestResult && (
+            <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fade-in ${
+              shiprocketTestResult.success
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50/80 border-rose-200 text-rose-900'
+            }`}>
+              <div className="flex items-center gap-2 font-bold">
+                {shiprocketTestResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{shiprocketTestResult.message}</span>
+              </div>
+
+              {shiprocketTestResult.company_name && (
+                <div className="text-[11px] text-emerald-800 space-y-0.5 pl-6">
+                  <div>Company: <strong>{shiprocketTestResult.company_name}</strong> ({shiprocketTestResult.email})</div>
+                </div>
+              )}
+
+              {Array.isArray(shiprocketTestResult.pickup_locations) && shiprocketTestResult.pickup_locations.length > 0 && (
+                <div className="pt-1 pl-6">
+                  <div className="text-[11px] font-semibold text-emerald-800 mb-1">Detected Pickup Addresses in Account (Click to select):</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {shiprocketTestResult.pickup_locations.map((loc, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSettings({ ...settings, shiprocket_pickup_location: loc.pickup_location })}
+                        className={`px-2 py-1 rounded-md text-[10.5px] border cursor-pointer font-medium transition-all ${
+                          settings.shiprocket_pickup_location === loc.pickup_location
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                        }`}
+                      >
+                        📍 {loc.pickup_location} ({loc.city}, {loc.pin_code})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Zero-Mismatch Partial COD Guarantee Card */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50/80 to-blue-50/60 border border-purple-200/80 space-y-3">
+            <div className="flex items-center gap-2 text-brand-primary font-bold text-xs">
+              <ShieldCheck className="w-4 h-4 text-brand-primary" />
+              <span>Partial COD Invoice & Doorstep Cash Guarantee (Zero Mismatch)</span>
+            </div>
+
+            <p className="text-[11.5px] text-brand-tertiary leading-relaxed">
+              To prevent any cash discrepancy between your store, the customer, and the delivery courier, the system enforces the following mathematical rules directly on Shiprocket:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="p-3 bg-white rounded-lg border border-purple-100 space-y-1">
+                <span className="text-[10.5px] font-bold text-brand-primary uppercase tracking-wide block">1. Advance Paid Online</span>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Customer pays token deposit (e.g. ₹{settings.partial_advance || 100}) via UPI. Recorded as upfront payment with Razorpay Transaction ID.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white rounded-lg border border-purple-100 space-y-1">
+                <span className="text-[10.5px] font-bold text-blue-700 uppercase tracking-wide block">2. Shiprocket Collectable Cash</span>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Transmitted with payment method <code>COD</code>. Discount is strictly calibrated so Collectable Cash = <strong>Remaining Balance Due</strong>.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white rounded-lg border border-purple-100 space-y-1">
+                <span className="text-[10.5px] font-bold text-emerald-700 uppercase tracking-wide block">3. Label & Tax Invoice Notice</span>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Shipping label & tax invoice prominently print: <em>"Advance Paid Online: ₹{settings.partial_advance || 100} | COLLECT EXACTLY REMAINING BALANCE ONLY"</em>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 6: 1-Click Fastrr Modal Branding & Conversion Messaging */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Sparkles className="w-4 h-4 text-brand-primary" />
-              <span>5. Fastrr Modal Banners, Exit-Intent & Social Proof</span>
+              <span>6. Fastrr Modal Banners, Exit-Intent & Social Proof</span>
             </div>
             <span className="text-[11px] text-brand-muted">Customer Experience</span>
           </div>

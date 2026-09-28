@@ -534,5 +534,11 @@ export const adminApi = {
 
     return resData;
   },
+
+  async testShiprocketConnection(params = {}) {
+    const qs = new URLSearchParams({ action: 'test_shiprocket', ...params }).toString();
+    const res = await request(`/settings/payments.php?${qs}`);
+    return res.data;
+  },
 };
 

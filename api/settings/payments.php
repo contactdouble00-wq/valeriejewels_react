@@ -85,6 +85,19 @@ try {
     }
 
     if ($method === 'GET') {
+        if (isset($_GET['action']) && $_GET['action'] === 'test_shiprocket') {
+            require_once dirname(__DIR__) . '/utils/admin_auth.php';
+            AdminAuth::authenticate(['admin', 'staff']);
+            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+
+            $email = isset($_GET['email']) && trim($_GET['email']) !== '' ? trim($_GET['email']) : null;
+            $password = isset($_GET['password']) && trim($_GET['password']) !== '' ? trim($_GET['password']) : null;
+
+            $result = ShiprocketService::testConnection($email, $password);
+            ApiResponse::success($result);
+            return;
+        }
+
         $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
         $stmt->execute();
         $raw = $stmt->fetchColumn();
@@ -140,6 +153,7 @@ try {
             unset($settings['fastrr_secret_key']);
             unset($settings['fastrr_webhook_secret']);
             unset($settings['razorpay_key_secret']);
+            unset($settings['shiprocket_password']);
         }
 
         ApiResponse::success($settings);
@@ -203,6 +217,12 @@ try {
             VALUES ('payment_settings', :val)
         ");
         $saveStmt->execute([':val' => json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+
+        if (!empty($data['shiprocket_password']) || isset($data['shiprocket_email'])) {
+            try {
+                $pdo->exec("DELETE FROM `site_settings` WHERE `key` = 'shiprocket_token_cache'");
+            } catch (Throwable $e) {}
+        }
 
         // Log admin activity
         try {

@@ -155,12 +155,16 @@ class ShiprocketService
         $orderItems = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $formattedItems = [];
+        $itemsSubtotal = 0.0;
         foreach ($orderItems as $it) {
+            $qty = max(1, (int)($it['quantity'] ?? 1));
+            $unitPrice = round((float)($it['unit_price'] ?? 0), 2);
+            $itemsSubtotal += ($qty * $unitPrice);
             $formattedItems[] = [
-                'name'          => $it['product_name'] ?: 'Valerie Fine Jewelry',
-                'sku'           => 'VJ-P' . ($it['product_id'] ?? 1),
-                'units'         => max(1, (int)$it['quantity']),
-                'selling_price' => round((float)$it['unit_price'], 2),
+                'name'          => trim($it['product_name'] ?? '') ?: 'Valerie Fine Jewelry',
+                'sku'           => 'VJ-P' . ($it['product_id'] ?? 1) . (!empty($it['variant_id']) ? ('-V' . $it['variant_id']) : ''),
+                'units'         => $qty,
+                'selling_price' => $unitPrice,
                 'discount'      => 0,
                 'tax'           => 0,
                 'hsn'           => 7117, // Standard HSN code for imitation/fashion jewelry
@@ -168,11 +172,13 @@ class ShiprocketService
         }
 
         if (empty($formattedItems)) {
+            $fallbackPrice = round((float)($order['subtotal'] > 0 ? $order['subtotal'] : $order['total_amount']), 2);
+            $itemsSubtotal = $fallbackPrice;
             $formattedItems[] = [
-                'name'          => 'Valerie Fine Jewelry Piece',
+                'name'          => 'Valerie Fine Jewelry Handcrafted Piece',
                 'sku'           => 'VJ-GEN-01',
                 'units'         => 1,
-                'selling_price' => round((float)$order['total_amount'], 2),
+                'selling_price' => $fallbackPrice,
                 'discount'      => 0,
                 'tax'           => 0,
                 'hsn'           => 7117,
@@ -182,39 +188,57 @@ class ShiprocketService
         // Split customer name into first & last name
         $fullName = trim($order['shipping_name'] ?? ($order['customer_name'] ?? 'Valerie Customer'));
         $nameParts = explode(' ', $fullName, 2);
-        $firstName = $nameParts[0];
-        $lastName = $nameParts[1] ?? '';
+        $firstName = !empty($nameParts[0]) ? $nameParts[0] : 'Valerie';
+        $lastName = !empty($nameParts[1]) ? $nameParts[1] : 'Customer';
 
         $cleanPhone = preg_replace('/\D/', '', $order['shipping_phone'] ?? ($order['customer_phone'] ?? ''));
         $cleanPhone = substr($cleanPhone, -10);
+        if (strlen($cleanPhone) < 10) {
+            $cleanPhone = '9876543210';
+        }
+
+        $address1 = trim($order['shipping_address_line1'] ?? 'Flat 101');
+        $address2 = trim($order['shipping_address_line2'] ?? '');
+        $city     = trim($order['shipping_city'] ?? ($order['city'] ?? 'Bengaluru'));
+        $pincode  = trim($order['shipping_pincode'] ?? ($order['pincode'] ?? '560038'));
+        $state    = trim($order['shipping_state'] ?? ($order['state'] ?? 'Karnataka'));
+        $email    = trim($order['customer_email'] ?? 'care@valeriejewels.in');
 
         // ════════════════════════════════════════════════════════════════
         // PARTIAL COD & PREPAID FINANCIAL MAPPING FOR SHIPROCKET
         // ════════════════════════════════════════════════════════════════
-        // When payment_type is 'partial':
-        // - payment_method in Shiprocket must be 'COD'
-        // - total_discount accounts for the advance token deposit already paid online
-        // - Shiprocket computes Collectable Cash = sub_total - total_discount = amount_due_on_delivery!
-        // E.g., for ₹899 product with ₹100 deposit paid online:
-        // sub_total = 899, total_discount = 100, collectable = ₹799!
-        $paymentType = $order['payment_type'] ?? 'full_prepaid';
+        // Shiprocket Invariant: Collectable Cash = (sub_total + shipping_charges) - total_discount
+        // To guarantee Collectable Cash strictly equals amount_due_on_delivery:
+        // total_discount = (sub_total + shipping_charges) - amount_due_on_delivery
+        $paymentType    = $order['payment_type'] ?? 'full_prepaid';
+        $totalAmount    = round((float)$order['total_amount'], 2);
+        $paidUpfront    = round((float)$order['amount_paid_upfront'], 2);
+        $dueOnDelivery  = round((float)$order['amount_due_on_delivery'], 2);
+        $shippingFee    = round((float)($order['shipping_fee'] ?? 0), 2);
+        $subTotal       = round($itemsSubtotal, 2);
+
+        $txnRef = !empty($order['fastrr_order_id']) ? " (Txn: {$order['fastrr_order_id']})" : '';
 
         if ($paymentType === 'partial') {
             $paymentMethod = 'COD';
-            $subTotal      = round((float)$order['subtotal'], 2);
-            $totalDiscount = round((float)($order['amount_paid_upfront'] + ($order['discount_amount'] ?? 0)), 2);
-            $shippingFee   = 0.0; // Free delivery on partial COD
+            $grossTotal    = $subTotal + $shippingFee;
+            $totalDiscount = max(0.0, round($grossTotal - $dueOnDelivery, 2));
+
+            // Comment is printed on both Shipping Label (Special Instructions) and Tax Invoice
+            $comment = "*** PARTIAL COD ORDER *** Total: Rs.{$totalAmount} | Advance Paid Online: Rs.{$paidUpfront}{$txnRef} | PLEASE COLLECT EXACTLY Rs.{$dueOnDelivery} CASH AT DELIVERY. DO NOT OVERCHARGE.";
         } elseif ($paymentType === 'cod') {
             $paymentMethod = 'COD';
-            $subTotal      = round((float)$order['subtotal'], 2);
-            $totalDiscount = round((float)($order['discount_amount'] ?? 0), 2);
-            $shippingFee   = round((float)($order['shipping_fee'] ?? 0), 2);
+            $grossTotal    = $subTotal + $shippingFee;
+            $totalDiscount = max(0.0, round($grossTotal - $dueOnDelivery, 2));
+
+            $comment = "*** CASH ON DELIVERY *** Total: Rs.{$totalAmount} | Collect Exactly Rs.{$dueOnDelivery} Cash At Doorstep.";
         } else {
             // Full prepaid
             $paymentMethod = 'Prepaid';
-            $subTotal      = round((float)$order['subtotal'], 2);
-            $totalDiscount = round((float)($order['discount_amount'] ?? 0), 2);
-            $shippingFee   = 0.0; // Free delivery on prepaid
+            $grossTotal    = $subTotal + $shippingFee;
+            $totalDiscount = max(0.0, round($grossTotal - $totalAmount, 2));
+
+            $comment = "*** 100% PREPAID ORDER *** Total: Rs.{$totalAmount} Paid Online{$txnRef} | DELIVER WITHOUT COLLECTING CASH.";
         }
 
         $orderPayload = [
@@ -222,18 +246,28 @@ class ShiprocketService
             'order_date'            => date('Y-m-d H:i', strtotime($order['created_at'] ?? 'now')),
             'pickup_location'       => $cfg['pickup_location'] ?: 'Primary',
             'channel_id'            => '',
-            'comment'               => 'Valerie Jewels — Anti-Tarnish Everyday Fine Jewelry',
+            'comment'               => $comment,
             'billing_customer_name' => $firstName,
             'billing_last_name'     => $lastName,
-            'billing_address'       => trim($order['shipping_address_line1'] ?? 'Flat 101'),
-            'billing_address_2'     => trim($order['shipping_address_line2'] ?? ''),
-            'billing_city'          => trim($order['shipping_city'] ?? ($order['city'] ?? 'Bengaluru')),
-            'billing_pincode'       => trim($order['shipping_pincode'] ?? ($order['pincode'] ?? '560038')),
-            'billing_state'         => trim($order['shipping_state'] ?? ($order['state'] ?? 'Karnataka')),
+            'billing_address'       => $address1,
+            'billing_address_2'     => $address2,
+            'billing_city'          => $city,
+            'billing_pincode'       => $pincode,
+            'billing_state'         => $state,
             'billing_country'       => 'India',
-            'billing_email'         => trim($order['customer_email'] ?? 'care@valeriejewels.in'),
+            'billing_email'         => $email,
             'billing_phone'         => $cleanPhone,
             'shipping_is_billing'   => true,
+            'shipping_customer_name'=> $firstName,
+            'shipping_last_name'    => $lastName,
+            'shipping_address'      => $address1,
+            'shipping_address_2'    => $address2,
+            'shipping_city'         => $city,
+            'shipping_pincode'      => $pincode,
+            'shipping_state'        => $state,
+            'shipping_country'      => 'India',
+            'shipping_email'        => $email,
+            'shipping_phone'        => $cleanPhone,
             'order_items'           => $formattedItems,
             'payment_method'        => $paymentMethod,
             'shipping_charges'      => $shippingFee,
@@ -320,6 +354,154 @@ class ShiprocketService
             'success' => false,
             'message' => $parsed['message'] ?? 'Shiprocket order creation failed',
             'raw'     => $parsed,
+        ];
+    }
+
+    /**
+     * Advance order fulfillment status and insert tracking milestone
+     */
+    public static function advanceOrderStatus(int $orderId, string $newStatus, ?string $location = null, ?string $note = null): array
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order) {
+            throw new Exception("Order #{$orderId} not found");
+        }
+
+        $statusTitles = [
+            'confirmed'        => 'Order Confirmed',
+            'processing'       => 'Order In Production / Manifested',
+            'shipped'          => 'Handed Over to Courier',
+            'out_for_delivery' => 'Out for Doorstep Delivery',
+            'delivered'        => 'Order Delivered',
+            'cancelled'        => 'Order Cancelled',
+        ];
+
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+        $upStmt = $pdo->prepare("
+            UPDATE orders 
+            SET order_status = :st,
+                updated_at = $nowSql
+            WHERE id = :id
+        ");
+        $upStmt->execute([
+            ':st' => $newStatus,
+            ':id' => $orderId,
+        ]);
+
+        $title = $statusTitles[$newStatus] ?? ucfirst($newStatus);
+        $desc = $note ?: "Order updated to {$newStatus}";
+        $loc = $location ?: ($order['shipping_city'] ?? ($order['city'] ?? 'Hub'));
+
+        try {
+            $evStmt = $pdo->prepare("
+                INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+                VALUES (:order_id, :status, :title, :desc, :loc, $nowSql)
+            ");
+            $evStmt->execute([
+                ':order_id' => $orderId,
+                ':status'   => $newStatus,
+                ':title'    => $title,
+                ':desc'     => $desc,
+                ':loc'      => $loc,
+            ]);
+        } catch (Throwable $e) {}
+
+        return [
+            'success'      => true,
+            'order_id'     => $orderId,
+            'order_status' => $newStatus,
+            'updated_at'   => date('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Test connection to Shiprocket with provided or saved credentials
+     */
+    public static function testConnection(?string $email = null, ?string $password = null): array
+    {
+        $cfg = self::getSettings();
+        $testEmail = !empty($email) ? trim($email) : ($cfg['email'] ?? '');
+        $testPass  = !empty($password) ? trim($password) : ($cfg['password'] ?? '');
+
+        if (empty($testEmail) || empty($testPass)) {
+            return [
+                'success' => false,
+                'message' => 'Shiprocket email and password are required to test connection.',
+            ];
+        }
+
+        $loginUrl = 'https://apiv2.shiprocket.in/v1/external/auth/login';
+        $ch = curl_init($loginUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'email'    => $testEmail,
+            'password' => $testPass,
+        ]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $data = json_decode($response, true);
+            if (!empty($data['token'])) {
+                $token = $data['token'];
+
+                // Fetch available pickup locations
+                $pickupLocations = [];
+                $pickupUrl = 'https://apiv2.shiprocket.in/v1/external/settings/company/pickup';
+                $pch = curl_init($pickupUrl);
+                curl_setopt($pch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($pch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $token,
+                ]);
+                curl_setopt($pch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($pch, CURLOPT_SSL_VERIFYPEER, false);
+                $pRes = curl_exec($pch);
+                $pCode = curl_getinfo($pch, CURLINFO_HTTP_CODE);
+                curl_close($pch);
+
+                if ($pCode === 200 && $pRes) {
+                    $pData = json_decode($pRes, true);
+                    $shippingAddresses = $pData['data']['shipping_address'] ?? [];
+                    foreach ($shippingAddresses as $addr) {
+                        $pickupLocations[] = [
+                            'pickup_location' => $addr['pickup_location'] ?? '',
+                            'address'         => $addr['address'] ?? '',
+                            'city'            => $addr['city'] ?? '',
+                            'state'           => $addr['state'] ?? '',
+                            'pin_code'        => $addr['pin_code'] ?? '',
+                            'phone'           => $addr['phone'] ?? '',
+                            'name'            => $addr['name'] ?? '',
+                        ];
+                    }
+                }
+
+                return [
+                    'success'          => true,
+                    'message'          => 'Shiprocket connected successfully! Credentials are valid.',
+                    'first_name'       => $data['first_name'] ?? '',
+                    'last_name'        => $data['last_name'] ?? '',
+                    'email'            => $data['email'] ?? $testEmail,
+                    'company_name'     => $data['company_name'] ?? '',
+                    'pickup_locations' => $pickupLocations,
+                ];
+            }
+        }
+
+        $errData = json_decode($response, true);
+        $errMsg = $errData['message'] ?? 'Invalid credentials or connection error with Shiprocket API';
+        return [
+            'success' => false,
+            'message' => $errMsg . " (HTTP {$httpCode})",
         ];
     }
 
