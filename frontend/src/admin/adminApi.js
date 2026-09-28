@@ -275,6 +275,14 @@ export const adminApi = {
     return res.data;
   },
 
+  async syncShiprocket(orderId) {
+    const res = await request('/admin/orders.php?action=sync_shiprocket', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    return res.data;
+  },
+
   async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '', customMessage = '', notifyCustomer = true) {
     const res = await request('/admin/orders.php?action=update_status', {
       method: 'POST',

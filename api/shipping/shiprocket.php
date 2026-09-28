@@ -117,7 +117,82 @@ class ShiprocketService
     /**
      * Create live order in Shiprocket with exact Partial COD / Prepaid mapping
      */
-    public static function createShipment(int $orderId): array
+    /**
+     * Resolve default active channel ID from Shiprocket account
+     */
+    public static function getDefaultChannelId(string $token): ?int
+    {
+        $url = 'https://apiv2.shiprocket.in/v1/external/channels';
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token,
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $res = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 200 && $res) {
+            $data = json_decode($res, true);
+            $channels = $data['data'] ?? (is_array($data) ? $data : []);
+            if (!empty($channels)) {
+                // Prefer Custom channel or take first active channel
+                foreach ($channels as $c) {
+                    if (stripos($c['name'] ?? '', 'custom') !== false) {
+                        return (int)$c['id'];
+                    }
+                }
+                if (!empty($channels[0]['id'])) {
+                    return (int)$channels[0]['id'];
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve valid verified pickup location from Shiprocket account
+     */
+    public static function getValidPickupLocation(string $token, string $preferredLocation = 'Primary'): string
+    {
+        $pickupUrl = 'https://apiv2.shiprocket.in/v1/external/settings/company/pickup';
+        $pch = curl_init($pickupUrl);
+        curl_setopt($pch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($pch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token,
+        ]);
+        curl_setopt($pch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($pch, CURLOPT_SSL_VERIFYPEER, false);
+        $pRes = curl_exec($pch);
+        $pCode = curl_getinfo($pch, CURLINFO_HTTP_CODE);
+        curl_close($pch);
+
+        if ($pCode === 200 && $pRes) {
+            $pData = json_decode($pRes, true);
+            $addresses = $pData['data']['shipping_address'] ?? [];
+            if (!empty($addresses)) {
+                foreach ($addresses as $a) {
+                    $locName = trim($a['pickup_location'] ?? '');
+                    if (strcasecmp($locName, trim($preferredLocation)) === 0) {
+                        return $locName;
+                    }
+                }
+                if (!empty($addresses[0]['pickup_location'])) {
+                    return trim($addresses[0]['pickup_location']);
+                }
+            }
+        }
+        return $preferredLocation ?: 'Primary';
+    }
+
+    /**
+     * Create live order in Shiprocket with exact Partial COD / Prepaid mapping
+     */
+    public static function createShipment(int $orderId, bool $force = false): array
     {
         $pdo = Database::getConnection();
 
@@ -129,8 +204,11 @@ class ShiprocketService
             throw new Exception("Order #{$orderId} not found");
         }
 
-        // Avoid duplicate Shiprocket order creation
-        if (!empty($order['shiprocket_order_id'])) {
+        // Avoid duplicate Shiprocket order creation if already synced to live Shiprocket (numeric order ID)
+        $existingSrId = trim($order['shiprocket_order_id'] ?? '');
+        $isSandboxMock = strpos($existingSrId, 'SR-ORD-') === 0;
+
+        if (!empty($existingSrId) && !$isSandboxMock && !$force) {
             return [
                 'success'               => true,
                 'already_synced'        => true,
@@ -143,9 +221,16 @@ class ShiprocketService
         $token = self::getAuthToken();
         $cfg = self::getSettings();
 
-        // If credentials are not yet configured, gracefully fall back to sandbox
+        // If credentials are not configured, handle based on context
         if (empty($token)) {
-            error_log("[Shiprocket] Live credentials not configured. Generating sandbox preview.");
+            $msg = "Shiprocket credentials (email or password) are not configured or authentication failed.";
+            error_log("[Shiprocket] " . $msg);
+            if ($force) {
+                return [
+                    'success' => false,
+                    'message' => $msg . " Please verify credentials in Admin Panel -> Settings -> Payment & Shipping.",
+                ];
+            }
             return self::createSandboxShipment($order);
         }
 
@@ -204,12 +289,14 @@ class ShiprocketService
         $state    = trim($order['shipping_state'] ?? ($order['state'] ?? 'Karnataka'));
         $email    = trim($order['customer_email'] ?? 'care@valeriejewels.in');
 
-        // ════════════════════════════════════════════════════════════════
-        // PARTIAL COD & PREPAID FINANCIAL MAPPING FOR SHIPROCKET
-        // ════════════════════════════════════════════════════════════════
-        // Shiprocket Invariant: Collectable Cash = (sub_total + shipping_charges) - total_discount
-        // To guarantee Collectable Cash strictly equals amount_due_on_delivery:
-        // total_discount = (sub_total + shipping_charges) - amount_due_on_delivery
+        // Resolve valid pickup location from Shiprocket account
+        $preferredPickup = !empty($cfg['pickup_location']) ? $cfg['pickup_location'] : 'Primary';
+        $pickupLocation = self::getValidPickupLocation($token, $preferredPickup);
+
+        // Resolve valid channel id from Shiprocket account
+        $channelId = self::getDefaultChannelId($token);
+
+        // Financial Mapping
         $paymentType    = $order['payment_type'] ?? 'full_prepaid';
         $totalAmount    = round((float)$order['total_amount'], 2);
         $paidUpfront    = round((float)$order['amount_paid_upfront'], 2);
@@ -223,29 +310,23 @@ class ShiprocketService
             $paymentMethod = 'COD';
             $grossTotal    = $subTotal + $shippingFee;
             $totalDiscount = max(0.0, round($grossTotal - $dueOnDelivery, 2));
-
-            // Comment is printed on both Shipping Label (Special Instructions) and Tax Invoice
             $comment = "*** PARTIAL COD ORDER *** Total: Rs.{$totalAmount} | Advance Paid Online: Rs.{$paidUpfront}{$txnRef} | PLEASE COLLECT EXACTLY Rs.{$dueOnDelivery} CASH AT DELIVERY. DO NOT OVERCHARGE.";
         } elseif ($paymentType === 'cod') {
             $paymentMethod = 'COD';
             $grossTotal    = $subTotal + $shippingFee;
             $totalDiscount = max(0.0, round($grossTotal - $dueOnDelivery, 2));
-
             $comment = "*** CASH ON DELIVERY *** Total: Rs.{$totalAmount} | Collect Exactly Rs.{$dueOnDelivery} Cash At Doorstep.";
         } else {
-            // Full prepaid
             $paymentMethod = 'Prepaid';
             $grossTotal    = $subTotal + $shippingFee;
             $totalDiscount = max(0.0, round($grossTotal - $totalAmount, 2));
-
             $comment = "*** 100% PREPAID ORDER *** Total: Rs.{$totalAmount} Paid Online{$txnRef} | DELIVER WITHOUT COLLECTING CASH.";
         }
 
         $orderPayload = [
             'order_id'              => $order['order_number'],
             'order_date'            => date('Y-m-d H:i', strtotime($order['created_at'] ?? 'now')),
-            'pickup_location'       => $cfg['pickup_location'] ?: 'Primary',
-            'channel_id'            => '',
+            'pickup_location'       => $pickupLocation,
             'comment'               => $comment,
             'billing_customer_name' => $firstName,
             'billing_last_name'     => $lastName,
@@ -278,8 +359,12 @@ class ShiprocketService
             'length'                => 10,
             'breadth'               => 8,
             'height'                => 5,
-            'weight'                => 0.15, // 150g standard volumetric weight for jewelry box
+            'weight'                => 0.15,
         ];
+
+        if ($channelId) {
+            $orderPayload['channel_id'] = $channelId;
+        }
 
         // Send to Shiprocket adhoc order creation endpoint
         $createUrl = 'https://apiv2.shiprocket.in/v1/external/orders/create/adhoc';
@@ -299,7 +384,41 @@ class ShiprocketService
 
         $parsed = json_decode($res, true);
 
-        if ($httpCode === 200 && !empty($parsed['order_id'])) {
+        // If order already exists in Shiprocket account, query and retrieve details
+        if ($httpCode !== 200 && $httpCode !== 201) {
+            $errMsg = $parsed['message'] ?? '';
+            if (is_array($errMsg)) $errMsg = implode(', ', $errMsg);
+            if (stripos($errMsg, 'already exists') !== false) {
+                $checkUrl = 'https://apiv2.shiprocket.in/v1/external/orders/show/' . urlencode($order['order_number']);
+                $cch = curl_init($checkUrl);
+                curl_setopt($cch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($cch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $token,
+                ]);
+                curl_setopt($cch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($cch, CURLOPT_SSL_VERIFYPEER, false);
+                $cRes = curl_exec($cch);
+                $cCode = curl_getinfo($cch, CURLINFO_HTTP_CODE);
+                curl_close($cch);
+
+                if ($cCode === 200 && $cRes) {
+                    $cData = json_decode($cRes, true);
+                    $existingSr = $cData['data'] ?? [];
+                    if (!empty($existingSr['id'])) {
+                        $parsed = [
+                            'order_id'     => $existingSr['id'],
+                            'shipment_id'  => $existingSr['shipment_id'] ?? ($existingSr['shipments'][0]['id'] ?? ''),
+                            'awb_code'     => $existingSr['awb_code'] ?? ($existingSr['shipments'][0]['awb'] ?? ''),
+                            'courier_name' => $existingSr['courier_name'] ?? ($existingSr['shipments'][0]['courier_name'] ?? 'Shiprocket Express'),
+                        ];
+                        $httpCode = 200;
+                    }
+                }
+            }
+        }
+
+        if (($httpCode === 200 || $httpCode === 201) && !empty($parsed['order_id'])) {
             $srOrderId    = (string)$parsed['order_id'];
             $srShipmentId = (string)($parsed['shipment_id'] ?? '');
             $srAwb        = (string)($parsed['awb_code'] ?? '');
@@ -307,6 +426,7 @@ class ShiprocketService
             $trackingUrl  = !empty($srAwb) ? "https://shiprocket.co/tracking/{$srAwb}" : null;
 
             // Update orders table with Shiprocket identifiers
+            $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
             $upStmt = $pdo->prepare("
                 UPDATE orders 
                 SET shiprocket_order_id    = :s_oid,
@@ -314,7 +434,7 @@ class ShiprocketService
                     shiprocket_awb         = COALESCE(NULLIF(:awb, ''), shiprocket_awb),
                     courier_name           = COALESCE(NULLIF(:courier, ''), courier_name),
                     tracking_url           = COALESCE(NULLIF(:turl, ''), tracking_url),
-                    updated_at             = NOW()
+                    updated_at             = $nowSql
                 WHERE id = :id
             ");
             $upStmt->execute([
@@ -330,11 +450,11 @@ class ShiprocketService
             try {
                 $evStmt = $pdo->prepare("
                     INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-                    VALUES (:order_id, 'confirmed', 'Order Pushed to Shiprocket Panel', :desc, 'Shiprocket Automated Hub', NOW())
+                    VALUES (:order_id, 'confirmed', 'Order Pushed to Shiprocket Panel', :desc, 'Shiprocket Automated Hub', $nowSql)
                 ");
                 $evStmt->execute([
                     ':order_id' => $orderId,
-                    ':desc'     => "Shiprocket Order ID #{$srOrderId} generated. Awaiting warehouse manifest & pickup.",
+                    ':desc'     => "Shiprocket Live Order ID #{$srOrderId} generated. Awaiting warehouse manifest & courier pickup.",
                 ]);
             } catch (Throwable $te) {}
 
@@ -349,10 +469,28 @@ class ShiprocketService
             ];
         }
 
+        $errorMsg = $parsed['message'] ?? 'Shiprocket order creation failed';
+        if (is_array($errorMsg)) {
+            $errorMsg = json_encode($errorMsg);
+        }
         error_log("[Shiprocket API] Order creation returned HTTP {$httpCode}: {$res}");
+
+        // Record sync failure in order tracking events
+        try {
+            $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+            $evStmt = $pdo->prepare("
+                INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+                VALUES (:order_id, 'confirmed', 'Shiprocket Sync Pending', :desc, 'Shiprocket API Gateway', $nowSql)
+            ");
+            $evStmt->execute([
+                ':order_id' => $orderId,
+                ':desc'     => "Shiprocket API Error (HTTP {$httpCode}): {$errorMsg}. Use Admin Orders to retry sync.",
+            ]);
+        } catch (Throwable $te) {}
+
         return [
             'success' => false,
-            'message' => $parsed['message'] ?? 'Shiprocket order creation failed',
+            'message' => "Shiprocket returned HTTP {$httpCode}: {$errorMsg}",
             'raw'     => $parsed,
         ];
     }

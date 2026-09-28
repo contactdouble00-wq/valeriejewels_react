@@ -234,6 +234,26 @@ if ($method === 'GET') {
 $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 $action = $_GET['action'] ?? ($input['action'] ?? '');
 
+// Handle Manual Push / Sync to Shiprocket
+if ($action === 'sync_shiprocket') {
+    require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid order ID is required for Shiprocket sync', 422);
+    }
+
+    try {
+        $result = ShiprocketService::createShipment($orderId, true);
+        if (!empty($result['success'])) {
+            ApiResponse::success($result, 'Order pushed to Shiprocket panel successfully!');
+        } else {
+            ApiResponse::error($result['message'] ?? 'Failed to push order to Shiprocket', 400, $result);
+        }
+    } catch (Throwable $e) {
+        ApiResponse::error('Shiprocket sync error: ' . $e->getMessage(), 500);
+    }
+}
+
 // Handle Order Deletion (DELETE or POST?action=delete)
 $isDeleteAction = ($method === 'DELETE')
     || ($method === 'POST' && in_array($action, ['delete', 'delete_order'], true))
