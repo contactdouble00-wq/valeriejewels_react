@@ -10,9 +10,9 @@ const DEFAULT_SITE_CONTENT = {
   },
   topRibbon: {
     enabled: true,
-    text: 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',
-    highlightAmount: '₹999',
-    suffix: '• 18K GOLD PVD ANTI-TARNISH',
+    text: 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)',
+    highlightAmount: '',
+    suffix: '',
   },
   mobileSlider: {
     enabled: true,

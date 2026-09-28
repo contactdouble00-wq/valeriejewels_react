@@ -312,9 +312,17 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[10px] sm:text-[11px] font-medium py-1.5 sm:py-2 px-3 sm:px-4 text-center tracking-wider sm:tracking-widest uppercase flex items-center justify-center space-x-1.5 sm:space-x-2">
           <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-primary shrink-0" />
           <span className="truncate sm:overflow-visible">
-            {content?.topRibbon?.text || 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS) • FREE ZIRCON NECKLACE ON PREPAID'}{' '}
-            <span className="font-bold text-brand-primary">{content?.topRibbon?.highlightAmount || '+ ₹50 OFF'}</span>{' '}
-            {content?.topRibbon?.suffix || '• 18K GOLD PVD ANTI-TARNISH'}
+            {content?.topRibbon?.text && content.topRibbon.text.trim() ? content.topRibbon.text.trim() : (
+              !content?.topRibbon?.highlightAmount?.trim() && !content?.topRibbon?.suffix?.trim()
+                ? 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)'
+                : ''
+            )}
+            {Boolean(content?.topRibbon?.highlightAmount && content.topRibbon.highlightAmount.trim()) && (
+              <> <span className="font-bold text-brand-primary">{content.topRibbon.highlightAmount.trim()}</span></>
+            )}
+            {Boolean(content?.topRibbon?.suffix && content.topRibbon.suffix.trim()) && (
+              <> {content.topRibbon.suffix.trim()}</>
+            )}
           </span>
         </div>
       )}

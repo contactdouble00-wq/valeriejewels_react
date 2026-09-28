@@ -96,9 +96,9 @@ const FACTORY_DEFAULTS = {
   },
   topRibbon: {
     enabled: true,
-    text: 'COMPLIMENTARY EXPRESS DELIVERY ON ALL ORDERS ABOVE',
-    highlightAmount: '₹999',
-    suffix: '• 18K GOLD PVD ANTI-TARNISH',
+    text: 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)',
+    highlightAmount: '',
+    suffix: '',
   },
   heroBanner: {
     badgeText: '18K PVD Anti-Tarnish Everyday Luxury',
@@ -1334,9 +1334,17 @@ export default function AdminHomepageView() {
               <div className="bg-[#FAF7FC] border border-brand-border text-brand-tertiary text-[11px] font-medium py-2 px-4 text-center tracking-widest uppercase flex items-center justify-center space-x-2 rounded-xl">
                 <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
                 <span>
-                  {formData.topRibbon.text}{' '}
-                  <span className="font-bold text-brand-primary">{formData.topRibbon.highlightAmount}</span>{' '}
-                  {formData.topRibbon.suffix}
+                  {formData.topRibbon.text && formData.topRibbon.text.trim() ? formData.topRibbon.text.trim() : (
+                    !formData.topRibbon.highlightAmount?.trim() && !formData.topRibbon.suffix?.trim()
+                      ? 'FREE DELIVERY ACROSS ALL INDIA'
+                      : ''
+                  )}
+                  {Boolean(formData.topRibbon.highlightAmount && formData.topRibbon.highlightAmount.trim()) && (
+                    <> <span className="font-bold text-brand-primary">{formData.topRibbon.highlightAmount.trim()}</span></>
+                  )}
+                  {Boolean(formData.topRibbon.suffix && formData.topRibbon.suffix.trim()) && (
+                    <> {formData.topRibbon.suffix.trim()}</>
+                  )}
                 </span>
               </div>
             </div>
