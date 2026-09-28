@@ -24,6 +24,7 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [copiedSku, setCopiedSku] = useState(false);
+  const [mediaDims, setMediaDims] = useState(null);
   const imageContainerRef = useRef(null);
 
   // Reset states when item or open state changes
@@ -31,6 +32,7 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
     setActiveImageIndex(0);
     setIsZoomed(false);
     setCopiedSku(false);
+    setMediaDims(null);
   }, [item, isOpen]);
 
   // Handle ESC key to dismiss
@@ -139,9 +141,25 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
           <div>
             {/* Header Badge */}
             <div className="flex items-center justify-between mb-3">
-              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold tracking-wider uppercase">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Visual Assurance Mode</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold tracking-wider uppercase">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Visual Assurance Mode</span>
+                </div>
+                {mediaDims && (
+                  <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-bold border ${
+                    mediaDims.isHd
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : mediaDims.w >= 800
+                      ? 'bg-purple-50 text-purple-800 border-purple-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}>
+                    <span>{mediaDims.w} × {mediaDims.h} px</span>
+                    <span className="font-sans font-semibold text-[10px]">
+                      {mediaDims.isHd ? '• High Quality ✓' : mediaDims.w < 800 ? '• Low Res (<800px) ⚠️' : '• Standard'}
+                    </span>
+                  </span>
+                )}
               </div>
               
               {!activeMedia.isVideo && (
@@ -178,6 +196,13 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
                     autoPlay
                     loop
                     className="w-full h-full object-contain"
+                    onLoadedMetadata={(e) => {
+                      setMediaDims({
+                        w: e.target.videoWidth,
+                        h: e.target.videoHeight,
+                        isHd: e.target.videoHeight >= 1080,
+                      });
+                    }}
                   />
                   <span className="absolute top-3 left-3 bg-brand-primary text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs">
                     Try-on Reel
@@ -188,6 +213,13 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
                   <img
                     src={activeMedia.url}
                     alt={productName}
+                    onLoad={(e) => {
+                      setMediaDims({
+                        w: e.target.naturalWidth,
+                        h: e.target.naturalHeight,
+                        isHd: e.target.naturalWidth >= 1000 && e.target.naturalHeight >= 1000,
+                      });
+                    }}
                     style={
                       isZoomed
                         ? {

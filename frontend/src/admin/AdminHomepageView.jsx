@@ -188,6 +188,9 @@ export default function AdminHomepageView() {
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
   const [uploadingSlideIndex, setUploadingSlideIndex] = useState(null);
+  const [faviconDims, setFaviconDims] = useState(null);
+  const [heroPhotoDims, setHeroPhotoDims] = useState(null);
+  const [slideDims, setSlideDims] = useState({});
 
   useEffect(() => {
     loadSettings();
@@ -612,23 +615,31 @@ export default function AdminHomepageView() {
                   Site Logo / Browser Favicon Icon
                 </label>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-[#FAF8FC] border-2 border-dashed border-brand-border flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                  <div className="w-16 h-16 rounded-2xl bg-[#FAF8FC] border-2 border-dashed border-brand-border flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative">
                     {formData.siteIdentity?.faviconUrl ? (
-                      <img
-                        src={formData.siteIdentity.faviconUrl}
-                        alt="Favicon"
-                        className="w-10 h-10 object-contain"
-                      />
+                      <>
+                        <img
+                          src={formData.siteIdentity.faviconUrl}
+                          alt="Favicon"
+                          onLoad={(e) => setFaviconDims({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
+                          className="w-10 h-10 object-contain"
+                        />
+                        {faviconDims && (
+                          <span className="absolute bottom-0 inset-x-0 text-center text-[7.5px] font-mono font-bold bg-black/75 text-white py-0.5">
+                            {faviconDims.w}×{faviconDims.h}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <Globe className="w-6 h-6 text-brand-muted" />
                     )}
                   </div>
 
                   <div className="flex flex-col gap-2 flex-1 w-full">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <label className="cursor-pointer px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center space-x-1.5 active:scale-95">
                         <UploadCloud className="w-3.5 h-3.5" />
-                        <span>{uploadingFavicon ? 'Uploading...' : 'Upload Icon / Logo'}</span>
+                        <span>{uploadingFavicon ? 'Uploading...' : 'Upload Icon / Logo (512×512 px)'}</span>
                         <input
                           type="file"
                           accept=".png,.ico,.svg,.jpg,.jpeg,.webp"
@@ -638,11 +649,15 @@ export default function AdminHomepageView() {
                         />
                       </label>
 
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                        Recommended: 512 × 512 px (Square 1:1)
+                      </span>
+
                       {formData.siteIdentity?.faviconUrl && (
                         <button
                           type="button"
                           onClick={() => updateNested('siteIdentity', 'faviconUrl', '')}
-                          className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors"
+                          className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors cursor-pointer"
                         >
                           Reset to Default
                         </button>
@@ -653,10 +668,10 @@ export default function AdminHomepageView() {
                       value={formData.siteIdentity?.faviconUrl || ''}
                       onChange={(e) => updateNested('siteIdentity', 'faviconUrl', e.target.value)}
                       placeholder="Or paste direct image URL (https://.../favicon.png)"
-                      className="w-full px-3.5 py-2 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      className="w-full px-3.5 py-2 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono"
                     />
-                    <p className="text-[10px] text-brand-muted">
-                      Recommended: Square 32x32px or 64x64px PNG, SVG, or ICO file with transparent background.
+                    <p className="text-[10.5px] text-brand-muted leading-relaxed">
+                      Recommended: <strong className="font-mono text-brand-tertiary">512 × 512 px</strong> (Square 1:1) transparent PNG or SVG for sharp display in browser tabs, mobile PWA shortcuts, and Google bookmarks without blur.
                     </p>
                   </div>
                 </div>
@@ -917,15 +932,32 @@ export default function AdminHomepageView() {
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
                       {/* Left: Thumbnail & File Upload */}
                       <div className="md:col-span-4 space-y-2">
-                        <label className="text-xs font-bold text-brand-tertiary block">
-                          Poster Image
-                        </label>
-                        <div className="relative aspect-square w-full max-w-[180px] rounded-t-none rounded-b-xl overflow-hidden border border-brand-border bg-gray-50 group">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-brand-tertiary block">
+                            Poster Image
+                          </label>
+                          <span className="text-[9.5px] font-mono font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                            1920 × 1080 px
+                          </span>
+                        </div>
+                        <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-brand-border bg-gray-50 group shadow-2xs">
                           <img
                             src={slide.imageUrl}
                             alt={`Slide ${idx + 1}`}
+                            onLoad={(e) => {
+                              const w = e.target.naturalWidth;
+                              const h = e.target.naturalHeight;
+                              setSlideDims((prev) => ({ ...prev, [idx]: { w, h, isHd: w >= 1200 } }));
+                            }}
                             className="w-full h-full object-cover object-center"
                           />
+                          {slideDims[idx] && (
+                            <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shadow-xs z-10 ${
+                              slideDims[idx].isHd ? 'bg-emerald-700/90 text-white' : 'bg-amber-600/90 text-white'
+                            }`}>
+                              {slideDims[idx].w}×{slideDims[idx].h} px {slideDims[idx].isHd ? '• HD' : '• Low Res'}
+                            </span>
+                          )}
                           {uploadingSlideIndex === idx && (
                             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white space-y-1">
                               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -936,9 +968,9 @@ export default function AdminHomepageView() {
 
                         {/* Direct File Upload Button */}
                         <div className="pt-1">
-                          <label className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-semibold cursor-pointer shadow-2xs active:scale-95 transition-all">
-                            <UploadCloud className="w-3.5 h-3.5 text-brand-primary" />
-                            <span>{uploadingSlideIndex === idx ? 'Uploading...' : 'Upload Image File'}</span>
+                          <label className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold cursor-pointer shadow-xs active:scale-95 transition-all">
+                            <UploadCloud className="w-3.5 h-3.5 text-white" />
+                            <span>{uploadingSlideIndex === idx ? 'Uploading...' : 'Upload Image (1920×1080 px)'}</span>
                             <input
                               type="file"
                               accept="image/jpeg,image/png,image/webp,image/jpg"
@@ -947,6 +979,9 @@ export default function AdminHomepageView() {
                               className="hidden"
                             />
                           </label>
+                          <p className="text-[10px] text-brand-muted mt-1 leading-snug">
+                            Recommended: <strong className="font-mono text-brand-tertiary">1920 × 1080 px</strong> (16:9 Landscape) or <strong className="font-mono text-brand-tertiary">1200 × 800 px</strong> (3:2). High quality HD ensures zero pixelation on desktop monitors and mobile retina screens.
+                          </p>
                         </div>
 
                         {/* Image URL text fallback */}
@@ -1515,18 +1550,21 @@ export default function AdminHomepageView() {
               <div className="sm:col-span-2 p-4 rounded-xl border border-brand-primary/20 bg-brand-primary-light/30 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h5 className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                    <h5 className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5 flex-wrap">
                       <ImageIcon className="w-4 h-4 text-brand-primary" />
                       <span>Hero Right Photograph (Desktop View)</span>
+                      <span className="text-[9.5px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Recommended: 1264 × 848 px (3:2)
+                      </span>
                     </h5>
-                    <p className="text-[11px] text-brand-muted mt-0.5">
-                      Fades creatively from left (0% opacity) into the white card background. Visible specifically on desktop view.
+                    <p className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
+                      Recommended: <strong className="font-mono text-brand-tertiary">1264 × 848 px</strong> (or 1600 × 1060 px). Fades creatively into the card background. High resolution ensures zero pixelation on desktop displays.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className={`cursor-pointer px-3.5 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-caps tracking-wider uppercase font-bold hover:bg-brand-primary-hover transition-colors flex items-center space-x-1.5 shadow-sm ${uploadingHeroPhoto ? 'opacity-70 pointer-events-none' : ''}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className={`cursor-pointer px-3.5 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-caps tracking-wider uppercase font-bold hover:bg-brand-primary-hover transition-colors flex items-center space-x-1.5 shadow-sm active:scale-95 ${uploadingHeroPhoto ? 'opacity-70 pointer-events-none' : ''}`}>
                       <UploadCloud className="w-3.5 h-3.5" />
-                      <span>{uploadingHeroPhoto ? 'Uploading...' : 'Upload Photo'}</span>
+                      <span>{uploadingHeroPhoto ? 'Uploading...' : 'Upload Photo (1264×848 px)'}</span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -1538,7 +1576,7 @@ export default function AdminHomepageView() {
                     <button
                       type="button"
                       onClick={() => updateNested('heroBanner', 'rightImageUrl', '/hero-jewelry-model.jpg')}
-                      className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary text-xs font-caps tracking-wider uppercase font-semibold hover:border-brand-primary transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary text-xs font-caps tracking-wider uppercase font-semibold hover:border-brand-primary transition-colors cursor-pointer"
                       title="Reset to default luxury model photograph"
                     >
                       Default Photo
@@ -1547,7 +1585,7 @@ export default function AdminHomepageView() {
                       <button
                         type="button"
                         onClick={() => updateNested('heroBanner', 'rightImageUrl', '')}
-                        className="p-1.5 rounded-lg border border-brand-border bg-white text-brand-muted hover:text-red-600 hover:border-red-300 transition-colors"
+                        className="p-1.5 rounded-lg border border-brand-border bg-white text-brand-muted hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer"
                         title="Remove photo"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1557,14 +1595,22 @@ export default function AdminHomepageView() {
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                  {/* Thumbnail */}
-                  <div className="w-16 h-16 rounded-lg border border-brand-border bg-white overflow-hidden flex-shrink-0 relative shadow-inner">
+                  {/* Thumbnail with resolution badge */}
+                  <div className="w-20 h-20 rounded-xl border border-brand-border bg-white overflow-hidden flex-shrink-0 relative shadow-inner">
                     {formData.heroBanner.rightImageUrl ? (
-                      <img
-                        src={formData.heroBanner.rightImageUrl}
-                        alt="Hero Preview Thumbnail"
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={formData.heroBanner.rightImageUrl}
+                          alt="Hero Preview Thumbnail"
+                          onLoad={(e) => setHeroPhotoDims({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
+                          className="w-full h-full object-cover"
+                        />
+                        {heroPhotoDims && (
+                          <span className="absolute bottom-0 inset-x-0 text-center text-[7.5px] font-mono font-bold bg-black/75 text-white py-0.5">
+                            {heroPhotoDims.w}×{heroPhotoDims.h} px
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-brand-muted text-[10px] text-center px-1">
                         No Photo
@@ -1572,9 +1618,16 @@ export default function AdminHomepageView() {
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
-                    <label className="text-[11px] font-medium text-brand-muted block">
-                      Image URL or Uploaded Path
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-medium text-brand-muted block">
+                        Image URL or Uploaded Path
+                      </label>
+                      {heroPhotoDims && (
+                        <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          Current: {heroPhotoDims.w} × {heroPhotoDims.h} px {heroPhotoDims.w >= 1200 ? '• High Quality HD' : ''}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       value={formData.heroBanner.rightImageUrl || ''}

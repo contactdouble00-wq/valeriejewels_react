@@ -28,6 +28,8 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id || `media-${index}` });
 
+  const [mediaDims, setMediaDims] = useState(null);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -43,12 +45,24 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 group shrink-0 select-none shadow-2xs transition-all ${isPrimary ? 'border-brand-primary ring-2 ring-brand-primary/20' : 'border-gray-200 hover:border-brand-primary/40'
-        }`}
+      className={`relative w-24 h-24 rounded-xl overflow-hidden border-2 group shrink-0 select-none shadow-2xs transition-all ${
+        isPrimary ? 'border-brand-primary ring-2 ring-brand-primary/20' : 'border-gray-200 hover:border-brand-primary/40'
+      }`}
     >
       {isVideo ? (
         <div className="w-full h-full bg-[#181420] flex items-center justify-center relative">
-          <video src={url} muted className="w-full h-full object-cover pointer-events-none" />
+          <video
+            src={url}
+            muted
+            className="w-full h-full object-cover pointer-events-none"
+            onLoadedMetadata={(e) => {
+              setMediaDims({
+                w: e.target.videoWidth,
+                h: e.target.videoHeight,
+                isHd: e.target.videoHeight >= 1080,
+              });
+            }}
+          />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <div className="w-6 h-6 rounded-full bg-white/90 text-brand-tertiary flex items-center justify-center shadow-xs">
               <Play className="w-3 h-3 fill-current ml-0.5" />
@@ -64,6 +78,13 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
             src={url}
             alt={`Product media ${index + 1}`}
             className="w-full h-full object-cover"
+            onLoad={(e) => {
+              setMediaDims({
+                w: e.target.naturalWidth,
+                h: e.target.naturalHeight,
+                isHd: e.target.naturalWidth >= 1000 && e.target.naturalHeight >= 1000,
+              });
+            }}
             onError={(e) => {
               if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                 e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
@@ -78,6 +99,22 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
         </div>
       )}
 
+      {/* Resolution Badge on Tile */}
+      {mediaDims && (
+        <span
+          className={`absolute top-1 left-1 px-1 py-0.5 rounded text-[7px] font-mono font-bold tracking-tight shadow-xs z-10 pointer-events-none ${
+            mediaDims.isHd
+              ? 'bg-emerald-700/90 text-white'
+              : mediaDims.w >= 800
+              ? 'bg-purple-800/90 text-white'
+              : 'bg-amber-600/95 text-white'
+          }`}
+          title={`${mediaDims.w} × ${mediaDims.h} pixels`}
+        >
+          {mediaDims.w}×{mediaDims.h}
+        </span>
+      )}
+
       {/* Drag handle */}
       <div
         {...attributes}
@@ -87,22 +124,33 @@ function SortableMediaTile({ item, index, onRemove, onSetPrimary, onPreview }) {
         <GripVertical className="w-3.5 h-3.5 text-white" />
       </div>
 
-      {/* Hover overlay: View + Set Primary + Remove */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 z-20">
+      {/* Hover overlay: View + Dimensions + Set Primary + Remove */}
+      <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1 z-20">
+        {mediaDims && (
+          <div className="text-[7.5px] font-mono text-center text-white/95 leading-tight">
+            <span className="font-bold">{mediaDims.w} × {mediaDims.h} px</span>
+            {mediaDims.isHd ? (
+              <span className="block text-emerald-300 font-bold">✓ High Quality</span>
+            ) : mediaDims.w < 800 ? (
+              <span className="block text-amber-300 font-bold">⚠️ Low Res (&lt;800px)</span>
+            ) : null}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => onPreview && onPreview(item)}
-          className="text-[9px] font-bold text-white hover:text-purple-200 bg-white/20 hover:bg-brand-primary px-2 py-0.5 rounded cursor-pointer flex items-center space-x-0.5"
+          className="text-[8.5px] font-bold text-white hover:text-purple-200 bg-white/20 hover:bg-brand-primary px-2 py-0.5 rounded cursor-pointer flex items-center space-x-0.5"
           title="View full image in assurance lightbox"
         >
-          <Eye className="w-3 h-3 mr-0.5" />
+          <Eye className="w-2.5 h-2.5 mr-0.5" />
           <span>View</span>
         </button>
         {!isPrimary && !isVideo && (
           <button
             type="button"
             onClick={() => onSetPrimary(index)}
-            className="text-[9px] font-bold text-yellow-300 hover:text-yellow-100 whitespace-nowrap bg-black/40 px-1.5 py-0.5 rounded cursor-pointer"
+            className="text-[8.5px] font-bold text-yellow-300 hover:text-yellow-100 whitespace-nowrap bg-black/50 px-1.5 py-0.5 rounded cursor-pointer"
             title="Set as primary photo"
           >
             ⭐ Primary
@@ -1017,27 +1065,29 @@ export default function AdminProductsView({ currentUser }) {
                   <div className="flex items-center justify-between">
                     <span className="font-caps tracking-wider uppercase font-bold text-brand-primary flex items-center gap-1.5 text-[11px]">
                       <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-                      <span>Studio Media Standards</span>
+                      <span>Studio Media Resolution & Quality Standards</span>
                     </span>
-                    <span className="text-[10px] font-semibold bg-white/90 px-2 py-0.5 rounded-md border border-brand-primary/20 text-brand-tertiary">
-                      High-Definition E-Commerce
+                    <span className="text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
+                      High-Definition Visuals (Retina 4K Ready)
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                     <div className="bg-white/95 p-2.5 rounded-xl border border-brand-border/70 space-y-1">
-                      <strong className="block text-brand-tertiary font-bold flex items-center gap-1">
-                        <span>📸 Product Photos: 1:1 Square Standard</span>
+                      <strong className="block text-brand-tertiary font-bold flex items-center justify-between">
+                        <span>📸 Product Photos: 1:1 Square (High Quality)</span>
+                        <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">1200 × 1200 px</span>
                       </strong>
                       <p className="text-[10.5px] text-brand-muted font-light leading-relaxed">
-                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1200 × 1200 px</strong> or <strong className="font-semibold text-brand-tertiary font-mono">1000 × 1000 px</strong>. Keeps product cards proportional, clean, and prevents cards or jewellery from stretching out.
+                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1200 × 1200 px</strong> (Minimum: <strong className="font-semibold text-brand-tertiary font-mono">1000 × 1000 px</strong>). Keeps jewelry crisp, enables sharp 2.4x zoom, and prevents stretching across phones and desktop monitors.
                       </p>
                     </div>
                     <div className="bg-white/95 p-2.5 rounded-xl border border-brand-border/70 space-y-1">
-                      <strong className="block text-brand-tertiary font-bold flex items-center gap-1">
+                      <strong className="block text-brand-tertiary font-bold flex items-center justify-between">
                         <span>🎬 Video Reels: 9:16 Vertical HD</span>
+                        <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">1080 × 1920 px</span>
                       </strong>
                       <p className="text-[10.5px] text-brand-muted font-light leading-relaxed">
-                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1080 × 1920 px</strong> (MP4/WebM). Plays live try-ons and unboxings in gallery with audio toggle.
+                        Recommended: <strong className="font-semibold text-brand-tertiary font-mono">1080 × 1920 px</strong> (MP4/WebM). Plays live try-on reels and luxury unboxings smoothly in product modals.
                       </p>
                     </div>
                   </div>
@@ -1045,12 +1095,17 @@ export default function AdminProductsView({ currentUser }) {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <span className="font-semibold text-brand-tertiary">Gallery Media (Photos & Video Reels)</span>
-                    <p className="text-[10.5px] text-brand-muted mt-0.5">Drag tiles to reorder · Supports square photos & vertical video reels · First photo = storefront primary</p>
+                    <span className="font-semibold text-brand-tertiary flex items-center gap-1.5">
+                      <span>Gallery Media (Photos & Video Reels)</span>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Target: 1200 × 1200 px
+                      </span>
+                    </span>
+                    <p className="text-[10.5px] text-brand-muted mt-0.5">Drag tiles to reorder · Recommended: <strong className="font-mono text-brand-tertiary">1200 × 1200 px</strong> (Min: 1000 × 1000 px) · First photo = storefront primary</p>
                   </div>
-                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-brand-surface hover:bg-brand-primary-light text-brand-primary border border-brand-border text-xs font-semibold transition-colors shrink-0">
+                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold transition-all shadow-xs shrink-0 active:scale-95">
                     <UploadCloud className="w-4 h-4" />
-                    <span>{uploadingMedia ? 'Uploading...' : 'Upload Media File'}</span>
+                    <span>{uploadingMedia ? 'Uploading...' : 'Upload Media (1200×1200 px)'}</span>
                     <input
                       type="file" accept="image/*,video/mp4,video/quicktime,video/webm"
                       onChange={handleFileUpload} className="hidden" disabled={uploadingMedia}

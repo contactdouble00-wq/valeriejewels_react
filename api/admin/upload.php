@@ -63,10 +63,10 @@ try {
     }
 
     $isVideo = str_starts_with($mime, 'video/');
-    $maxSize = $isVideo ? (30 * 1024 * 1024) : (5 * 1024 * 1024); // 30MB video, 5MB image
+    $maxSize = $isVideo ? (50 * 1024 * 1024) : (15 * 1024 * 1024); // 50MB video, 15MB high-res studio image
 
     if ($file['size'] > $maxSize) {
-        $maxMb = $isVideo ? '30MB' : '5MB';
+        $maxMb = $isVideo ? '50MB' : '15MB';
         ApiResponse::error("File exceeds maximum allowed size of {$maxMb}", 422);
     }
 
@@ -93,18 +93,34 @@ try {
     $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1:8000';
     $publicUrl = "{$protocol}://{$host}/api/uploads/{$filename}";
 
+    // Detect exact image resolution (width x height)
+    $dimensions = null;
+    if (!$isVideo && function_exists('getimagesize')) {
+        $imgInfo = @getimagesize($destination);
+        if ($imgInfo && !empty($imgInfo[0]) && !empty($imgInfo[1])) {
+            $dimensions = [
+                'width'      => $imgInfo[0],
+                'height'     => $imgInfo[1],
+                'resolution' => "{$imgInfo[0]} × {$imgInfo[1]} px",
+                'is_hd'      => ($imgInfo[0] >= 1000 && $imgInfo[1] >= 1000),
+            ];
+        }
+    }
+
     AdminAuth::logActivity($adminUser['id'], 'upload_media', 'media', $filename, [
-        'mime'      => $mime,
-        'size_kb'   => round($file['size'] / 1024, 1),
-        'is_video'  => $isVideo,
+        'mime'       => $mime,
+        'size_kb'    => round($file['size'] / 1024, 1),
+        'is_video'   => $isVideo,
+        'dimensions' => $dimensions ? $dimensions['resolution'] : null,
     ]);
 
     ApiResponse::success([
-        'filename' => $filename,
-        'url'      => $publicUrl,
-        'mime'     => $mime,
-        'is_video' => $isVideo,
-        'size'     => $file['size'],
+        'filename'   => $filename,
+        'url'        => $publicUrl,
+        'mime'       => $mime,
+        'is_video'   => $isVideo,
+        'size'       => $file['size'],
+        'dimensions' => $dimensions,
     ], 'File uploaded successfully', 201);
 
 } catch (Throwable $e) {
