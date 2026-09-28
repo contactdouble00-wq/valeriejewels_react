@@ -9,6 +9,7 @@ import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
 import { useSiteContent } from '../context/SiteContentContext';
+import { trackPixel } from '../utils/pixel';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -49,6 +50,19 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     window.addEventListener('valerie_payment_settings_updated', onSettingsUpdate);
     return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
   }, []);
+
+  // Track Meta Pixel ViewContent event
+  useEffect(() => {
+    if (product && product.id) {
+      trackPixel('ViewContent', {
+        content_name: product.name,
+        content_ids: [product.id],
+        content_type: 'product',
+        value: Number(selectedVariant?.price || product.price || 0),
+        currency: 'INR',
+      });
+    }
+  }, [product?.id]);
 
   const videoRefMobile = useRef(null);
   const videoRefDesktop = useRef(null);
