@@ -342,6 +342,18 @@ export const adminApi = {
     return res.data;
   },
 
+  async bulkDeleteOrders(orderIds) {
+    const res = await request('/admin/orders.php?action=bulk_delete', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'bulk_delete',
+        order_ids: orderIds,
+        _method: 'DELETE',
+      }),
+    });
+    return res.data;
+  },
+
   // Customers & RTO
   async getCustomers(params = {}) {
     const qs = new URLSearchParams(params).toString();

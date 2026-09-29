@@ -67,6 +67,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Bulk Order Selection & Deletion Dialog
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const isStaff = currentUser?.role === 'staff';
 
   const showToast = (msg) => {
@@ -86,10 +91,57 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         jhumka_only: jhumkaOnly ? 1 : 0,
       });
       setOrders(res || []);
+      if (res && Array.isArray(res)) {
+        const validIds = new Set(res.map((o) => o.id));
+        setSelectedOrderIds((prev) => prev.filter((id) => validIds.has(id)));
+      }
     } catch (err) {
       showToast(err.message || 'Failed to fetch orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Bulk Selection Helpers
+  const isAllSelected = orders.length > 0 && orders.every((o) => selectedOrderIds.includes(o.id));
+  const isSomeSelected = selectedOrderIds.length > 0 && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(orders.map((o) => o.id));
+    }
+  };
+
+  const handleToggleSelectOrder = (orderId) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedOrderIds([]);
+  };
+
+  const confirmBulkDeleteOrders = async () => {
+    if (selectedOrderIds.length === 0) return;
+    try {
+      setBulkDeleting(true);
+      const res = await adminApi.bulkDeleteOrders(selectedOrderIds);
+      const count = res?.deleted_count || selectedOrderIds.length;
+      showToast(`${count} ${count === 1 ? 'order' : 'orders'} deleted permanently`);
+      setOrders((prev) => prev.filter((o) => !selectedOrderIds.includes(o.id)));
+      if (selectedOrder && selectedOrderIds.includes(selectedOrder.id)) {
+        setSelectedOrder(null);
+      }
+      setSelectedOrderIds([]);
+      setBulkDeleteModalOpen(false);
+      loadOrders();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete selected orders');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -435,12 +487,63 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         </div>
       </div>
 
+      {/* Multi-Select Batch Action Banner */}
+      {selectedOrderIds.length > 0 && (
+        <div className="bg-[#26153D] text-white rounded-2xl p-3.5 px-4 shadow-luxury flex items-center justify-between flex-wrap gap-3 animate-fade-in border border-purple-900/40">
+          <div className="flex items-center space-x-3">
+            <span className="w-7 h-7 rounded-xl bg-purple-500/30 border border-purple-400/40 text-purple-200 font-mono font-bold flex items-center justify-center text-xs">
+              {selectedOrderIds.length}
+            </span>
+            <span className="text-xs font-semibold text-purple-100">
+              {selectedOrderIds.length} of {orders.length} {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
+            </span>
+            <span className="text-white/30 hidden sm:inline">|</span>
+            <button
+              type="button"
+              onClick={handleToggleSelectAll}
+              className="text-xs text-purple-300 hover:text-white underline cursor-pointer font-medium"
+            >
+              {isAllSelected ? 'Deselect All' : `Select All Visible (${orders.length})`}
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setBulkDeleteModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Selected Junk Orders ({selectedOrderIds.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
               <tr>
+                <th className="py-3.5 px-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    aria-label="Select all orders"
+                    title={isAllSelected ? "Deselect all orders" : "Select all orders"}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-[#8366B0]"
+                  />
+                </th>
                 <th className="py-3.5 px-4">Order # & Tags</th>
                 <th className="py-3.5 px-4">Customer</th>
                 <th className="py-3.5 px-4">Payment Breakdown</th>
@@ -452,19 +555,32 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             <tbody className="divide-y divide-brand-border/60">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-brand-muted">
+                  <td colSpan={7} className="py-12 text-center text-brand-muted">
                     Loading orders...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-brand-muted">
+                  <td colSpan={7} className="py-12 text-center text-brand-muted">
                     No orders found.
                   </td>
                 </tr>
               ) : (
                 orders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#FAF8FC] transition-colors">
+                  <tr 
+                    key={ord.id} 
+                    className={`transition-colors ${selectedOrderIds.includes(ord.id) ? 'bg-purple-50/70' : 'hover:bg-[#FAF8FC]'}`}
+                  >
+                    {/* Selection Checkbox */}
+                    <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrderIds.includes(ord.id)}
+                        onChange={() => handleToggleSelectOrder(ord.id)}
+                        aria-label={`Select order #${ord.order_number}`}
+                        className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-[#8366B0]"
+                      />
+                    </td>
                     {/* Order Number & Item Preview */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-start space-x-3">
@@ -1445,6 +1561,91 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{deleting ? 'Deleting Order...' : 'Confirm Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BULK DELETE ORDERS PERMANENT CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {bulkDeleteModalOpen && selectedOrderIds.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-brand-border shadow-luxury space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center space-x-3 text-rose-600">
+              <div className="p-2.5 bg-rose-50 rounded-2xl border border-rose-100 shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                  Delete {selectedOrderIds.length} Selected Junk Orders
+                </h3>
+                <span className="text-[11px] text-rose-600 font-semibold block">
+                  ⚠️ Irreversible Permanent Bulk Purge
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-brand-muted leading-relaxed">
+              You are about to permanently delete <strong className="text-brand-tertiary">{selectedOrderIds.length} selected {selectedOrderIds.length === 1 ? 'order' : 'orders'}</strong>. All customer details, items, dispatch tracking events, and email logs will be completely purged from the database.
+            </p>
+
+            {/* List preview of selected orders to prevent accidental mistakes */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-caps text-brand-muted px-1">
+                <span>Orders to be purged ({selectedOrderIds.length})</span>
+                <span>Review carefully</span>
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-2xl border border-brand-border bg-[#FAF8FC] p-2 space-y-1 divide-y divide-brand-border/40">
+                {orders
+                  .filter((o) => selectedOrderIds.includes(o.id))
+                  .map((o) => (
+                    <div key={o.id} className="pt-1.5 first:pt-0 flex items-center justify-between text-xs px-2 py-1">
+                      <div className="truncate max-w-[240px]">
+                        <span className="font-mono font-bold text-brand-primary">#{o.order_number}</span>
+                        <span className="text-brand-tertiary ml-2 font-medium">{o.customer_name || 'Guest'}</span>
+                        <span className="text-[10px] text-brand-muted ml-1.5 font-mono">({o.customer_phone})</span>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-white border border-brand-border text-brand-tertiary uppercase">
+                          {o.order_status}
+                        </span>
+                        <span className="font-bold text-brand-tertiary">
+                          ₹{Number(o.total_amount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="bg-rose-50/80 rounded-2xl p-3 border border-rose-200/80 text-[11px] text-rose-800 space-y-1">
+              <p className="font-bold flex items-center gap-1">
+                <span>🛡️ Protection Safeguard</span>
+              </p>
+              <p>
+                Double-check the order list above to ensure you are not deleting genuine paid customer orders. Once deleted, these records cannot be recovered.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBulkDeleteModalOpen(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel / Keep Orders
+              </button>
+              <button
+                type="button"
+                onClick={confirmBulkDeleteOrders}
+                disabled={bulkDeleting}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{bulkDeleting ? `Deleting ${selectedOrderIds.length} Orders...` : `Yes, Delete ${selectedOrderIds.length} Orders`}</span>
               </button>
             </div>
           </div>

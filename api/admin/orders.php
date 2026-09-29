@@ -266,69 +266,109 @@ if ($action === 'sync_shiprocket') {
     }
 }
 
-// Handle Order Deletion (DELETE or POST?action=delete)
-$isDeleteAction = ($method === 'DELETE')
-    || ($method === 'POST' && in_array($action, ['delete', 'delete_order'], true))
-    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_order'], true))
+// Handle Order Deletion (Single or Bulk)
+$isBulkDelete = ($action === 'bulk_delete') 
+    || (($input['action'] ?? '') === 'bulk_delete')
+    || !empty($input['order_ids']);
+
+$isDeleteAction = $isBulkDelete
+    || ($method === 'DELETE')
+    || ($method === 'POST' && in_array($action, ['delete', 'delete_order', 'bulk_delete'], true))
+    || ($method === 'POST' && in_array($input['action'] ?? '', ['delete', 'delete_order', 'bulk_delete'], true))
     || ($method === 'POST' && ($input['_method'] ?? '') === 'DELETE');
 
 if ($isDeleteAction) {
-    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
-    if ($orderId <= 0) {
-        ApiResponse::error('Valid Order ID is required for deletion', 422);
+    // Determine IDs to delete
+    $rawIds = [];
+    if (!empty($input['order_ids']) && is_array($input['order_ids'])) {
+        $rawIds = $input['order_ids'];
+    } elseif (!empty($_GET['order_ids'])) {
+        $rawIds = is_array($_GET['order_ids']) ? $_GET['order_ids'] : explode(',', (string)$_GET['order_ids']);
+    } else {
+        $singleId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+        if ($singleId > 0) {
+            $rawIds = [$singleId];
+        }
     }
 
-    // Verify order exists
-    $stmt = $pdo->prepare("SELECT id, order_number, customer_name, customer_email, total_amount, order_status FROM orders WHERE id = ?");
-    $stmt->execute([$orderId]);
-    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    $orderIds = array_values(array_filter(array_unique(array_map('intval', $rawIds)), function($id) {
+        return $id > 0;
+    }));
 
-    if (!$order) {
-        ApiResponse::error('Order not found or has already been deleted', 404);
+    if (empty($orderIds)) {
+        ApiResponse::error('Valid Order ID(s) are required for deletion', 422);
     }
 
     try {
         $pdo->beginTransaction();
 
-        // 1. Delete associated tracking events
-        $delTrk = $pdo->prepare("DELETE FROM order_tracking_events WHERE order_id = ?");
-        $delTrk->execute([$orderId]);
+        $deletedCount = 0;
+        $deletedOrders = [];
 
-        // 2. Delete associated email logs
-        $delEmails = $pdo->prepare("DELETE FROM email_logs WHERE order_id = ?");
-        $delEmails->execute([$orderId]);
-
-        // 3. Delete associated order items
+        // Prepare statements for reusability & maximum performance
+        $stmtFind = $pdo->prepare("SELECT id, order_number, customer_name, customer_email, total_amount, order_status FROM orders WHERE id = ?");
+        $delTrk   = $pdo->prepare("DELETE FROM order_tracking_events WHERE order_id = ?");
+        $delEmails= $pdo->prepare("DELETE FROM email_logs WHERE order_id = ?");
         $delItems = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
-        $delItems->execute([$orderId]);
-
-        // 4. Delete the order record itself
         $delOrder = $pdo->prepare("DELETE FROM orders WHERE id = ?");
-        $delOrder->execute([$orderId]);
 
-        // 5. Audit trail in admin activity log
-        AdminAuth::logActivity($adminUser['id'], 'admin_delete_order', 'order', $orderId, [
-            'order_number'  => $order['order_number'],
-            'customer_name' => $order['customer_name'],
-            'customer_email'=> $order['customer_email'],
-            'total_amount'  => $order['total_amount'],
-            'order_status'  => $order['order_status'],
-        ]);
+        foreach ($orderIds as $ordId) {
+            $stmtFind->execute([$ordId]);
+            $ord = $stmtFind->fetch(PDO::FETCH_ASSOC);
+            if (!$ord) {
+                continue; // Skip already deleted or nonexistent
+            }
+
+            // 1. Delete associated tracking events
+            $delTrk->execute([$ordId]);
+
+            // 2. Delete associated email logs
+            $delEmails->execute([$ordId]);
+
+            // 3. Delete associated order items
+            $delItems->execute([$ordId]);
+
+            // 4. Delete the order record itself
+            $delOrder->execute([$ordId]);
+
+            // 5. Audit trail in admin activity log
+            AdminAuth::logActivity($adminUser['id'], 'admin_delete_order', 'order', $ordId, [
+                'order_number'  => $ord['order_number'],
+                'customer_name' => $ord['customer_name'],
+                'customer_email'=> $ord['customer_email'],
+                'total_amount'  => $ord['total_amount'],
+                'order_status'  => $ord['order_status'],
+            ]);
+
+            $deletedCount++;
+            $deletedOrders[] = [
+                'id' => $ordId,
+                'order_number' => $ord['order_number']
+            ];
+        }
 
         $pdo->commit();
 
+        if ($deletedCount === 0) {
+            ApiResponse::error('No orders found to delete or they were already deleted', 404);
+        }
+
+        $msg = count($deletedOrders) === 1
+            ? "Order #{$deletedOrders[0]['order_number']} deleted successfully."
+            : "Successfully deleted {$deletedCount} orders.";
+
         ApiResponse::success([
-            'order_id'     => $orderId,
-            'order_number' => $order['order_number'],
-            'deleted'      => true,
-        ], "Order #{$order['order_number']} deleted successfully.");
+            'deleted_count'  => $deletedCount,
+            'deleted_orders' => $deletedOrders,
+            'deleted_ids'    => array_column($deletedOrders, 'id'),
+        ], $msg);
 
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        error_log('Failed to delete order: ' . $e->getMessage());
-        ApiResponse::error('Failed to delete order: ' . $e->getMessage(), 500);
+        error_log('Failed to delete orders: ' . $e->getMessage());
+        ApiResponse::error('Failed to delete orders: ' . $e->getMessage(), 500);
     }
 }
 
