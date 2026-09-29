@@ -168,6 +168,7 @@ if ($method === 'GET') {
     $search = trim($_GET['search'] ?? '');
     $status = trim($_GET['status'] ?? '');
     $paymentMethod = trim($_GET['payment_method'] ?? '');
+    $paymentStatus = trim($_GET['payment_status'] ?? '');
     $riskTier = trim($_GET['risk_tier'] ?? '');
     $jhumkaOnly = !empty($_GET['jhumka_only']);
 
@@ -188,6 +189,17 @@ if ($method === 'GET') {
     if ($paymentMethod !== '' && $paymentMethod !== 'all') {
         $where[] = "o.payment_type = ?";
         $params[] = $paymentMethod;
+    }
+
+    if ($paymentStatus !== '' && $paymentStatus !== 'all') {
+        if ($paymentStatus === 'paid_confirmed') {
+            $where[] = "(o.payment_status IN ('paid', 'partial_paid') OR o.order_status = 'confirmed')";
+        } elseif ($paymentStatus === 'unpaid_pending') {
+            $where[] = "(o.payment_status = 'pending' AND o.order_status = 'pending')";
+        } else {
+            $where[] = "o.payment_status = ?";
+            $params[] = $paymentStatus;
+        }
     }
 
     if ($riskTier !== '' && $riskTier !== 'all') {
