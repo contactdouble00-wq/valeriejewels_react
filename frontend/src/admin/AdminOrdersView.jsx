@@ -212,51 +212,51 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     switch (status) {
       case 'delivered':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <span>✓</span>
-            <span className="capitalize">Delivered</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>Delivered</span>
           </span>
         );
       case 'shipped':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-            <span>✈</span>
-            <span className="capitalize">Shipped</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+            <span>Shipped</span>
           </span>
         );
       case 'on_hold':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-            <span>⏱</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             <span>On Hold</span>
           </span>
         );
       case 'failed':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-            <span>✕</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
             <span>Failed</span>
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-300">
-            <span>—</span>
-            <span className="capitalize">Cancelled</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-50 text-gray-600 border border-gray-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+            <span>Cancelled</span>
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
-            <span>⏳</span>
-            <span>Incomplete / Pending</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50/80 text-amber-700 border border-amber-200/70 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span>Pending</span>
           </span>
         );
       case 'confirmed':
       default:
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
-            <span>✦</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-800 border border-purple-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
             <span className="capitalize">{status || 'Confirmed'}</span>
           </span>
         );
@@ -269,45 +269,45 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
     if (pStatus === 'paid') {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-          <span>✓</span>
-          <span>Payment Received</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Paid</span>
         </span>
       );
     }
 
     if (pStatus === 'partial_paid') {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
-          <span>✓</span>
-          <span>Advance Paid (₹{Number(ord.amount_paid_upfront)})</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Advance Paid</span>
         </span>
       );
     }
 
     if (pType === 'cod') {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-50 text-blue-800 border border-blue-200">
-          <span>💵</span>
-          <span>Cash On Delivery</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/80 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+          <span>COD</span>
         </span>
       );
     }
 
     if (pStatus === 'failed') {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-          <span>✕</span>
-          <span>Payment Failed</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+          <span>Failed</span>
         </span>
       );
     }
 
-    // Default: payment is pending / not received
+    // Default: unpaid / pending checkout
     return (
-      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Buyer opened payment gateway but did not complete the transaction">
-        <span>⚠️</span>
-        <span>Payment Not Received</span>
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap" title="Customer opened checkout but did not complete payment on gateway">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+        <span>Unpaid</span>
       </span>
     );
   };
@@ -542,34 +542,28 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </td>
 
                     {/* Payment Breakdown & Status */}
-                    <td className="py-3.5 px-4 space-y-1">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="font-semibold text-brand-tertiary">
-                          ₹{Number(ord.total_amount).toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-[10px] capitalize text-brand-muted bg-gray-100 px-1.5 py-0.2 rounded font-medium">
-                          {ord.payment_type?.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div>
-                        {renderPaymentStatusBadge(ord)}
-                      </div>
-                      {ord.payment_type === 'partial' && (
-                        (ord.payment_status === 'partial_paid' || ord.payment_status === 'paid') ? (
-                          <div className="text-[10px] text-emerald-700 font-medium">
-                            Paid: ₹{Number(ord.amount_paid_upfront)} • Due at Door: ₹{Number(ord.amount_due_on_delivery)}
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-rose-600 font-medium">
-                            Advance: ₹{Number(ord.amount_paid_upfront)} (Unpaid) • Due: ₹{Number(ord.amount_due_on_delivery)}
-                          </div>
-                        )
-                      )}
-                      {ord.fastrr_order_id && (
-                        <div className="text-[9px] font-mono text-brand-muted truncate max-w-[130px]" title={`Txn: ${ord.fastrr_order_id}`}>
-                          Txn: {ord.fastrr_order_id}
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-brand-tertiary">
+                            ₹{Number(ord.total_amount).toLocaleString('en-IN')}
+                          </span>
+                          {renderPaymentStatusBadge(ord)}
                         </div>
-                      )}
+                        <div className="text-[11px] text-brand-muted">
+                          {ord.payment_type === 'partial' ? (
+                            (ord.payment_status === 'partial_paid' || ord.payment_status === 'paid') ? (
+                              <span className="text-emerald-700 font-medium">₹{Number(ord.amount_paid_upfront)} advance paid · ₹{Number(ord.amount_due_on_delivery)} due</span>
+                            ) : (
+                              <span>Partial COD (₹{Number(ord.amount_paid_upfront)} advance)</span>
+                            )
+                          ) : ord.payment_type === 'cod' ? (
+                            <span>Cash on Delivery</span>
+                          ) : (
+                            <span>Prepaid</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     {/* Fulfillment Status */}
@@ -653,7 +647,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           type="button"
                           onClick={() => {
                             if (ord.payment_status === 'pending' && ord.payment_type !== 'cod') {
-                              if (!window.confirm(`⚠️ PAYMENT WARNING:\n\nPayment for Order #${ord.order_number} has NOT been received yet (Status: Unpaid / Abandoned).\n\nAre you sure you want to push this unpaid order to Shiprocket?`)) {
+                              if (!window.confirm(`Payment for Order #${ord.order_number} has not been received yet (Status: Unpaid). Are you sure you want to push this unpaid order to Shiprocket?`)) {
                                 return;
                               }
                             }
@@ -662,7 +656,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           disabled={syncingSrId === ord.id}
                           title={
                             ord.payment_status === 'pending' && ord.payment_type !== 'cod'
-                              ? 'Warning: Payment has not been received yet'
+                              ? 'Payment pending. Confirm payment before shipping.'
                               : (ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
                                   ? 'Re-sync with Shiprocket live panel'
                                   : 'Push order directly to Shiprocket live panel')
@@ -670,9 +664,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
                             ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
                               ? 'bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200 text-emerald-700'
-                              : ord.payment_status === 'pending' && ord.payment_type !== 'cod'
-                              ? 'bg-rose-50 hover:bg-rose-500 hover:text-white border-rose-200 text-rose-700'
-                              : 'bg-amber-50 hover:bg-amber-500 hover:text-white border-amber-200 text-amber-800'
+                              : 'bg-white hover:bg-gray-100 border-brand-border text-brand-tertiary'
                           }`}
                         >
                           <Truck className={`w-3 h-3 ${syncingSrId === ord.id ? 'animate-bounce' : ''}`} />
@@ -681,8 +673,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               ? 'Syncing...'
                               : (ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
                                   ? 'SR Synced'
-                                  : ord.payment_status === 'pending' && ord.payment_type !== 'cod'
-                                  ? 'Push SR (Unpaid)'
                                   : 'Push SR')}
                           </span>
                         </button>
