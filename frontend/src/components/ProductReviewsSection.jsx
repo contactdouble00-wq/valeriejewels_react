@@ -229,37 +229,39 @@ export default function ProductReviewsSection({
               ))}
             </div>
             <span className="text-[11px] text-brand-muted mt-1 font-light">
-              Based on {reviewsCountNumber} verified ratings
+              Verified Atelier Rating
             </span>
           </div>
         </div>
 
         {/* Center / Right: Star Filter Badges */}
-        <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-end text-xs">
-          <button
-            onClick={() => setSelectedStarFilter(null)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-              selectedStarFilter === null
-                ? 'bg-brand-primary text-white shadow-xs'
-                : 'bg-white border border-brand-border text-brand-muted hover:text-brand-tertiary'
-            }`}
-          >
-            All Reviews ({reviews.length})
-          </button>
-          {[5, 4, 3].map((star) => (
+        {reviews.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-end text-xs">
             <button
-              key={star}
-              onClick={() => setSelectedStarFilter(selectedStarFilter === star ? null : star)}
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center space-x-1 transition-all ${
-                selectedStarFilter === star
-                  ? 'bg-amber-500 text-white shadow-xs'
+              onClick={() => setSelectedStarFilter(null)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                selectedStarFilter === null
+                  ? 'bg-brand-primary text-white shadow-xs'
                   : 'bg-white border border-brand-border text-brand-muted hover:text-brand-tertiary'
               }`}
             >
-              <span>{star} ★</span>
+              All Reviews
             </button>
-          ))}
-        </div>
+            {[5, 4, 3].map((star) => (
+              <button
+                key={star}
+                onClick={() => setSelectedStarFilter(selectedStarFilter === star ? null : star)}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center space-x-1 transition-all ${
+                  selectedStarFilter === star
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'bg-white border border-brand-border text-brand-muted hover:text-brand-tertiary'
+                }`}
+              >
+                <span>{star} ★</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Customer Photo Gallery Slider */}
@@ -268,7 +270,7 @@ export default function ProductReviewsSection({
           <div className="flex items-center justify-between">
             <span className="font-caps uppercase tracking-wider text-brand-muted text-[10.5px] font-bold flex items-center space-x-1">
               <Camera className="w-3 h-3 text-brand-primary" />
-              <span>Real Customer Photos ({allCustomerPhotos.length})</span>
+              <span>Real Customer Photos</span>
             </span>
             <span className="text-[10px] text-brand-muted font-light">Tap photo to enlarge</span>
           </div>
@@ -298,8 +300,9 @@ export default function ProductReviewsSection({
       {/* Reviews Cards List */}
       <div className="space-y-3">
         {displayedReviews.length === 0 ? (
-          <div className="p-8 text-center bg-[#FAF8FC] rounded-2xl border border-brand-border text-brand-muted text-xs">
-            No reviews match the selected filter.
+          <div className="p-8 text-center bg-[#FAF8FC] rounded-2xl border border-brand-border text-brand-muted text-xs space-y-2">
+            <p className="font-medium text-brand-tertiary">No reviews yet for this piece</p>
+            <p className="font-light">Be the first to share your styling feedback and photo!</p>
           </div>
         ) : (
           displayedReviews.map((rev) => (

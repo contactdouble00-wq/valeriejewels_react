@@ -108,7 +108,6 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             const displayRating = product.rating_avg !== null && product.rating_avg !== undefined && Number(product.rating_avg) > 0
               ? Number(product.rating_avg).toFixed(1)
               : (product.rating ? Number(product.rating).toFixed(1) : '4.9');
-            const reviewCount = product.review_count || product.rating_summary?.reviews_count || 128;
             return (
               <div className="flex items-center space-x-1 text-amber-500">
                 {[...Array(5)].map((_, i) => (
@@ -121,9 +120,6 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
                 ))}
                 <span className="text-[10px] sm:text-xs text-brand-muted ml-1 font-medium">
                   {displayRating}
-                </span>
-                <span className="text-[9.5px] sm:text-[10.5px] text-brand-muted/70 font-light">
-                  ({reviewCount})
                 </span>
               </div>
             );

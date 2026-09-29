@@ -783,7 +783,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     />
                   ))}
                   <span className="text-xs text-brand-muted ml-1 font-medium">
-                    {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★ ({product.review_count || product.rating_summary?.reviews_count || 128})
+                    {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★
                   </span>
                 </div>
               </div>
@@ -1324,7 +1324,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       />
                     ))}
                     <span className="text-xs text-brand-muted ml-1 font-medium">
-                      {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★ ({product.review_count || product.rating_summary?.reviews_count || 128} reviews)
+                      {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★
                     </span>
                   </div>
                 </div>
