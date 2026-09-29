@@ -754,6 +754,7 @@ class Database {
             }
 
             $coupons = [
+                ['VALERIE10', 'fixed', 50, 0, 50, 10000],
                 ['WELCOME10', 'percentage', 10, 999, 500, 1000],
                 ['FIRSTORDER', 'fixed', 200, 1299, null, 500],
                 ['VALERIEVIP', 'percentage', 15, 1999, 1000, 200],

@@ -296,7 +296,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
         if (isMounted) {
           // Client-side fallback calculation if offline
           const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-          const disc = couponApplied ? Math.min(subtotal * 0.1, 200) : 0;
+          const disc = couponApplied ? (couponCode === 'VALERIE10' ? 50 : Math.min(subtotal * 0.1, 200)) : 0;
           const finalTot = Math.max(0, subtotal - disc);
           const maxPrepDisc = Number(paymentSettings.prepaid_discount ?? 50);
           const prepDisc = finalTot > 1 ? Math.min(maxPrepDisc, finalTot - 1) : 0;
@@ -314,10 +314,11 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
             is_free_shipping: true,
             shipping_fee: 0,
             cod_shipping_fee: codShipping,
+            applied_coupon: couponApplied ? { code: couponCode, amount_saved: disc } : null,
             payment_splits: {
               full_prepaid: {
                 title: 'Prepaid (UPI / Cards / NetBanking)',
-                badge: prepDisc > 0 ? `Save ₹${prepDisc} Extra Instant Discount` : 'Free Delivery Included',
+                badge: prepDisc > 0 ? `₹${prepDisc} OFF because of Prepaid Order` : 'Free Delivery Included',
                 incentive_discount: prepDisc,
                 shipping_fee: 0,
                 amount_due_now: prepaidDueNow,
@@ -326,7 +327,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               partial: {
                 enabled: paymentSettings.partial_cod_enabled,
                 title: 'Partial COD (Smart Split)',
-                badge: `Pay ₹${partialDeposit} Deposit Now, Rest on Delivery`,
+                badge: `Pay ₹${partialDeposit} Deposit Now • Rest on Delivery (Prepaid discount not applicable)`,
+                incentive_discount: 0,
                 shipping_fee: 0,
                 amount_due_now: partialDeposit,
                 amount_due_on_delivery: partialBalance,
@@ -1210,7 +1212,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     type="text"
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    placeholder={couponApplied ? couponCode : "Enter coupon code"}
+                    placeholder={couponApplied ? couponCode : "Enter coupon code (e.g. VALERIE10)"}
                     className="w-full pl-9 pr-3 py-2 bg-transparent text-xs font-bold tracking-wider text-gray-900 focus:outline-none uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-400 font-mono"
                   />
                 </div>
@@ -1221,7 +1223,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       setCouponApplied(false);
                       setCouponInput('');
                     } else {
-                      setCouponCode(couponInput || 'VALERIE10');
+                      const codeToApply = (couponInput.trim() || 'VALERIE10').toUpperCase();
+                      setCouponCode(codeToApply);
                       setCouponApplied(true);
                     }
                   }}
@@ -1235,10 +1238,15 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 </button>
               </div>
               {couponApplied && (
-                <p className="text-[11px] text-emerald-700 font-medium pt-2 pl-1 flex items-center gap-1 animate-fade-in">
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Coupon {couponCode} applied! Extra savings added to your order.</span>
-                </p>
+                <div className="pt-2 pl-1 space-y-1 animate-fade-in">
+                  <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Coupon {couponCode} applied: Flat ₹{calcData?.discount_amount || 50} discount added!</span>
+                  </p>
+                  <p className="text-[10px] text-emerald-600/90 font-medium pl-5">
+                    💡 Extra ₹{prepaidDiscount} off will be applied if you pay online (Prepaid)!
+                  </p>
+                </div>
               )}
             </div>
 
@@ -1348,7 +1356,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                         <Smartphone className="w-4 h-4 text-gray-700" />
                         <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
                       </div>
-                      <span className="text-sm font-bold text-gray-900">UPI payment</span>
+                      <div>
+                        <span className="text-sm font-bold text-gray-900 block">UPI payment</span>
+                        <span className="text-[10px] text-emerald-700 font-semibold block">Flat ₹{prepaidDiscount} off for prepaid order</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
@@ -1361,7 +1372,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                   <div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E7F8EE] text-[#0A803D] text-xs font-bold border border-[#0A803D]/20">
                       <Percent className="w-3.5 h-3.5 text-[#0A803D]" />
-                      <span>{prepaidDiscount > 0 ? `Pay online and save ₹${prepaidDiscount}` : 'Free Delivery Included'}</span>
+                      <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} OFF because of prepaid order (Pay online & save flat ₹${prepaidDiscount})` : 'Free Delivery Included'}</span>
                     </span>
                   </div>
 
@@ -1479,7 +1490,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
+                          <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
@@ -1522,7 +1533,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
+                          <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
@@ -1565,7 +1576,7 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                       <div className="mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                           <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
-                          <span>{prepaidDiscount > 0 ? `Save ₹${prepaidDiscount}` : 'Free Delivery'}</span>
+                          <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
                         </span>
                       </div>
                     </div>
@@ -1617,6 +1628,9 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                           </div>
                           <p className="text-[10.5px] text-gray-500">
                             Pay ₹{partialDeposit}.00 Token Deposit Now • Balance ₹{partialBalance.toLocaleString('en-IN')}.00 on Delivery
+                          </p>
+                          <p className="text-[9.5px] text-gray-400 mt-0.5">
+                            {couponApplied ? `Coupon ${couponCode} (-₹${calcData?.discount_amount || 50}) applied • Total ₹${(partialDeposit + partialBalance).toLocaleString('en-IN')}.00` : `Total ₹${(partialDeposit + partialBalance).toLocaleString('en-IN')}.00`} • Note: ₹50 prepaid discount is only valid on 100% online payment.
                           </p>
                         </div>
                       </div>
@@ -1747,43 +1761,63 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                     ))}
                   </div>
 
-                  <div className="pt-2 border-t border-gray-150 space-y-1 text-xs text-gray-600">
+                  <div className="pt-2 border-t border-gray-150 space-y-1.5 text-xs text-gray-600">
                     <div className="flex justify-between">
                       <span>Total MRP</span>
                       <span className="text-gray-400 line-through">₹{totalMrp.toLocaleString('en-IN')}.00</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Store Price</span>
-                      <span>₹{subtotal.toLocaleString('en-IN')}.00</span>
+                      <span className="font-semibold text-gray-800">₹{subtotal.toLocaleString('en-IN')}.00</span>
                     </div>
                     {couponApplied && (
                       <div className="flex justify-between text-emerald-700 font-semibold">
-                        <span>Coupon Discount</span>
-                        <span>- ₹{calcData?.discount_amount || 0}</span>
+                        <span>Coupon Discount ({couponCode})</span>
+                        <span>- ₹{(calcData?.discount_amount !== undefined ? calcData.discount_amount : 50).toLocaleString('en-IN')}.00</span>
                       </div>
                     )}
                     {paymentType === 'full_prepaid' && prepaidDiscount > 0 && (
                       <div className="flex justify-between text-emerald-700 font-semibold">
-                        <span>Prepaid Instant Discount</span>
-                        <span>- ₹{prepaidDiscount}</span>
+                        <div>
+                          <span>Prepaid Order Discount</span>
+                          <span className="text-[10px] text-emerald-600 font-normal block">₹{prepaidDiscount} off because of prepaid order</span>
+                        </div>
+                        <span>- ₹{prepaidDiscount.toLocaleString('en-IN')}.00</span>
+                      </div>
+                    )}
+                    {paymentType === 'partial' && (
+                      <div className="flex justify-between text-gray-500 text-[11px]">
+                        <span>Prepaid Online Discount</span>
+                        <span className="text-gray-400 italic">₹0 (Prepaid discount not applicable on COD)</span>
                       </div>
                     )}
                     <div className="flex justify-between text-emerald-700">
-                      <span>Shipping</span>
+                      <span>Shipping Fee</span>
                       <span className="font-bold uppercase text-[10px]">
                         {paymentType === 'cod' && finalTotal < 999 ? '₹99.00' : 'FREE'}
                       </span>
                     </div>
-                    {paymentType === 'partial' && (
-                      <div className="flex justify-between text-purple-700 font-semibold text-xs">
-                        <span>Balance Due on Delivery</span>
-                        <span>₹{dueOnDelivery.toLocaleString('en-IN')}.00</span>
+                    {paymentType === 'partial' ? (
+                      <>
+                        <div className="flex justify-between text-gray-700 font-medium pt-1.5 border-t border-gray-100">
+                          <span>Total Order Value (after coupon)</span>
+                          <span className="font-bold text-gray-900">₹{(partialDeposit + partialBalance).toLocaleString('en-IN')}.00</span>
+                        </div>
+                        <div className="flex justify-between text-purple-700 font-semibold text-xs">
+                          <span>Balance Due on Delivery (Cash)</span>
+                          <span>₹{dueOnDelivery.toLocaleString('en-IN')}.00</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t border-gray-200 font-extrabold text-sm text-gray-900">
+                          <span>Token Deposit Payable Now</span>
+                          <span className="text-brand-primary">₹{dueNow.toLocaleString('en-IN')}.00</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between pt-2 border-t border-gray-200 font-extrabold text-sm text-gray-900">
+                        <span>Amount Payable Now</span>
+                        <span className="text-brand-primary">₹{dueNow.toLocaleString('en-IN')}.00</span>
                       </div>
                     )}
-                    <div className="flex justify-between pt-2 border-t border-gray-200 font-extrabold text-sm text-gray-900">
-                      <span>{paymentType === 'partial' ? 'Token Deposit Payable Now' : 'Amount Payable Now'}</span>
-                      <span className="text-brand-primary">₹{dueNow.toLocaleString('en-IN')}.00</span>
-                    </div>
                   </div>
                 </div>
               )}
@@ -1899,12 +1933,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
                 </span>
                 {paymentType === 'partial' && (
                   <span className="text-[10.5px] text-purple-700 font-semibold block">
-                    (₹{Math.round(dueOnDelivery).toLocaleString('en-IN')} on delivery)
+                    (₹{Math.round(dueOnDelivery).toLocaleString('en-IN')} on delivery • Total ₹{Math.round(partialDeposit + partialBalance).toLocaleString('en-IN')})
                   </span>
                 )}
-                {paymentType === 'full_prepaid' && totalSavings > 0 && (
-                  <span className="text-[10.5px] text-emerald-600 font-bold">
-                    Save ₹{totalSavings}
+                {paymentType === 'full_prepaid' && (
+                  <span className="text-[10.5px] text-emerald-600 font-bold block">
+                    ₹{prepaidDiscount} off for prepaid order{couponApplied ? ` + ₹${calcData?.discount_amount || 50} coupon` : ''}
                   </span>
                 )}
               </div>

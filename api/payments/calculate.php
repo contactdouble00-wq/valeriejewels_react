@@ -221,7 +221,7 @@ try {
             'full_prepaid' => [
                 'enabled'               => (bool)($payConfig['online_payment_enabled'] ?? true),
                 'title'                 => 'Prepaid (UPI / Cards / NetBanking)',
-                'badge'                 => $prepaidIncentiveDiscount > 0 ? ('Save ₹' . round($prepaidIncentiveDiscount) . ' Extra Instant Discount') : 'Free Delivery Included',
+                'badge'                 => $prepaidIncentiveDiscount > 0 ? ('₹' . round($prepaidIncentiveDiscount) . ' OFF because of Prepaid Order') : 'Free Delivery Included',
                 'incentive_discount'    => $prepaidIncentiveDiscount,
                 'shipping_fee'          => 0.0,
                 'is_free_shipping'      => true,
@@ -231,7 +231,8 @@ try {
             'partial' => [
                 'enabled'               => (bool)$payConfig['partial_cod_enabled'],
                 'title'                 => 'Partial COD (Smart Split)',
-                'badge'                 => 'Free Delivery • Pay ₹' . round($partialDeposit) . ' Deposit Now',
+                'badge'                 => 'Pay ₹' . round($partialDeposit) . ' Deposit Now • Rest on Delivery (Prepaid discount not applicable)',
+                'incentive_discount'    => 0.0,
                 'shipping_fee'          => 0.0,
                 'is_free_shipping'      => true,
                 'amount_due_now'        => $partialDeposit,
