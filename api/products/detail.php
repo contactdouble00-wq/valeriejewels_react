@@ -78,7 +78,7 @@ try {
 
     // 4. Fetch Reviews
     $revStmt = $pdo->prepare("
-        SELECT id, reviewer_name, rating, title, comment, is_verified_buyer, created_at
+        SELECT id, reviewer_name, rating, title, comment, image_url, images, is_verified_buyer, created_at
         FROM reviews
         WHERE product_id = :product_id AND status = 'approved'
         ORDER BY id DESC
@@ -86,12 +86,33 @@ try {
     $revStmt->execute([':product_id' => $productId]);
     $reviews = $revStmt->fetchAll();
 
-    // Aggregate rating
-    $avgRating = 5.0;
-    if (!empty($reviews)) {
+    foreach ($reviews as &$rev) {
+        if (!empty($rev['image_url'])) {
+            $rev['image_url'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $rev['image_url']);
+        }
+        if (!empty($rev['images'])) {
+            $decoded = json_decode($rev['images'], true);
+            if (is_array($decoded)) {
+                $rev['images'] = array_map(function($u) {
+                    return preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $u);
+                }, $decoded);
+            }
+        }
+    }
+    unset($rev);
+
+    // Dynamic rating: product override > review average > category default > 4.9
+    $avgRating = 4.9;
+    if (!empty($product['rating_avg']) && (float)$product['rating_avg'] > 0) {
+        $avgRating = (float)$product['rating_avg'];
+    } elseif (!empty($reviews)) {
         $totalRating = array_sum(array_column($reviews, 'rating'));
         $avgRating = round($totalRating / count($reviews), 1);
     }
+
+    $reviewsCount = !empty($product['review_count']) && (int)$product['review_count'] > 0
+        ? max(count($reviews), (int)$product['review_count'])
+        : (count($reviews) > 0 ? count($reviews) : 128);
 
     // 5. Related Products in same category
     $relStmt = $pdo->prepare("
@@ -101,6 +122,8 @@ try {
             p.slug,
             p.mrp,
             p.price,
+            p.rating_avg,
+            p.review_count,
             ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage,
             COALESCE(
                 (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' LIMIT 1),
@@ -142,15 +165,18 @@ try {
         if (!empty($rel['primary_image'])) {
             $rel['primary_image'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $rel['primary_image']);
         }
+        $rel['rating'] = (!empty($rel['rating_avg']) && (float)$rel['rating_avg'] > 0) ? (float)$rel['rating_avg'] : 4.9;
     }
     unset($rel);
 
     $product['images']           = $images;
     $product['variants']         = $variants;
     $product['reviews']          = $reviews;
+    $product['rating']           = $avgRating;
+    $product['rating_avg']       = $avgRating;
     $product['rating_summary']   = [
         'average_rating' => $avgRating,
-        'reviews_count'  => count($reviews),
+        'reviews_count'  => $reviewsCount,
     ];
     $product['related_products'] = $relatedProducts;
 

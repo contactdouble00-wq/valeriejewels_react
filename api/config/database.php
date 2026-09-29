@@ -160,10 +160,26 @@ class Database {
                 "ALTER TABLE `products` ADD COLUMN `meta_title` VARCHAR(255) DEFAULT NULL AFTER `is_active`",
                 "ALTER TABLE `products` ADD COLUMN `meta_description` TEXT DEFAULT NULL AFTER `meta_title`",
                 "ALTER TABLE `products` ADD COLUMN `video_url` VARCHAR(255) DEFAULT NULL AFTER `meta_description`",
+                "ALTER TABLE `products` ADD COLUMN `rating_avg` DECIMAL(3,2) DEFAULT NULL AFTER `video_url`",
+                "ALTER TABLE `products` ADD COLUMN `review_count` INT UNSIGNED DEFAULT NULL AFTER `rating_avg`",
             ];
             foreach ($productCols as $sql) {
                 try { $pdo->exec($sql); } catch (Throwable $e) {}
             }
+
+            // Ensure reviews table has image columns
+            $reviewCols = [
+                "ALTER TABLE `reviews` ADD COLUMN `image_url` VARCHAR(500) DEFAULT NULL AFTER `comment`",
+                "ALTER TABLE `reviews` ADD COLUMN `images` TEXT DEFAULT NULL AFTER `image_url`",
+            ];
+            foreach ($reviewCols as $sql) {
+                try { $pdo->exec($sql); } catch (Throwable $e) {}
+            }
+
+            // Ensure categories has rating_avg column
+            try {
+                $pdo->exec("ALTER TABLE `categories` ADD COLUMN `rating_avg` DECIMAL(3,2) DEFAULT NULL AFTER `display_order`");
+            } catch (Throwable $e) {}
 
             // Ensure order_tracking_events columns exist in MySQL
             $trackingCols = [
@@ -316,6 +332,8 @@ class Database {
                     rating INTEGER NOT NULL,
                     title TEXT,
                     comment TEXT,
+                    image_url TEXT,
+                    images TEXT,
                     is_verified_buyer INTEGER NOT NULL DEFAULT 1,
                     status TEXT NOT NULL DEFAULT 'approved',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -429,6 +447,11 @@ class Database {
                 "ALTER TABLE products ADD COLUMN meta_title TEXT DEFAULT NULL",
                 "ALTER TABLE products ADD COLUMN meta_description TEXT DEFAULT NULL",
                 "ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT NULL",
+                "ALTER TABLE products ADD COLUMN rating_avg REAL DEFAULT NULL",
+                "ALTER TABLE products ADD COLUMN review_count INTEGER DEFAULT NULL",
+                "ALTER TABLE categories ADD COLUMN rating_avg REAL DEFAULT NULL",
+                "ALTER TABLE reviews ADD COLUMN image_url TEXT DEFAULT NULL",
+                "ALTER TABLE reviews ADD COLUMN images TEXT DEFAULT NULL",
                 "ALTER TABLE orders ADD COLUMN user_id INTEGER DEFAULT NULL",
                 "ALTER TABLE orders ADD COLUMN fastrr_risk_tier TEXT NOT NULL DEFAULT 'low'",
                 "ALTER TABLE orders ADD COLUMN fastrr_order_id TEXT DEFAULT NULL",

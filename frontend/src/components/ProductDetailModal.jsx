@@ -10,6 +10,7 @@ import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { trackPixel } from '../utils/pixel';
+import ProductReviewsSection from './ProductReviewsSection';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -764,12 +765,25 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 <span className="text-xs font-caps uppercase tracking-[0.16em] text-brand-primary font-bold">
                   {product.category_name || 'Everyday Luxury'}
                 </span>
-                <div className="flex items-center space-x-1 text-amber-500">
+                <div 
+                  onClick={() => {
+                    document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center space-x-1 text-amber-500 cursor-pointer hover:opacity-80 transition-opacity"
+                  title="View Customer Reviews"
+                >
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-current" />
+                    <Star
+                      key={i}
+                      className={`w-3 h-3 ${
+                        i < Math.round(Number(product.rating_avg || product.rating_summary?.average_rating || 4.9))
+                          ? 'fill-current'
+                          : 'fill-gray-200 text-gray-200'
+                      }`}
+                    />
                   ))}
                   <span className="text-xs text-brand-muted ml-1 font-medium">
-                    ({product.rating_summary?.reviews_count || 120} reviews)
+                    {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★ ({product.review_count || product.rating_summary?.reviews_count || 128})
                   </span>
                 </div>
               </div>
@@ -877,6 +891,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 </div>
                 <p>{product.description || product.short_description}</p>
               </div>
+
+              {/* Customer Reviews Section */}
+              <ProductReviewsSection
+                productId={product.id}
+                productName={product.name}
+                productSlug={product.slug}
+                initialReviews={product.reviews || []}
+                initialSummary={product.rating_summary}
+              />
 
             </div>
 
@@ -1283,12 +1306,25 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   <span className="text-xs font-caps uppercase tracking-[0.2em] text-brand-primary font-bold">
                     {product.category_name || 'Everyday Luxury'}
                   </span>
-                  <div className="flex items-center space-x-1.5 text-amber-500">
+                  <div 
+                    onClick={() => {
+                      document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="flex items-center space-x-1.5 text-amber-500 cursor-pointer hover:opacity-80 transition-opacity"
+                    title="View Customer Reviews"
+                  >
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                      <Star
+                        key={i}
+                        className={`w-3.5 h-3.5 ${
+                          i < Math.round(Number(product.rating_avg || product.rating_summary?.average_rating || 4.9))
+                            ? 'fill-current'
+                            : 'fill-gray-200 text-gray-200'
+                        }`}
+                      />
                     ))}
                     <span className="text-xs text-brand-muted ml-1 font-medium">
-                      ({product.rating_summary?.reviews_count || 120} reviews)
+                      {Number(product.rating_avg || product.rating_summary?.average_rating || 4.9).toFixed(1)} ★ ({product.review_count || product.rating_summary?.reviews_count || 128} reviews)
                     </span>
                   </div>
                 </div>
@@ -1496,6 +1532,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     );
                   })()}
                 </div>
+
+                {/* Customer Reviews Section */}
+                <ProductReviewsSection
+                  productId={product.id}
+                  productName={product.name}
+                  productSlug={product.slug}
+                  initialReviews={product.reviews || []}
+                  initialSummary={product.rating_summary}
+                />
 
               </div>
             </div>

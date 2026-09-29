@@ -560,5 +560,112 @@ export const adminApi = {
     const res = await request(`/settings/payments.php?${qs}`);
     return res.data;
   },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Reviews & Rating Management
+  // ─────────────────────────────────────────────────────────────────────────────
+  async getReviews(params = {}) {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== null && v !== undefined && v !== '')
+    );
+    const qs = new URLSearchParams(cleanParams).toString();
+    const res = await request(`/admin/reviews.php${qs ? '?' + qs : ''}`);
+    return res.data;
+  },
+
+  async getReview(id) {
+    const res = await request(`/admin/reviews.php?id=${id}`);
+    return res.data;
+  },
+
+  async createReview(data) {
+    const isFormData = data instanceof FormData;
+    const res = await request('/admin/reviews.php?action=create', {
+      method: 'POST',
+      body: isFormData ? data : JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async updateReview(data) {
+    const isFormData = data instanceof FormData;
+    const res = await request('/admin/reviews.php?action=update', {
+      method: 'POST',
+      body: isFormData ? data : JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async deleteReview(id) {
+    const res = await request(`/admin/reviews.php?action=delete&id=${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ id, action: 'delete' }),
+    });
+    return res.data;
+  },
+
+  async bulkDeleteReviews(ids) {
+    const res = await request('/admin/reviews.php?action=bulk_delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids, action: 'bulk_delete' }),
+    });
+    return res.data;
+  },
+
+  async bulkUpdateReviewStatus(ids, status) {
+    const res = await request('/admin/reviews.php?action=bulk_status', {
+      method: 'POST',
+      body: JSON.stringify({ ids, status, action: 'bulk_status' }),
+    });
+    return res.data;
+  },
+
+  async uploadReviewPhoto(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('action', 'upload_photo');
+    const res = await request('/admin/reviews.php?action=upload_photo', {
+      method: 'POST',
+      body: formData,
+    });
+    return res.data;
+  },
+
+  async getCategoryRatings() {
+    const res = await request('/admin/reviews.php?action=category_ratings');
+    return res.data;
+  },
+
+  async getProductsDropdown() {
+    const res = await request('/admin/reviews.php?action=products_dropdown');
+    return res.data;
+  },
+
+  async updateProductRating(productId, ratingAvg, reviewCount) {
+    const res = await request('/admin/reviews.php?action=update_product_rating', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_id: productId,
+        rating_avg: ratingAvg,
+        review_count: reviewCount,
+        action: 'update_product_rating',
+      }),
+    });
+    return res.data;
+  },
+
+  async bulkCategoryRating(categoryId, ratingAvg, reviewCount = null, applyToAllProducts = true) {
+    const res = await request('/admin/reviews.php?action=bulk_category_rating', {
+      method: 'POST',
+      body: JSON.stringify({
+        category_id: categoryId,
+        rating_avg: ratingAvg,
+        review_count: reviewCount,
+        apply_to_all_products: applyToAllProducts,
+        action: 'bulk_category_rating',
+      }),
+    });
+    return res.data;
+  },
 };
 

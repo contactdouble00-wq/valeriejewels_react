@@ -106,6 +106,9 @@ try {
                 (SELECT image_url FROM product_images WHERE product_id = p.id AND (image_url LIKE '%.mp4%' OR image_url LIKE '%.webm%' OR image_url LIKE '%.mov%' OR image_url LIKE '%video_%') LIMIT 1)
             ) AS video_url,
             p.created_at,
+            p.rating_avg,
+            p.review_count,
+            c.rating_avg AS category_rating_avg,
             ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage,
             COALESCE(
                 (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' LIMIT 1),
@@ -140,6 +143,20 @@ try {
         } else {
             $prod['pairs_count'] = (int)$prod['pairs_count'];
         }
+
+        // Compute dynamic rating based on product rating_avg, category rating_avg, or default 4.9
+        $dynRating = (!empty($prod['rating_avg']) && (float)$prod['rating_avg'] > 0)
+            ? (float)$prod['rating_avg']
+            : ((!empty($prod['category_rating_avg']) && (float)$prod['category_rating_avg'] > 0)
+                ? (float)$prod['category_rating_avg']
+                : 4.9);
+        $dynReviewsCount = (!empty($prod['review_count']) && (int)$prod['review_count'] > 0)
+            ? (int)$prod['review_count']
+            : 128;
+
+        $prod['rating'] = $dynRating;
+        $prod['rating_avg'] = $dynRating;
+        $prod['review_count'] = $dynReviewsCount;
 
         if (!empty($prod['primary_image'])) {
             $prod['primary_image'] = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $prod['primary_image']);

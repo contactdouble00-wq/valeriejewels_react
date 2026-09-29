@@ -104,12 +104,30 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           className="mt-2.5 sm:mt-4 space-y-1 sm:space-y-1.5 cursor-pointer"
         >
           {/* Rating */}
-          <div className="flex items-center space-x-1 text-amber-500">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
-            ))}
-            <span className="text-[10px] sm:text-xs text-brand-muted ml-1 font-light">4.9</span>
-          </div>
+          {(() => {
+            const displayRating = product.rating_avg !== null && product.rating_avg !== undefined && Number(product.rating_avg) > 0
+              ? Number(product.rating_avg).toFixed(1)
+              : (product.rating ? Number(product.rating).toFixed(1) : '4.9');
+            const reviewCount = product.review_count || product.rating_summary?.reviews_count || 128;
+            return (
+              <div className="flex items-center space-x-1 text-amber-500">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${
+                      i < Math.round(Number(displayRating)) ? 'fill-current' : 'fill-gray-200 text-gray-200'
+                    }`}
+                  />
+                ))}
+                <span className="text-[10px] sm:text-xs text-brand-muted ml-1 font-medium">
+                  {displayRating}
+                </span>
+                <span className="text-[9.5px] sm:text-[10.5px] text-brand-muted/70 font-light">
+                  ({reviewCount})
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Product Name */}
           <h3

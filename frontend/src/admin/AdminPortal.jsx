@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Zap,
   MessageCircle,
+  Star,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -24,6 +25,7 @@ import AdminDashboardView from './AdminDashboardView';
 import AdminHomepageView from './AdminHomepageView';
 import AdminCustomerCareView from './AdminCustomerCareView';
 import AdminProductsView from './AdminProductsView';
+import AdminReviewsView from './AdminReviewsView';
 import AdminOrdersView from './AdminOrdersView';
 import AdminCustomersView from './AdminCustomersView';
 import AdminCouponsView from './AdminCouponsView';
@@ -65,6 +67,7 @@ export default function AdminPortal({ onReturnToStore }) {
     { id: 'customercare', label: 'Customer Care & WhatsApp', icon: MessageCircle, badge: 'Support' },
     { id: 'products', label: 'Products & Stock', icon: Package },
     { id: 'categories', label: 'Category Manager', icon: Tag },
+    { id: 'reviews', label: 'Product Reviews & Ratings', icon: Star, badge: 'Full Control' },
     { id: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag },
     { id: 'payments', label: 'Fastrr & Payments', icon: Zap, badge: '1-Click' },
     { id: 'customers', label: 'Customers & RTO', icon: Users },
@@ -234,6 +237,8 @@ export default function AdminPortal({ onReturnToStore }) {
           {activeTab === 'customercare' && <AdminCustomerCareView />}
 
           {activeTab === 'products' && <AdminProductsView currentUser={currentUser} />}
+          {activeTab === 'categories' && <AdminCategoriesView currentUser={currentUser} />}
+          {activeTab === 'reviews' && <AdminReviewsView currentUser={currentUser} />}
 
           {activeTab === 'orders' && (
             <AdminOrdersView
@@ -243,8 +248,6 @@ export default function AdminPortal({ onReturnToStore }) {
           )}
 
           {activeTab === 'customers' && <AdminCustomersView />}
-
-          {activeTab === 'categories' && <AdminCategoriesView currentUser={currentUser} />}
 
           {activeTab === 'coupons' && <AdminCouponsView currentUser={currentUser} />}
 
