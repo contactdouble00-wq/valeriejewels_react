@@ -301,7 +301,8 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
           const maxPrepDisc = Number(paymentSettings.prepaid_discount ?? 50);
           const prepDisc = finalTot > 1 ? Math.min(maxPrepDisc, finalTot - 1) : 0;
           const prepaidDueNow = finalTot > 0 ? Math.max(1, finalTot - prepDisc) : 0;
-          const advanceConf = Number(paymentSettings.partial_advance ?? 100);
+          const totalItemQty = cartItems.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+          const advanceConf = Number(paymentSettings.partial_advance ?? 100) * Math.max(1, totalItemQty);
           const partialDeposit = finalTot > 0 ? Math.min(advanceConf, finalTot) : 0;
           const partialBalance = Math.max(0, finalTot - partialDeposit);
           const codShipping = finalTot >= 999 ? 0 : 99;
@@ -327,7 +328,9 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
               partial: {
                 enabled: paymentSettings.partial_cod_enabled,
                 title: 'Partial COD (Smart Split)',
-                badge: `Pay ₹${partialDeposit} Deposit Now • Rest on Delivery (Prepaid discount not applicable)`,
+                badge: totalItemQty > 1
+                  ? `Pay ₹${partialDeposit} Deposit Now (₹${Number(paymentSettings.partial_advance ?? 100)} × ${totalItemQty} items) • Rest on Delivery`
+                  : `Pay ₹${partialDeposit} Deposit Now • Rest on Delivery (Prepaid discount not applicable)`,
                 incentive_discount: 0,
                 shipping_fee: 0,
                 amount_due_now: partialDeposit,
@@ -797,7 +800,9 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder }) {
     ? prepaidSplit.amount_due_now
     : (finalTotal > 0 ? Math.max(1, finalTotal - prepaidDiscount) : 0);
 
-  const configuredPartialAdvance = Number(paymentSettings.partial_advance ?? 100);
+  const totalItemCount = cartItems.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+  const advancePerItem = Number(paymentSettings.partial_advance ?? 100);
+  const configuredPartialAdvance = advancePerItem * Math.max(1, totalItemCount);
   const partialDeposit = partialSplit?.amount_due_now !== undefined
     ? partialSplit.amount_due_now
     : (finalTotal > 0 ? Math.min(configuredPartialAdvance, finalTotal) : 0);

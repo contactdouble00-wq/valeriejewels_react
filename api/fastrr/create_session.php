@@ -80,15 +80,20 @@ try {
         $totalAmount += ($price * $qty);
     }
 
+    $totalQuantity = max(1, (int)array_sum(array_column($formattedItems, 'quantity')));
+    $totalPartialAdvance = $partialAdvance * $totalQuantity;
+
     $cartData = [
         'items'               => $formattedItems,
         'custom_attributes'   => [
-            'partial_cod_enabled' => $partialCodEnabled,
-            'partial_advance'     => $partialAdvance,
-            'cod_available'       => $codAvailable,
+            'partial_cod_enabled'      => $partialCodEnabled,
+            'partial_advance'          => $totalPartialAdvance,
+            'partial_advance_per_item' => $partialAdvance,
+            'total_quantity'           => $totalQuantity,
+            'cod_available'            => $codAvailable,
         ],
         'partial_cod_enabled' => $partialCodEnabled,
-        'partial_advance'     => $partialAdvance,
+        'partial_advance'     => $totalPartialAdvance,
         'cod_available'       => $codAvailable,
         'mobile_app'          => false
     ];
@@ -116,10 +121,11 @@ try {
 
     // Clear logging for outgoing session payload
     error_log(sprintf(
-        "[Fastrr Checkout] Outgoing session payload: items=%d, partial_cod_enabled=%s, partial_advance=%d, cod_available=%s",
+        "[Fastrr Checkout] Outgoing session payload: items=%d, total_qty=%d, partial_cod_enabled=%s, partial_advance=%d, cod_available=%s",
         count($formattedItems),
+        $totalQuantity,
         $partialCodEnabled ? 'true' : 'false',
-        $partialAdvance,
+        $totalPartialAdvance,
         $codAvailable ? 'true' : 'false'
     ));
 

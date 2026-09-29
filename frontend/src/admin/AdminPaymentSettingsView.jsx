@@ -450,14 +450,14 @@ export default function AdminPaymentSettingsView() {
                 </div>
 
                 <p className="text-[11px] text-brand-muted leading-relaxed">
-                  Requires <strong className="text-brand-tertiary font-mono">₹{settings.partial_advance}</strong> UPI token deposit now + remaining on delivery. Cuts RTO fake orders by 70%+.
+                  Requires <strong className="text-brand-tertiary font-mono">₹{settings.partial_advance}</strong> per item UPI token deposit now (e.g. 2 items = ₹{Number(settings.partial_advance) * 2}) + remaining on delivery. Cuts RTO fake orders by 70%+.
                 </p>
 
                 {/* Interactive Partial Advance Amount Controller */}
                 <div className="p-2.5 rounded-xl bg-purple-50/80 border border-purple-100/90 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10.5px] font-bold text-brand-tertiary uppercase tracking-wider">
-                      Advance Token Deposit
+                      Advance Token Deposit (Per Item)
                     </span>
                     <span className="text-xs font-mono font-extrabold text-brand-primary">
                       ₹{settings.partial_advance}
@@ -466,7 +466,7 @@ export default function AdminPaymentSettingsView() {
 
                   {/* Preset Pills */}
                   <div className="flex items-center gap-1 flex-wrap">
-                    {[99, 149, 199, 249, 299].map((preset) => (
+                    {[99, 100, 149, 199, 249, 299].map((preset) => (
                       <button
                         key={preset}
                         type="button"
@@ -1152,17 +1152,17 @@ export default function AdminPaymentSettingsView() {
             {/* Advance Deposit Amount */}
             <div className="space-y-2 p-3.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-brand-tertiary">Partial COD Advance Deposit (₹)</label>
-                <span className="text-xs font-mono font-extrabold text-brand-primary">₹{settings.partial_advance}</span>
+                <label className="text-xs font-bold text-brand-tertiary">Partial COD Advance Deposit (₹ per item)</label>
+                <span className="text-xs font-mono font-extrabold text-brand-primary">₹{settings.partial_advance} / item</span>
               </div>
               <p className="text-[10.5px] text-brand-muted font-light leading-snug">
-                Initial deposit collected via UPI now to guarantee delivery dispatch. Remainder collected at doorstep.
+                Deposit collected per item quantity via UPI now (e.g. 2 items = ₹{Number(settings.partial_advance) * 2}) to guarantee delivery dispatch. Remainder collected at doorstep.
               </p>
 
               {/* Quick Presets */}
               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                 <span className="text-[10px] text-brand-muted font-medium">Quick Presets:</span>
-                {[99, 149, 199, 249, 299].map((preset) => (
+                {[99, 100, 149, 199, 249, 299].map((preset) => (
                   <button
                     key={preset}
                     type="button"

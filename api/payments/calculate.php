@@ -196,9 +196,11 @@ try {
 
     // 2. Partial COD Calculation
     // Free delivery: shipping fee = 0
-    // Upfront deposit: min($partialAdvance, $netSubtotal) with min ₹1
-    $configuredAdvance = (float)($payConfig['partial_advance'] ?? 100.0);
-    $partialDeposit = ($netSubtotal > 0.0) ? round(min($configuredAdvance, $netSubtotal), 2) : 0.0;
+    // Upfront deposit: ₹100 per item quantity (e.g., 2 items => ₹200 deposit, 3 items => ₹300 deposit)
+    $totalItemQuantity = max(1, (int)array_sum(array_column($recalculatedItems, 'quantity')));
+    $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
+    $totalRequiredAdvance = $configuredAdvancePerItem * $totalItemQuantity;
+    $partialDeposit = ($netSubtotal > 0.0) ? round(min($totalRequiredAdvance, $netSubtotal), 2) : 0.0;
     $partialDueOnDelivery = round(max(0.0, $netSubtotal - $partialDeposit), 2);
 
     // 3. Full COD Calculation
@@ -207,7 +209,7 @@ try {
 
     $calculation = [
         'items'                   => $recalculatedItems,
-        'item_count'              => array_sum(array_column($recalculatedItems, 'quantity')),
+        'item_count'              => $totalItemQuantity,
         'subtotal'                => round($subtotal, 2),
         'total_mrp'               => round($totalMrp, 2),
         'discount_amount'         => round($discountAmount, 2),
@@ -231,12 +233,16 @@ try {
             'partial' => [
                 'enabled'               => (bool)$payConfig['partial_cod_enabled'],
                 'title'                 => 'Partial COD (Smart Split)',
-                'badge'                 => 'Pay ₹' . round($partialDeposit) . ' Deposit Now • Rest on Delivery (Prepaid discount not applicable)',
+                'badge'                 => $totalItemQuantity > 1 
+                                            ? ('Pay ₹' . round($partialDeposit) . ' Deposit Now (₹' . round($configuredAdvancePerItem) . ' × ' . $totalItemQuantity . ' items) • Rest on Delivery')
+                                            : ('Pay ₹' . round($partialDeposit) . ' Deposit Now • Rest on Delivery (Prepaid discount not applicable)'),
                 'incentive_discount'    => 0.0,
                 'shipping_fee'          => 0.0,
                 'is_free_shipping'      => true,
                 'amount_due_now'        => $partialDeposit,
                 'amount_due_on_delivery'=> $partialDueOnDelivery,
+                'advance_per_item'      => $configuredAdvancePerItem,
+                'total_quantity'        => $totalItemQuantity,
             ],
             'cod' => [
                 'enabled'               => (bool)$payConfig['cod_available'],

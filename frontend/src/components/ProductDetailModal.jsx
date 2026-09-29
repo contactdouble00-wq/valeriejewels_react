@@ -38,7 +38,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     return {
       cod_available: true,
       partial_cod_enabled: true,
-      partial_advance: 199,
+      partial_advance: 100,
       online_payment_enabled: true,
       prepaid_discount: 50,
     };
@@ -1462,7 +1462,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       }${
                         paySettings.online_payment_enabled !== false && (paySettings.cod_available || paySettings.partial_cod_enabled) ? ' & ' : ''
                       }${
-                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? `Partial COD (₹${paySettings.partial_advance || 199})` : '')
+                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? `Partial COD (₹${paySettings.partial_advance || 100})` : '')
                       } Available`}
                     </span>
                   </p>

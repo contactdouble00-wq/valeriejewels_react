@@ -42,7 +42,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
     return {
       cod_available: true,
       partial_cod_enabled: true,
-      partial_advance: 199,
+      partial_advance: 100,
       online_payment_enabled: true,
       prepaid_discount: 50,
     };
@@ -391,7 +391,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
                     {paySettings.cod_available
                       ? 'ORDER NOW - CASH ON DELIVERY'
                       : paySettings.partial_cod_enabled
-                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
+                      ? `ORDER NOW - PARTIAL COD (₹${(Number(paySettings.partial_advance) || 100) * Math.max(1, cartItems?.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0) || Number(itemCount) || 1)})`
                       : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                   </span>
                 </div>

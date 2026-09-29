@@ -226,8 +226,10 @@ try {
         // Free delivery on partial COD: ₹0 shipping
         $shippingFee = 0.0;
         $totalAmount = $netSubtotal;
-        $configuredAdvance = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
-        $deposit = ($totalAmount > 0.0) ? round(min($configuredAdvance, $totalAmount), 2) : 0.0;
+        $totalItemQuantity = max(1, (int)array_sum(array_column($validatedOrderItems, 'quantity')));
+        $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
+        $totalRequiredAdvance = $configuredAdvancePerItem * $totalItemQuantity;
+        $deposit = ($totalAmount > 0.0) ? round(min($totalRequiredAdvance, $totalAmount), 2) : 0.0;
         $amountPaidUpfront = $deposit;
         $amountDueOnDelivery = round(max(0.0, $totalAmount - $deposit), 2);
     } else {

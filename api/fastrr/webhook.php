@@ -80,8 +80,25 @@ try {
         )
     ");
 
-    $amountPaid = ($paymentType === 'prepaid') ? $totalAmount : 0.0;
-    $amountDue = ($paymentType === 'cod') ? $totalAmount : 0.0;
+    $items = $payload['cart_data']['items'] ?? [];
+    $totalQty = 0;
+    foreach ($items as $it) {
+        $totalQty += max(1, (int)($it['quantity'] ?? 1));
+    }
+    $totalQty = max(1, $totalQty);
+
+    if (str_contains($paymentTypeRaw, 'PARTIAL')) {
+        $paymentType = 'partial';
+        $paymentStatus = 'partial_paid';
+        $partialAdv = (float)($payload['cart_data']['custom_attributes']['partial_advance'] 
+            ?? $payload['cart_data']['partial_advance'] 
+            ?? (100.0 * $totalQty));
+        $amountPaid = round(min($partialAdv, $totalAmount), 2);
+        $amountDue = round(max(0.0, $totalAmount - $amountPaid), 2);
+    } else {
+        $amountPaid = ($paymentType === 'prepaid') ? $totalAmount : 0.0;
+        $amountDue = ($paymentType === 'cod') ? $totalAmount : 0.0;
+    }
 
     $ins->execute([
         $orderNumber, $name, $email, $phone,
