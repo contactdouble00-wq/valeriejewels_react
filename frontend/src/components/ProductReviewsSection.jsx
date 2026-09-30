@@ -298,14 +298,9 @@ export default function ProductReviewsSection({
       )}
 
       {/* Reviews Cards List */}
-      <div className="space-y-3">
-        {displayedReviews.length === 0 ? (
-          <div className="p-8 text-center bg-[#FAF8FC] rounded-2xl border border-brand-border text-brand-muted text-xs space-y-2">
-            <p className="font-medium text-brand-tertiary">No reviews yet for this piece</p>
-            <p className="font-light">Be the first to share your styling feedback and photo!</p>
-          </div>
-        ) : (
-          displayedReviews.map((rev) => (
+      {displayedReviews.length > 0 && (
+        <div className="space-y-3">
+          {displayedReviews.map((rev) => (
             <div
               key={rev.id}
               className="p-4 rounded-2xl bg-white border border-brand-border/70 hover:border-brand-border shadow-xs space-y-2.5 transition-all"
@@ -377,9 +372,9 @@ export default function ProductReviewsSection({
                 </div>
               )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Write a Review Modal */}
       {writeReviewOpen && (
