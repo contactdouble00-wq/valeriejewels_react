@@ -109,7 +109,7 @@ const DEFAULT_SITE_CONTENT = {
 
 const SiteContentContext = createContext({
   content: DEFAULT_SITE_CONTENT,
-  refreshContent: () => {},
+  refreshContent: () => { },
   loading: false,
 });
 
@@ -131,7 +131,7 @@ export function SiteContentProvider({ children }) {
           },
         };
       }
-    } catch {}
+    } catch { }
     return DEFAULT_SITE_CONTENT;
   });
   const [loading, setLoading] = useState(false);
@@ -172,7 +172,7 @@ export function SiteContentProvider({ children }) {
           };
           try {
             localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
-          } catch {}
+          } catch { }
           return merged;
         });
       }
@@ -203,7 +203,7 @@ export function SiteContentProvider({ children }) {
           };
           try {
             localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
-          } catch {}
+          } catch { }
           return merged;
         });
       }
@@ -257,7 +257,7 @@ export function SiteContentProvider({ children }) {
 export function useSiteContent() {
   const context = useContext(SiteContentContext);
   if (!context) {
-    return { content: DEFAULT_SITE_CONTENT, refreshContent: () => {}, loading: false, DEFAULT_SITE_CONTENT };
+    return { content: DEFAULT_SITE_CONTENT, refreshContent: () => { }, loading: false, DEFAULT_SITE_CONTENT };
   }
   return context;
 }

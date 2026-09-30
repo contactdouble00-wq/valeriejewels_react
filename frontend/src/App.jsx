@@ -363,7 +363,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
             {/* Actions Cluster (Mobile: Search | Wishlist | Bag; Desktop: Search | Wishlist | Track | Account | Bag) */}
             <div className="flex items-center justify-end shrink-0 min-w-[48px] lg:min-w-[220px]">
-              
+
               {/* Search Button */}
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -480,11 +480,10 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                   <a
                     href="#jhumka-boxes"
                     onClick={() => setSelectedCategory(featuredCat.slug)}
-                    className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${
-                      selectedCategory === featuredCat.slug
+                    className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${selectedCategory === featuredCat.slug
                         ? 'bg-brand-primary text-white font-bold shadow-xs'
                         : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
-                    }`}
+                      }`}
                   >
                     <span>✨ {featuredCat.name}</span>
                   </a>
@@ -494,9 +493,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               <a
                 href="#catalog"
                 onClick={() => setSelectedCategory('all')}
-                className={`transition-colors py-1 whitespace-nowrap relative ${
-                  selectedCategory === 'all' ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
-                }`}
+                className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === 'all' ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                  }`}
               >
                 All Jewelry
               </a>
@@ -511,9 +509,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                     key={cat.id}
                     href="#catalog"
                     onClick={() => setSelectedCategory(cat.slug)}
-                    className={`transition-colors py-1 whitespace-nowrap relative ${
-                      selectedCategory === cat.slug ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
-                    }`}
+                    className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === cat.slug ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                      }`}
                   >
                     {cat.name}
                   </a>

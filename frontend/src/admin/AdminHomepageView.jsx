@@ -496,8 +496,8 @@ export default function AdminHomepageView() {
       {feedback && (
         <div
           className={`p-4 rounded-xl border flex items-center space-x-3 text-xs font-medium animate-in fade-in duration-200 ${feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-rose-50 border-rose-200 text-rose-800'
             }`}
         >
           {feedback.type === 'success' ? (
@@ -519,16 +519,16 @@ export default function AdminHomepageView() {
               key={sec.id}
               onClick={() => setActiveSection(sec.id)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all flex items-center space-x-2 ${isActive
-                  ? 'bg-brand-primary text-white shadow-xs font-bold'
-                  : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
+                ? 'bg-brand-primary text-white shadow-xs font-bold'
+                : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
                 }`}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-muted'}`} />
               <span>{sec.label}</span>
               {sec.id === 'festivalOffer' ? (
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false')
-                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                    : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                   }`}>
                   {(formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false') ? 'Hidden' : 'Active'}
                 </span>
@@ -842,8 +842,8 @@ export default function AdminHomepageView() {
                     <span
                       key={idx}
                       className={`block transform rotate-45 transition-all ${idx === 0
-                          ? 'w-2 h-2 bg-[#8366B0]'
-                          : 'w-1.5 h-1.5 bg-gray-300'
+                        ? 'w-2 h-2 bg-[#8366B0]'
+                        : 'w-1.5 h-1.5 bg-gray-300'
                         }`}
                     />
                   ))}
@@ -952,9 +952,8 @@ export default function AdminHomepageView() {
                             className="w-full h-full object-cover object-center"
                           />
                           {slideDims[idx] && (
-                            <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shadow-xs z-10 ${
-                              slideDims[idx].isHd ? 'bg-emerald-700/90 text-white' : 'bg-amber-600/90 text-white'
-                            }`}>
+                            <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shadow-xs z-10 ${slideDims[idx].isHd ? 'bg-emerald-700/90 text-white' : 'bg-amber-600/90 text-white'
+                              }`}>
                               {slideDims[idx].w}×{slideDims[idx].h} px {slideDims[idx].isHd ? '• HD' : '• Low Res'}
                             </span>
                           )}
@@ -1911,8 +1910,8 @@ export default function AdminHomepageView() {
                     type="button"
                     onClick={() => updateNested('festivalOffer', 'enabled', true)}
                     className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${formData.festivalOffer?.enabled !== false && formData.festivalOffer?.enabled !== 'false'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
                       }`}
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
@@ -1922,8 +1921,8 @@ export default function AdminHomepageView() {
                     type="button"
                     onClick={() => updateNested('festivalOffer', 'enabled', false)}
                     className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${formData.festivalOffer?.enabled === false || formData.festivalOffer?.enabled === 'false'
-                        ? 'bg-rose-600 text-white shadow-xs'
-                        : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'text-brand-muted hover:text-brand-tertiary bg-transparent'
                       }`}
                   >
                     <EyeOff className="w-3.5 h-3.5" />
