@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, Film } from 'lucide-react';
+import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, Film, ExternalLink } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { useWishlist } from '../context/WishlistContext';
+import { OriginalAmazonLogo, DEFAULT_AMAZON_STORE_URL } from './AmazonTrustBadge';
 
 export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenCheckout }) {
   const { addToCart } = useCart();
@@ -89,6 +90,21 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
             <Sparkles className="w-4 h-4 text-brand-gold shrink-0" />
             <span>{jHero.pill3 || 'Save up to 50% vs Individual Pieces'}</span>
           </div>
+          <a
+            href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between space-x-2 bg-gradient-to-r from-amber-50/70 to-white hover:from-amber-100/70 px-3.5 py-1.5 rounded-xl border border-amber-200/80 hover:border-amber-400 shadow-2xs transition-all group cursor-pointer"
+            title="Also Available on Amazon India (HOUSE OF VJ)"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="text-[10.5px] text-brand-muted font-light">Also on</span>
+              <div className="bg-white px-2 py-0.5 rounded border border-amber-200/60 shadow-2xs flex items-center">
+                <OriginalAmazonLogo className="h-2.5 w-auto" />
+              </div>
+            </div>
+            <ExternalLink className="w-3.5 h-3.5 text-brand-muted group-hover:text-brand-primary transition-colors" />
+          </a>
         </div>
       </div>
 

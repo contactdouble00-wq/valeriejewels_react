@@ -1506,6 +1506,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         </div>
                       </div>
                     </div>
+
+                    <AmazonTrustBadge variant="pdp" />
                   </div>
 
                   {/* About This Piece (Placed under Delivery & Returns) */}

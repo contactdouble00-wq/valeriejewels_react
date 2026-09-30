@@ -346,10 +346,24 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               </button>
             </div>
 
-            {/* Desktop Left: Luxury Promise / Tagline */}
-            <div className="hidden lg:flex items-center space-x-2 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[220px]">
-              <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-              <span className="font-caps tracking-[0.14em] uppercase text-[10.5px]">18K PVD Anti-Tarnish Luxury</span>
+            {/* Desktop Left: Luxury Promise & Amazon Storefront Trust */}
+            <div className="hidden lg:flex items-center space-x-2.5 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[260px]">
+              <div className="flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                <span className="font-caps tracking-[0.14em] uppercase text-[10px] xl:text-[10.5px]">18K PVD Anti-Tarnish</span>
+              </div>
+              <span className="h-3 w-px bg-brand-border/80" />
+              <a
+                href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-white border border-brand-border hover:border-amber-400 hover:shadow-2xs transition-all group"
+                title="Also Available on Amazon India (HOUSE OF VJ)"
+              >
+                <span className="text-[9.5px] text-brand-muted font-light">On</span>
+                <OriginalAmazonLogo className="h-2.5 w-auto" />
+                <ExternalLink className="w-2.5 h-2.5 text-brand-muted group-hover:text-brand-primary" />
+              </a>
             </div>
 
             {/* Center: Brand Logo (Optimized & Balanced Proportions) */}
@@ -527,6 +541,18 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                   <span>Festive Offers</span>
                 </a>
               )}
+
+              <a
+                href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-all px-2.5 py-1 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50/40 hover:bg-amber-100/70 text-brand-tertiary flex items-center space-x-1.5 whitespace-nowrap shadow-2xs group ml-1"
+                title="Visit our verified Amazon Storefront (HOUSE OF VJ)"
+              >
+                <span className="text-[10px] text-brand-muted font-light">Available on</span>
+                <OriginalAmazonLogo className="h-2.5 w-auto" />
+                <ExternalLink className="w-2.5 h-2.5 text-brand-muted group-hover:text-brand-primary" />
+              </a>
             </div>
           </div>
         </nav>
@@ -646,6 +672,33 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 className="px-5 py-3 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-caps tracking-wider uppercase font-semibold transition-colors"
               >
                 {content?.heroBanner?.secondaryBtnText || 'All Everyday Jewelry'}
+              </a>
+            </div>
+
+            {/* Desktop Hero Trust Reassurance with Original Amazon Logo */}
+            <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-brand-muted font-light">
+              <span className="flex items-center space-x-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-brand-tertiary font-medium">100% Anti-Tarnish</span>
+              </span>
+              <span className="text-brand-border">•</span>
+              <span className="flex items-center space-x-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-brand-tertiary font-medium">Free Express Delivery</span>
+              </span>
+              <span className="text-brand-border">•</span>
+              <a
+                href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1.5 text-brand-tertiary hover:text-brand-primary font-medium transition-colors group"
+                title="Also Available on Amazon India (HOUSE OF VJ)"
+              >
+                <span>Also on</span>
+                <span className="bg-white px-2 py-0.5 rounded-md border border-brand-border/90 shadow-2xs inline-flex items-center">
+                  <OriginalAmazonLogo className="h-3 w-auto" />
+                </span>
+                <ExternalLink className="w-3 h-3 text-brand-muted group-hover:text-brand-primary" />
               </a>
             </div>
           </div>
