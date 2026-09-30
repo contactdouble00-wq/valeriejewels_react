@@ -40,7 +40,7 @@ const DEFAULT_SITE_CONTENT = {
     pill2: 'Zero Earache • Featherlight',
     pill3: 'Save up to 50% vs Single Pairs',
     showBoxNumber: true,
-    showPricePerPair: true,
+    showPricePerPair: false,
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',

@@ -162,17 +162,12 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 />
 
                 {/* Mobile Rating on Image */}
-                <div className="sm:hidden absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-1.5 pt-3 flex items-center justify-between text-white text-[8.5px]">
+                <div className="sm:hidden absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-1.5 pt-3 flex items-center text-white text-[8.5px]">
                   <span className="flex items-center space-x-0.5 text-amber-300 font-bold">
                     <Star className="w-2.5 h-2.5 fill-amber-300" />
                     <span>4.9</span>
                     <span className="text-white/80 font-normal">(1.2k)</span>
                   </span>
-                  {pricePerPair && (jHero.showPricePerPair !== false) && (
-                    <span className="text-white font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-[8px]">
-                      ₹{pricePerPair}/pair
-                    </span>
-                  )}
                 </div>
 
                 {/* Desktop hover overlay */}
