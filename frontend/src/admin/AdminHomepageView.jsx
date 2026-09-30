@@ -1429,9 +1429,9 @@ export default function AdminHomepageView() {
                     <Sparkles className="w-3 h-3 text-brand-primary" />
                     <span>{formData.heroBanner.badgeText}</span>
                   </div>
-                  <h4 className="text-2xl font-editorial font-bold text-brand-tertiary leading-snug">
+                  <h4 className="text-2xl font-cormorant font-medium text-brand-tertiary leading-snug">
                     {formData.heroBanner.headline} <br />
-                    <span className="italic font-normal text-brand-primary">{formData.heroBanner.accentText}</span>
+                    <span className="font-cormorant font-normal text-brand-primary">{formData.heroBanner.accentText}</span>
                   </h4>
                   <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed">
                     {formData.heroBanner.subtitle}

@@ -610,9 +610,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               <span className="whitespace-normal leading-tight text-left">{content?.heroBanner?.badgeText || '18K PVD Anti-Tarnish Everyday Luxury'}</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-editorial font-normal leading-[1.08] text-brand-tertiary tracking-tight">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
               {content?.heroBanner?.headline || 'Curated everyday jewelry,'} <br />
-              <span className="italic font-light text-brand-primary">{content?.heroBanner?.accentText || 'designed to shine forever.'}</span>
+              <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
+                {content?.heroBanner?.accentText || 'designed to shine forever.'}
+              </span>
             </h1>
 
             <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
