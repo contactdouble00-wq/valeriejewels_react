@@ -26,7 +26,7 @@ import ProductCard from './components/ProductCard';
 import ProductDetailModal from './components/ProductDetailModal';
 import FestivalOfferSection from './components/FestivalOfferSection';
 import TrustStrip from './components/TrustStrip';
-import AmazonTrustBadge, { DEFAULT_AMAZON_STORE_URL } from './components/AmazonTrustBadge';
+import AmazonTrustBadge, { DEFAULT_AMAZON_STORE_URL, OriginalAmazonLogo } from './components/AmazonTrustBadge';
 import FaqSection from './components/FaqSection';
 import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
@@ -991,10 +991,13 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1"
+                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1.5"
                 title={`Valerie Jewels on Amazon (${content?.amazonStore?.storeName || 'HOUSE OF VJ'})`}
               >
-                <span>Amazon Store</span>
+                <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/60 flex items-center">
+                  <OriginalAmazonLogo className="h-2.5 w-auto" />
+                </span>
+                <span>Store</span>
                 <ExternalLink className="w-3 h-3 text-brand-muted" />
               </a>
             </div>
