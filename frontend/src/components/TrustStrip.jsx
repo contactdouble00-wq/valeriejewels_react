@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldCheck, Droplet, Sparkles, Truck } from 'lucide-react';
 import { useSiteContent } from '../context/SiteContentContext';
+import AmazonTrustBadge from './AmazonTrustBadge';
 
 const DEFAULT_ICONS = [ShieldCheck, Droplet, Sparkles, Truck];
 
@@ -55,6 +56,7 @@ export default function TrustStrip() {
           );
         })}
       </div>
+      <AmazonTrustBadge variant="strip" />
     </section>
   );
 }

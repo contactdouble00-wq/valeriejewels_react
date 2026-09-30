@@ -17,6 +17,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useSiteContent } from '../context/SiteContentContext';
+import AmazonTrustBadge from './AmazonTrustBadge';
 
 export default function MobileSidebarDrawer({
   isOpen,
@@ -380,6 +381,9 @@ export default function MobileSidebarDrawer({
                 </a>
               );
             })()}
+
+            {/* Amazon Store Reassurance */}
+            <AmazonTrustBadge variant="sidebar" />
 
             {/* Quality Seals */}
             <div className="grid grid-cols-2 gap-2 text-[10px] text-brand-muted font-light pt-1">

@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Check,
   Tag,
-  Truck
+  Truck,
+  ExternalLink
 } from 'lucide-react';
 import { apiService } from './services/api';
 import { CartProvider, useCart } from './context/CartContext';
@@ -25,6 +26,7 @@ import ProductCard from './components/ProductCard';
 import ProductDetailModal from './components/ProductDetailModal';
 import FestivalOfferSection from './components/FestivalOfferSection';
 import TrustStrip from './components/TrustStrip';
+import AmazonTrustBadge, { DEFAULT_AMAZON_STORE_URL } from './components/AmazonTrustBadge';
 import FaqSection from './components/FaqSection';
 import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
@@ -931,6 +933,9 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               <p className="text-xs text-brand-muted mt-2 max-w-sm text-center md:text-left font-light">
                 Curated everyday luxury jewelry. Engineered with 18K PVD gold plating for lifetime anti-tarnish elegance.
               </p>
+              <div className="mt-3">
+                <AmazonTrustBadge variant="footer" />
+              </div>
             </div>
 
             <div className="flex flex-wrap justify-center gap-6 text-xs text-brand-muted font-light">
@@ -982,6 +987,16 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               >
                 Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
               </button>
+              <a
+                href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1"
+                title={`Valerie Jewels on Amazon (${content?.amazonStore?.storeName || 'HOUSE OF VJ'})`}
+              >
+                <span>Amazon Store</span>
+                <ExternalLink className="w-3 h-3 text-brand-muted" />
+              </a>
             </div>
           </div>
 

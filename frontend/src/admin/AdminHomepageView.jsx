@@ -177,6 +177,13 @@ const FACTORY_DEFAULTS = {
     title: 'Phase 4 Authentication & Guest Mode Active',
     subtitle: 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.',
   },
+  amazonStore: {
+    enabled: true,
+    url: 'https://www.amazon.in/s?rh=n%3A1951048031%2Cp_4%3AHOUSE%2BOF%2BVJ',
+    storeName: 'HOUSE OF VJ',
+    label: 'Also Available on Amazon',
+    tagline: 'Verified Marketplace Storefront',
+  },
 };
 
 export default function AdminHomepageView() {
@@ -223,6 +230,7 @@ export default function AdminHomepageView() {
             : FACTORY_DEFAULTS.trustStrip,
           telemetryBanner: { ...FACTORY_DEFAULTS.telemetryBanner, ...(data.telemetryBanner || {}) },
           customerSupport: { ...FACTORY_DEFAULTS.customerSupport, ...(data.customerSupport || {}) },
+          amazonStore: { ...FACTORY_DEFAULTS.amazonStore, ...(data.amazonStore || {}) },
         });
       }
     } catch (err) {
@@ -2283,6 +2291,72 @@ export default function AdminHomepageView() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Amazon Verified Storefront Trust Configuration */}
+            <div className="mt-8 pt-6 border-t border-brand-border/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-editorial font-bold text-brand-tertiary flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#232F3E] text-amber-400 flex items-center justify-center font-bold text-[10px]">a</span>
+                    <span>Amazon Verified Storefront Credibility</span>
+                  </h4>
+                  <p className="text-xs text-brand-muted font-light mt-0.5">
+                    Displays subtle, verified Amazon badges across the homepage trust strip, PDP reassurance area, footer, and mobile drawer to build visitor confidence.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.amazonStore?.enabled !== false && formData.amazonStore?.enabled !== 'false')}
+                    onChange={(e) => updateNested('amazonStore', 'enabled', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-brand-tertiary block">
+                    Amazon Store Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.amazonStore?.storeName || 'HOUSE OF VJ'}
+                    onChange={(e) => updateNested('amazonStore', 'storeName', e.target.value)}
+                    placeholder="e.g. HOUSE OF VJ"
+                    className="w-full px-3.5 py-2 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
+                  />
+                  <p className="text-[10px] text-brand-muted">The official seller/storefront brand name on Amazon.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-brand-tertiary block">
+                      Amazon Storefront URL
+                    </label>
+                    {Boolean(formData.amazonStore?.url) && (
+                      <a
+                        href={formData.amazonStore.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-brand-primary hover:underline font-medium inline-flex items-center gap-1"
+                      >
+                        <span>Test Link ↗</span>
+                      </a>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={formData.amazonStore?.url || ''}
+                    onChange={(e) => updateNested('amazonStore', 'url', e.target.value)}
+                    placeholder="https://www.amazon.in/s?rh=..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary bg-white"
+                  />
+                  <p className="text-[10px] text-brand-muted">Direct URL to your Amazon storefront or search collection.</p>
+                </div>
+              </div>
             </div>
           </div>
         )}

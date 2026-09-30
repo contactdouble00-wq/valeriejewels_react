@@ -105,6 +105,13 @@ const DEFAULT_SITE_CONTENT = {
     hours: '7 days a week, 8:00 AM – 4:00 PM',
     whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
   },
+  amazonStore: {
+    enabled: true,
+    url: 'https://www.amazon.in/s?rh=n%3A1951048031%2Cp_4%3AHOUSE%2BOF%2BVJ',
+    storeName: 'HOUSE OF VJ',
+    label: 'Also Available on Amazon',
+    tagline: 'Verified Marketplace Storefront',
+  },
 };
 
 const SiteContentContext = createContext({
@@ -169,6 +176,7 @@ export function SiteContentProvider({ children }) {
             },
             telemetryBanner: { ...DEFAULT_SITE_CONTENT.telemetryBanner, ...(res.data.telemetryBanner || {}) },
             customerSupport: { ...DEFAULT_SITE_CONTENT.customerSupport, ...(res.data.customerSupport || {}) },
+            amazonStore: { ...DEFAULT_SITE_CONTENT.amazonStore, ...(res.data.amazonStore || {}) },
           };
           try {
             localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));

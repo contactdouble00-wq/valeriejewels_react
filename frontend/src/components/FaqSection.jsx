@@ -47,6 +47,12 @@ export const VALERIE_FAQS = [
     a: 'Our pieces are crafted for durability and long-lasting shine. Proper care will help maintain their beauty over time. We use 18K gold plated anti-tarnish materials designed to withstand everyday wear.',
   },
   {
+    category: 'Trust & Authenticity',
+    icon: Shield,
+    q: 'Are Valerie Jewels pieces also available on Amazon?',
+    a: 'Yes! To provide maximum confidence and convenience to our patrons, Valerie Jewels is also officially available on Amazon India under our storefront name "HOUSE OF VJ". You can find our verified Amazon store with 100% genuine anti-tarnish jewelry pieces.',
+  },
+  {
     category: 'Contact',
     icon: Phone,
     q: 'How can I contact Valerié Jewels?',

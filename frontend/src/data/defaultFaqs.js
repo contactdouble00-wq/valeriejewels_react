@@ -108,5 +108,13 @@ export const DEFAULT_FAQS_DATA = {
       isActive: true,
       priority: 11
     },
+    {
+      id: 'faq-12',
+      category: 'Orders & Payments',
+      q: 'Are Valerie Jewels pieces also available on Amazon?',
+      a: 'Yes! To offer complete confidence and trust to our patrons, Valerie Jewels is also officially available on Amazon India under our brand storefront name "HOUSE OF VJ". You can find our verified Amazon store with 100% authentic anti-tarnish jewelry collections.',
+      isActive: true,
+      priority: 12
+    },
   ]
 };

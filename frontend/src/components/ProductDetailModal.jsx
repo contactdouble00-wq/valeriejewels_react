@@ -11,6 +11,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { trackPixel } from '../utils/pixel';
 import ProductReviewsSection from './ProductReviewsSection';
+import AmazonTrustBadge from './AmazonTrustBadge';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -882,6 +883,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     </div>
                   </div>
                 </div>
+
+                <AmazonTrustBadge variant="pdp" />
               </div>
 
               {/* Description Content (Placed under Delivery & Returns) */}
