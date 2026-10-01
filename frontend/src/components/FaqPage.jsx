@@ -346,39 +346,64 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
         </div>
 
         {/* Concierge Support Banner */}
-        <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#FAF5FF] via-white to-[#FFF5F8] border border-brand-primary/20 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
-            <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-primary font-bold">
-              Still Have Questions?
-            </span>
-            <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-brand-tertiary">
-              Speak with a Valerie Concierge
-            </h3>
-            <p className="text-xs text-brand-muted font-light max-w-lg">
-              Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.
-            </p>
-          </div>
+        {(() => {
+          const concierge = faqsData.concierge || {
+            enabled: true,
+            eyebrow: 'Still Have Questions?',
+            title: 'Speak with a Valerie Concierge',
+            description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
+            whatsappNumber: faqsData.meta?.whatsappNumber || '+91 70163 47945',
+            whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
+            phone: faqsData.meta?.supportPhone || '+91 90234 22392',
+            hours: faqsData.meta?.workingHours || '7 days a week from 8:00 AM to 4:00 PM IST',
+          };
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <a
-              href="https://wa.me/917016347945"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center space-x-2 shadow-xs transition-all"
-            >
-              <MessageCircle className="w-4 h-4 fill-white/20" />
-              <span>WhatsApp: +91 70163 47945</span>
-            </a>
+          if (concierge.enabled === false) return null;
 
-            <a
-              href="tel:+919023422392"
-              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white hover:bg-brand-surface border border-brand-border text-brand-tertiary text-xs font-semibold flex items-center justify-center space-x-2 transition-colors"
-            >
-              <Phone className="w-4 h-4 text-brand-primary" />
-              <span>Call: +91 90234 22392</span>
-            </a>
-          </div>
-        </div>
+          const cleanWa = (concierge.whatsappNumber || '917016347945').replace(/\D/g, '');
+          const waMsg = encodeURIComponent(concierge.whatsappMessage || 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.');
+          const cleanPhone = (concierge.phone || '+919023422392').replace(/\s+/g, '');
+
+          return (
+            <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-[#FAF5FF] via-white to-[#FFF5F8] border border-brand-primary/20 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-2 text-center md:text-left">
+                <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-primary font-bold">
+                  {concierge.eyebrow || 'Still Have Questions?'}
+                </span>
+                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-brand-tertiary">
+                  {concierge.title || 'Speak with a Valerie Concierge'}
+                </h3>
+                <p className="text-xs text-brand-muted font-light max-w-lg leading-relaxed">
+                  {concierge.description || 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.'}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                {concierge.whatsappNumber && (
+                  <a
+                    href={`https://wa.me/${cleanWa}?text=${waMsg}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center space-x-2 shadow-xs transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-white/20" />
+                    <span>WhatsApp: {concierge.whatsappNumber}</span>
+                  </a>
+                )}
+
+                {concierge.phone && (
+                  <a
+                    href={`tel:${cleanPhone}`}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white hover:bg-brand-surface border border-brand-border text-brand-tertiary text-xs font-semibold flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+                  >
+                    <Phone className="w-4 h-4 text-brand-primary" />
+                    <span>Call: {concierge.phone}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Policy Quick Links Footer Strip */}
         <div className="pt-6 border-t border-brand-border flex flex-wrap items-center justify-between gap-4 text-xs text-brand-muted">

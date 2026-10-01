@@ -16,8 +16,11 @@ import {
   X,
   Sparkles,
   Truck,
-  ShieldCheck,
-  Tag
+  Tag,
+  ChevronUp,
+  MessageCircle,
+  Phone,
+  Clock
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import { DEFAULT_FAQS_DATA } from '../data/defaultFaqs';
@@ -31,6 +34,61 @@ export default function AdminFaqsView({ currentUser }) {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
+  const [conciergeCardOpen, setConciergeCardOpen] = useState(true);
+  const [savingConcierge, setSavingConcierge] = useState(false);
+
+  // Derived Concierge Contact Details from faqsData
+  const concierge = faqsData.concierge || {
+    enabled: true,
+    eyebrow: 'Still Have Questions?',
+    title: 'Speak with a Valerie Concierge',
+    description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
+    whatsappNumber: '+91 70163 47945',
+    whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
+    phone: '+91 90234 22392',
+    hours: '7 days a week from 8:00 AM to 4:00 PM IST',
+  };
+
+  const updateConcierge = (field, val) => {
+    setFaqsData((prev) => ({
+      ...prev,
+      concierge: {
+        ...(prev.concierge || {
+          enabled: true,
+          eyebrow: 'Still Have Questions?',
+          title: 'Speak with a Valerie Concierge',
+          description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
+          whatsappNumber: '+91 70163 47945',
+          whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
+          phone: '+91 90234 22392',
+          hours: '7 days a week from 8:00 AM to 4:00 PM IST',
+        }),
+        [field]: val,
+      },
+    }));
+  };
+
+  // Dedicated Save for Concierge Details
+  const handleSaveConciergeOnly = async () => {
+    setSavingConcierge(true);
+    setStatusMessage(null);
+    try {
+      const res = await adminApi.updateFaqs(faqsData);
+      setFaqsData(res || faqsData);
+      setStatusMessage({
+        type: 'success',
+        text: 'Concierge contact details successfully updated and live on /faqs!',
+      });
+      setTimeout(() => setStatusMessage(null), 5000);
+    } catch (err) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Failed to update concierge details.',
+      });
+    } finally {
+      setSavingConcierge(false);
+    }
+  };
 
   // Modal states for Create / Edit
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -309,6 +367,251 @@ export default function AdminFaqsView({ currentUser }) {
           </button>
         </div>
       )}
+
+      {/* ── Concierge Support Banner Configuration Card (Speak with a Valerie Concierge) ── */}
+      <div className="bg-white rounded-2xl border border-brand-border shadow-xs overflow-hidden">
+        <div 
+          onClick={() => setConciergeCardOpen(!conciergeCardOpen)}
+          className="p-5 border-b border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer bg-gradient-to-r from-emerald-50/40 via-purple-50/30 to-white hover:bg-emerald-50/60 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+              <MessageCircle className="w-5 h-5 fill-emerald-600/20" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-editorial text-lg font-bold text-brand-tertiary">
+                  "Speak with a Valerie Concierge" Contact Controls
+                </h2>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  concierge.enabled !== false 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                    : 'bg-zinc-100 text-zinc-600'
+                }`}>
+                  {concierge.enabled !== false ? '● Live on /faqs' : '○ Hidden'}
+                </span>
+              </div>
+              <p className="text-xs text-brand-muted font-light mt-0.5">
+                Update the contact numbers, WhatsApp prefilled message, and concierge guidance shown on the /faqs customer banner.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={handleSaveConciergeOnly}
+              disabled={savingConcierge}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center space-x-1.5 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{savingConcierge ? 'Saving...' : 'Save Concierge Details'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setConciergeCardOpen(!conciergeCardOpen)}
+              className="p-2 rounded-xl border border-brand-border text-brand-muted hover:text-brand-tertiary hover:bg-white transition-colors"
+              title={conciergeCardOpen ? 'Collapse' : 'Expand'}
+            >
+              {conciergeCardOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {conciergeCardOpen && (
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Left Column: Form Controls (7 cols) */}
+              <div className="lg:col-span-7 space-y-4 text-xs">
+                
+                {/* Section Eyebrow & Title */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-1">
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
+                      Eyebrow Tag *
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.eyebrow || ''}
+                      onChange={(e) => updateConcierge('eyebrow', e.target.value)}
+                      placeholder="e.g. STILL HAVE QUESTIONS?"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary font-medium"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
+                      Concierge Section Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.title || ''}
+                      onChange={(e) => updateConcierge('title', e.target.value)}
+                      placeholder="e.g. Speak with a Valerie Concierge"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Concierge Description */}
+                <div>
+                  <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
+                    Concierge Description / Guidance *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={concierge.description || ''}
+                    onChange={(e) => updateConcierge('description', e.target.value)}
+                    placeholder="Enter availability hours and how the concierge team can assist patrons..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary leading-relaxed font-light"
+                  />
+                </div>
+
+                {/* Primary Contact Numbers */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1 flex items-center gap-1.5">
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp Number *</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.whatsappNumber || ''}
+                      onChange={(e) => updateConcierge('whatsappNumber', e.target.value)}
+                      placeholder="e.g. +91 70163 47945"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary font-mono font-medium"
+                    />
+                    <span className="text-[10px] text-brand-muted mt-0.5 block">Used for the green 1-click WhatsApp button</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>Direct Helpline Phone Number *</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.phone || ''}
+                      onChange={(e) => updateConcierge('phone', e.target.value)}
+                      placeholder="e.g. +91 90234 22392"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary font-mono font-medium"
+                    />
+                    <span className="text-[10px] text-brand-muted mt-0.5 block">Dials automatically when patrons click Call</span>
+                  </div>
+                </div>
+
+                {/* WhatsApp Prefilled Message & Hours */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
+                      WhatsApp Pre-filled Message
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.whatsappMessage || ''}
+                      onChange={(e) => updateConcierge('whatsappMessage', e.target.value)}
+                      placeholder="e.g. Hello Valerie Jewels Concierge, I have an inquiry."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-caps uppercase tracking-wider text-brand-tertiary font-bold mb-1">
+                      Operating Hours (Reference)
+                    </label>
+                    <input
+                      type="text"
+                      value={concierge.hours || ''}
+                      onChange={(e) => updateConcierge('hours', e.target.value)}
+                      placeholder="e.g. 7 days a week from 8:00 AM to 4:00 PM IST"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Visibility Toggle & Save Action */}
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-brand-border">
+                  <label className="inline-flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={concierge.enabled !== false}
+                      onChange={(e) => updateConcierge('enabled', e.target.checked)}
+                      className="rounded text-brand-primary focus:ring-brand-primary w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs text-brand-tertiary font-semibold">
+                      Display "Speak with a Valerie Concierge" banner on /faqs
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveConciergeOnly}
+                    disabled={savingConcierge}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50 cursor-pointer self-start sm:self-auto"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{savingConcierge ? 'Saving Details...' : 'Save Concierge Details'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Live Storefront Preview (5 cols) */}
+              <div className="lg:col-span-5 space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-brand-muted">
+                  <span className="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Live Preview (Exact /faqs Layout)</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-mono font-semibold">
+                    Real-Time Visualizer
+                  </span>
+                </div>
+
+                {/* Mock Banner exactly replicating the user's screenshot */}
+                <div className="rounded-2xl p-5 bg-gradient-to-r from-[#FAF5FF] via-white to-[#FFF5F8] border border-brand-primary/20 shadow-xs space-y-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-caps uppercase tracking-wider text-brand-primary font-bold block">
+                      {concierge.eyebrow || 'STILL HAVE QUESTIONS?'}
+                    </span>
+                    <h3 className="font-editorial text-lg sm:text-xl font-bold text-brand-tertiary leading-snug">
+                      {concierge.title || 'Speak with a Valerie Concierge'}
+                    </h3>
+                    <p className="text-[11.5px] text-brand-muted font-light leading-relaxed">
+                      {concierge.description || 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.'}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    {concierge.whatsappNumber && (
+                      <div className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center space-x-2 shadow-2xs">
+                        <MessageCircle className="w-4 h-4 fill-white/20 shrink-0" />
+                        <span className="truncate">WhatsApp: {concierge.whatsappNumber}</span>
+                      </div>
+                    )}
+
+                    {concierge.phone && (
+                      <div className="w-full px-4 py-2.5 rounded-xl bg-white border border-brand-border text-brand-tertiary text-xs font-semibold flex items-center justify-center space-x-2 shadow-2xs">
+                        <Phone className="w-4 h-4 text-brand-primary shrink-0" />
+                        <span className="truncate">Call: {concierge.phone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-brand-border/60 text-[10px] text-brand-muted flex flex-col gap-0.5 font-mono">
+                    <span className="truncate">WhatsApp Link: https://wa.me/{(concierge.whatsappNumber || '').replace(/\D/g, '')}</span>
+                    <span className="truncate">Call Dial: tel:{(concierge.phone || '').replace(/\s+/g, '')}</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-brand-muted/80 italic text-center">
+                  Changes made here update live on <strong className="font-medium text-brand-primary">valeriejewels.in/faqs</strong> when published.
+                </p>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Filter and Search Controls */}
       <div className="bg-white p-4 rounded-2xl border border-brand-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
