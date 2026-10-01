@@ -112,6 +112,10 @@ const DEFAULT_SITE_CONTENT = {
     label: 'Also Available on Amazon',
     tagline: 'Verified Marketplace Storefront',
   },
+  seoTracking: {
+    googleAnalyticsId: '',
+    googleSearchConsoleTag: '',
+  },
 };
 
 const SiteContentContext = createContext({
@@ -177,6 +181,7 @@ export function SiteContentProvider({ children }) {
             telemetryBanner: { ...DEFAULT_SITE_CONTENT.telemetryBanner, ...(res.data.telemetryBanner || {}) },
             customerSupport: { ...DEFAULT_SITE_CONTENT.customerSupport, ...(res.data.customerSupport || {}) },
             amazonStore: { ...DEFAULT_SITE_CONTENT.amazonStore, ...(res.data.amazonStore || {}) },
+            seoTracking: { ...DEFAULT_SITE_CONTENT.seoTracking, ...(res.data.seoTracking || {}) },
           };
           try {
             localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
@@ -254,6 +259,32 @@ export function SiteContentProvider({ children }) {
       }
     }
   }, [content?.siteIdentity]);
+
+  // Sync Google Analytics 4 Measurement ID and Google Search Console verification tag
+  useEffect(() => {
+    if (content?.seoTracking?.googleAnalyticsId) {
+      const gaId = content.seoTracking.googleAnalyticsId.trim();
+      if (gaId && typeof window !== 'undefined' && typeof window.initGA4 === 'function') {
+        window.initGA4(gaId);
+      }
+    }
+    if (content?.seoTracking?.googleSearchConsoleTag) {
+      let raw = content.seoTracking.googleSearchConsoleTag.trim();
+      if (raw) {
+        // If user pasted `<meta name="google-site-verification" content="XYZ" />`, extract XYZ
+        const match = raw.match(/content=["']([^"']+)["']/i);
+        const code = match ? match[1] : raw;
+        let meta = document.getElementById('google-site-verification') || document.querySelector("meta[name='google-site-verification']");
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.name = 'google-site-verification';
+          meta.id = 'google-site-verification';
+          document.getElementsByTagName('head')[0].appendChild(meta);
+        }
+        meta.setAttribute('content', code);
+      }
+    }
+  }, [content?.seoTracking]);
 
   return (
     <SiteContentContext.Provider value={{ content, refreshContent: fetchContent, loading, DEFAULT_SITE_CONTENT }}>

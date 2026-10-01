@@ -34,11 +34,11 @@ if (!is_array($data)) {
 }
 
 // Clean and validate payload
-function sanitizeContent($input) {
+function sanitizeContent($input, $key = null) {
     if (is_array($input)) {
         $clean = [];
         foreach ($input as $k => $v) {
-            $clean[$k] = sanitizeContent($v);
+            $clean[$k] = sanitizeContent($v, $k);
         }
         return $clean;
     }
@@ -46,6 +46,12 @@ function sanitizeContent($input) {
         return $input;
     }
     if (is_string($input)) {
+        if ($key === 'googleSearchConsoleTag') {
+            // If full <meta ...> tag was pasted, extract the content token
+            if (preg_match('/content=["\']([^"\']+)["\']/i', $input, $matches)) {
+                return trim($matches[1]);
+            }
+        }
         return trim(strip_tags($input));
     }
     return $input;

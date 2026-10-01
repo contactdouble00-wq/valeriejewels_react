@@ -33,6 +33,10 @@ import {
   MapPin,
   Headphones,
   Globe,
+  BarChart3,
+  Search,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 
@@ -184,6 +188,10 @@ const FACTORY_DEFAULTS = {
     label: 'Also Available on Amazon',
     tagline: 'Verified Marketplace Storefront',
   },
+  seoTracking: {
+    googleAnalyticsId: '',
+    googleSearchConsoleTag: '',
+  },
 };
 
 export default function AdminHomepageView() {
@@ -192,6 +200,7 @@ export default function AdminHomepageView() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
   const [activeSection, setActiveSection] = useState('siteIdentity');
+  const [copiedSitemap, setCopiedSitemap] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
   const [uploadingSlideIndex, setUploadingSlideIndex] = useState(null);
@@ -231,6 +240,7 @@ export default function AdminHomepageView() {
           telemetryBanner: { ...FACTORY_DEFAULTS.telemetryBanner, ...(data.telemetryBanner || {}) },
           customerSupport: { ...FACTORY_DEFAULTS.customerSupport, ...(data.customerSupport || {}) },
           amazonStore: { ...FACTORY_DEFAULTS.amazonStore, ...(data.amazonStore || {}) },
+          seoTracking: { ...FACTORY_DEFAULTS.seoTracking, ...(data.seoTracking || {}) },
         });
       }
     } catch (err) {
@@ -445,6 +455,7 @@ export default function AdminHomepageView() {
 
   const sections = [
     { id: 'siteIdentity', label: 'Site Title, Logo & Favicon', icon: Globe, badge: 'Browser Tab' },
+    { id: 'seoTracking', label: 'Google Analytics & Search Console', icon: BarChart3, badge: 'SEO & Tracking' },
     { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
     { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
@@ -705,6 +716,282 @@ export default function AdminHomepageView() {
                 <p className="text-[10px] text-brand-muted">
                   Appears below the title in search engine results. Keep between 120–160 characters for best SEO ranking.
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 0.1 GOOGLE ANALYTICS & SEARCH CONSOLE TRACKING */}
+        {activeSection === 'seoTracking' && (
+          <div className="space-y-6">
+            <div className="border-b border-brand-border/60 pb-5">
+              <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary-light text-brand-primary text-[10px] font-caps uppercase tracking-wider font-bold mb-1">
+                <BarChart3 className="w-3 h-3" />
+                <span>Analytics & Search Indexing</span>
+              </div>
+              <h3 className="text-lg font-editorial font-bold text-brand-tertiary">
+                Google Analytics 4 (GA4) & Search Console Verification
+              </h3>
+              <p className="text-xs text-brand-muted font-light max-w-2xl mt-0.5">
+                Connect your Google Analytics 4 Measurement ID and verify your website in Google Search Console to monitor real-time visitors, track e-commerce purchases, and get indexed in Google Search.
+              </p>
+            </div>
+
+            {/* Quick Status Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
+                    Google Analytics 4
+                  </div>
+                  <div className="text-sm font-bold text-brand-tertiary mt-0.5 truncate max-w-[160px]">
+                    {formData.seoTracking?.googleAnalyticsId ? formData.seoTracking.googleAnalyticsId : 'Not Configured'}
+                  </div>
+                </div>
+                {formData.seoTracking?.googleAnalyticsId ? (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                    Pending
+                  </span>
+                )}
+              </div>
+
+              <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
+                    Search Console Tag
+                  </div>
+                  <div className="text-sm font-bold text-brand-tertiary mt-0.5">
+                    {formData.seoTracking?.googleSearchConsoleTag ? 'Verification Tag Set' : 'Not Added'}
+                  </div>
+                </div>
+                {formData.seoTracking?.googleSearchConsoleTag ? (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
+                    <Check className="w-3 h-3" />
+                    <span>Injected</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                    Pending
+                  </span>
+                )}
+              </div>
+
+              <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
+                    XML Dynamic Sitemap
+                  </div>
+                  <div className="text-sm font-bold text-brand-tertiary mt-0.5">
+                    /sitemap.xml
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
+                  <Check className="w-3 h-3" />
+                  <span>Live</span>
+                </span>
+              </div>
+            </div>
+
+            {/* 1. Google Analytics 4 Section */}
+            <div className="bg-white border border-brand-border rounded-2xl p-6 space-y-4 shadow-2xs">
+              <div className="flex items-center space-x-2 text-brand-tertiary">
+                <BarChart3 className="w-4 h-4 text-brand-primary" />
+                <h4 className="text-sm font-bold">1. Google Analytics 4 (GA4) Configuration</h4>
+              </div>
+
+              <div className="space-y-1.5 max-w-xl">
+                <label className="text-xs font-semibold text-brand-tertiary flex items-center justify-between">
+                  <span>Measurement ID (G-XXXXXXXXXX)</span>
+                  <span className="text-[10px] text-brand-muted font-normal">Starts with G-</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.seoTracking?.googleAnalyticsId || ''}
+                  onChange={(e) => updateNested('seoTracking', 'googleAnalyticsId', e.target.value.trim())}
+                  placeholder="G-XXXXXXXXXX"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">
+                  Find this in your Google Analytics account: <strong>Admin &gt; Data Streams &gt; Web &gt; Measurement ID</strong>.
+                </p>
+              </div>
+
+              {/* Automatic Events Box */}
+              <div className="bg-[#FAF8FC] rounded-xl p-4 border border-brand-border/60 space-y-2">
+                <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                  Automatic E-Commerce Funnel Tracking Enabled
+                </span>
+                <p className="text-[11px] text-brand-muted">
+                  Once your Measurement ID is entered, Valerie Jewels automatically transmits standard GA4 e-commerce events synced alongside Meta Pixel:
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[
+                    { name: 'page_view', desc: 'All Page Navigation' },
+                    { name: 'view_item', desc: 'Product Quickviews & Pages' },
+                    { name: 'add_to_cart', desc: 'Bag Additions & Quantity' },
+                    { name: 'begin_checkout', desc: 'Fastrr & 1-Click Launch' },
+                    { name: 'purchase', desc: 'Prepaid & COD Order Conversions' },
+                  ].map((evt) => (
+                    <div
+                      key={evt.name}
+                      className="px-2.5 py-1 bg-white border border-brand-border rounded-lg text-[10px] flex items-center space-x-1.5 shadow-2xs"
+                    >
+                      <span className="font-mono font-bold text-brand-primary">{evt.name}</span>
+                      <span className="text-brand-muted">({evt.desc})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Google Search Console Verification Section */}
+            <div className="bg-white border border-brand-border rounded-2xl p-6 space-y-4 shadow-2xs">
+              <div className="flex items-center space-x-2 text-brand-tertiary">
+                <Search className="w-4 h-4 text-brand-primary" />
+                <h4 className="text-sm font-bold">2. Google Search Console Ownership Verification</h4>
+              </div>
+
+              <div className="space-y-1.5 max-w-xl">
+                <label className="text-xs font-semibold text-brand-tertiary flex items-center justify-between">
+                  <span>HTML Verification Meta Tag or Code</span>
+                  <span className="text-[10px] text-brand-muted font-normal">HTML Tag Method</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.seoTracking?.googleSearchConsoleTag || ''}
+                  onChange={(e) => updateNested('seoTracking', 'googleSearchConsoleTag', e.target.value.trim())}
+                  placeholder='<meta name="google-site-verification" content="..." /> or just verification token'
+                  className="w-full px-3.5 py-2.5 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-brand-muted">
+                  You can paste either the full <code>&lt;meta name="google-site-verification" content="..." /&gt;</code> snippet or just the code token. It will be injected directly into the HTML <code>&lt;head&gt;</code>.
+                </p>
+              </div>
+
+              {/* Step-by-step instructions */}
+              <div className="bg-[#FAF8FC] rounded-xl p-4 border border-brand-border/60 space-y-2">
+                <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                  How to verify in 3 simple steps:
+                </span>
+                <ol className="list-decimal list-inside text-[11px] text-brand-muted space-y-1 pl-1">
+                  <li>
+                    Open{' '}
+                    <a
+                      href="https://search.google.com/search-console"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-primary underline font-medium inline-flex items-center space-x-0.5"
+                    >
+                      <span>Google Search Console</span>
+                      <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                    </a>{' '}
+                    and add property <strong>https://valeriejewels.in</strong> (select <em>URL prefix</em>).
+                  </li>
+                  <li>
+                    In the verification modal under <strong>Other verification methods</strong>, choose <strong>HTML tag</strong>.
+                  </li>
+                  <li>
+                    Copy the tag, paste it into the field above, click <strong>Save Live Changes</strong> at the top right, then return to Search Console and click <strong>VERIFY</strong>.
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            {/* 3. Sitemap & Indexing */}
+            <div className="bg-white border border-brand-border rounded-2xl p-6 space-y-4 shadow-2xs">
+              <div className="flex items-center space-x-2 text-brand-tertiary">
+                <Globe className="w-4 h-4 text-brand-primary" />
+                <h4 className="text-sm font-bold">3. XML Sitemap & Crawling for Search Console</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#FAF8FC] border border-brand-border/80 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                      Official XML Sitemap
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Auto-Updated
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-brand-muted">
+                    Submit this URL inside Google Search Console under <strong>Sitemaps &gt; Add a new sitemap</strong>:
+                  </p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <input
+                      type="text"
+                      readOnly
+                      value="https://valeriejewels.in/sitemap.xml"
+                      className="w-full px-3 py-1.5 bg-white border border-brand-border rounded-lg text-xs font-mono text-brand-tertiary select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://valeriejewels.in/sitemap.xml');
+                        setCopiedSitemap(true);
+                        setTimeout(() => setCopiedSitemap(false), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-brand-primary-dark transition-colors shrink-0 flex items-center space-x-1"
+                    >
+                      {copiedSitemap ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                    <a
+                      href="https://valeriejewels.in/sitemap.xml"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 border border-brand-border bg-white rounded-lg text-brand-muted hover:text-brand-tertiary transition-colors"
+                      title="Open sitemap in new tab"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                <div className="bg-[#FAF8FC] border border-brand-border/80 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                      Robots.txt Configuration
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Standard Compliant
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-brand-muted">
+                    Instructs Googlebot and other legitimate search engine crawlers to index all storefront pages while protecting admin paths:
+                  </p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <input
+                      type="text"
+                      readOnly
+                      value="https://valeriejewels.in/robots.txt"
+                      className="w-full px-3 py-1.5 bg-white border border-brand-border rounded-lg text-xs font-mono text-brand-tertiary select-all"
+                    />
+                    <a
+                      href="https://valeriejewels.in/robots.txt"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 border border-brand-border bg-white rounded-lg text-brand-muted hover:text-brand-tertiary transition-colors"
+                      title="Open robots.txt in new tab"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

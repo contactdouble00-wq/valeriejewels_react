@@ -17,6 +17,25 @@
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Tenor+Sans&display=swap"
     rel="stylesheet">
 
+  <!-- Google Search Console Verification -->
+  <meta name="google-site-verification" content="" id="google-site-verification" />
+
+  <!-- Google tag (gtag.js) for Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js" id="ga4-script"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    window.initGA4 = function (measurementId) {
+      if (!measurementId) return;
+      var s = document.getElementById('ga4-script');
+      if (s && !s.src.includes('id=')) {
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
+      }
+      gtag('config', measurementId, { send_page_view: true });
+    };
+  </script>
+
   <!-- Meta Pixel Code -->
   <script>
     !function (f, b, e, v, n, t, s) {

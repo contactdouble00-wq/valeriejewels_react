@@ -99,6 +99,12 @@ try {
                     'perk3Desc'           => 'Priority dispatch & insured delivery across 29,000+ Indian pincodes.',
                 ];
             }
+            if (!isset($data['seoTracking']) || !is_array($data['seoTracking'])) {
+                $data['seoTracking'] = [
+                    'googleAnalyticsId'      => '',
+                    'googleSearchConsoleTag' => '',
+                ];
+            }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
             exit;
         }
@@ -239,6 +245,10 @@ try {
             'address'          => 'Patel Chowk, Rajkot, Gujarat',
             'hours'            => '7 days a week, 8:00 AM – 4:00 PM',
             'whatsappMessage'  => 'Hello Valerie Jewels, I have an inquiry about an item.',
+        ],
+        'seoTracking' => [
+            'googleAnalyticsId'      => '',
+            'googleSearchConsoleTag' => '',
         ],
     ];
 

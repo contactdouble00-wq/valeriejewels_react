@@ -1,0 +1,9 @@
+# Robots.txt for Valerie Jewels
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /vj-manage-x1126
+Disallow: /api/
+
+# Official Sitemap for Google Search Console
+Sitemap: https://valeriejewels.in/sitemap.xml
