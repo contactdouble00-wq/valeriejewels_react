@@ -135,8 +135,12 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
     wishlistCount
   } = useWishlist();
 
+  // Initial payment mode preference for checkout ('full_prepaid' | 'partial' | 'cod')
+  const [checkoutInitialPaymentType, setCheckoutInitialPaymentType] = useState('full_prepaid');
+
   // Official Shiprocket Fastrr 1-Click Checkout Trigger
-  const handleTriggerFastrr = async (itemsOverride = null, event = null) => {
+  const handleTriggerFastrr = async (itemsOverride = null, event = null, paymentTypePreference = 'full_prepaid') => {
+    setCheckoutInitialPaymentType(paymentTypePreference || 'full_prepaid');
     let items = itemsOverride;
     if (!items || items.length === 0) {
       items = cartItems;
@@ -891,7 +895,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           onAddToCart={(product, variant) => {
             addToCart(product, variant, 1, true);
           }}
-          onBuyNow={(product, variant) => {
+          onBuyNow={(product, variant, initialMode = 'full_prepaid') => {
             const price = variant && variant.price ? Number(variant.price) : Number(product.price);
             const item = {
               productId: product.id,
@@ -902,13 +906,13 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
               image: product.primary_image || (product.images && (product.images[0]?.image_url || product.images[0]?.url || product.images[0])) || '',
             };
             addToCart(product, variant, 1, false);
-            handleTriggerFastrr([item]);
+            handleTriggerFastrr([item], null, initialMode);
           }}
         />
       )}
 
       {/* Slide-out Cart Drawer */}
-      <CartDrawer onProceedToCheckout={() => handleTriggerFastrr()} />
+      <CartDrawer onProceedToCheckout={(initialMode = 'full_prepaid') => handleTriggerFastrr(null, null, initialMode)} />
 
       {/* Slide-out Wishlist Drawer */}
       <WishlistDrawer onSelectProduct={(item) => openPdp(item.slug, item)} />
@@ -943,6 +947,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           onTrackOrder={(orderNum) => openTracking(orderNum)}
+          initialPaymentType={checkoutInitialPaymentType}
         />
       </ErrorBoundary>
 
