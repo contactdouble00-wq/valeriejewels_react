@@ -7,3 +7,4 @@ Disallow: /api/
 
 # Official Sitemap for Google Search Console
 Sitemap: https://valeriejewels.in/sitemap.xml
+Sitemap: https://valeriejewels.in/sitemap_index.xml

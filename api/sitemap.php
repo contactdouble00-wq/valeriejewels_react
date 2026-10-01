@@ -2,6 +2,7 @@
 /**
  * Dynamic XML Sitemap Generator for Google Search Console
  * Automatically indexes homepage, policies, categories, and products.
+ * Also synchronizes static sitemap.xml and sitemap_index.xml to root directory.
  */
 
 header('Content-Type: application/xml; charset=utf-8');
@@ -51,10 +52,10 @@ try {
 
     // Query categories
     try {
-        $catStmt = $pdo->query("SELECT slug, updated_at FROM categories WHERE is_active = 1 OR is_active IS NULL");
+        $catStmt = $pdo->query("SELECT slug, created_at FROM categories WHERE is_active = 1 OR is_active IS NULL");
         $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($categories as $cat) {
-            $lastmod = !empty($cat['updated_at']) ? date('Y-m-d', strtotime($cat['updated_at'])) : date('Y-m-d');
+            $lastmod = !empty($cat['created_at']) ? date('Y-m-d', strtotime($cat['created_at'])) : date('Y-m-d');
             $urls[] = [
                 'loc' => $baseUrl . '/?category=' . rawurlencode($cat['slug']),
                 'lastmod' => $lastmod,
@@ -66,20 +67,30 @@ try {
         // Fallback or ignore if table differs
     }
 
-    // Query active products
+    // Query active products with primary images
     try {
-        $prodStmt = $pdo->query("SELECT slug, updated_at, primary_image FROM products WHERE is_active = 1 OR is_active IS NULL ORDER BY id DESC LIMIT 500");
+        $prodStmt = $pdo->query("
+            SELECT 
+                p.id, 
+                p.slug, 
+                p.created_at,
+                (SELECT image_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_url
+            FROM products p 
+            WHERE p.is_active = 1 OR p.is_active IS NULL 
+            ORDER BY p.id DESC 
+            LIMIT 500
+        ");
         $products = $prodStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($products as $prod) {
-            $lastmod = !empty($prod['updated_at']) ? date('Y-m-d', strtotime($prod['updated_at'])) : date('Y-m-d');
+            $lastmod = !empty($prod['created_at']) ? date('Y-m-d', strtotime($prod['created_at'])) : date('Y-m-d');
             $item = [
                 'loc' => $baseUrl . '/?product=' . rawurlencode($prod['slug']),
                 'lastmod' => $lastmod,
                 'changefreq' => 'daily',
                 'priority' => '0.9'
             ];
-            if (!empty($prod['primary_image'])) {
-                $imgUrl = $prod['primary_image'];
+            if (!empty($prod['image_url'])) {
+                $imgUrl = $prod['image_url'];
                 if (strpos($imgUrl, 'http') !== 0) {
                     $imgUrl = $baseUrl . '/' . ltrim($imgUrl, '/');
                 }
@@ -95,29 +106,51 @@ try {
     // Database connection failed, output static URLs only
 }
 
-// Generate XML
-echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
-echo '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
+// Generate Main Sitemap XML
+$xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+$xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
+$xml .= '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
 
 foreach ($urls as $u) {
-    echo '  <url>' . "\n";
-    echo '    <loc>' . htmlspecialchars($u['loc'], ENT_XML1, 'UTF-8') . '</loc>' . "\n";
+    $xml .= '  <url>' . "\n";
+    $xml .= '    <loc>' . htmlspecialchars($u['loc'], ENT_XML1, 'UTF-8') . '</loc>' . "\n";
     if (!empty($u['lastmod'])) {
-        echo '    <lastmod>' . htmlspecialchars($u['lastmod'], ENT_XML1, 'UTF-8') . '</lastmod>' . "\n";
+        $xml .= '    <lastmod>' . htmlspecialchars($u['lastmod'], ENT_XML1, 'UTF-8') . '</lastmod>' . "\n";
     } else {
-        echo '    <lastmod>' . date('Y-m-d') . '</lastmod>' . "\n";
+        $xml .= '    <lastmod>' . date('Y-m-d') . '</lastmod>' . "\n";
     }
-    echo '    <changefreq>' . htmlspecialchars($u['changefreq'] ?? 'weekly', ENT_XML1, 'UTF-8') . '</changefreq>' . "\n";
-    echo '    <priority>' . htmlspecialchars($u['priority'] ?? '0.8', ENT_XML1, 'UTF-8') . '</priority>' . "\n";
+    $xml .= '    <changefreq>' . htmlspecialchars($u['changefreq'] ?? 'weekly', ENT_XML1, 'UTF-8') . '</changefreq>' . "\n";
+    $xml .= '    <priority>' . htmlspecialchars($u['priority'] ?? '0.8', ENT_XML1, 'UTF-8') . '</priority>' . "\n";
     
     if (!empty($u['image'])) {
-        echo '    <image:image>' . "\n";
-        echo '      <image:loc>' . htmlspecialchars($u['image'], ENT_XML1, 'UTF-8') . '</image:loc>' . "\n";
-        echo '    </image:image>' . "\n";
+        $xml .= '    <image:image>' . "\n";
+        $xml .= '      <image:loc>' . htmlspecialchars($u['image'], ENT_XML1, 'UTF-8') . '</image:loc>' . "\n";
+        $xml .= '    </image:image>' . "\n";
     }
     
-    echo '  </url>' . "\n";
+    $xml .= '  </url>' . "\n";
 }
 
-echo '</urlset>' . "\n";
+$xml .= '</urlset>' . "\n";
+
+// Generate Sitemap Index XML (for crawlers that check sitemap_index.xml)
+$indexXml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+$indexXml .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+$indexXml .= '  <sitemap>' . "\n";
+$indexXml .= '    <loc>' . $baseUrl . '/sitemap.xml</loc>' . "\n";
+$indexXml .= '    <lastmod>' . date('Y-m-d') . '</lastmod>' . "\n";
+$indexXml .= '  </sitemap>' . "\n";
+$indexXml .= '</sitemapindex>' . "\n";
+
+// Keep static files synchronized on root if writable
+$rootDir = dirname(__DIR__);
+@file_put_contents($rootDir . '/sitemap.xml', $xml);
+@file_put_contents($rootDir . '/sitemap_index.xml', $indexXml);
+
+// Check if request is specifically for sitemap_index.xml
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+if (strpos($requestUri, 'sitemap_index') !== false) {
+    echo $indexXml;
+} else {
+    echo $xml;
+}

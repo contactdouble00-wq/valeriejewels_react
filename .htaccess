@@ -37,8 +37,9 @@ Options -Indexes
   # 1. Direct legacy or root /uploads/ requests directly to /api/uploads/
   RewriteRule ^uploads/(.*)$ api/uploads/$1 [L,NC]
 
-  # 1b. XML Sitemap rewrite for Google Search Console
-  RewriteRule ^sitemap\.xml$ api/sitemap.php [L,NC]
+  # 1b. XML Sitemap rewrite for Google Search Console (Static first, fallback to PHP generator)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^sitemap(_index)?\.xml$ api/sitemap.php [L,NC]
 
   # 2. Pass PHP API requests straight to the backend without rewriting to index.html
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
