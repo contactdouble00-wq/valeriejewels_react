@@ -8,8 +8,72 @@
  * - purchase
  */
 
+const TELEMETRY_STORAGE_KEY = 'valerie_live_telemetry_events';
+const MAX_TELEMETRY_ITEMS = 60;
+
+/**
+ * Log event to local storage ring buffer and dispatch a live event for Admin Panel
+ */
+export const logLocalTelemetry = (eventName, params = {}) => {
+  try {
+    if (typeof window === 'undefined') return;
+    const now = new Date();
+    const eventRecord = {
+      id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      eventName,
+      params,
+      timestamp: Date.now(),
+      timeFormatted: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      page: window.location.pathname || '/',
+    };
+
+    const raw = localStorage.getItem(TELEMETRY_STORAGE_KEY);
+    let list = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) list = [];
+    list.unshift(eventRecord);
+    if (list.length > MAX_TELEMETRY_ITEMS) {
+      list = list.slice(0, MAX_TELEMETRY_ITEMS);
+    }
+    localStorage.setItem(TELEMETRY_STORAGE_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent('valerie_analytics_event', { detail: eventRecord }));
+  } catch (e) {
+    // Non-blocking telemetry warning
+  }
+};
+
+/**
+ * Get all stored telemetry events
+ */
+export const getStoredTelemetry = () => {
+  try {
+    if (typeof window === 'undefined') return [];
+    const raw = localStorage.getItem(TELEMETRY_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+/**
+ * Clear stored telemetry events
+ */
+export const clearStoredTelemetry = () => {
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(TELEMETRY_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent('valerie_analytics_event', { detail: { action: 'clear' } }));
+  } catch (e) {
+    // Non-blocking
+  }
+};
+
 export const trackGAEvent = (eventName, params = {}) => {
   try {
+    // 1. Record event for real-time Admin Panel Activity Stream
+    logLocalTelemetry(eventName, params);
+
+    // 2. Dispatch to official Google Analytics 4 gtag.js
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       window.gtag('event', eventName, params);
       if (process.env.NODE_ENV !== 'production') {

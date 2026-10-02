@@ -18,10 +18,12 @@ import {
   Zap,
   MessageCircle,
   Star,
+  BarChart3,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
 import AdminDashboardView from './AdminDashboardView';
+import AdminAnalyticsView from './AdminAnalyticsView';
 import AdminHomepageView from './AdminHomepageView';
 import AdminCustomerCareView from './AdminCustomerCareView';
 import AdminProductsView from './AdminProductsView';
@@ -63,6 +65,7 @@ export default function AdminPortal({ onReturnToStore }) {
 
   const navItems = [
     { id: 'dashboard', label: 'Executive Telemetry', icon: LayoutDashboard, badge: 'Ad Spotlight' },
+    { id: 'analytics', label: 'Google Analytics & Traffic', icon: BarChart3, badge: 'GA4 Live' },
     { id: 'homepage', label: 'Homepage & Banners', icon: Sliders, badge: 'Live UI' },
     { id: 'customercare', label: 'Customer Care & WhatsApp', icon: MessageCircle, badge: 'Support' },
     { id: 'products', label: 'Products & Stock', icon: Package },
@@ -231,6 +234,8 @@ export default function AdminPortal({ onReturnToStore }) {
               }}
             />
           )}
+
+          {activeTab === 'analytics' && <AdminAnalyticsView currentUser={currentUser} />}
 
           {activeTab === 'homepage' && <AdminHomepageView />}
 
