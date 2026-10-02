@@ -312,6 +312,18 @@ export const adminApi = {
     return res.data;
   },
 
+  async bulkSendPaymentReminders(orderIds, customMessage = '', emailType = 'payment_reminder') {
+    const res = await request('/admin/orders.php?action=bulk_send_payment_reminder', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_ids: orderIds,
+        custom_message: customMessage,
+        email_type: emailType,
+      }),
+    });
+    return res.data;
+  },
+
   async previewEmailTemplate(type = 'order_confirmation', params = {}) {
     const qs = new URLSearchParams({ action: 'preview_email', type, ...params }).toString();
     const res = await request(`/admin/orders.php?${qs}`);

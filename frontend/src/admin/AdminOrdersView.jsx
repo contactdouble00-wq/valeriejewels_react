@@ -72,6 +72,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Bulk Email Pending Payment Modal
+  const [bulkEmailModalOpen, setBulkEmailModalOpen] = useState(false);
+  const [bulkEmailCustomMessage, setBulkEmailCustomMessage] = useState('');
+  const [bulkEmailSending, setBulkEmailSending] = useState(false);
+
   const isStaff = currentUser?.role === 'staff';
 
   const showToast = (msg) => {
@@ -142,6 +147,61 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Failed to delete selected orders');
     } finally {
       setBulkDeleting(false);
+    }
+  };
+
+  // Pending payment orders in currently loaded list
+  const pendingPaymentOrders = orders.filter(
+    (o) =>
+      (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
+      o.payment_type !== 'cod'
+  );
+
+  // Selected orders that have pending payment
+  const selectedPendingOrders = orders.filter(
+    (o) =>
+      selectedOrderIds.includes(o.id) &&
+      (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
+      o.payment_type !== 'cod'
+  );
+
+  // Target orders for the bulk email dispatch modal
+  const targetBulkEmailOrders = selectedPendingOrders.length > 0
+    ? selectedPendingOrders
+    : orders.filter((o) => selectedOrderIds.includes(o.id));
+
+  const handleSelectAllPendingOrders = () => {
+    const pending = orders.filter(
+      (o) =>
+        (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
+        o.payment_type !== 'cod'
+    );
+
+    if (pending.length > 0) {
+      const pendingIds = pending.map((o) => o.id);
+      setSelectedOrderIds(pendingIds);
+      showToast(`Selected all ${pendingIds.length} orders with pending payment`);
+    } else {
+      setPaymentStatusFilter('unpaid_pending');
+      showToast('Filtered view to Unpaid / Pending Checkouts. Please select when loaded.');
+    }
+  };
+
+  const handleConfirmBulkEmail = async () => {
+    if (targetBulkEmailOrders.length === 0) return;
+    setBulkEmailSending(true);
+    try {
+      const orderIds = targetBulkEmailOrders.map((o) => o.id);
+      const res = await adminApi.bulkSendPaymentReminders(orderIds, bulkEmailCustomMessage, 'payment_reminder');
+      showToast(res?.message || `Payment reminders sent to ${orderIds.length} customers!`);
+      setBulkEmailModalOpen(false);
+      setBulkEmailCustomMessage('');
+      setSelectedOrderIds([]);
+      loadOrders();
+    } catch (err) {
+      showToast(err.message || 'Failed to dispatch payment reminder emails');
+    } finally {
+      setBulkEmailSending(false);
     }
   };
 
@@ -483,6 +543,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <Flame className="w-3 h-3" />
               <span>Jhumka Boxes Only</span>
             </button>
+
+            {/* Quick Select All Pending Payment Orders Button */}
+            <button
+              type="button"
+              onClick={handleSelectAllPendingOrders}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-2xs border cursor-pointer ${
+                pendingPaymentOrders.length > 0
+                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-[#FAF8FC] hover:bg-gray-100 text-brand-muted border-brand-border'
+              }`}
+              title="Select all orders where customer payment is pending to email them"
+            >
+              <Mail className="w-3.5 h-3.5 text-amber-600" />
+              <span>Select All Pending ({pendingPaymentOrders.length})</span>
+            </button>
           </div>
         </div>
       </div>
@@ -490,13 +565,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       {/* Multi-Select Batch Action Banner */}
       {selectedOrderIds.length > 0 && (
         <div className="bg-[#26153D] text-white rounded-2xl p-3.5 px-4 shadow-luxury flex items-center justify-between flex-wrap gap-3 animate-fade-in border border-purple-900/40">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-1">
             <span className="w-7 h-7 rounded-xl bg-purple-500/30 border border-purple-400/40 text-purple-200 font-mono font-bold flex items-center justify-center text-xs">
               {selectedOrderIds.length}
             </span>
             <span className="text-xs font-semibold text-purple-100">
               {selectedOrderIds.length} of {orders.length} {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
             </span>
+            {selectedPendingOrders.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                {selectedPendingOrders.length} Pending Payment
+              </span>
+            )}
             <span className="text-white/30 hidden sm:inline">|</span>
             <button
               type="button"
@@ -505,15 +585,39 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             >
               {isAllSelected ? 'Deselect All' : `Select All Visible (${orders.length})`}
             </button>
+            {pendingPaymentOrders.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSelectAllPendingOrders}
+                className="text-xs text-amber-300 hover:text-amber-100 underline cursor-pointer font-medium"
+              >
+                Select All Pending ({pendingPaymentOrders.length})
+              </button>
+            )}
           </div>
           <div className="flex items-center space-x-2">
+            {/* EMAIL PENDING PAYMENT USERS BUTTON */}
+            <button
+              type="button"
+              onClick={() => setBulkEmailModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
+              title="Email payment reminder to selected pending customers"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>
+                Email Pending Users (
+                {selectedPendingOrders.length > 0 ? selectedPendingOrders.length : selectedOrderIds.length}
+                )
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => setBulkDeleteModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Selected Junk Orders ({selectedOrderIds.length})</span>
+              <span>Delete Selected ({selectedOrderIds.length})</span>
             </button>
             <button
               type="button"
@@ -1344,6 +1448,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <option value="order_confirmation">✦ Order Confirmation / Successful (Full Recap + Gift Callout)</option>
                   <option value="order_status_update">🚚 Status Update & Milestone (Live Badge + Live Tracking)</option>
                   <option value="order_on_hold">⏱ Order Temporarily On Hold (Concierge Notice & WhatsApp)</option>
+                  <option value="payment_reminder">💳 Payment Reminder (Incomplete Checkout Recovery Link)</option>
                   <option value="order_failed">✕ Payment Incomplete / Failed (Reassurance & Retry Link)</option>
                   <option value="order_shipped">✈️ Order Shipped (Air Express & AWB Tracking)</option>
                   <option value="order_cancelled">🛑 Order Cancelled & Refund Notice</option>
@@ -1646,6 +1751,112 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{bulkDeleting ? `Deleting ${selectedOrderIds.length} Orders...` : `Yes, Delete ${selectedOrderIds.length} Orders`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BULK EMAIL PENDING PAYMENT REMINDER MODAL */}
+      {/* ========================================================================= */}
+      {bulkEmailModalOpen && targetBulkEmailOrders.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 border border-brand-border shadow-luxury space-y-4 animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center space-x-3 text-amber-600">
+              <div className="p-2.5 bg-amber-50 rounded-2xl border border-amber-200 shrink-0">
+                <Mail className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                  Email Pending Payment Reminders
+                </h3>
+                <span className="text-[11px] text-amber-700 font-semibold block">
+                  Batch Reminder Dispatch • {targetBulkEmailOrders.length} {targetBulkEmailOrders.length === 1 ? 'Customer' : 'Customers'} Selected
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-brand-muted leading-relaxed">
+              You are about to dispatch an official Valerie Jewels luxury payment recovery email to <strong className="text-brand-tertiary">{targetBulkEmailOrders.length} {targetBulkEmailOrders.length === 1 ? 'customer' : 'customers'}</strong>. Each email contains an itemized order summary, a direct 1-click payment recovery link, and customer concierge support.
+            </p>
+
+            {/* Recipients List Preview */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-caps text-brand-muted px-1">
+                <span>Selected Customers ({targetBulkEmailOrders.length})</span>
+                <span>Review emails & amounts</span>
+              </div>
+              <div className="max-h-44 overflow-y-auto rounded-2xl border border-brand-border bg-[#FAF8FC] p-2 space-y-1 divide-y divide-brand-border/40">
+                {targetBulkEmailOrders.map((o) => (
+                  <div key={o.id} className="pt-1.5 first:pt-0 flex items-center justify-between text-xs px-2 py-1">
+                    <div className="truncate max-w-[280px]">
+                      <span className="font-mono font-bold text-brand-primary">#{o.order_number}</span>
+                      <span className="text-brand-tertiary ml-2 font-medium">{o.customer_name || 'Valued Customer'}</span>
+                      <span className="text-[10px] text-brand-muted ml-1.5">({o.customer_email || 'No email'})</span>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        {o.payment_status === 'pending' ? 'Unpaid' : o.payment_status}
+                      </span>
+                      <span className="font-bold text-brand-tertiary">
+                        ₹{Number(o.total_amount).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Note / Message (Optional) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-brand-tertiary flex items-center justify-between">
+                <span>Optional Personalized Concierge Note</span>
+                <span className="text-[10px] text-brand-muted">Renders in a highlighted block in the email</span>
+              </label>
+              <textarea
+                value={bulkEmailCustomMessage}
+                onChange={(e) => setBulkEmailCustomMessage(e.target.value)}
+                placeholder="e.g. Your handcrafted pieces have been reserved. Please complete your payment today to guarantee immediate dispatch and your complimentary velvet keepsake box."
+                rows={3}
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary placeholder:text-brand-muted/60"
+              />
+            </div>
+
+            {/* Reassurance Feature Pill */}
+            <div className="bg-[#FAF8FC] rounded-2xl p-3 border border-brand-border/60 text-[11px] text-brand-tertiary flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Includes secure 1-click checkout recovery URL & WhatsApp Concierge link</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary bg-white px-2 py-0.5 rounded border border-brand-border shrink-0 ml-2">
+                Auto-Linked
+              </span>
+            </div>
+
+            {/* Modal Footer Buttons */}
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-brand-border/60">
+              <button
+                type="button"
+                onClick={() => setBulkEmailModalOpen(false)}
+                disabled={bulkEmailSending}
+                className="px-4 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkEmail}
+                disabled={bulkEmailSending || targetBulkEmailOrders.length === 0}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold shadow-sm transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                <Send className={`w-3.5 h-3.5 ${bulkEmailSending ? 'animate-spin' : ''}`} />
+                <span>
+                  {bulkEmailSending
+                    ? `Dispatching to ${targetBulkEmailOrders.length} Customers...`
+                    : `Dispatch Reminders to ${targetBulkEmailOrders.length} ${targetBulkEmailOrders.length === 1 ? 'Customer' : 'Customers'}`}
+                </span>
               </button>
             </div>
           </div>

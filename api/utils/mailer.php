@@ -154,7 +154,7 @@ class MailerService
     /**
      * Send Order Failed / Payment Incomplete Email
      */
-    public static function sendOrderFailed(int $orderId, ?string $reason = null, bool $force = false): array
+    public static function sendOrderFailed(int $orderId, ?string $reason = null, bool $force = false, ?string $customMessage = null): array
     {
         $pdo = Database::getConnection();
 
@@ -179,6 +179,43 @@ class MailerService
         return self::send(
             $orderId,
             'order_failed',
+            $order['customer_email'],
+            $order['customer_name'],
+            $subject,
+            $htmlBody,
+            $force
+        );
+    }
+
+    /**
+     * Send Payment Reminder / Pending Order Follow-up Email
+     */
+    public static function sendPaymentReminder(int $orderId, ?string $customMessage = null, bool $force = false): array
+    {
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) throw new Exception("Order #{$orderId} not found");
+
+        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $itemStmt->execute([$orderId]);
+        $items = $itemStmt->fetchAll();
+
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $reason    = 'Pending payment completion';
+
+        ob_start();
+        require dirname(__DIR__) . '/templates/emails/order_failed.php';
+        $htmlBody = ob_get_clean();
+
+        $subject = "Complete Your Order #{$order['order_number']} — Your Luxury Jewelry is Waiting — Valerie Jewels";
+
+        return self::send(
+            $orderId,
+            'payment_reminder',
             $order['customer_email'],
             $order['customer_name'],
             $subject,

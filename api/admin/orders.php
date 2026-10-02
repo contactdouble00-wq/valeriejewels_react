@@ -511,8 +511,11 @@ if ($action === 'send_customer_email') {
             case 'order_confirmation':
                 $result = MailerService::sendOrderConfirmation($orderId, $force);
                 break;
+            case 'payment_reminder':
+                $result = MailerService::sendPaymentReminder($orderId, $customMessage ?: null, $force);
+                break;
             case 'order_failed':
-                $result = MailerService::sendOrderFailed($orderId, $reason ?: null, $force);
+                $result = MailerService::sendOrderFailed($orderId, $reason ?: null, $force, $customMessage ?: null);
                 break;
             case 'order_on_hold':
                 $result = MailerService::sendOrderOnHold($orderId, $reason ?: null, $force);
@@ -540,6 +543,105 @@ if ($action === 'send_customer_email') {
     } catch (Throwable $e) {
         ApiResponse::error('Failed to dispatch email: ' . $e->getMessage(), 500);
     }
+}
+
+// Handle Bulk Send Payment Reminder Emails
+if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
+    $orderIds = $input['order_ids'] ?? [];
+    if (!is_array($orderIds) || empty($orderIds)) {
+        ApiResponse::error('No orders selected for batch email dispatch', 422);
+    }
+
+    $customMessage = trim($input['custom_message'] ?? '');
+    $emailType = trim($input['email_type'] ?? 'payment_reminder');
+
+    $sentOrders = [];
+    $failedOrders = [];
+
+    $stmt = $pdo->prepare("SELECT id, order_number, customer_name, customer_email, payment_status, total_amount FROM orders WHERE id = ?");
+
+    foreach ($orderIds as $ordId) {
+        $ordIdInt = (int)$ordId;
+        if ($ordIdInt <= 0) continue;
+
+        $stmt->execute([$ordIdInt]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order) {
+            $failedOrders[] = [
+                'order_id' => $ordIdInt,
+                'error'    => 'Order not found in database',
+            ];
+            continue;
+        }
+
+        if (empty($order['customer_email']) || !filter_var($order['customer_email'], FILTER_VALIDATE_EMAIL)) {
+            $failedOrders[] = [
+                'order_id'     => $ordIdInt,
+                'order_number' => $order['order_number'],
+                'customer_name'=> $order['customer_name'],
+                'error'        => 'No valid email address on file',
+            ];
+            continue;
+        }
+
+        try {
+            if ($emailType === 'order_failed') {
+                $res = MailerService::sendOrderFailed($ordIdInt, null, true, $customMessage ?: null);
+            } else {
+                $res = MailerService::sendPaymentReminder($ordIdInt, $customMessage ?: null, true);
+            }
+
+            if (!empty($res['success'])) {
+                $sentOrders[] = [
+                    'order_id'       => $ordIdInt,
+                    'order_number'   => $order['order_number'],
+                    'customer_name'  => $order['customer_name'],
+                    'customer_email' => $order['customer_email'],
+                    'status'         => $res['status'] ?? 'sent',
+                ];
+            } else {
+                $failedOrders[] = [
+                    'order_id'       => $ordIdInt,
+                    'order_number'   => $order['order_number'],
+                    'customer_name'  => $order['customer_name'],
+                    'customer_email' => $order['customer_email'],
+                    'error'          => $res['error_message'] ?? 'Mailer failed',
+                ];
+            }
+        } catch (Throwable $e) {
+            $failedOrders[] = [
+                'order_id'       => $ordIdInt,
+                'order_number'   => $order['order_number'],
+                'customer_name'  => $order['customer_name'],
+                'customer_email' => $order['customer_email'],
+                'error'          => $e->getMessage(),
+            ];
+        }
+    }
+
+    $sentCount = count($sentOrders);
+    $failedCount = count($failedOrders);
+
+    // Audit trail log
+    AdminAuth::logActivity($adminUser['id'], 'bulk_send_payment_reminder', 'orders', 0, [
+        'selected_count' => count($orderIds),
+        'sent_count'     => $sentCount,
+        'failed_count'   => $failedCount,
+        'email_type'     => $emailType,
+    ]);
+
+    $summaryMsg = "Payment reminder email successfully dispatched to {$sentCount} " . ($sentCount === 1 ? 'customer' : 'customers') . ".";
+    if ($failedCount > 0) {
+        $summaryMsg .= " ({$failedCount} orders failed or had invalid emails).";
+    }
+
+    ApiResponse::success([
+        'sent_count'    => $sentCount,
+        'failed_count'  => $failedCount,
+        'sent_orders'   => $sentOrders,
+        'failed_orders' => $failedOrders,
+    ], $summaryMsg);
 }
 
 // Handle Cancel & Refund

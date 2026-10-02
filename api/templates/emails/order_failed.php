@@ -66,6 +66,11 @@ $total = number_format((float)($order['total_amount'] ?? 0), 2);
               <p style="margin: 0; font-size: 13.5px; line-height: 22px; color: #6D5E7A;">
                 Hello <strong><?= $customerName ?></strong>, we noticed that your checkout for order reference <strong style="color: #8366B0; font-family: monospace;"><?= $orderNumber ?></strong> could not be completed.
               </p>
+              <?php if (!empty($customMessage)): ?>
+              <div style="margin: 16px 0 0 0; padding: 12px 16px; background-color: #FAF7FC; border-left: 3px solid #8366B0; border-radius: 6px; font-size: 12.5px; line-height: 19px; color: #26153D; text-align: left;">
+                <?= nl2br(htmlspecialchars($customMessage)) ?>
+              </div>
+              <?php endif; ?>
             </td>
           </tr>
 
