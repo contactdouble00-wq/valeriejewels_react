@@ -266,24 +266,26 @@ if ($method === 'GET') {
         $params = array_merge($params, [$term, $term, $term, $term, $term]);
     }
 
-    if ($status !== '' && $status !== 'all') {
-        $where[] = "o.order_status = ?";
-        $params[] = $status;
-    }
+    // If filtering by unpaid_pending, ensure ALL pending/failed/unpaid orders are captured
+    if ($paymentStatus === 'unpaid_pending') {
+        $where[] = "((o.payment_status IN ('pending', 'failed') OR o.order_status IN ('pending', 'failed')) AND o.payment_status != 'paid')";
+    } else {
+        if ($status !== '' && $status !== 'all') {
+            if ($status === 'pending' || $status === 'failed') {
+                $where[] = "((o.payment_status IN ('pending', 'failed') OR o.order_status IN ('pending', 'failed')) AND o.payment_status != 'paid')";
+            } else {
+                $where[] = "o.order_status = ?";
+                $params[] = $status;
+            }
+        }
 
-    if ($paymentMethod !== '' && $paymentMethod !== 'all') {
-        $where[] = "o.payment_type = ?";
-        $params[] = $paymentMethod;
-    }
-
-    if ($paymentStatus !== '' && $paymentStatus !== 'all') {
-        if ($paymentStatus === 'paid_confirmed') {
-            $where[] = "(o.payment_status IN ('paid', 'partial_paid') OR o.order_status = 'confirmed')";
-        } elseif ($paymentStatus === 'unpaid_pending') {
-            $where[] = "(o.payment_status = 'pending' AND o.order_status = 'pending')";
-        } else {
-            $where[] = "o.payment_status = ?";
-            $params[] = $paymentStatus;
+        if ($paymentStatus !== '' && $paymentStatus !== 'all') {
+            if ($paymentStatus === 'paid_confirmed') {
+                $where[] = "(o.payment_status IN ('paid', 'partial_paid') OR o.order_status = 'confirmed')";
+            } else {
+                $where[] = "o.payment_status = ?";
+                $params[] = $paymentStatus;
+            }
         }
     }
 

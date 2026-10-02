@@ -171,19 +171,17 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
+  // Pending payment / incomplete orders (including all pending, failed, or unpaid checkout states)
+  const isPendingOrder = (o) =>
+    ((o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending' || o.order_status === 'failed') &&
+      o.payment_status !== 'paid');
+
   // Pending payment orders in currently loaded list
-  const pendingPaymentOrders = orders.filter(
-    (o) =>
-      (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
-      o.payment_type !== 'cod'
-  );
+  const pendingPaymentOrders = orders.filter(isPendingOrder);
 
   // Selected orders that have pending payment
   const selectedPendingOrders = orders.filter(
-    (o) =>
-      selectedOrderIds.includes(o.id) &&
-      (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
-      o.payment_type !== 'cod'
+    (o) => selectedOrderIds.includes(o.id) && isPendingOrder(o)
   );
 
   // Target orders for the bulk email dispatch modal
@@ -192,19 +190,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     : orders.filter((o) => selectedOrderIds.includes(o.id));
 
   const handleSelectAllPendingOrders = () => {
-    const pending = orders.filter(
-      (o) =>
-        (o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending') &&
-        o.payment_type !== 'cod'
-    );
+    const pending = orders.filter(isPendingOrder);
 
     if (pending.length > 0) {
       const pendingIds = pending.map((o) => o.id);
       setSelectedOrderIds(pendingIds);
-      showToast(`Selected all ${pendingIds.length} orders with pending payment`);
+      showToast(`Selected all ${pendingIds.length} pending orders`);
     } else {
       setPaymentStatusFilter('unpaid_pending');
-      showToast('Filtered view to Unpaid / Pending Checkouts. Please select when loaded.');
+      setStatusFilter('');
+      showToast('Filtered view to Unpaid / Abandoned Checkouts (All Pending Orders).');
     }
   };
 
@@ -683,29 +678,41 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             {/* Payment Status Filter (Paid vs Unpaid / Abandoned) */}
             <select
               value={paymentStatusFilter}
-              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPaymentStatusFilter(val);
+                if (val === 'unpaid_pending') {
+                  setStatusFilter('');
+                }
+              }}
               className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-semibold"
             >
               <option value="">All Orders (Paid & Unpaid)</option>
+              <option value="unpaid_pending">⚠️ Unpaid / Abandoned Checkouts (All Pending Orders)</option>
               <option value="paid_confirmed">✓ Paid / Confirmed Orders Only</option>
-              <option value="unpaid_pending">⚠️ Unpaid / Abandoned Checkouts</option>
               <option value="paid">100% Prepaid Paid</option>
               <option value="partial_paid">Partial COD (Advance Paid)</option>
             </select>
 
-            {/* Status Filter */}
+            {/* Fulfillment Status Filter */}
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'pending' || val === 'failed') {
+                  setPaymentStatusFilter('unpaid_pending');
+                  setStatusFilter('');
+                } else {
+                  setStatusFilter(val);
+                }
+              }}
               className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary"
             >
-              <option value="">All Statuses</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="pending">Incomplete / Pending</option>
+              <option value="">All Fulfillment Statuses</option>
+              <option value="confirmed">Confirmed (Ready to Pack)</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="on_hold">On Hold</option>
-              <option value="failed">Payment Failed</option>
               <option value="cancelled">Cancelled</option>
             </select>
 
