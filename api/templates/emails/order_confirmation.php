@@ -18,9 +18,11 @@ $trackingUrl = rtrim($storeUrl, '/') . '/#track-order?order=' . urlencode($order
 $orderNumber = htmlspecialchars($order['order_number'] ?? '');
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
 $isPrepaid = ($order['payment_type'] ?? '') === 'full_prepaid';
-$paymentTypeLabel = ($order['payment_type'] ?? '') === 'full_prepaid' 
+$isPartialCod = ($order['payment_type'] ?? '') === 'partial' || ((float)($order['amount_due_on_delivery'] ?? 0) > 0 && (float)($order['amount_paid_upfront'] ?? 0) > 0);
+$isFullCod = ($order['payment_type'] ?? '') === 'cod' || ($order['payment_method'] ?? '') === 'cod';
+$paymentTypeLabel = $isPrepaid 
     ? 'Prepaid (UPI / Card / NetBanking)' 
-    : (($order['payment_type'] ?? '') === 'partial' ? 'Partial COD (Deposit Paid)' : 'Cash on Delivery (Full COD)');
+    : ($isPartialCod ? 'Partial COD (Advance Deposit Verified)' : 'Cash on Delivery (Full COD)');
 $amountPaid = number_format((float)($order['amount_paid_upfront'] ?? 0), 2);
 $amountDue  = number_format((float)($order['amount_due_on_delivery'] ?? 0), 2);
 $subtotal   = number_format((float)($order['subtotal'] ?? 0), 2);
@@ -69,13 +71,33 @@ $total      = number_format((float)($order['total_amount'] ?? 0), 2);
                 ✓
               </div>
               <h2 style="margin: 0 0 8px 0; font-family: 'Georgia', serif; font-size: 22px; color: #26153D; font-weight: 600;">
-                Your Order is Confirmed
+                <?= $isPartialCod ? 'Partial COD Order Confirmed' : 'Your Order is Confirmed' ?>
               </h2>
               <p style="margin: 0; font-size: 13px; line-height: 20px; color: #6D5E7A;">
-                Thank you for choosing Valerie Jewels, <strong><?= $customerName ?></strong>. Our master craftsmen have allocated your piece for luxury anti-tarnish preparation.
+                <?php if ($isPartialCod): ?>
+                  Thank you for choosing Valerie Jewels, <strong><?= $customerName ?></strong>. Your partial advance deposit of <strong>₹<?= $amountPaid ?></strong> has been received and verified. The remaining balance of <strong>₹<?= $amountDue ?></strong> will be collected upon courier delivery.
+                <?php else: ?>
+                  Thank you for choosing Valerie Jewels, <strong><?= $customerName ?></strong>. Our master craftsmen have allocated your piece for luxury anti-tarnish preparation.
+                <?php endif; ?>
               </p>
             </td>
           </tr>
+
+          <!-- Partial COD Highlight Callout -->
+          <?php if ($isPartialCod): ?>
+          <tr>
+            <td style="padding: 0 35px 20px 35px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="12" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-radius: 12px; border: 1px solid #FCD34D;">
+                <tr>
+                  <td width="30" valign="middle" style="font-size: 20px; text-align: center;">🛡️</td>
+                  <td valign="middle" style="font-size: 12px; color: #92400E; line-height: 18px;">
+                    <strong>Partial COD Deposit Received:</strong> ₹<?= $amountPaid ?> paid upfront. Remaining balance due at doorstep: <strong>₹<?= $amountDue ?></strong>. Please keep cash or UPI ready for delivery!
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <?php endif; ?>
 
           <!-- Complimentary Gift Callout for Prepaid Orders -->
           <?php if ($isPrepaid): ?>

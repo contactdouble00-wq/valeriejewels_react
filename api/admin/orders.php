@@ -639,6 +639,109 @@ if ($action === 'send_customer_email') {
     }
 }
 
+// Handle Send Custom Test Email (Diagnostics & Verification)
+if ($action === 'send_test_email') {
+    $recipientEmail = trim($input['recipient_email'] ?? ($input['email'] ?? ''));
+    $recipientName = trim($input['recipient_name'] ?? ($input['name'] ?? 'Valued Customer'));
+    $subject = trim($input['subject'] ?? '');
+    $customMessage = trim($input['message'] ?? ($input['custom_message'] ?? ''));
+
+    if (empty($recipientEmail) || !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+        ApiResponse::error('A valid recipient email address is required (e.g. yashpatel6855@gmail.com)', 422);
+    }
+
+    try {
+        $result = MailerService::sendCustomTestEmail($recipientEmail, $recipientName, $subject ?: null, $customMessage ?: null);
+
+        AdminAuth::logActivity($adminUser['id'], 'send_test_email', 'system', 0, [
+            'recipient' => $recipientEmail,
+            'status'    => $result['status'] ?? 'unknown',
+            'error'     => $result['error_message'] ?? null,
+        ]);
+
+        $smtpConfig = MailerService::getConfig();
+        $isLiveSmtp = MailerService::hasLiveSmtp();
+
+        ApiResponse::success([
+            'result'       => $result,
+            'is_live_smtp' => $isLiveSmtp,
+            'smtp_host'    => $smtpConfig['host'] ?? 'smtp.hostinger.com',
+            'smtp_port'    => $smtpConfig['port'] ?? 465,
+            'smtp_user'    => !empty($smtpConfig['username']) ? $smtpConfig['username'] : '(not configured)',
+            'from_email'   => $smtpConfig['from_email'] ?? 'orders@valeriejewels.in',
+            'status'       => $result['status'],
+            'message'      => $result['status'] === 'sent' 
+                ? "Test email delivered successfully to {$recipientEmail}!" 
+                : "Test email simulated. (Live SMTP credentials not configured)",
+        ], "Test email processing complete");
+    } catch (Throwable $e) {
+        ApiResponse::error('Failed to send test email: ' . $e->getMessage(), 500);
+    }
+}
+
+// Handle Get Current SMTP Settings
+if ($action === 'get_smtp_settings') {
+    $cfg = MailerService::getConfig();
+    ApiResponse::success([
+        'host'         => $cfg['host'] ?? 'smtp.hostinger.com',
+        'port'         => (int)($cfg['port'] ?? 465),
+        'username'     => $cfg['username'] ?? '',
+        'has_password' => !empty($cfg['password']),
+        'from_email'   => $cfg['from_email'] ?? 'orders@valeriejewels.in',
+        'from_name'    => $cfg['from_name'] ?? 'Valerie Jewels Support',
+        'encryption'   => $cfg['encryption'] ?? 'ssl',
+        'is_live_smtp' => MailerService::hasLiveSmtp(),
+    ], 'Current SMTP configuration');
+}
+
+// Handle Save SMTP Settings into site_settings
+if ($action === 'save_smtp_settings') {
+    $smtpData = [
+        'host'       => trim($input['host'] ?? 'smtp.hostinger.com'),
+        'port'       => (int)($input['port'] ?? 465),
+        'username'   => trim($input['username'] ?? ''),
+        'password'   => trim($input['password'] ?? ''),
+        'from_email' => trim($input['from_email'] ?? 'orders@valeriejewels.in'),
+        'from_name'  => trim($input['from_name'] ?? 'Valerie Jewels Support'),
+        'encryption' => trim($input['encryption'] ?? 'ssl'),
+    ];
+
+    if (empty($smtpData['username']) || empty($smtpData['password'])) {
+        ApiResponse::error('SMTP username and password are required', 422);
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO site_settings (`key`, `value`) 
+            VALUES ('smtp_settings', ?)
+            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
+        ");
+        $stmt->execute([json_encode($smtpData)]);
+    } catch (Throwable $e) {
+        // Fallback for sqlite
+        $stmt = $pdo->prepare("INSERT OR REPLACE INTO site_settings (`key`, `value`) VALUES ('smtp_settings', ?)");
+        $stmt->execute([json_encode($smtpData)]);
+    }
+
+    // Invalidate cached config so new credentials apply immediately
+    MailerService::resetConfig();
+
+    AdminAuth::logActivity($adminUser['id'], 'update_smtp_settings', 'system', 0, [
+        'host'     => $smtpData['host'],
+        'username' => $smtpData['username'],
+    ]);
+
+    ApiResponse::success([
+        'host'         => $smtpData['host'],
+        'port'         => $smtpData['port'],
+        'username'     => $smtpData['username'],
+        'from_email'   => $smtpData['from_email'],
+        'from_name'    => $smtpData['from_name'],
+        'encryption'   => $smtpData['encryption'],
+        'is_live_smtp' => true,
+    ], 'SMTP credentials saved successfully');
+}
+
 // Handle Bulk Send Payment Reminder Emails
 if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
     $orderIds = $input['order_ids'] ?? [];

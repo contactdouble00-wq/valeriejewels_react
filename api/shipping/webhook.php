@@ -120,10 +120,16 @@ try {
         ':occurred_at' => $now,
     ]);
 
-    // Phase 7: If newly shipped, dispatch idempotent shipping email
+    // Phase 7: Dispatch idempotent shipping or delivery notification email
     if ($mappedStatus === 'shipped') {
         try {
             MailerService::sendOrderShipped((int)$order['id']);
+        } catch (Throwable $e) {
+            // Log silently
+        }
+    } elseif ($mappedStatus === 'delivered') {
+        try {
+            MailerService::sendStatusUpdate((int)$order['id'], 'delivered', 'Your Valerie Jewels bespoke order has been successfully delivered to your doorstep. We hope you cherish your exquisite fine jewelry pieces!');
         } catch (Throwable $e) {
             // Log silently
         }

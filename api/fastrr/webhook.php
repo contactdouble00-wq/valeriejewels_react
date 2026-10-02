@@ -141,6 +141,14 @@ try {
     ");
     $trk->execute([$newOrderId]);
 
+    // Dispatch automated confirmation email (Prepaid, Partial COD deposit verified, or COD)
+    try {
+        require_once dirname(__DIR__) . '/utils/mailer.php';
+        MailerService::sendOrderConfirmation($newOrderId);
+    } catch (Throwable $mailEx) {
+        error_log("[Fastrr Webhook] Automated confirmation email error: " . $mailEx->getMessage());
+    }
+
     http_response_code(200);
     header('Content-Type: application/json');
     echo json_encode(['ok' => true, 'order_number' => $orderNumber, 'order_id' => $newOrderId]);

@@ -108,6 +108,11 @@ try {
                 error_log('[Shiprocket] Auto-sync error on verify: ' . $e->getMessage());
             }
         } else {
+            try {
+                MailerService::sendOrderFailed((int)$order['id'], 'Payment authorization or signature verification failed');
+            } catch (Throwable $e) {
+                error_log('[Verify] Error dispatching order_failed email: ' . $e->getMessage());
+            }
             ApiResponse::error('Payment signature verification failed', 400);
         }
     }

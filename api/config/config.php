@@ -126,5 +126,40 @@ $config['fastrr']['secret_key'] = $fastrrSecretKey;
 $config['fastrr']['webhook_secret'] = $fastrrWebhookSecret;
 $config['fastrr']['sandbox'] = false;
 
-return $config;
+// 4. SMTP Email Credentials (Environment Variables & Database Overrides)
+$smtpHost = getenv('SMTP_HOST') ?: ($_ENV['SMTP_HOST'] ?? null);
+if ($smtpHost) {
+    $config['smtp']['host'] = $smtpHost;
+}
 
+$smtpPort = getenv('SMTP_PORT') ?: ($_ENV['SMTP_PORT'] ?? null);
+if ($smtpPort) {
+    $config['smtp']['port'] = (int)$smtpPort;
+}
+
+$smtpUser = getenv('SMTP_USERNAME') ?: (getenv('SMTP_USER') ?: ($_ENV['SMTP_USERNAME'] ?? ($_ENV['SMTP_USER'] ?? null)));
+if ($smtpUser) {
+    $config['smtp']['username'] = $smtpUser;
+}
+
+$smtpPass = getenv('SMTP_PASSWORD') !== false ? getenv('SMTP_PASSWORD') : (getenv('SMTP_PASS') !== false ? getenv('SMTP_PASS') : ($_ENV['SMTP_PASSWORD'] ?? ($_ENV['SMTP_PASS'] ?? null)));
+if ($smtpPass !== null) {
+    $config['smtp']['password'] = $smtpPass;
+}
+
+$smtpFrom = getenv('SMTP_FROM_EMAIL') ?: (getenv('SMTP_FROM') ?: ($_ENV['SMTP_FROM_EMAIL'] ?? ($_ENV['SMTP_FROM'] ?? null)));
+if ($smtpFrom) {
+    $config['smtp']['from_email'] = $smtpFrom;
+}
+
+$smtpFromName = getenv('SMTP_FROM_NAME') ?: ($_ENV['SMTP_FROM_NAME'] ?? null);
+if ($smtpFromName) {
+    $config['smtp']['from_name'] = $smtpFromName;
+}
+
+$smtpEncryption = getenv('SMTP_ENCRYPTION') ?: ($_ENV['SMTP_ENCRYPTION'] ?? null);
+if ($smtpEncryption) {
+    $config['smtp']['encryption'] = strtolower($smtpEncryption);
+}
+
+return $config;

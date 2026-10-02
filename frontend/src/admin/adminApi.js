@@ -325,6 +325,32 @@ export const adminApi = {
     return res.data;
   },
 
+  async sendTestEmail(recipientEmail, recipientName = '', subject = '', message = '') {
+    const res = await request('/admin/orders.php?action=send_test_email', {
+      method: 'POST',
+      body: JSON.stringify({
+        recipient_email: recipientEmail,
+        recipient_name: recipientName,
+        subject,
+        message,
+      }),
+    });
+    return res.data;
+  },
+
+  async getSmtpSettings() {
+    const res = await request('/admin/orders.php?action=get_smtp_settings');
+    return res.data;
+  },
+
+  async saveSmtpSettings(smtpSettings) {
+    const res = await request('/admin/orders.php?action=save_smtp_settings', {
+      method: 'POST',
+      body: JSON.stringify(smtpSettings),
+    });
+    return res.data;
+  },
+
   async getSentEmailLogs(params = {}) {
     const qs = new URLSearchParams({ action: 'sent_emails', ...params }).toString();
     const res = await request(`/admin/orders.php?${qs}`);

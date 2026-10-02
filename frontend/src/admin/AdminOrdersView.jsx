@@ -30,7 +30,9 @@ import {
   ArrowUpRight,
   Download,
   Package,
-  PackageCheck
+  PackageCheck,
+  Settings,
+  Lock
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -109,11 +111,117 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [bulkEmailIncludeRetryLink, setBulkEmailIncludeRetryLink] = useState(true);
   const [bulkEmailSending, setBulkEmailSending] = useState(false);
 
+  // SMTP Settings & Test Email Modal State
+  const [smtpModalOpen, setSmtpModalOpen] = useState(false);
+  const [smtpHost, setSmtpHost] = useState('smtp.hostinger.com');
+  const [smtpPort, setSmtpPort] = useState(465);
+  const [smtpEncryption, setSmtpEncryption] = useState('ssl');
+  const [smtpUser, setSmtpUser] = useState('orders@valeriejewels.in');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpFromEmail, setSmtpFromEmail] = useState('orders@valeriejewels.in');
+  const [smtpFromName, setSmtpFromName] = useState('Valerie Jewels Support');
+  const [smtpSaving, setSmtpSaving] = useState(false);
+  const [smtpHasSavedPassword, setSmtpHasSavedPassword] = useState(false);
+  const [isLiveSmtpConfigured, setIsLiveSmtpConfigured] = useState(false);
+  const [loadingSmtpSettings, setLoadingSmtpSettings] = useState(false);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('yashpatel6855@gmail.com');
+  const [testEmailName, setTestEmailName] = useState('Yash Patel');
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+
   const isStaff = currentUser?.role === 'staff';
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const loadSmtpSettings = async () => {
+    try {
+      setLoadingSmtpSettings(true);
+      const data = await adminApi.getSmtpSettings();
+      if (data) {
+        if (data.host) setSmtpHost(data.host);
+        if (data.port) setSmtpPort(data.port);
+        if (data.username) setSmtpUser(data.username);
+        if (data.from_email) setSmtpFromEmail(data.from_email);
+        if (data.from_name) setSmtpFromName(data.from_name);
+        if (data.encryption) setSmtpEncryption(data.encryption);
+        setSmtpHasSavedPassword(Boolean(data.has_password));
+        setIsLiveSmtpConfigured(Boolean(data.is_live_smtp));
+      }
+    } catch (err) {
+      console.warn('Failed to load SMTP settings:', err);
+    } finally {
+      setLoadingSmtpSettings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (smtpModalOpen) {
+      loadSmtpSettings();
+    }
+  }, [smtpModalOpen]);
+
+  const handleSaveSmtpSettings = async (e) => {
+    e?.preventDefault();
+    if (!smtpUser || !smtpPass) {
+      showToast('⚠️ Please enter both SMTP username and password');
+      return;
+    }
+    setSmtpSaving(true);
+    try {
+      await adminApi.saveSmtpSettings({
+        host: smtpHost,
+        port: parseInt(smtpPort, 10),
+        username: smtpUser,
+        password: smtpPass,
+        from_email: smtpFromEmail,
+        from_name: smtpFromName,
+        encryption: smtpEncryption,
+      });
+      setIsLiveSmtpConfigured(true);
+      setSmtpHasSavedPassword(true);
+      setSmtpPass('');
+      showToast('✓ SMTP credentials saved! Live customer emails are now enabled.');
+    } catch (err) {
+      showToast(`❌ Failed to save SMTP settings: ${err.message}`);
+    } finally {
+      setSmtpSaving(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailRecipient) {
+      showToast('⚠️ Please enter a recipient email address');
+      return;
+    }
+    setTestEmailSending(true);
+    setTestEmailResult(null);
+    try {
+      const res = await adminApi.sendTestEmail(
+        testEmailRecipient,
+        testEmailName,
+        'Valerie Jewels Atelier — Live Email Dispatch Test',
+        'This is a verified test email sent from Valerie Jewels Haute Joaillerie Atelier. If you have received this message in your inbox, your SMTP email delivery pipeline is fully functional and live customer emails (order confirmations, shipping notifications, and payment reminders) are operating successfully.'
+      );
+      setTestEmailResult(res);
+      if (res?.status === 'sent') {
+        showToast(`✓ Test email delivered to ${testEmailRecipient}!`);
+      } else {
+        showToast(`⚠️ Email processed in simulation mode. Live SMTP credentials required.`);
+      }
+      loadSentEmailLogs();
+    } catch (err) {
+      setTestEmailResult({
+        status: 'failed',
+        error: err.message,
+      });
+      showToast(`❌ Test email failed: ${err.message}`);
+    } finally {
+      setTestEmailSending(false);
+    }
   };
 
   const loadOrders = async () => {
@@ -1935,6 +2043,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <span>Refresh</span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => setSmtpModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                  title="Configure Hostinger SMTP Credentials & Send Live Test Email"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>SMTP Settings & Live Test</span>
+                </button>
+
                 {/* Email Type Filter */}
                 <select
                   value={sentEmailTypeFilter}
@@ -3304,6 +3422,292 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     ? `Dispatching to ${targetBulkEmailOrders.length} Customers...`
                     : `Dispatch Payment Incomplete Emails to ${targetBulkEmailOrders.length} ${targetBulkEmailOrders.length === 1 ? 'Customer' : 'Customers'}`}
                 </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMTP Settings & Live Test Email Modal */}
+      {smtpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-brand-border shadow-2xl max-w-2xl w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-brand-border/60 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-lg font-bold text-brand-tertiary">
+                    SMTP Email Delivery & Diagnostics
+                  </h3>
+                </div>
+                <p className="text-xs text-brand-muted">
+                  Configure live SMTP credentials (e.g., Hostinger Webmail) so customers receive real order confirmations, shipping tracking, and payment recovery emails.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSmtpModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Status Pill */}
+            <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-semibold ${
+              isLiveSmtpConfigured
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isLiveSmtpConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>
+                  {isLiveSmtpConfigured
+                    ? 'Live SMTP Operational — Real emails will be dispatched to customers inboxes'
+                    : 'Simulation Mode Active — Live credentials missing, emails saved locally to disk'}
+                </span>
+              </div>
+              {smtpHasSavedPassword && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/80 border border-emerald-300 text-emerald-700">
+                  Password Saved
+                </span>
+              )}
+            </div>
+
+            {/* Section 1: SMTP Credentials */}
+            <form onSubmit={handleSaveSmtpSettings} className="space-y-4 bg-[#FAF8FC] p-4 md:p-5 rounded-2xl border border-brand-border/70">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-xs font-bold text-brand-tertiary">
+                  <Lock className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Hostinger SMTP Server Credentials</span>
+                </div>
+                <span className="text-[11px] text-brand-muted">Hostinger / Webmail</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    SMTP Host
+                  </label>
+                  <input
+                    type="text"
+                    value={smtpHost}
+                    onChange={(e) => setSmtpHost(e.target.value)}
+                    required
+                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    placeholder="smtp.hostinger.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                      Port
+                    </label>
+                    <input
+                      type="number"
+                      value={smtpPort}
+                      onChange={(e) => setSmtpPort(e.target.value)}
+                      required
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      placeholder="465"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                      Encryption
+                    </label>
+                    <select
+                      value={smtpEncryption}
+                      onChange={(e) => setSmtpEncryption(e.target.value)}
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary font-medium"
+                    >
+                      <option value="ssl">SSL (465)</option>
+                      <option value="tls">TLS (587)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    SMTP Username / Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={smtpUser}
+                    onChange={(e) => setSmtpUser(e.target.value)}
+                    required
+                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono text-xs"
+                    placeholder="orders@valeriejewels.in"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    Hostinger Email Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSmtpPass ? 'text' : 'password'}
+                      value={smtpPass}
+                      onChange={(e) => setSmtpPass(e.target.value)}
+                      required={!smtpHasSavedPassword}
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 pr-9 text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono text-xs"
+                      placeholder={smtpHasSavedPassword ? '•••••••• (Enter new to change)' : 'Enter email password'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPass(!showSmtpPass)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer text-[10px]"
+                    >
+                      {showSmtpPass ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    From Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={smtpFromEmail}
+                    onChange={(e) => setSmtpFromEmail(e.target.value)}
+                    required
+                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    placeholder="orders@valeriejewels.in"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    From Sender Name
+                  </label>
+                  <input
+                    type="text"
+                    value={smtpFromName}
+                    onChange={(e) => setSmtpFromName(e.target.value)}
+                    required
+                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    placeholder="Valerie Jewels Support"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] text-brand-muted">
+                  Credentials are encrypted and stored in system database settings.
+                </span>
+                <button
+                  type="submit"
+                  disabled={smtpSaving || loadingSmtpSettings}
+                  className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <Check className={`w-3.5 h-3.5 ${smtpSaving ? 'animate-spin' : ''}`} />
+                  <span>{smtpSaving ? 'Saving Credentials...' : 'Save SMTP Settings'}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Section 2: Live Test Email Dispatcher */}
+            <div className="space-y-4 bg-white p-4 md:p-5 rounded-2xl border border-brand-border shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-xs font-bold text-brand-tertiary">
+                  <Send className="w-3.5 h-3.5 text-purple-700" />
+                  <span>Send Live Test Email (Instant Verification)</span>
+                </div>
+                <span className="text-[11px] text-purple-700 font-semibold">Test Inboxes</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    Recipient Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    required
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono focus:outline-none focus:border-brand-primary"
+                    placeholder="yashpatel6855@gmail.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-brand-tertiary mb-1">
+                    Recipient Name
+                  </label>
+                  <input
+                    type="text"
+                    value={testEmailName}
+                    onChange={(e) => setTestEmailName(e.target.value)}
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    placeholder="Yash Patel"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="text-[11px] text-brand-muted">
+                  Sends a luxury Valerie Jewels verification template to test mailbox delivery.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailSending || !testEmailRecipient}
+                  className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-95 text-white text-xs font-bold shadow-sm transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Send className={`w-3.5 h-3.5 ${testEmailSending ? 'animate-spin' : ''}`} />
+                  <span>{testEmailSending ? 'Connecting & Dispatching...' : 'Send Test Email Now'}</span>
+                </button>
+              </div>
+
+              {/* Test Result Box */}
+              {testEmailResult && (
+                <div className={`p-4 rounded-2xl border text-xs space-y-2 animate-in fade-in duration-200 ${
+                  testEmailResult.status === 'sent'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                    : testEmailResult.status === 'simulated'
+                    ? 'bg-amber-50 border-amber-200 text-amber-900'
+                    : 'bg-rose-50 border-rose-200 text-rose-900'
+                }`}>
+                  <div className="flex items-center space-x-2 font-bold">
+                    {testEmailResult.status === 'sent' && <CheckCircle className="w-4 h-4 text-emerald-600" />}
+                    {testEmailResult.status === 'simulated' && <AlertTriangle className="w-4 h-4 text-amber-600" />}
+                    {testEmailResult.status === 'failed' && <XCircle className="w-4 h-4 text-rose-600" />}
+                    <span>
+                      {testEmailResult.status === 'sent' && `✓ Test email successfully sent to ${testEmailRecipient}!`}
+                      {testEmailResult.status === 'simulated' && `⚠️ Email rendered in simulation mode`}
+                      {testEmailResult.status === 'failed' && `❌ SMTP Email Delivery Failed`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {testEmailResult.message || testEmailResult.error || (
+                      testEmailResult.status === 'sent'
+                        ? 'The email was accepted by Hostinger SMTP with code 250 OK and dispatched to recipient inbox. Please check your spam/inbox folder.'
+                        : 'Live SMTP credentials must be saved above before real emails can leave the server.'
+                    )}
+                  </p>
+                  {testEmailResult.smtp_host && (
+                    <div className="text-[10px] text-brand-muted font-mono pt-1">
+                      Server: {testEmailResult.smtp_host}:{testEmailResult.smtp_port} | From: {testEmailResult.from_email}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end pt-2 border-t border-brand-border/60">
+              <button
+                type="button"
+                onClick={() => setSmtpModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
