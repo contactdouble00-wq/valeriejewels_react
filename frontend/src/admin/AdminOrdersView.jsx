@@ -28,7 +28,9 @@ import {
   User,
   MailCheck,
   ArrowUpRight,
-  Download
+  Download,
+  Package,
+  PackageCheck
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -48,8 +50,17 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [toastMessage, setToastMessage] = useState('');
   const [assuranceItem, setAssuranceItem] = useState(null);
 
-  // View Mode: 'orders' | 'sent_emails'
+  // View Mode: 'orders' | 'shiprocket_synced' | 'sent_emails'
   const [activeOrdersViewMode, setActiveOrdersViewMode] = useState('orders');
+
+  // In Orders view: sync segment filter ('unsynced' by default to shift synced orders to separate section, or 'all')
+  const [ordersSyncSegment, setOrdersSyncSegment] = useState('unsynced');
+
+  // Dedicated Shiprocket Synced Section States
+  const [syncedSearch, setSyncedSearch] = useState('');
+  const [syncedStatusFilter, setSyncedStatusFilter] = useState('');
+  const [syncedCourierFilter, setSyncedCourierFilter] = useState('');
+  const [copiedAwbId, setCopiedAwbId] = useState(null);
 
   // Sent Emails Customer Log State
   const [sentEmailLogs, setSentEmailLogs] = useState([]);
@@ -128,15 +139,54 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
-  // Bulk Selection Helpers
-  const isAllSelected = orders.length > 0 && orders.every((o) => selectedOrderIds.includes(o.id));
+  // Shiprocket Synced Order Identifier (zero mismatch: orders with SR ID or AWB)
+  const isShiprocketSyncedOrder = (o) => Boolean(o && (o.shiprocket_order_id || o.shiprocket_awb));
+
+  const syncedOrders = orders.filter(isShiprocketSyncedOrder);
+  const unsyncedOrders = orders.filter((o) => !isShiprocketSyncedOrder(o));
+
+  // In Orders view: display unsynced orders by default to shift synced orders to separate section
+  const displayOrders = ordersSyncSegment === 'unsynced'
+    ? unsyncedOrders
+    : (ordersSyncSegment === 'synced' ? syncedOrders : orders);
+
+  // Filtered list for the dedicated Shiprocket Synced Section
+  const filteredSyncedOrders = syncedOrders.filter((ord) => {
+    if (syncedStatusFilter && ord.order_status !== syncedStatusFilter) {
+      return false;
+    }
+    if (syncedCourierFilter) {
+      const cName = String(ord.courier_name || '').toLowerCase();
+      if (!cName.includes(syncedCourierFilter.toLowerCase())) {
+        return false;
+      }
+    }
+    if (syncedSearch.trim()) {
+      const q = syncedSearch.toLowerCase();
+      const match =
+        String(ord.order_number || '').toLowerCase().includes(q) ||
+        String(ord.customer_name || '').toLowerCase().includes(q) ||
+        String(ord.customer_phone || '').toLowerCase().includes(q) ||
+        String(ord.customer_email || '').toLowerCase().includes(q) ||
+        String(ord.shiprocket_order_id || '').toLowerCase().includes(q) ||
+        String(ord.shiprocket_awb || '').toLowerCase().includes(q) ||
+        String(ord.courier_name || '').toLowerCase().includes(q) ||
+        String(ord.city || '').toLowerCase().includes(q) ||
+        String(ord.state || '').toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // Bulk Selection Helpers (scoped to visible displayOrders)
+  const isAllSelected = displayOrders.length > 0 && displayOrders.every((o) => selectedOrderIds.includes(o.id));
   const isSomeSelected = selectedOrderIds.length > 0 && !isAllSelected;
 
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedOrderIds([]);
     } else {
-      setSelectedOrderIds(orders.map((o) => o.id));
+      setSelectedOrderIds(displayOrders.map((o) => o.id));
     }
   };
 
@@ -176,21 +226,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     ((o.payment_status === 'pending' || o.payment_status === 'failed' || o.order_status === 'pending' || o.order_status === 'failed') &&
       o.payment_status !== 'paid');
 
-  // Pending payment orders in currently loaded list
-  const pendingPaymentOrders = orders.filter(isPendingOrder);
+  // Pending payment orders in currently loaded visible list
+  const pendingPaymentOrders = displayOrders.filter(isPendingOrder);
 
   // Selected orders that have pending payment
-  const selectedPendingOrders = orders.filter(
+  const selectedPendingOrders = displayOrders.filter(
     (o) => selectedOrderIds.includes(o.id) && isPendingOrder(o)
   );
 
   // Target orders for the bulk email dispatch modal
   const targetBulkEmailOrders = selectedPendingOrders.length > 0
     ? selectedPendingOrders
-    : orders.filter((o) => selectedOrderIds.includes(o.id));
+    : displayOrders.filter((o) => selectedOrderIds.includes(o.id));
 
   const handleSelectAllPendingOrders = () => {
-    const pending = orders.filter(isPendingOrder);
+    const pending = displayOrders.filter(isPendingOrder);
 
     if (pending.length > 0) {
       const pendingIds = pending.map((o) => o.id);
@@ -345,6 +395,94 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     return `https://wa.me/${phoneClean}?text=${message}`;
   };
 
+  // Copy AWB code with visual feedback
+  const handleCopyAwb = (awb, id) => {
+    if (!awb) return;
+    navigator.clipboard.writeText(String(awb).trim());
+    setCopiedAwbId(id);
+    showToast(`Copied AWB tracking code ${awb} to clipboard!`);
+    setTimeout(() => setCopiedAwbId(null), 2500);
+  };
+
+  // Generate WhatsApp tracking dispatch URL for synced orders
+  const getWhatsAppTrackingUrl = (ord) => {
+    const rawPhone = String(ord.customer_phone || '').replace(/[^0-9]/g, '');
+    const phoneClean = rawPhone.startsWith('91') && rawPhone.length === 12
+      ? rawPhone
+      : (rawPhone.length === 10 ? `91${rawPhone}` : rawPhone);
+    const custName = ord.customer_name || 'Valued Customer';
+    const ordNum = ord.order_number ? `#${ord.order_number}` : '';
+    const courier = ord.courier_name || 'our courier partner';
+    const awb = ord.shiprocket_awb || 'Assigned';
+    const trackingLink = ord.shiprocket_awb
+      ? `https://shiprocket.co/tracking/${ord.shiprocket_awb}`
+      : 'https://shiprocket.co/tracking';
+
+    const message = encodeURIComponent(
+      `Hello ${custName}! 📦✨\n\nYour Valerie Jewels order ${ordNum} has been processed and synced with Shiprocket logistics via ${courier}.\n\nWaybill / AWB Number: ${awb}\nYou can track your shipment live here:\n${trackingLink}\n\nThank you for choosing Valerie Jewels!`
+    );
+    return `https://wa.me/${phoneClean}?text=${message}`;
+  };
+
+  // Export Shiprocket Synced Orders to CSV
+  const exportSyncedOrdersCsv = () => {
+    if (syncedOrders.length === 0) {
+      showToast('No Shiprocket synced orders available to export');
+      return;
+    }
+    const headers = [
+      'Order ID',
+      'Order Number',
+      'Order Date',
+      'Customer Name',
+      'Customer Phone',
+      'Customer Email',
+      'Address Line 1',
+      'City',
+      'State',
+      'Pincode',
+      'Total Amount (INR)',
+      'Payment Type',
+      'Payment Status',
+      'Fulfillment Status',
+      'Shiprocket Order ID',
+      'Shiprocket AWB',
+      'Courier Partner',
+      'Tracking URL'
+    ];
+    const rows = filteredSyncedOrders.map((ord) => [
+      ord.id || '',
+      `"${ord.order_number || ''}"`,
+      `"${ord.created_at || ''}"`,
+      `"${(ord.customer_name || '').replace(/"/g, '""')}"`,
+      `"${(ord.customer_phone || '').replace(/"/g, '""')}"`,
+      `"${(ord.customer_email || '').replace(/"/g, '""')}"`,
+      `"${(ord.shipping_address_line1 || '').replace(/"/g, '""')}"`,
+      `"${(ord.city || '').replace(/"/g, '""')}"`,
+      `"${(ord.state || '').replace(/"/g, '""')}"`,
+      `"${(ord.pincode || '').replace(/"/g, '""')}"`,
+      ord.total_amount || 0,
+      `"${ord.payment_type || ''}"`,
+      `"${ord.payment_status || ''}"`,
+      `"${ord.order_status || ''}"`,
+      `"${ord.shiprocket_order_id || ''}"`,
+      `"${ord.shiprocket_awb || ''}"`,
+      `"${(ord.courier_name || '').replace(/"/g, '""')}"`,
+      `"https://shiprocket.co/tracking/${ord.shiprocket_awb || ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `valerie_shiprocket_synced_orders_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${filteredSyncedOrders.length} Shiprocket shipment records to CSV`);
+  };
+
   useEffect(() => {
     loadOrders();
     loadSentEmailLogs();
@@ -395,7 +533,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     try {
       setSyncingSrId(orderId);
       const res = await adminApi.syncShiprocket(orderId);
-      showToast(res?.message || 'Order pushed to Shiprocket panel successfully!');
+      showToast(res?.message || 'Order pushed to Shiprocket panel successfully! Shifted to Shiprocket Synced section.');
       await loadOrders();
       if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
         await inspectOrder(orderId);
@@ -607,37 +745,64 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             Fulfillment & Customer Concierge
           </span>
           <h1 className="text-2xl sm:text-3xl font-editorial font-bold text-brand-tertiary mt-1">
-            {activeOrdersViewMode === 'orders' ? 'Orders Management & Shipments' : 'Sent Customer Emails & Recovery Audit'}
+            {activeOrdersViewMode === 'orders' 
+              ? 'Orders Management & Fulfillment' 
+              : activeOrdersViewMode === 'shiprocket_synced'
+              ? 'Shiprocket Synced Orders & Logistics'
+              : 'Sent Customer Emails & Recovery Audit'}
           </h1>
         </div>
 
-        {/* View Switcher Tabs */}
-        <div className="flex items-center space-x-1.5 bg-[#FAF8FC] p-1.5 rounded-2xl border border-brand-border self-start md:self-auto shadow-2xs">
+        {/* View Switcher Tabs (3 Dedicated Sections to Eliminate Mismatch) */}
+        <div className="flex items-center space-x-1.5 bg-[#FAF8FC] p-1.5 rounded-2xl border border-brand-border self-start md:self-auto shadow-2xs flex-wrap gap-y-1">
+          {/* Tab 1: Orders & Fulfillment (Unsynced / Awaiting Dispatch) */}
           <button
             type="button"
             onClick={() => setActiveOrdersViewMode('orders')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
               activeOrdersViewMode === 'orders'
                 ? 'bg-[#26153D] text-white shadow-xs'
                 : 'text-brand-tertiary hover:bg-white'
             }`}
           >
-            <Truck className="w-3.5 h-3.5" />
-            <span>Orders & Shipments</span>
+            <Package className="w-3.5 h-3.5" />
+            <span>Orders & Fulfillment</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               activeOrdersViewMode === 'orders' ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-brand-tertiary'
             }`}>
-              {orders.length}
+              {unsyncedOrders.length}
             </span>
           </button>
 
+          {/* Tab 2: Shiprocket Synced Orders (Shifted to Separate Section) */}
+          <button
+            type="button"
+            onClick={() => setActiveOrdersViewMode('shiprocket_synced')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
+              activeOrdersViewMode === 'shiprocket_synced'
+                ? 'bg-[#26153D] text-white shadow-xs'
+                : 'text-brand-tertiary hover:bg-white'
+            }`}
+          >
+            <Truck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Shiprocket Synced</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeOrdersViewMode === 'shiprocket_synced'
+                ? 'bg-emerald-400 text-emerald-950'
+                : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+            }`}>
+              {syncedOrders.length}
+            </span>
+          </button>
+
+          {/* Tab 3: Sent Customer Emails Log */}
           <button
             type="button"
             onClick={() => {
               setActiveOrdersViewMode('sent_emails');
               loadSentEmailLogs();
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
               activeOrdersViewMode === 'sent_emails'
                 ? 'bg-[#26153D] text-white shadow-xs'
                 : 'text-brand-tertiary hover:bg-white'
@@ -779,7 +944,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               {selectedOrderIds.length}
             </span>
             <span className="text-xs font-semibold text-purple-100">
-              {selectedOrderIds.length} of {orders.length} {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
+              {selectedOrderIds.length} of {displayOrders.length} {selectedOrderIds.length === 1 ? 'order' : 'orders'} selected
             </span>
             {selectedPendingOrders.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
@@ -792,7 +957,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               onClick={handleToggleSelectAll}
               className="text-xs text-purple-300 hover:text-white underline cursor-pointer font-medium"
             >
-              {isAllSelected ? 'Deselect All' : `Select All Visible (${orders.length})`}
+              {isAllSelected ? 'Deselect All' : `Select All Visible (${displayOrders.length})`}
             </button>
             {pendingPaymentOrders.length > 0 && (
               <button
@@ -840,6 +1005,43 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         </div>
       )}
 
+      {/* Shiprocket Synced Shift Banner (Zero Mismatch Assurance) */}
+      {syncedOrders.length > 0 && (
+        <div className="flex items-center justify-between bg-emerald-50/80 border border-emerald-200/90 rounded-2xl px-4 py-3 text-xs text-emerald-950 flex-wrap gap-2 shadow-2xs animate-fade-in">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-7 h-7 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-emerald-700 shrink-0">
+              <Truck className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-emerald-900">
+                {syncedOrders.length} {syncedOrders.length === 1 ? 'order has' : 'orders have'} been synced to Shiprocket
+              </span>
+              <span className="text-emerald-700 text-[11px] ml-1.5 hidden md:inline">
+                — shifted to the dedicated Shiprocket Synced tab to prevent any fulfillment mismatch.
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setActiveOrdersViewMode('shiprocket_synced')}
+              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer flex items-center space-x-1 shadow-2xs"
+            >
+              <span>View Synced Orders ({syncedOrders.length})</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrdersSyncSegment(ordersSyncSegment === 'unsynced' ? 'all' : 'unsynced')}
+              className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-800 text-[11px] font-medium transition-colors cursor-pointer"
+              title="Toggle whether already-synced orders are hidden from this fulfillment queue"
+            >
+              {ordersSyncSegment === 'unsynced' ? 'Show All Here' : 'Hide Synced (Segregated)'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -872,14 +1074,45 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     Loading orders...
                   </td>
                 </tr>
-              ) : orders.length === 0 ? (
+              ) : displayOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-brand-muted">
-                    No orders found.
+                    {ordersSyncSegment === 'unsynced' && syncedOrders.length > 0 ? (
+                      <div className="space-y-3 py-6 max-w-md mx-auto">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-xs">
+                          <CheckCircle className="w-6 h-6" />
+                        </div>
+                        <div className="font-editorial text-lg font-bold text-brand-tertiary">
+                          All Orders Have Been Synced with Shiprocket!
+                        </div>
+                        <p className="text-xs text-brand-muted leading-relaxed">
+                          All {syncedOrders.length} active orders have already been pushed to Shiprocket and shifted to the dedicated Synced Orders section to eliminate fulfillment mismatch.
+                        </p>
+                        <div className="pt-2 flex items-center justify-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveOrdersViewMode('shiprocket_synced')}
+                            className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary/90 transition-colors shadow-xs cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>Go to Shiprocket Synced Orders ({syncedOrders.length})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOrdersSyncSegment('all')}
+                            className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            Show All
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      'No orders found.'
+                    )}
                   </td>
                 </tr>
               ) : (
-                orders.map((ord) => (
+                displayOrders.map((ord) => (
                   <tr 
                     key={ord.id} 
                     className={`transition-colors ${selectedOrderIds.includes(ord.id) ? 'bg-purple-50/70' : 'hover:bg-[#FAF8FC]'}`}
@@ -1140,7 +1373,466 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       </div>
       )}
 
-      {/* VIEW MODE 2: SENT CUSTOMER EMAILS & RECOVERY AUDIT LOG */}
+      {/* ========================================================================= */}
+      {/* VIEW MODE 2: SHIPROCKET SYNCED ORDERS & LOGISTICS (SEPARATE SECTION) */}
+      {/* ========================================================================= */}
+      {activeOrdersViewMode === 'shiprocket_synced' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Logistics Performance Metrics Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Total Synced Shipments</span>
+                <Truck className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-brand-tertiary">
+                {syncedOrders.length}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Pushed to Shiprocket with zero mismatch
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">In Transit (AWB Active)</span>
+                <ShieldCheck className="w-4 h-4 text-sky-600" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-sky-700">
+                {syncedOrders.filter((o) => o.shiprocket_awb).length}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Waybill assigned & tracking live
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Delivered Orders</span>
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-emerald-700">
+                {syncedOrders.filter((o) => o.order_status === 'delivered').length}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Successfully delivered to customers
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Consignment Value</span>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-brand-tertiary">
+                ₹{syncedOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0).toLocaleString('en-IN')}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Total value of synced shipments
+              </div>
+            </div>
+          </div>
+
+          {/* Logistics Filter Toolbar */}
+          <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-4 shadow-2xs">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-96">
+                <input
+                  type="text"
+                  value={syncedSearch}
+                  onChange={(e) => setSyncedSearch(e.target.value)}
+                  placeholder="Search order #, customer, phone, AWB, SR ID, courier..."
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <Search className="w-3.5 h-3.5 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                {syncedSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setSyncedSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                {/* Courier Partner Filter */}
+                <select
+                  value={syncedCourierFilter}
+                  onChange={(e) => setSyncedCourierFilter(e.target.value)}
+                  className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-semibold"
+                >
+                  <option value="">All Courier Partners</option>
+                  <option value="bluedart">Bluedart Express</option>
+                  <option value="delhivery">Delhivery</option>
+                  <option value="dtdc">DTDC</option>
+                  <option value="ekart">Ekart</option>
+                  <option value="shadowfax">Shadowfax</option>
+                  <option value="xpressbees">Xpressbees</option>
+                </select>
+
+                {/* Fulfillment Status Filter */}
+                <select
+                  value={syncedStatusFilter}
+                  onChange={(e) => setSyncedStatusFilter(e.target.value)}
+                  className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary"
+                >
+                  <option value="">All Delivery Statuses</option>
+                  <option value="confirmed">Confirmed (Ready to Pack)</option>
+                  <option value="shipped">Shipped / In Transit</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+
+                {/* Clear Filters */}
+                {(syncedSearch || syncedCourierFilter || syncedStatusFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSyncedSearch('');
+                      setSyncedCourierFilter('');
+                      setSyncedStatusFilter('');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+
+                {/* Refresh Shipments */}
+                <button
+                  type="button"
+                  onClick={loadOrders}
+                  disabled={loading}
+                  className="px-3 py-1.5 rounded-xl bg-[#FAF8FC] hover:bg-gray-100 border border-brand-border text-brand-tertiary text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                  title="Refresh orders from database"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                {/* Export Synced Shipments CSV */}
+                <button
+                  type="button"
+                  onClick={exportSyncedOrdersCsv}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                  title="Export all Shiprocket synced order records to CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Synced CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Synced Shipments Table */}
+          <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
+                  <tr>
+                    <th className="py-3.5 px-4">Order # & Tags</th>
+                    <th className="py-3.5 px-4">Customer & Destination</th>
+                    <th className="py-3.5 px-4">Shiprocket Order ID</th>
+                    <th className="py-3.5 px-4">Courier & AWB Tracking</th>
+                    <th className="py-3.5 px-4">Payment & Amount</th>
+                    <th className="py-3.5 px-4">Delivery Milestone</th>
+                    <th className="py-3.5 px-4 text-right">Logistics Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-border/60">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                        Loading Shiprocket synced shipments...
+                      </td>
+                    </tr>
+                  ) : syncedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                        <div className="space-y-3 max-w-sm mx-auto py-6">
+                          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary flex items-center justify-center mx-auto shadow-xs">
+                            <Truck className="w-6 h-6" />
+                          </div>
+                          <div className="font-editorial text-base font-bold text-brand-tertiary">
+                            No Shiprocket Synced Orders Yet
+                          </div>
+                          <p className="text-xs text-brand-muted leading-relaxed">
+                            When orders in the Orders & Fulfillment tab are pushed to Shiprocket, they will automatically appear in this dedicated section with full tracking details.
+                          </p>
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveOrdersViewMode('orders')}
+                              className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary/90 transition-colors shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
+                            >
+                              <Package className="w-3.5 h-3.5" />
+                              <span>Go to Orders & Fulfillment</span>
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredSyncedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                        <div className="space-y-2 py-6">
+                          <p>No shipments match your current search or filters.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSyncedSearch('');
+                              setSyncedCourierFilter('');
+                              setSyncedStatusFilter('');
+                            }}
+                            className="text-xs text-brand-primary font-semibold underline cursor-pointer"
+                          >
+                            Clear all filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSyncedOrders.map((ord) => (
+                      <tr key={ord.id} className="hover:bg-[#FAF8FC] transition-colors">
+                        {/* Order Number & Item Preview */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-start space-x-3">
+                            {ord.first_item_image ? (
+                              <button
+                                type="button"
+                                onClick={() => setAssuranceItem({
+                                  product_name: ord.first_item_name,
+                                  sku: ord.first_item_sku,
+                                  slug: ord.first_item_slug,
+                                  primary_image: ord.first_item_image,
+                                  order_number: ord.order_number,
+                                  customer_name: ord.customer_name,
+                                  total_price: ord.total_amount,
+                                  is_jhumka_box: Number(ord.has_jhumka_box) > 0,
+                                })}
+                                className="relative group shrink-0 rounded-xl overflow-hidden border border-brand-border cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                title="Click to view product image (Assurance Preview)"
+                              >
+                                <img
+                                  src={normalizeMediaUrl(ord.first_item_image)}
+                                  alt={ord.first_item_name || 'Ordered item'}
+                                  className="w-11 h-11 object-cover group-hover:scale-105 transition-transform duration-200"
+                                  onError={(e) => {
+                                    if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
+                                      e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                                    } else {
+                                      e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                                    }
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </div>
+                              </button>
+                            ) : null}
+
+                            <div className="min-w-0">
+                              <div className="font-mono font-bold text-brand-tertiary flex items-center space-x-1">
+                                <span>#{ord.order_number}</span>
+                              </div>
+                              {ord.first_item_name && (
+                                <div className="text-[11px] font-medium text-brand-tertiary truncate max-w-[170px]" title={ord.first_item_name}>
+                                  {ord.first_item_name}
+                                </div>
+                              )}
+                              <div className="text-[10px] text-brand-muted">
+                                {new Date(ord.created_at).toLocaleDateString('en-IN', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                                {Number(ord.items_count) > 1 && (
+                                  <span className="ml-1.5 px-1.5 py-0.2 bg-gray-100 text-gray-700 rounded font-semibold text-[9px]">
+                                    +{Number(ord.items_count) - 1} more
+                                  </span>
+                                )}
+                              </div>
+                              {Number(ord.has_jhumka_box) > 0 && (
+                                <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 mt-1">
+                                  <Flame className="w-2.5 h-2.5 text-amber-600" />
+                                  <span>📦 Jhumka Ad Order</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Customer & Destination */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-brand-tertiary">{ord.customer_name}</div>
+                          <div className="text-[10px] text-brand-muted">{ord.customer_phone}</div>
+                          <div className="text-[10px] text-brand-muted truncate max-w-[190px]" title={`${ord.city || ''}, ${ord.state || ''} ${ord.pincode || ''}`}>
+                            {[ord.city, ord.state, ord.pincode].filter(Boolean).join(', ') || 'N/A'}
+                          </div>
+                          {ord.shipping_address_line1 && (
+                            <div className="text-[9px] text-brand-muted truncate max-w-[190px]" title={ord.shipping_address_line1}>
+                              {ord.shipping_address_line1}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Shiprocket Order ID */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <span>SR #{ord.shiprocket_order_id || 'ID Pending'}</span>
+                            </span>
+                            <div className="text-[9px] text-emerald-700 font-medium flex items-center space-x-1">
+                              <Check className="w-2.5 h-2.5" />
+                              <span>Live Synced</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Courier Partner & AWB Tracking */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1.5">
+                            <div className="font-semibold text-brand-tertiary text-xs flex items-center space-x-1">
+                              <Truck className="w-3 h-3 text-brand-primary" />
+                              <span>{ord.courier_name || 'Shiprocket Assigned Partner'}</span>
+                            </div>
+
+                            {ord.shiprocket_awb ? (
+                              <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                                <span className="font-mono text-brand-primary font-bold text-xs bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                                  {ord.shiprocket_awb}
+                                </span>
+
+                                {/* Copy AWB */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyAwb(ord.shiprocket_awb, ord.id)}
+                                  title="Copy AWB code to clipboard"
+                                  className={`p-1 rounded-lg border text-[10px] font-semibold transition-all cursor-pointer flex items-center space-x-0.5 ${
+                                    copiedAwbId === ord.id
+                                      ? 'bg-emerald-600 text-white border-emerald-600'
+                                      : 'bg-white hover:bg-gray-100 border-brand-border text-brand-tertiary'
+                                  }`}
+                                >
+                                  {copiedAwbId === ord.id ? (
+                                    <>
+                                      <Check className="w-3 h-3" />
+                                      <span>Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span className="hidden xl:inline">Copy</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Live Track Package */}
+                                <a
+                                  href={`https://shiprocket.co/tracking/${ord.shiprocket_awb}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Track package live on Shiprocket courier portal"
+                                  className="p-1 rounded-lg bg-sky-50 hover:bg-sky-600 hover:text-white border border-sky-200 text-sky-700 text-[10px] font-semibold transition-colors flex items-center space-x-0.5 shadow-2xs"
+                                >
+                                  <span>Track</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-brand-muted italic">
+                                AWB Assignment in progress
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Payment Breakdown & Total */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-brand-tertiary">
+                                ₹{Number(ord.total_amount).toLocaleString('en-IN')}
+                              </span>
+                              {renderPaymentStatusBadge(ord)}
+                            </div>
+                            <div className="text-[11px] text-brand-muted">
+                              {ord.payment_type === 'partial' ? (
+                                (ord.payment_status === 'partial_paid' || ord.payment_status === 'paid') ? (
+                                  <span className="text-emerald-700 font-medium">₹{Number(ord.amount_paid_upfront)} advance paid</span>
+                                ) : (
+                                  <span>Partial COD (₹{Number(ord.amount_paid_upfront)} advance)</span>
+                                )
+                              ) : ord.payment_type === 'cod' ? (
+                                <span>Cash on Delivery</span>
+                              ) : (
+                                <span>Prepaid</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Fulfillment Status */}
+                        <td className="py-3.5 px-4">
+                          {renderStatusBadge(ord.order_status)}
+                        </td>
+
+                        {/* Logistics Actions */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end space-x-1.5 flex-wrap gap-y-1">
+                            {/* WhatsApp Tracking Notification */}
+                            {ord.customer_phone && (
+                              <a
+                                href={getWhatsAppTrackingUrl(ord)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Send live WhatsApp tracking message to customer"
+                                className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 text-emerald-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span className="hidden xl:inline">WhatsApp</span>
+                              </a>
+                            )}
+
+                            {/* Inspect Drawer */}
+                            <button
+                              type="button"
+                              onClick={() => inspectOrder(ord.id)}
+                              className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center space-x-1"
+                              title="Inspect full shipment and customer dossier"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Inspect</span>
+                            </button>
+
+                            {/* Re-sync SR */}
+                            <button
+                              type="button"
+                              onClick={() => handleSyncShiprocket(ord.id)}
+                              disabled={syncingSrId === ord.id}
+                              title="Re-sync order details with Shiprocket API"
+                              className="p-1.5 rounded-xl bg-gray-50 hover:bg-gray-200 border border-brand-border text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${syncingSrId === ord.id ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW MODE 3: SENT CUSTOMER EMAILS & RECOVERY AUDIT LOG */}
       {activeOrdersViewMode === 'sent_emails' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Metrics Summary Strip */}

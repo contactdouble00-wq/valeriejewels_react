@@ -256,14 +256,15 @@ if ($method === 'GET') {
     $paymentStatus = trim($_GET['payment_status'] ?? '');
     $riskTier = trim($_GET['risk_tier'] ?? '');
     $jhumkaOnly = !empty($_GET['jhumka_only']);
+    $shiprocketSynced = trim($_GET['shiprocket_synced'] ?? '');
 
     $where = ["1=1"];
     $params = [];
 
     if ($search !== '') {
-        $where[] = "(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ? OR o.shiprocket_awb LIKE ?)";
+        $where[] = "(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ? OR o.shiprocket_awb LIKE ? OR o.shiprocket_order_id LIKE ? OR o.courier_name LIKE ?)";
         $term = "%{$search}%";
-        $params = array_merge($params, [$term, $term, $term, $term, $term]);
+        $params = array_merge($params, [$term, $term, $term, $term, $term, $term, $term]);
     }
 
     // If filtering by unpaid_pending, ensure ALL pending/failed/unpaid orders are captured
@@ -300,6 +301,12 @@ if ($method === 'GET') {
             JOIN products p ON oi.product_id = p.id 
             WHERE oi.order_id = o.id AND (p.sku LIKE 'VJ-JHM%' OR p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1))
         )";
+    }
+
+    if ($shiprocketSynced === '1' || $shiprocketSynced === 'synced') {
+        $where[] = "(o.shiprocket_order_id IS NOT NULL OR o.shiprocket_awb IS NOT NULL)";
+    } elseif ($shiprocketSynced === '0' || $shiprocketSynced === 'unsynced') {
+        $where[] = "(o.shiprocket_order_id IS NULL AND o.shiprocket_awb IS NULL)";
     }
 
     $whereSql = implode(' AND ', $where);
