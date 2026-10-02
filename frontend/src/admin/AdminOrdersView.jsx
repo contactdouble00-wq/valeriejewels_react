@@ -66,6 +66,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
   // Sent Emails Customer Log State
   const [sentEmailLogs, setSentEmailLogs] = useState([]);
+  const safeSentLogs = Array.isArray(sentEmailLogs) ? sentEmailLogs : [];
   const [loadingSentEmails, setLoadingSentEmails] = useState(false);
   const [sentEmailSearch, setSentEmailSearch] = useState('');
   const [sentEmailTypeFilter, setSentEmailTypeFilter] = useState('');
@@ -395,8 +396,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         type: sentEmailTypeFilter,
         delivery_status: sentEmailStatusFilter,
       });
-      setSentEmailLogs(res || []);
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setSentEmailLogs(list);
     } catch (err) {
+      setSentEmailLogs([]);
       showToast(err.message || 'Failed to fetch sent email logs');
     } finally {
       setLoadingSentEmails(false);
@@ -432,7 +435,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
   // Export Sent Emails Customer Log to CSV
   const exportSentEmailsCsv = () => {
-    if (sentEmailLogs.length === 0) {
+    if (safeSentLogs.length === 0) {
       showToast('No sent email records available to export');
       return;
     }
@@ -456,25 +459,25 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       'Email Subject',
       'Error Message'
     ];
-    const rows = sentEmailLogs.map((l) => [
+    const rows = safeSentLogs.map((l) => [
       l.log_id || '',
       `"${l.sent_at || ''}"`,
       `"${l.email_type || ''}"`,
       `"${l.delivery_status || ''}"`,
-      `"${(l.recipient_name || l.customer_name || '').replace(/"/g, '""')}"`,
-      `"${(l.recipient_email || l.customer_email || '').replace(/"/g, '""')}"`,
-      `"${(l.customer_phone || '').replace(/"/g, '""')}"`,
-      `"${(l.shipping_address_line1 || '').replace(/"/g, '""')}"`,
-      `"${(l.shipping_address_line2 || '').replace(/"/g, '""')}"`,
-      `"${(l.city || '').replace(/"/g, '""')}"`,
-      `"${(l.state || '').replace(/"/g, '""')}"`,
-      `"${(l.pincode || '').replace(/"/g, '""')}"`,
-      `"${(l.order_number || '').replace(/"/g, '""')}"`,
+      `"${String(l.recipient_name || l.customer_name || '').replace(/"/g, '""')}"`,
+      `"${String(l.recipient_email || l.customer_email || '').replace(/"/g, '""')}"`,
+      `"${String(l.customer_phone || '').replace(/"/g, '""')}"`,
+      `"${String(l.shipping_address_line1 || '').replace(/"/g, '""')}"`,
+      `"${String(l.shipping_address_line2 || '').replace(/"/g, '""')}"`,
+      `"${String(l.city || '').replace(/"/g, '""')}"`,
+      `"${String(l.state || '').replace(/"/g, '""')}"`,
+      `"${String(l.pincode || '').replace(/"/g, '""')}"`,
+      `"${String(l.order_number || '').replace(/"/g, '""')}"`,
       l.total_amount || 0,
       `"${l.payment_status || ''}"`,
       `"${l.order_status || ''}"`,
-      `"${(l.subject || '').replace(/"/g, '""')}"`,
-      `"${(l.error_message || '').replace(/"/g, '""')}"`
+      `"${String(l.subject || '').replace(/"/g, '""')}"`,
+      `"${String(l.error_message || '').replace(/"/g, '""')}"`
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -486,7 +489,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Exported ${sentEmailLogs.length} customer records to CSV`);
+    showToast(`Exported ${safeSentLogs.length} customer records to CSV`);
   };
 
   // Generate WhatsApp recovery chat URL
@@ -818,6 +821,30 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     );
   };
 
+  const renderPaymentBadge = (statusOrOrd) => {
+    if (!statusOrOrd) return renderPaymentStatusBadge({ payment_status: 'pending' });
+    if (typeof statusOrOrd === 'object') return renderPaymentStatusBadge(statusOrOrd);
+    return renderPaymentStatusBadge({ payment_status: statusOrOrd });
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const safe = String(dateStr).replace(' ', 'T');
+      const d = new Date(safe);
+      if (isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return String(dateStr);
+    }
+  };
+
   const handleCancelAndRefund = async (e) => {
     e.preventDefault();
     if (!selectedOrder || !cancelReason) return;
@@ -923,7 +950,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 ? 'bg-amber-400 text-amber-950'
                 : 'bg-amber-100 text-amber-900 border border-amber-300'
             }`}>
-              {sentEmailLogs.length}
+              {safeSentLogs.length}
             </span>
           </button>
         </div>
@@ -1951,7 +1978,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <MailCheck className="w-4 h-4 text-brand-primary" />
               </div>
               <div className="text-2xl font-bold font-mono text-brand-tertiary">
-                {sentEmailLogs.length}
+                {safeSentLogs.length}
               </div>
               <div className="text-[10px] text-brand-muted">
                 All lifecycle & recovery emails logged
@@ -1964,7 +1991,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <User className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="text-2xl font-bold font-mono text-brand-tertiary">
-                {new Set(sentEmailLogs.map((l) => l.recipient_email || l.customer_email).filter(Boolean)).size}
+                {new Set(safeSentLogs.map((l) => l.recipient_email || l.customer_email).filter(Boolean)).size}
               </div>
               <div className="text-[10px] text-brand-muted">
                 Direct contacts reachable
@@ -1977,7 +2004,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <Sparkles className="w-4 h-4 text-amber-500" />
               </div>
               <div className="text-2xl font-bold font-mono text-brand-tertiary">
-                ₹{sentEmailLogs.reduce((sum, l) => sum + (Number(l.total_amount) || 0), 0).toLocaleString('en-IN')}
+                ₹{safeSentLogs.reduce((sum, l) => sum + (Number(l.total_amount) || 0), 0).toLocaleString('en-IN')}
               </div>
               <div className="text-[10px] text-brand-muted">
                 Associated customer cart/order value
@@ -1990,8 +2017,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="text-2xl font-bold font-mono text-emerald-700">
-                {sentEmailLogs.length > 0
-                  ? `${Math.round((sentEmailLogs.filter((l) => l.delivery_status !== 'failed').length / sentEmailLogs.length) * 100)}%`
+                {safeSentLogs.length > 0
+                  ? `${Math.round((safeSentLogs.filter((l) => l.delivery_status !== 'failed').length / safeSentLogs.length) * 100)}%`
                   : '100%'}
               </div>
               <div className="text-[10px] text-brand-muted">
@@ -2022,7 +2049,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         search: '',
                         type: sentEmailTypeFilter,
                         delivery_status: sentEmailStatusFilter,
-                      }).then(res => setSentEmailLogs(res || []));
+                      }).then(res => {
+                        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+                        setSentEmailLogs(list);
+                      });
                     }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
                   >
@@ -2084,7 +2114,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <button
                   type="button"
                   onClick={exportSentEmailsCsv}
-                  disabled={sentEmailLogs.length === 0}
+                  disabled={safeSentLogs.length === 0}
                   className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
                   title="Export all sent customer records with phone, address, and orders to CSV"
                 >
@@ -2129,7 +2159,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </div>
                       </td>
                     </tr>
-                  ) : sentEmailLogs.length === 0 ? (
+                  ) : safeSentLogs.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-16 text-center text-brand-muted">
                         <div className="max-w-md mx-auto space-y-3">
@@ -2162,7 +2192,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                       </td>
                     </tr>
                   ) : (
-                    sentEmailLogs.map((log) => {
+                    safeSentLogs.map((log) => {
                       const custName = log.recipient_name || log.customer_name || 'Valued Customer';
                       const email = log.recipient_email || log.customer_email || 'No email';
                       const phone = log.customer_phone;
@@ -2175,7 +2205,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           <td className="py-3.5 px-4">
                             <div className="flex items-start space-x-3">
                               <div className="w-8 h-8 rounded-full bg-purple-100 text-brand-primary font-bold flex items-center justify-center shrink-0 text-xs shadow-2xs">
-                                {custName.charAt(0).toUpperCase()}
+                                {(custName && typeof custName === 'string' && custName.length > 0) ? custName.charAt(0).toUpperCase() : 'C'}
                               </div>
                               <div className="min-w-0">
                                 <div className="font-semibold text-brand-tertiary flex items-center space-x-1.5">
@@ -2243,7 +2273,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   ₹{log.total_amount ? Number(log.total_amount).toLocaleString('en-IN') : '0.00'}
                                 </div>
                                 <div className="flex items-center space-x-1 flex-wrap gap-1">
-                                  {renderPaymentBadge(log.payment_status || 'pending')}
+                                  {renderPaymentBadge(log)}
                                   {log.first_item_name && (
                                     <span className="text-[9px] text-brand-muted truncate max-w-[130px]" title={log.first_item_name}>
                                       • {log.first_item_name}
@@ -2270,7 +2300,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   ? 'bg-blue-100 text-blue-800 border border-blue-300'
                                   : 'bg-purple-100 text-purple-800 border border-purple-300'
                               }`}>
-                                {isPaymentIncomplete ? '⚠️ Payment Incomplete Recovery' : log.email_type.replace(/_/g, ' ')}
+                                {isPaymentIncomplete ? '⚠️ Payment Incomplete Recovery' : String(log.email_type || 'Email').replace(/_/g, ' ')}
                               </span>
                               <div className="text-[11px] font-medium text-brand-tertiary truncate" title={log.subject}>
                                 {log.subject}
@@ -2294,13 +2324,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                 </span>
                               </div>
                               <div className="text-[10px] text-brand-muted">
-                                {new Date(log.sent_at).toLocaleDateString('en-IN', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                {formatDateTime(log.sent_at)}
                               </div>
                             </div>
                           </td>
