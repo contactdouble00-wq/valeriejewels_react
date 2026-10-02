@@ -553,7 +553,8 @@ if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
     }
 
     $customMessage = trim($input['custom_message'] ?? '');
-    $emailType = trim($input['email_type'] ?? 'payment_reminder');
+    $reason = trim($input['reason'] ?? '');
+    $emailType = trim($input['email_type'] ?? 'order_failed');
 
     $sentOrders = [];
     $failedOrders = [];
@@ -586,11 +587,7 @@ if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
         }
 
         try {
-            if ($emailType === 'order_failed') {
-                $res = MailerService::sendOrderFailed($ordIdInt, null, true, $customMessage ?: null);
-            } else {
-                $res = MailerService::sendPaymentReminder($ordIdInt, $customMessage ?: null, true);
-            }
+            $res = MailerService::sendOrderFailed($ordIdInt, $reason ?: null, true, $customMessage ?: null);
 
             if (!empty($res['success'])) {
                 $sentOrders[] = [

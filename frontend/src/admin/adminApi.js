@@ -312,12 +312,13 @@ export const adminApi = {
     return res.data;
   },
 
-  async bulkSendPaymentReminders(orderIds, customMessage = '', emailType = 'payment_reminder') {
+  async bulkSendPaymentReminders(orderIds, customMessage = '', reason = '', emailType = 'order_failed') {
     const res = await request('/admin/orders.php?action=bulk_send_payment_reminder', {
       method: 'POST',
       body: JSON.stringify({
         order_ids: orderIds,
         custom_message: customMessage,
+        reason,
         email_type: emailType,
       }),
     });
