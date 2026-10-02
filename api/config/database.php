@@ -191,6 +191,15 @@ class Database {
                 try { $pdo->exec($sql); } catch (Throwable $e) {}
             }
 
+            // Ensure email_logs columns and indexes support all recovery email types
+            $emailLogCols = [
+                "ALTER TABLE `email_logs` MODIFY COLUMN `email_type` VARCHAR(100) NOT NULL",
+                "ALTER TABLE `email_logs` DROP INDEX `uq_order_email`",
+            ];
+            foreach ($emailLogCols as $sql) {
+                try { $pdo->exec($sql); } catch (Throwable $e) {}
+            }
+
             // Ensure site_settings table exists
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS `site_settings` (

@@ -20,7 +20,15 @@ import {
   Sparkles,
   SendHorizontal,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Copy,
+  Check,
+  MessageSquare,
+  History,
+  User,
+  MailCheck,
+  ArrowUpRight,
+  Download
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -39,6 +47,17 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [assuranceItem, setAssuranceItem] = useState(null);
+
+  // View Mode: 'orders' | 'sent_emails'
+  const [activeOrdersViewMode, setActiveOrdersViewMode] = useState('orders');
+
+  // Sent Emails Customer Log State
+  const [sentEmailLogs, setSentEmailLogs] = useState([]);
+  const [loadingSentEmails, setLoadingSentEmails] = useState(false);
+  const [sentEmailSearch, setSentEmailSearch] = useState('');
+  const [sentEmailTypeFilter, setSentEmailTypeFilter] = useState('');
+  const [sentEmailStatusFilter, setSentEmailStatusFilter] = useState('');
+  const [copiedLogId, setCopiedLogId] = useState(null);
 
   // Shiprocket sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
@@ -204,7 +223,9 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       setBulkEmailModalOpen(false);
       setBulkEmailCustomMessage('');
       setSelectedOrderIds([]);
-      loadOrders();
+      await loadOrders();
+      await loadSentEmailLogs();
+      setActiveOrdersViewMode('sent_emails');
     } catch (err) {
       showToast(err.message || 'Failed to dispatch payment incomplete emails');
     } finally {
@@ -212,9 +233,133 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
+  // Fetch Sent Email Customer Logs
+  const loadSentEmailLogs = async () => {
+    try {
+      setLoadingSentEmails(true);
+      const res = await adminApi.getSentEmailLogs({
+        search: sentEmailSearch,
+        type: sentEmailTypeFilter,
+        delivery_status: sentEmailStatusFilter,
+      });
+      setSentEmailLogs(res || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to fetch sent email logs');
+    } finally {
+      setLoadingSentEmails(false);
+    }
+  };
+
+  // Copy customer dossier for concierge / phone / WhatsApp access
+  const handleCopyCustomerDossier = (log) => {
+    const custName = log.recipient_name || log.customer_name || 'Valued Customer';
+    const email = log.recipient_email || log.customer_email || 'N/A';
+    const phone = log.customer_phone || 'N/A';
+    const address = [log.shipping_address_line1, log.shipping_address_line2, log.city, log.state, log.pincode].filter(Boolean).join(', ') || 'N/A';
+    const ordNum = log.order_number ? `#${log.order_number}` : 'N/A';
+    const amount = log.total_amount ? `₹${Number(log.total_amount).toLocaleString('en-IN')}` : 'N/A';
+
+    const text = [
+      `VALERIE JEWELS — CUSTOMER DOSSIER`,
+      `---------------------------------`,
+      `Name: ${custName}`,
+      `Phone: ${phone}`,
+      `Email: ${email}`,
+      `Address: ${address}`,
+      `Order: ${ordNum} (${amount})`,
+      `Payment Status: ${log.payment_status || 'Pending'}`,
+      `Last Dispatched Email: ${log.subject || log.email_type} on ${log.sent_at}`,
+    ].join('\n');
+
+    navigator.clipboard.writeText(text);
+    setCopiedLogId(log.log_id);
+    showToast(`Copied ${custName}'s customer data to clipboard!`);
+    setTimeout(() => setCopiedLogId(null), 2500);
+  };
+
+  // Export Sent Emails Customer Log to CSV
+  const exportSentEmailsCsv = () => {
+    if (sentEmailLogs.length === 0) {
+      showToast('No sent email records available to export');
+      return;
+    }
+    const headers = [
+      'Log ID',
+      'Sent At',
+      'Email Type',
+      'Delivery Status',
+      'Customer Name',
+      'Recipient Email',
+      'Customer Phone',
+      'Shipping Address Line 1',
+      'Shipping Address Line 2',
+      'City',
+      'State',
+      'Pincode',
+      'Order Number',
+      'Order Total (INR)',
+      'Payment Status',
+      'Order Status',
+      'Email Subject',
+      'Error Message'
+    ];
+    const rows = sentEmailLogs.map((l) => [
+      l.log_id || '',
+      `"${l.sent_at || ''}"`,
+      `"${l.email_type || ''}"`,
+      `"${l.delivery_status || ''}"`,
+      `"${(l.recipient_name || l.customer_name || '').replace(/"/g, '""')}"`,
+      `"${(l.recipient_email || l.customer_email || '').replace(/"/g, '""')}"`,
+      `"${(l.customer_phone || '').replace(/"/g, '""')}"`,
+      `"${(l.shipping_address_line1 || '').replace(/"/g, '""')}"`,
+      `"${(l.shipping_address_line2 || '').replace(/"/g, '""')}"`,
+      `"${(l.city || '').replace(/"/g, '""')}"`,
+      `"${(l.state || '').replace(/"/g, '""')}"`,
+      `"${(l.pincode || '').replace(/"/g, '""')}"`,
+      `"${(l.order_number || '').replace(/"/g, '""')}"`,
+      l.total_amount || 0,
+      `"${l.payment_status || ''}"`,
+      `"${l.order_status || ''}"`,
+      `"${(l.subject || '').replace(/"/g, '""')}"`,
+      `"${(l.error_message || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `valerie_customer_sent_emails_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${sentEmailLogs.length} customer records to CSV`);
+  };
+
+  // Generate WhatsApp recovery chat URL
+  const getWhatsAppRecoveryUrl = (log) => {
+    const rawPhone = String(log.customer_phone || '').replace(/[^0-9]/g, '');
+    const phoneClean = rawPhone.startsWith('91') && rawPhone.length === 12
+      ? rawPhone
+      : (rawPhone.length === 10 ? `91${rawPhone}` : rawPhone);
+    const custName = log.recipient_name || log.customer_name || 'there';
+    const ordNum = log.order_number ? `#${log.order_number}` : '';
+    const message = encodeURIComponent(
+      `Hello ${custName}, this is the Valerie Jewels Concierge team regarding your order ${ordNum}. We noticed your payment attempt was interrupted. Your handcrafted pieces are safe with us! Would you like us to assist you in completing your payment or switching to Cash on Delivery?`
+    );
+    return `https://wa.me/${phoneClean}?text=${message}`;
+  };
+
   useEffect(() => {
     loadOrders();
+    loadSentEmailLogs();
   }, [statusFilter, paymentFilter, paymentStatusFilter, riskFilter, jhumkaOnly]);
+
+  useEffect(() => {
+    if (activeOrdersViewMode === 'sent_emails') {
+      loadSentEmailLogs();
+    }
+  }, [activeOrdersViewMode, sentEmailTypeFilter, sentEmailStatusFilter]);
 
   useEffect(() => {
     if (initialSelectedOrderId) {
@@ -295,6 +440,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       if (selectedOrder && selectedOrder.id === targetEmailOrder.id) {
         await inspectOrder(selectedOrder.id);
       }
+      await loadSentEmailLogs();
     } catch (err) {
       showToast(err.message || 'Failed to dispatch email');
     } finally {
@@ -459,18 +605,67 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         </div>
       )}
 
-      {/* Header */}
-      <div>
-        <span className="text-[11px] font-caps tracking-widest uppercase text-brand-primary font-bold">
-          Fulfillment & Logistics
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-editorial font-bold text-brand-tertiary mt-1">
-          Orders Management & Shipments
-        </h1>
+      {/* Header with Luxury View Switcher */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-caps tracking-widest uppercase text-brand-primary font-bold">
+            Fulfillment & Customer Concierge
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-editorial font-bold text-brand-tertiary mt-1">
+            {activeOrdersViewMode === 'orders' ? 'Orders Management & Shipments' : 'Sent Customer Emails & Recovery Audit'}
+          </h1>
+        </div>
+
+        {/* View Switcher Tabs */}
+        <div className="flex items-center space-x-1.5 bg-[#FAF8FC] p-1.5 rounded-2xl border border-brand-border self-start md:self-auto shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveOrdersViewMode('orders')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
+              activeOrdersViewMode === 'orders'
+                ? 'bg-[#26153D] text-white shadow-xs'
+                : 'text-brand-tertiary hover:bg-white'
+            }`}
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>Orders & Shipments</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeOrdersViewMode === 'orders' ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-brand-tertiary'
+            }`}>
+              {orders.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveOrdersViewMode('sent_emails');
+              loadSentEmailLogs();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 cursor-pointer ${
+              activeOrdersViewMode === 'sent_emails'
+                ? 'bg-[#26153D] text-white shadow-xs'
+                : 'text-brand-tertiary hover:bg-white'
+            }`}
+          >
+            <Mail className="w-3.5 h-3.5 text-brand-accent" />
+            <span>Sent Customer Emails Log</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeOrdersViewMode === 'sent_emails'
+                ? 'bg-amber-400 text-amber-950'
+                : 'bg-amber-100 text-amber-900 border border-amber-300'
+            }`}>
+              {sentEmailLogs.length}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-4 shadow-2xs">
+      {/* VIEW MODE 1: ORDERS & SHIPMENTS */}
+      {activeOrdersViewMode === 'orders' && (
+        <div className="space-y-6">
+          {/* Filter Toolbar */}
+          <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-4 shadow-2xs">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="relative w-full md:w-80">
             <input
@@ -935,6 +1130,429 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           </table>
         </div>
       </div>
+      </div>
+      )}
+
+      {/* VIEW MODE 2: SENT CUSTOMER EMAILS & RECOVERY AUDIT LOG */}
+      {activeOrdersViewMode === 'sent_emails' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Metrics Summary Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Total Dispatched</span>
+                <MailCheck className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-brand-tertiary">
+                {sentEmailLogs.length}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                All lifecycle & recovery emails logged
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Unique Customers</span>
+                <User className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-brand-tertiary">
+                {new Set(sentEmailLogs.map((l) => l.recipient_email || l.customer_email).filter(Boolean)).size}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Direct contacts reachable
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Value Monitored</span>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-brand-tertiary">
+                ₹{sentEmailLogs.reduce((sum, l) => sum + (Number(l.total_amount) || 0), 0).toLocaleString('en-IN')}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Associated customer cart/order value
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-brand-muted">
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Delivery Success</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-emerald-700">
+                {sentEmailLogs.length > 0
+                  ? `${Math.round((sentEmailLogs.filter((l) => l.delivery_status !== 'failed').length / sentEmailLogs.length) * 100)}%`
+                  : '100%'}
+              </div>
+              <div className="text-[10px] text-brand-muted">
+                Live SMTP & simulated delivery
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Toolbar for Sent Emails */}
+          <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-4 shadow-2xs">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-96">
+                <input
+                  type="text"
+                  value={sentEmailSearch}
+                  onChange={(e) => setSentEmailSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && loadSentEmailLogs()}
+                  placeholder="Search customer name, email, phone, city, order #..."
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <Search className="w-3.5 h-3.5 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                {sentEmailSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSentEmailSearch('');
+                      adminApi.getSentEmailLogs({
+                        search: '',
+                        type: sentEmailTypeFilter,
+                        delivery_status: sentEmailStatusFilter,
+                      }).then(res => setSentEmailLogs(res || []));
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={loadSentEmailLogs}
+                  disabled={loadingSentEmails}
+                  className="px-3 py-1.5 rounded-xl bg-[#FAF8FC] hover:bg-gray-100 border border-brand-border text-brand-tertiary text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                  title="Refresh sent customer emails log"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingSentEmails ? 'animate-spin text-brand-primary' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+
+                {/* Email Type Filter */}
+                <select
+                  value={sentEmailTypeFilter}
+                  onChange={(e) => setSentEmailTypeFilter(e.target.value)}
+                  className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-medium"
+                >
+                  <option value="">All Email Types</option>
+                  <option value="order_failed">⚠️ Payment Incomplete / Failed</option>
+                  <option value="order_confirmation">✓ Order Confirmed</option>
+                  <option value="order_shipped">📦 Shipped & Tracking</option>
+                  <option value="order_on_hold">⏳ Order On Hold</option>
+                  <option value="order_status_update">🔄 Status Update</option>
+                  <option value="order_cancelled">❌ Order Cancelled</option>
+                </select>
+
+                {/* Delivery Status Filter */}
+                <select
+                  value={sentEmailStatusFilter}
+                  onChange={(e) => setSentEmailStatusFilter(e.target.value)}
+                  className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-medium"
+                >
+                  <option value="">All Delivery Statuses</option>
+                  <option value="sent">Delivered (Live SMTP)</option>
+                  <option value="simulated">Delivered (Simulated / Local)</option>
+                  <option value="failed">Failed</option>
+                </select>
+
+                {/* Export CSV Button */}
+                <button
+                  type="button"
+                  onClick={exportSentEmailsCsv}
+                  disabled={sentEmailLogs.length === 0}
+                  className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="Export all sent customer records with phone, address, and orders to CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Customer CSV</span>
+                </button>
+
+                {/* Quick Switch to Orders Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveOrdersViewMode('orders')}
+                  className="px-3 py-1.5 rounded-xl bg-[#26153D] hover:bg-[#3B205D] text-white text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>View All Orders</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sent Emails Customer List Table */}
+          <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
+                  <tr>
+                    <th className="py-3.5 px-4">Customer & Contact</th>
+                    <th className="py-3.5 px-4">Delivery Address</th>
+                    <th className="py-3.5 px-4">Order Reference</th>
+                    <th className="py-3.5 px-4">Dispatched Email</th>
+                    <th className="py-3.5 px-4">Status & Timestamp</th>
+                    <th className="py-3.5 px-4 text-right">Concierge Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-border/60">
+                  {loadingSentEmails ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-brand-muted">
+                        <div className="flex flex-col items-center justify-center space-y-2">
+                          <RefreshCw className="w-6 h-6 animate-spin text-brand-primary" />
+                          <span className="text-xs font-medium">Loading sent customer email logs...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : sentEmailLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-brand-muted">
+                        <div className="max-w-md mx-auto space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary flex items-center justify-center mx-auto">
+                            <Mail className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-sm font-bold text-brand-tertiary font-editorial">
+                            No Sent Customer Emails Found
+                          </h4>
+                          <p className="text-xs text-brand-muted leading-relaxed">
+                            {sentEmailSearch || sentEmailTypeFilter || sentEmailStatusFilter
+                              ? 'No sent email records match your search or filter criteria. Try clearing the filters.'
+                              : 'No customer emails have been dispatched yet. When you select pending orders and send recovery emails, every customer record will be saved here for instant access.'}
+                          </p>
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSentEmailSearch('');
+                                setSentEmailTypeFilter('');
+                                setSentEmailStatusFilter('');
+                                setActiveOrdersViewMode('orders');
+                              }}
+                              className="px-4 py-2 rounded-xl bg-[#26153D] text-white text-xs font-semibold hover:bg-brand-primary transition-all shadow-xs cursor-pointer"
+                            >
+                              Go to Orders & Select Customers
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    sentEmailLogs.map((log) => {
+                      const custName = log.recipient_name || log.customer_name || 'Valued Customer';
+                      const email = log.recipient_email || log.customer_email || 'No email';
+                      const phone = log.customer_phone;
+                      const hasAddress = log.shipping_address_line1 || log.city;
+                      const isPaymentIncomplete = log.email_type === 'order_failed';
+
+                      return (
+                        <tr key={log.log_id} className="hover:bg-[#FAF8FC] transition-colors">
+                          {/* Customer & Contact Info */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-start space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-purple-100 text-brand-primary font-bold flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                                {custName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-brand-tertiary flex items-center space-x-1.5">
+                                  <span>{custName}</span>
+                                </div>
+                                <div className="text-[11px] text-brand-muted flex items-center space-x-1 mt-0.5 truncate max-w-[200px]" title={email}>
+                                  <Mail className="w-3 h-3 shrink-0 text-gray-400" />
+                                  <a href={`mailto:${email}`} className="hover:text-brand-primary truncate hover:underline">
+                                    {email}
+                                  </a>
+                                </div>
+                                {phone && (
+                                  <div className="text-[11px] text-brand-muted flex items-center space-x-1.5 mt-0.5">
+                                    <Phone className="w-3 h-3 shrink-0 text-gray-400" />
+                                    <a href={`tel:${phone}`} className="hover:text-brand-primary font-mono text-[10px]">
+                                      {phone}
+                                    </a>
+                                    <a
+                                      href={getWhatsAppRecoveryUrl(log)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title="Open WhatsApp chat with prefilled payment recovery message"
+                                      className="inline-flex items-center space-x-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors"
+                                    >
+                                      <span>💬 WhatsApp</span>
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Customer Address Details */}
+                          <td className="py-3.5 px-4">
+                            {hasAddress ? (
+                              <div className="space-y-0.5 max-w-[190px]">
+                                <div className="font-medium text-brand-tertiary text-xs">
+                                  {log.city || 'City'}{log.state ? `, ${log.state}` : ''} {log.pincode ? `- ${log.pincode}` : ''}
+                                </div>
+                                <div className="text-[10px] text-brand-muted truncate" title={log.shipping_address_line1}>
+                                  {log.shipping_address_line1}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-brand-muted italic">
+                                Checkout address pending
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Order Reference & Amount */}
+                          <td className="py-3.5 px-4">
+                            {log.order_id ? (
+                              <div className="space-y-1">
+                                <button
+                                  type="button"
+                                  onClick={() => inspectOrder(log.order_id)}
+                                  className="font-mono font-bold text-brand-primary hover:underline cursor-pointer flex items-center space-x-1"
+                                  title="Inspect complete order details"
+                                >
+                                  <span>#{log.order_number || log.order_id}</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                                <div className="font-bold text-brand-tertiary font-mono text-xs">
+                                  ₹{log.total_amount ? Number(log.total_amount).toLocaleString('en-IN') : '0.00'}
+                                </div>
+                                <div className="flex items-center space-x-1 flex-wrap gap-1">
+                                  {renderPaymentBadge(log.payment_status || 'pending')}
+                                  {log.first_item_name && (
+                                    <span className="text-[9px] text-brand-muted truncate max-w-[130px]" title={log.first_item_name}>
+                                      • {log.first_item_name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-brand-muted">
+                                General Dispatch
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Dispatched Email Subject & Type */}
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1 max-w-[240px]">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                isPaymentIncomplete
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                  : log.email_type === 'order_confirmation'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : log.email_type === 'order_shipped'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                  : 'bg-purple-100 text-purple-800 border border-purple-300'
+                              }`}>
+                                {isPaymentIncomplete ? '⚠️ Payment Incomplete Recovery' : log.email_type.replace(/_/g, ' ')}
+                              </span>
+                              <div className="text-[11px] font-medium text-brand-tertiary truncate" title={log.subject}>
+                                {log.subject}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Status & Sent Timestamp */}
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1">
+                              <div>
+                                <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  log.delivery_status === 'sent'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    : log.delivery_status === 'simulated'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-100 text-rose-800 border border-rose-300'
+                                }`} title={log.error_message || ''}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${log.delivery_status === 'failed' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                                  <span>{log.delivery_status === 'simulated' ? 'Delivered (Simulated)' : log.delivery_status === 'sent' ? 'Delivered (SMTP)' : 'Failed'}</span>
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-brand-muted">
+                                {new Date(log.sent_at).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Concierge Actions */}
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {/* Copy Customer Dossier */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCustomerDossier(log)}
+                                title="Copy Customer Name, Phone, Email & Address Dossier to clipboard"
+                                className={`p-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs flex items-center space-x-1 ${
+                                  copiedLogId === log.log_id
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white hover:bg-gray-100 border-brand-border text-brand-tertiary'
+                                }`}
+                              >
+                                {copiedLogId === log.log_id ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span className="text-[10px]">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5" />
+                                    <span className="hidden lg:inline text-[10px]">Copy Data</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {/* WhatsApp Direct Chat */}
+                              {phone && (
+                                <a
+                                  href={getWhatsAppRecoveryUrl(log)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Chat with Customer on WhatsApp"
+                                  className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 text-emerald-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  <span className="hidden xl:inline text-[10px]">WhatsApp</span>
+                                </a>
+                              )}
+
+                              {/* Inspect Full Order Drawer */}
+                              {log.order_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => inspectOrder(log.order_id)}
+                                  title="View full customer and order details in drawer"
+                                  className="px-2.5 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center space-x-1"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>Inspect</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* ORDER DETAIL INSPECTION DRAWER */}
@@ -1353,6 +1971,68 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 </div>
               </div>
             )}
+
+            {/* Dispatched Emails Audit Trail */}
+            <div className="space-y-3 pt-3 border-t border-brand-border">
+              <div className="flex items-center justify-between">
+                <div className="font-caps tracking-wider uppercase text-[10px] text-brand-muted font-bold flex items-center space-x-1.5">
+                  <Mail className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Email Dispatch History ({selectedOrder.email_logs?.length || 0})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openEmailModal(selectedOrder)}
+                  className="text-[11px] font-semibold text-brand-primary hover:underline flex items-center space-x-1 cursor-pointer"
+                >
+                  <SendHorizontal className="w-3 h-3" />
+                  <span>Send Email</span>
+                </button>
+              </div>
+
+              {selectedOrder.email_logs && selectedOrder.email_logs.length > 0 ? (
+                <div className="divide-y divide-brand-border/60 border border-brand-border rounded-2xl bg-white p-2 space-y-1">
+                  {selectedOrder.email_logs.map((log) => (
+                    <div key={log.id} className="p-2.5 hover:bg-[#FAF8FC] rounded-xl transition-colors text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          log.email_type === 'order_failed'
+                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                            : log.email_type === 'order_confirmation'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : 'bg-purple-100 text-purple-800 border border-purple-200'
+                        }`}>
+                          {log.email_type === 'order_failed' ? 'Payment Incomplete Recovery' : log.email_type.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-[10px] text-brand-muted">
+                          {new Date(log.sent_at).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <div className="font-medium text-brand-tertiary truncate" title={log.subject}>
+                        {log.subject}
+                      </div>
+                      <div className="text-[10px] text-brand-muted flex items-center justify-between pt-0.5">
+                        <span className="truncate max-w-[200px]">To: {log.recipient_email}</span>
+                        <span className={`font-semibold capitalize ${
+                          log.status === 'sent' || log.status === 'simulated' ? 'text-emerald-700' : 'text-rose-700'
+                        }`}>
+                          {log.status === 'simulated' ? '✓ Delivered (Simulated)' : `✓ ${log.status}`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-[#FAF8FC] border border-brand-border rounded-2xl p-4 text-center text-xs text-brand-muted">
+                  No email notifications dispatched for this order yet.
+                </div>
+              )}
+            </div>
 
             {/* Cancel & Refund Action (Admin Only) */}
             {selectedOrder.order_status !== 'cancelled' && (
@@ -1893,6 +2573,14 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <span>✨</span>
                 <span><strong>Luxury Theme Assured:</strong> Includes Valerie Jewels top logo, reserved items table, debited funds reassurance ("🛡️ Was money debited from your account?"), and WhatsApp Concierge support.</span>
               </div>
+            </div>
+
+            {/* Automatic Customer Log Audit Notice */}
+            <div className="p-3 bg-purple-50/70 rounded-2xl border border-purple-100 text-[11px] text-purple-900 flex items-center space-x-2">
+              <MailCheck className="w-4 h-4 text-brand-primary shrink-0" />
+              <span>
+                <strong>Instant History Access:</strong> All {targetBulkEmailOrders.length} customer records will be automatically saved to your <strong>Sent Customer Emails Log</strong> so you can access customer phone numbers, delivery addresses, and order data anytime.
+              </span>
             </div>
 
             {/* Footer Buttons */}

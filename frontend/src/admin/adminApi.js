@@ -325,6 +325,12 @@ export const adminApi = {
     return res.data;
   },
 
+  async getSentEmailLogs(params = {}) {
+    const qs = new URLSearchParams({ action: 'sent_emails', ...params }).toString();
+    const res = await request(`/admin/orders.php?${qs}`);
+    return res.data;
+  },
+
   async previewEmailTemplate(type = 'order_confirmation', params = {}) {
     const qs = new URLSearchParams({ action: 'preview_email', type, ...params }).toString();
     const res = await request(`/admin/orders.php?${qs}`);

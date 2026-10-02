@@ -87,6 +87,13 @@ class MailerService
                 ) VALUES (
                     :order_id, :type, :email, :name, :subject, :status, :error, :sent_at
                 )
+                ON DUPLICATE KEY UPDATE 
+                    recipient_email = VALUES(recipient_email),
+                    recipient_name = VALUES(recipient_name),
+                    subject = VALUES(subject),
+                    status = VALUES(status),
+                    error_message = VALUES(error_message),
+                    sent_at = VALUES(sent_at)
             ");
             $insStmt->execute([
                 ':order_id' => $orderId,
@@ -100,7 +107,28 @@ class MailerService
             ]);
             $logId = (int)$pdo->lastInsertId();
         } catch (Throwable $e) {
-            $logId = null;
+            try {
+                $insStmt = $pdo->prepare("
+                    INSERT INTO email_logs (
+                        order_id, email_type, recipient_email, recipient_name, subject, status, error_message, sent_at
+                    ) VALUES (
+                        :order_id, :type, :email, :name, :subject, :status, :error, :sent_at
+                    )
+                ");
+                $insStmt->execute([
+                    ':order_id' => $orderId,
+                    ':type'     => $emailType,
+                    ':email'    => $toEmail,
+                    ':name'     => $toName,
+                    ':subject'  => $subject,
+                    ':status'   => $status,
+                    ':error'    => $errorMessage,
+                    ':sent_at'  => date('Y-m-d H:i:s'),
+                ]);
+                $logId = (int)$pdo->lastInsertId();
+            } catch (Throwable $e2) {
+                $logId = null;
+            }
         }
 
         return [

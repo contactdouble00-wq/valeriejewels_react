@@ -126,6 +126,82 @@ if ($method === 'GET') {
         ], 'Email template preview generated successfully');
     }
 
+    // Action: Get Sent Email Customer Logs (Audit history of all dispatched emails)
+    if ($action === 'sent_emails' || $action === 'get_email_logs') {
+        $search = trim($_GET['search'] ?? '');
+        $emailType = trim($_GET['type'] ?? ($_GET['email_type'] ?? ''));
+        $deliveryStatus = trim($_GET['delivery_status'] ?? ($_GET['status'] ?? ''));
+        $limit = isset($_GET['limit']) ? min(1000, max(1, (int)$_GET['limit'])) : 500;
+
+        $where = ["1=1"];
+        $params = [];
+
+        if ($search !== '') {
+            $where[] = "(el.recipient_name LIKE ? OR el.recipient_email LIKE ? OR el.subject LIKE ? OR o.order_number LIKE ? OR o.customer_phone LIKE ? OR o.city LIKE ? OR o.customer_name LIKE ?)";
+            $term = "%{$search}%";
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        if ($emailType !== '') {
+            $where[] = "el.email_type = ?";
+            $params[] = $emailType;
+        }
+
+        if ($deliveryStatus !== '') {
+            $where[] = "el.status = ?";
+            $params[] = $deliveryStatus;
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                el.id AS log_id,
+                el.order_id,
+                el.email_type,
+                el.recipient_email,
+                COALESCE(NULLIF(el.recipient_name, ''), o.customer_name, 'Valued Customer') AS recipient_name,
+                el.subject,
+                el.status AS delivery_status,
+                el.error_message,
+                el.sent_at,
+                o.order_number,
+                COALESCE(o.customer_name, el.recipient_name) AS customer_name,
+                COALESCE(o.customer_email, el.recipient_email) AS customer_email,
+                o.customer_phone,
+                o.shipping_address_line1,
+                o.shipping_address_line2,
+                o.city,
+                o.state,
+                o.pincode,
+                o.total_amount,
+                o.subtotal,
+                o.payment_status,
+                o.payment_type,
+                o.order_status,
+                o.shiprocket_awb,
+                o.courier_name,
+                o.created_at AS order_created_at,
+                (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS items_count,
+                (SELECT oi.product_name FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_name
+            FROM email_logs el
+            LEFT JOIN orders o ON el.order_id = o.id
+            WHERE {$whereSql}
+            ORDER BY el.sent_at DESC, el.id DESC
+            LIMIT {$limit}
+        ");
+        $stmt->execute($params);
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        ApiResponse::success($logs, 'Sent email customer logs retrieved successfully');
+    }
+
     $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if ($id > 0) {
@@ -159,6 +235,15 @@ if ($method === 'GET') {
             $order['tracking_events'] = $trkStmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             $order['tracking_events'] = [];
+        }
+
+        // Fetch email dispatch logs for this order
+        try {
+            $emailStmt = $pdo->prepare("SELECT * FROM email_logs WHERE order_id = ? ORDER BY sent_at DESC, id DESC");
+            $emailStmt->execute([$id]);
+            $order['email_logs'] = $emailStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $order['email_logs'] = [];
         }
 
         ApiResponse::success($order, 'Order retrieved successfully');
