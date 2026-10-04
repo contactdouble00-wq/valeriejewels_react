@@ -199,6 +199,41 @@ class MailerService
     }
 
     /**
+     * Retrieve order items with high-resolution product images
+     */
+    public static function getOrderItemsWithImages(PDO $pdo, int $orderId): array
+    {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    oi.*,
+                    COALESCE(
+                        (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id ORDER BY pi.is_primary DESC, pi.display_order ASC LIMIT 1),
+                        (SELECT pi2.image_url FROM product_images pi2 JOIN products p ON pi2.product_id = p.id WHERE p.name = oi.product_name ORDER BY pi2.is_primary DESC LIMIT 1)
+                    ) AS product_image
+                FROM order_items oi
+                WHERE oi.order_id = ?
+                ORDER BY oi.id ASC
+            ");
+            $stmt->execute([$orderId]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($items)) {
+                return $items;
+            }
+        } catch (Throwable $e) {
+            // Fallback if subquery fails
+        }
+
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC");
+            $stmt->execute([$orderId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e2) {
+            return [];
+        }
+    }
+
+    /**
      * Send Order Confirmation / Successful Email
      */
     public static function sendOrderConfirmation(int $orderId, bool $force = false): array
@@ -210,27 +245,41 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+
+        // Calculate accurate Partial COD / Prepaid amounts
+        $totalVal = (float)($order['total_amount'] ?? 0);
+        $amountPaidVal = (float)($order['amount_paid_upfront'] ?? 0);
+        $amountDueVal = (float)($order['amount_due_on_delivery'] ?? 0);
+
+        $isPartial = ($order['payment_type'] ?? '') === 'partial' || 
+                     ($order['payment_status'] ?? '') === 'partial_paid' ||
+                     ($amountDueVal > 0 && $amountPaidVal > 0) ||
+                     (strpos(strtolower($order['payment_type'] ?? ''), 'partial') !== false);
+
+        if ($isPartial && $amountDueVal <= 0 && $totalVal > $amountPaidVal) {
+            $amountDueVal = max(0, $totalVal - $amountPaidVal);
+        }
+        if ($isPartial && $amountPaidVal <= 0 && $totalVal > $amountDueVal) {
+            $amountPaidVal = max(0, $totalVal - $amountDueVal);
+        }
+
+        $amountPaidStr = number_format($amountPaidVal, 0);
+        $amountDueStr = number_format($amountDueVal, 0);
+
+        if ($isPartial) {
+            $subject = "Partial COD Confirmed: {$order['order_number']} — Pay ₹{$amountDueStr} at Delivery — Valerie Jewels";
+        } else {
+            $subject = "Order Confirmed: {$order['order_number']} — Valerie Jewels";
+        }
 
         // Render template
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_confirmation.php';
         $htmlBody = ob_get_clean();
-
-        $isPartial = ($order['payment_type'] ?? '') === 'partial' || ((float)($order['amount_due_on_delivery'] ?? 0) > 0 && (float)($order['amount_paid_upfront'] ?? 0) > 0);
-        $amountPaid = number_format((float)($order['amount_paid_upfront'] ?? 0), 0);
-        $amountDue = number_format((float)($order['amount_due_on_delivery'] ?? 0), 0);
-
-        if ($isPartial) {
-            $subject = "Partial COD Confirmed: {$order['order_number']} — ₹{$amountPaid} Advance Received — Valerie Jewels";
-        } else {
-            $subject = "Order Confirmed: {$order['order_number']} — Valerie Jewels";
-        }
 
         return self::send(
             $orderId,
@@ -255,12 +304,10 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_failed.php';
@@ -291,12 +338,10 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
         $reason    = 'Pending payment completion';
 
         ob_start();
@@ -328,12 +373,10 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_on_hold.php';
@@ -364,12 +407,10 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_status_update.php';
@@ -403,12 +444,10 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
-        $itemStmt->execute([$orderId]);
-        $items = $itemStmt->fetchAll();
+        $items = self::getOrderItemsWithImages($pdo, $orderId);
 
         $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_shipped.php';
