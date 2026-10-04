@@ -8,14 +8,11 @@
  * - $storeUrl (string): Base URL of the storefront
  * - $reason (string|null): Optional reason for hold (e.g. address verification)
  */
-$storeUrl = $storeUrl ?? 'http://localhost:5173';
-$assetLogoFile = dirname(dirname(dirname(__DIR__))) . '/Assets/valerie.png';
-if (file_exists($assetLogoFile) && (!isset($logoUrl) || strpos($storeUrl, 'localhost') !== false || strpos($storeUrl, '127.0.0.1') !== false)) {
-    $logoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($assetLogoFile));
-} else {
-    $logoUrl = $logoUrl ?? (rtrim($storeUrl, '/') . '/valerie.png');
-}
-$trackingUrl = rtrim($storeUrl, '/') . '/#track-order?order=' . urlencode($order['order_number'] ?? '');
+$storeUrl = (!empty($storeUrl) && strpos($storeUrl, 'localhost') === false && strpos($storeUrl, '127.0.0.1') === false) 
+    ? rtrim($storeUrl, '/') 
+    : 'https://valeriejewels.in';
+$logoUrl = 'https://valeriejewels.in/valerie.png';
+$trackingUrl = $storeUrl . '/?track=' . urlencode($order['order_number'] ?? '');
 $orderNumber = htmlspecialchars($order['order_number'] ?? '');
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
 $holdReason = !empty($reason) ? htmlspecialchars($reason) : 'Standard concierge verification & address validation';

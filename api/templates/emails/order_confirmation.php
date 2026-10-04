@@ -7,18 +7,23 @@
  * - $items (array): Itemized product list from order_items table with product_image
  * - $storeUrl (string): Base URL of the storefront
  */
-$storeUrl = !empty($storeUrl) ? rtrim($storeUrl, '/') : 'https://valeriejewels.in';
+$storeUrl = (!empty($storeUrl) && strpos($storeUrl, 'localhost') === false && strpos($storeUrl, '127.0.0.1') === false) 
+    ? rtrim($storeUrl, '/') 
+    : 'https://valeriejewels.in';
 
-$assetLogoFile = dirname(dirname(dirname(__DIR__))) . '/Assets/valerie.png';
-if (file_exists($assetLogoFile) && (!isset($logoUrl) || strpos($storeUrl, 'localhost') !== false || strpos($storeUrl, '127.0.0.1') !== false)) {
-    $logoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($assetLogoFile));
-} else {
-    $logoUrl = $logoUrl ?? ($storeUrl . '/valerie.png');
-}
+// Use production CDN/HTTPS logo for optimal rendering across Gmail, Apple Mail, and Outlook
+$logoUrl = 'https://valeriejewels.in/valerie.png';
 
 $orderNumber = htmlspecialchars($order['order_number'] ?? ('#' . ($order['id'] ?? '')));
 $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
-$trackingUrl = $storeUrl . '/#track-order?order=' . urlencode($order['order_number'] ?? '');
+$rawOrderNum = $order['order_number'] ?? ('#' . ($order['id'] ?? ''));
+$trackingUrl = $storeUrl . '/?track=' . urlencode($rawOrderNum);
+$courierTrackingUrl = !empty($order['tracking_url']) ? $order['tracking_url'] : '';
+$shiprocketAwb = !empty($order['shiprocket_awb']) ? htmlspecialchars($order['shiprocket_awb']) : '';
+$courierName = !empty($order['courier_name']) ? htmlspecialchars($order['courier_name']) : 'Shiprocket Express (Bluedart / Delhivery / Xpressbees)';
+$estimatedDelivery = !empty($order['estimated_delivery_date']) 
+    ? date('l, d M Y', strtotime($order['estimated_delivery_date'])) 
+    : '3–5 Business Days (Express Air)';
 
 // Financial calculation safeguards
 $totalAmountFloat = (float)($order['total_amount'] ?? 0);
@@ -208,11 +213,20 @@ foreach ($items as $it) {
                 <?php foreach ($items as $item): 
                   $rawImg = $item['product_image'] ?? ($item['primary_image'] ?? ($item['image_url'] ?? ''));
                   if (empty($rawImg)) {
-                    $itemImage = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=240&q=80';
+                    $pNameLower = strtolower($item['product_name'] ?? '');
+                    if (strpos($pNameLower, 'oxidized') !== false || strpos($pNameLower, 'jhumka') !== false) {
+                      $itemImage = 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=600&q=80';
+                    } elseif (strpos($pNameLower, 'earring') !== false || strpos($pNameLower, 'stud') !== false || strpos($pNameLower, 'dangle') !== false) {
+                      $itemImage = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=600&q=80';
+                    } elseif (strpos($pNameLower, 'ring') !== false) {
+                      $itemImage = 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80';
+                    } else {
+                      $itemImage = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80';
+                    }
                   } elseif (str_starts_with($rawImg, 'http://') || str_starts_with($rawImg, 'https://') || str_starts_with($rawImg, 'data:')) {
                     $itemImage = $rawImg;
                   } else {
-                    $itemImage = $storeUrl . '/' . ltrim($rawImg, '/');
+                    $itemImage = 'https://valeriejewels.in/' . ltrim($rawImg, '/');
                   }
                   $qty = max(1, (int)($item['quantity'] ?? 1));
                   $unitPrice = (float)($item['unit_price'] ?? 0);
@@ -374,15 +388,83 @@ foreach ($items as $it) {
             </td>
           </tr>
 
-          <!-- Track CTA Button -->
+          <!-- Live Order Tracking & Shipment Status Card -->
           <tr>
-            <td align="center" style="padding: 0 35px 35px 35px;">
-              <a href="<?= $trackingUrl ?>" class="btn-primary" style="display: inline-block; background-color: #8366B0; color: #FFFFFF; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 14px 34px; border-radius: 12px; box-shadow: 0 4px 14px rgba(131, 102, 176, 0.35);">
-                Track Order Status
-              </a>
-              <p style="margin: 14px 0 0 0; font-size: 11px; color: #8F82A0;">
-                Delivered across India in 3–5 working days via Shiprocket Express Air.
-              </p>
+            <td style="padding: 0 35px 30px 35px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #FAF7FC 0%, #F5EEFA 100%); border-radius: 16px; border: 1.5px solid #E4D5EE; overflow: hidden; box-shadow: 0 4px 16px rgba(131, 102, 176, 0.08);">
+                <tr>
+                  <td style="padding: 20px 24px; border-bottom: 1px solid #ECE0F5;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="34" valign="middle" style="font-size: 24px; line-height: 1;">🚚</td>
+                        <td valign="middle" style="padding-left: 10px;">
+                          <div style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 800; color: #8366B0;">
+                            Live Order Tracking
+                          </div>
+                          <div style="font-size: 14px; font-weight: 700; color: #26153D; margin-top: 2px;">
+                            Track Your Shipment Online
+                          </div>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="display: inline-block; background-color: #EBF8F2; color: #059669; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #A7F3D0;">
+                            ● Confirmed
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Tracking Details -->
+                <tr>
+                  <td style="padding: 16px 24px; background-color: #FFFFFF;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="6">
+                      <tr>
+                        <td width="42%" style="font-size: 12px; color: #6D5E7A;">Order Reference:</td>
+                        <td style="font-size: 13px; color: #8366B0; font-family: monospace; font-weight: 700;"><?= $orderNumber ?></td>
+                      </tr>
+                      <tr>
+                        <td style="font-size: 12px; color: #6D5E7A;">Courier Network:</td>
+                        <td style="font-size: 12px; color: #26153D; font-weight: 600;"><?= $courierName ?></td>
+                      </tr>
+                      <?php if (!empty($shiprocketAwb)): ?>
+                      <tr>
+                        <td style="font-size: 12px; color: #6D5E7A;">AWB Tracking Code:</td>
+                        <td style="font-size: 13px; color: #26153D; font-family: monospace; font-weight: 700;"><?= $shiprocketAwb ?></td>
+                      </tr>
+                      <?php endif; ?>
+                      <tr>
+                        <td style="font-size: 12px; color: #6D5E7A;">Estimated Delivery:</td>
+                        <td style="font-size: 12px; color: #059669; font-weight: 700;"><?= $estimatedDelivery ?></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Direct CTA Action -->
+                <tr>
+                  <td align="center" style="padding: 22px 24px; background-color: #FAF7FC;">
+                    <a href="<?= $trackingUrl ?>" class="btn-primary" style="display: block; width: 85%; max-width: 360px; background: linear-gradient(135deg, #8366B0 0%, #6C4F99 100%); color: #FFFFFF; text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 15px 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(131, 102, 176, 0.35); text-align: center; margin: 0 auto;">
+                      🔍 Click to Track Order Status
+                    </a>
+                    
+                    <?php if (!empty($courierTrackingUrl)): ?>
+                    <div style="margin-top: 10px;">
+                      <a href="<?= htmlspecialchars($courierTrackingUrl) ?>" target="_blank" style="font-size: 11px; color: #8366B0; text-decoration: underline; font-weight: 600;">
+                        Or Track Directly on Shiprocket Portal →
+                      </a>
+                    </div>
+                    <?php endif; ?>
+
+                    <p style="margin: 12px 0 6px 0; font-size: 11px; color: #8F82A0; line-height: 16px;">
+                      Direct instant tracking. Click the button above to view live checkpoints and out-for-delivery alerts without logging in.
+                    </p>
+                    <div style="font-size: 10px; color: #A498B2; word-break: break-all;">
+                      Direct Link: <a href="<?= $trackingUrl ?>" style="color: #8366B0; text-decoration: underline;"><?= $trackingUrl ?></a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 

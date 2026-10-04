@@ -65,6 +65,19 @@ class MailerService
     }
 
     /**
+     * Get validated public storefront URL (strictly production domain, never localhost)
+     */
+    public static function getStoreUrl(): string
+    {
+        $appConfig = require dirname(__DIR__) . '/config/config.php';
+        $url = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        if (empty($url) || strpos($url, 'localhost') !== false || strpos($url, '127.0.0.1') !== false) {
+            return 'https://valeriejewels.in';
+        }
+        return rtrim($url, '/');
+    }
+
+    /**
      * Core sending engine with idempotency check and force override
      */
     public static function send(int $orderId, string $emailType, string $toEmail, string $toName, string $subject, string $htmlBody, bool $force = false): array
@@ -246,9 +259,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl = self::getStoreUrl();
 
         // Calculate accurate Partial COD / Prepaid amounts
         $totalVal = (float)($order['total_amount'] ?? 0);
@@ -305,9 +316,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl = self::getStoreUrl();
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_failed.php';
@@ -339,9 +348,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl  = self::getStoreUrl();
         $reason    = 'Pending payment completion';
 
         ob_start();
@@ -374,9 +381,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl = self::getStoreUrl();
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_on_hold.php';
@@ -408,9 +413,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl = self::getStoreUrl();
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_status_update.php';
@@ -445,9 +448,7 @@ class MailerService
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
         $items = self::getOrderItemsWithImages($pdo, $orderId);
-
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'https://valeriejewels.in';
+        $storeUrl = self::getStoreUrl();
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_shipped.php';
@@ -479,8 +480,7 @@ class MailerService
         $order = $stmt->fetch();
         if (!$order) throw new Exception("Order #{$orderId} not found");
 
-        $appConfig = require dirname(__DIR__) . '/config/config.php';
-        $storeUrl  = $appConfig['app']['url'] ?? 'http://localhost:5173';
+        $storeUrl = self::getStoreUrl();
 
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_cancelled.php';

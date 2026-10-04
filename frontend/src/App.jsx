@@ -63,6 +63,42 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
   const [activeTrackingOrderNumber, setActiveTrackingOrderNumber] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // Helper to extract order reference from query parameters, hash, or path
+  const parseTrackingOrderFromUrl = () => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryOrder = searchParams.get('track') || 
+                         searchParams.get('order') || 
+                         searchParams.get('tracking') || 
+                         searchParams.get('order_number') ||
+                         searchParams.get('ref');
+      if (queryOrder && queryOrder.trim()) {
+        return queryOrder.trim();
+      }
+
+      const hash = window.location.hash || '';
+      if (hash.includes('track') || hash.includes('order=')) {
+        const hashMatch = hash.match(/(?:order=|track=|track\/|track-order\/|track-order\?order=)(VJ-[A-Za-z0-9-]+|[A-Za-z0-9-]+)/i);
+        if (hashMatch && hashMatch[1]) {
+          return hashMatch[1];
+        }
+        if (hash.includes('#track-order') || hash.includes('#track')) {
+          return '__prompt__';
+        }
+      }
+
+      const path = window.location.pathname || '';
+      if (path.startsWith('/track/')) {
+        const pathOrder = path.replace('/track/', '').trim();
+        if (pathOrder) return pathOrder;
+      }
+      if (path === '/track' || path === '/track-order') {
+        return '__prompt__';
+      }
+    } catch (_) {}
+    return '';
+  };
+
   const openTracking = (orderNumber = '') => {
     setActiveTrackingOrderNumber(orderNumber);
     setIsTrackingOpen(true);
@@ -96,6 +132,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       } else {
         setActivePdpSlug(null);
       }
+
+      const trackingRef = parseTrackingOrderFromUrl();
+      if (trackingRef) {
+        openTracking(trackingRef === '__prompt__' ? '' : trackingRef);
+      }
     };
 
     // On mount check if URL already has a product hash
@@ -104,8 +145,18 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       setActivePdpSlug(slug);
     }
 
+    // Auto-detect direct tracking link from email (e.g. ?track=VJ-XXXX or #track-order?order=VJ-XXXX)
+    const initialTracking = parseTrackingOrderFromUrl();
+    if (initialTracking) {
+      openTracking(initialTracking === '__prompt__' ? '' : initialTracking);
+    }
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
 
@@ -957,7 +1008,16 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {/* Shiprocket Order Tracking Modal */}
       <OrderTrackingModal
         isOpen={isTrackingOpen}
-        onClose={() => setIsTrackingOpen(false)}
+        onClose={() => {
+          setIsTrackingOpen(false);
+          setActiveTrackingOrderNumber('');
+          if (window.location.search.includes('track') || window.location.search.includes('order')) {
+            window.history.replaceState(null, '', window.location.pathname || '/');
+          }
+          if (window.location.hash.includes('track')) {
+            window.history.replaceState(null, '', window.location.pathname || '/');
+          }
+        }}
         initialOrderNumber={activeTrackingOrderNumber}
       />
 
@@ -1154,9 +1214,10 @@ export default function App() {
       return '404';
     }
 
-    // 5. Known valid routes in this Single Page Application (note: /admin is now treated as 404)
+    // 5. Known valid routes in this Single Page Application
     const validPaths = [
       '/', '', '/shop', '/index.html',
+      '/track', '/track-order', '/order-tracking',
       '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
       '/refund-policy', '/return-and-refund-policy', '/return-policy',
@@ -1165,6 +1226,9 @@ export default function App() {
       '/policies',
       '/faqs', '/faq'
     ];
+    if (rawPath.startsWith('/track/')) {
+      return 'store';
+    }
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
     }

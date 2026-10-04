@@ -112,6 +112,13 @@ if ($appEnv) {
     $config['app']['env'] = $appEnv;
 }
 
+$appUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? null);
+if ($appUrl && strpos($appUrl, 'localhost') === false && strpos($appUrl, '127.0.0.1') === false) {
+    $config['app']['url'] = rtrim($appUrl, '/');
+} else {
+    $config['app']['url'] = 'https://valeriejewels.in';
+}
+
 // Fastrr Credentials - strictly loaded from environment variables
 $fastrrAppId = getenv('FASTRR_APP_ID') ?: ($_ENV['FASTRR_APP_ID'] ?? ($_SERVER['FASTRR_APP_ID'] ?? ''));
 $fastrrSecretKey = getenv('FASTRR_SECRET_KEY') ?: ($_ENV['FASTRR_SECRET_KEY'] ?? ($_SERVER['FASTRR_SECRET_KEY'] ?? ''));

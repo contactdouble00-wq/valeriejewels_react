@@ -7,10 +7,10 @@
 return [
     'app' => [
         'name'        => 'Valerie Jewels',
-        'env'         => 'development', // 'development' | 'production'
-        'url'         => 'http://localhost:5173',
-        'api_url'     => 'http://localhost:8000',
-        'debug'       => true,
+        'env'         => 'production', // 'development' | 'production'
+        'url'         => 'https://valeriejewels.in',
+        'api_url'     => 'https://valeriejewels.in/api',
+        'debug'       => false,
         'timezone'    => 'Asia/Kolkata',
     ],
 
