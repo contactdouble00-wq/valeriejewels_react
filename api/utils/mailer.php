@@ -636,7 +636,18 @@ class MailerService
             ]
         ]);
 
-        $socket = @stream_socket_client("{$protocol}{$host}:{$port}", $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $context);
+        $socket = @stream_socket_client("{$protocol}{$host}:{$port}", $errno, $errstr, 12, STREAM_CLIENT_CONNECT, $context);
+
+        // If primary SSL port 465 fails, automatically fallback to TLS port 587
+        if (!$socket && $port === 465) {
+            $fallbackPort = 587;
+            $fallbackSocket = @stream_socket_client("{$host}:{$fallbackPort}", $errno, $errstr, 12, STREAM_CLIENT_CONNECT, $context);
+            if ($fallbackSocket) {
+                $socket = $fallbackSocket;
+                $port = $fallbackPort;
+                $encryption = 'tls';
+            }
+        }
 
         if (!$socket) {
             throw new Exception("Could not connect to SMTP server {$host}:{$port} ({$errstr} [{$errno}])");

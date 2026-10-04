@@ -162,4 +162,27 @@ if ($smtpEncryption) {
     $config['smtp']['encryption'] = strtolower($smtpEncryption);
 }
 
+// 5. Default verified Hostinger SMTP credentials (ensures production mail works even if .env is not yet created on Hostinger)
+if (empty($config['smtp']['username'])) {
+    $config['smtp']['username'] = 'orders@valeriejewels.in';
+}
+if (empty($config['smtp']['password'])) {
+    $config['smtp']['password'] = 'orders@SECURE11_';
+}
+if (empty($config['smtp']['host'])) {
+    $config['smtp']['host'] = 'smtp.hostinger.com';
+}
+if (empty($config['smtp']['port'])) {
+    $config['smtp']['port'] = 465;
+}
+if (empty($config['smtp']['encryption'])) {
+    $config['smtp']['encryption'] = 'ssl';
+}
+if (empty($config['smtp']['from_email']) || strpos($config['smtp']['from_email'], '@valeriejewels.com') !== false) {
+    $config['smtp']['from_email'] = 'orders@valeriejewels.in';
+}
+if (empty($config['smtp']['from_name'])) {
+    $config['smtp']['from_name'] = 'Valerie Jewels';
+}
+
 return $config;

@@ -59,9 +59,9 @@ return [
         'host'       => 'smtp.hostinger.com',
         'port'       => 465,
         'encryption' => 'ssl',
-        'username'   => '',
-        'password'   => '',
-        'from_email' => 'support@valeriejewels.com',
-        'from_name'  => 'Valerie Jewels Support',
+        'username'   => 'orders@valeriejewels.in',
+        'password'   => 'orders@SECURE11_',
+        'from_email' => 'orders@valeriejewels.in',
+        'from_name'  => 'Valerie Jewels',
     ],
 ];

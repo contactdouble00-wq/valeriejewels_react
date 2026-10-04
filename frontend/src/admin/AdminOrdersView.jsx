@@ -32,7 +32,8 @@ import {
   Package,
   PackageCheck,
   Settings,
-  Lock
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -72,6 +73,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [sentEmailTypeFilter, setSentEmailTypeFilter] = useState('');
   const [sentEmailStatusFilter, setSentEmailStatusFilter] = useState('');
   const [copiedLogId, setCopiedLogId] = useState(null);
+  const [resendingLogId, setResendingLogId] = useState(null);
 
   // Shiprocket sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
@@ -431,6 +433,28 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     setCopiedLogId(log.log_id);
     showToast(`Copied ${custName}'s customer data to clipboard!`);
     setTimeout(() => setCopiedLogId(null), 2500);
+  };
+
+  // 1-Click Retry / Resend Customer Email via Live SMTP
+  const handleResendEmail = async (log) => {
+    if (!log.order_id) {
+      showToast('⚠️ No associated order ID to resend this email');
+      return;
+    }
+    setResendingLogId(log.log_id);
+    try {
+      const res = await adminApi.sendCustomerEmail(log.order_id, log.email_type || 'order_confirmation');
+      if (res?.status === 'failed') {
+        showToast(`❌ Retry dispatch failed: ${res.error_message || 'SMTP error'}`);
+      } else {
+        showToast(`✓ Email successfully dispatched to ${log.recipient_email || log.customer_email || 'customer'}!`);
+      }
+      await loadSentEmailLogs();
+    } catch (err) {
+      showToast(`❌ Failed to resend email: ${err.message}`);
+    } finally {
+      setResendingLogId(null);
+    }
   };
 
   // Export Sent Emails Customer Log to CSV
@@ -2326,12 +2350,40 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               <div className="text-[10px] text-brand-muted">
                                 {formatDateTime(log.sent_at)}
                               </div>
+                              {log.delivery_status === 'failed' && log.error_message && (
+                                <div 
+                                  className="text-[10px] text-rose-600 font-medium max-w-[210px] truncate cursor-pointer hover:underline flex items-center space-x-1"
+                                  title={`Failure Reason: ${log.error_message}\n\nClick to view full error details.`}
+                                  onClick={() => alert(`Email Dispatch Failure Diagnostic:\n\nOrder: #${log.order_number || log.order_id}\nRecipient: ${log.recipient_email || log.customer_email}\nType: ${log.email_type}\nFailure Reason: ${log.error_message}`)}
+                                >
+                                  <AlertCircle className="w-3 h-3 shrink-0 text-rose-500" />
+                                  <span className="truncate">{log.error_message}</span>
+                                </div>
+                              )}
                             </div>
                           </td>
 
                           {/* Concierge Actions */}
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end space-x-1.5">
+                              {/* Retry / Resend Email Button */}
+                              {log.order_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResendEmail(log)}
+                                  disabled={resendingLogId === log.log_id}
+                                  title={log.delivery_status === 'failed' ? "Retry sending failed email to customer via live SMTP" : "Resend copy of this email to customer via live SMTP"}
+                                  className={`p-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs flex items-center space-x-1 ${
+                                    log.delivery_status === 'failed'
+                                      ? 'bg-rose-50 hover:bg-rose-600 hover:text-white border-rose-200 text-rose-700'
+                                      : 'bg-white hover:bg-brand-primary hover:text-white border-brand-border text-brand-tertiary'
+                                  }`}
+                                >
+                                  <RefreshCw className={`w-3.5 h-3.5 ${resendingLogId === log.log_id ? 'animate-spin' : ''}`} />
+                                  <span className="hidden xl:inline text-[10px]">{log.delivery_status === 'failed' ? 'Retry' : 'Resend'}</span>
+                                </button>
+                              )}
+
                               {/* Copy Customer Dossier */}
                               <button
                                 type="button"
