@@ -29,11 +29,31 @@ try {
                 c.slug AS category_slug,
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
-            JOIN categories c ON p.category_id = c.id
-            WHERE p.slug = :slug AND p.is_active = 1 AND c.is_active = 1
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.slug = :slug AND p.is_active = 1
             LIMIT 1
         ");
         $stmt->execute([':slug' => $slug]);
+        $product = $stmt->fetch();
+
+        // Fallback: If not found by exact slug, try partial match or keyword search
+        if (!$product) {
+            $prefix = substr($slug, 0, 25) . '%';
+            $kw = '%' . str_replace('-', '%', substr($slug, 0, 30)) . '%';
+            $stmt = $pdo->prepare("
+                SELECT 
+                    p.*,
+                    c.name AS category_name,
+                    c.slug AS category_slug,
+                    ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE (p.slug LIKE :prefix OR p.slug LIKE :kw OR p.name LIKE :prefix) AND p.is_active = 1
+                LIMIT 1
+            ");
+            $stmt->execute([':prefix' => $prefix, ':kw' => $kw]);
+            $product = $stmt->fetch();
+        }
     } else {
         $stmt = $pdo->prepare("
             SELECT 
@@ -42,14 +62,14 @@ try {
                 c.slug AS category_slug,
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
-            JOIN categories c ON p.category_id = c.id
-            WHERE p.id = :id AND p.is_active = 1 AND c.is_active = 1
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = :id AND p.is_active = 1
             LIMIT 1
         ");
         $stmt->execute([':id' => $id]);
+        $product = $stmt->fetch();
     }
 
-    $product = $stmt->fetch();
     if (!$product) {
         ApiResponse::error('Product not found or inactive', 404);
     }

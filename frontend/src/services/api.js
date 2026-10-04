@@ -196,9 +196,10 @@ export const apiService = {
   },
 
   /**
-   * Fetch full product details by slug or id with seed fallback
+   * Fetch full product details by slug or id with seed fallback and fuzzy resolution
    */
   async getProductDetail(slugOrId) {
+    if (!slugOrId) return null;
     const isId = typeof slugOrId === 'number' || /^\d+$/.test(slugOrId);
     const param = isId ? `id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
     try {
@@ -215,8 +216,60 @@ export const apiService = {
         if (result.data) return normalizeProductMedia(result.data);
       }
     } catch (err) {
-      console.warn('API getProductDetail error, falling back to seed:', err);
+      console.warn('API getProductDetail error, checking catalog fallback:', err);
     }
+
+    // Secondary Fallback: If not found by exact slug, search catalog for partial/fuzzy match
+    if (!isId && typeof slugOrId === 'string') {
+      try {
+        const catalogRes = await this.getProducts({ limit: 100 });
+        const catalog = catalogRes?.products || [];
+        const normTarget = slugOrId.toLowerCase().replace(/[^a-z0-9]/g, ' ');
+        const targetWords = normTarget.split(/\s+/).filter((w) => w.length > 2);
+
+        let bestMatch = null;
+        let highestScore = 0;
+
+        for (const item of catalog) {
+          const itemSlug = (item.slug || '').toLowerCase();
+          const itemName = (item.name || '').toLowerCase();
+
+          if (itemSlug === slugOrId.toLowerCase()) {
+            bestMatch = item;
+            break;
+          }
+          if (itemSlug.includes(slugOrId.toLowerCase()) || slugOrId.toLowerCase().includes(itemSlug)) {
+            bestMatch = item;
+            break;
+          }
+
+          let score = 0;
+          for (const word of targetWords) {
+            if (itemSlug.includes(word) || itemName.includes(word)) {
+              score++;
+            }
+          }
+          if (score > highestScore && score >= 2) {
+            highestScore = score;
+            bestMatch = item;
+          }
+        }
+
+        if (bestMatch && bestMatch.id) {
+          try {
+            const detailRes = await fetch(`${API_BASE_URL}/products/detail.php?id=${bestMatch.id}&_t=${Date.now()}`);
+            if (detailRes.ok) {
+              const resJson = await detailRes.json();
+              if (resJson.data) return normalizeProductMedia(resJson.data);
+            }
+          } catch (_) {}
+          return normalizeProductMedia(bestMatch);
+        }
+      } catch (catErr) {
+        console.warn('API getProductDetail catalog fallback error:', catErr);
+      }
+    }
+
     const found = SEED_PRODUCTS.find((p) => (isId ? String(p.id) === String(slugOrId) : p.slug === slugOrId));
     return found ? normalizeProductMedia(found) : null;
   },
@@ -317,6 +370,18 @@ export const apiService = {
     if (simulateSuccess) query.append('simulate_success', '1');
 
     const response = await fetch(`${API_BASE_URL}/payments/verify.php?${query.toString()}`);
+    return handleResponse(response);
+  },
+
+  /**
+   * Report payment failed or drop-off to trigger instant customer recovery email
+   */
+  async reportPaymentFailed(data) {
+    const response = await fetch(`${API_BASE_URL}/payments/report_failed.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
     return handleResponse(response);
   },
 

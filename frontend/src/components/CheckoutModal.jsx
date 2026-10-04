@@ -747,12 +747,30 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
               setIsSubmitting(false);
             }
           },
+          modal: {
+            ondismiss: () => {
+              setIsSubmitting(false);
+              try {
+                apiService.reportPaymentFailed({
+                  order_number: finalOrderNumber,
+                  reason: 'Customer closed payment window without completing transaction',
+                }).catch(() => {});
+              } catch (_) {}
+            },
+          },
         };
 
         const rzpInstance = new window.Razorpay(rzpOptions);
         rzpInstance.on('payment.failed', (failResp) => {
           setIsSubmitting(false);
-          setSubmitError(failResp.error?.description || 'Payment was cancelled or unsuccessful. Please try again.');
+          const desc = failResp.error?.description || 'Payment was cancelled or unsuccessful. Please try again.';
+          setSubmitError(desc);
+          try {
+            apiService.reportPaymentFailed({
+              order_number: finalOrderNumber,
+              reason: desc,
+            }).catch(() => {});
+          } catch (_) {}
         });
         rzpInstance.open();
         return;
@@ -2219,6 +2237,10 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
                   setSubmitError('Please enter your flat, house no., or building name.');
                   return;
                 }
+                if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+                  setSubmitError('Please enter a valid email address for order confirmation & delivery updates.');
+                  return;
+                }
                 if (pincode.trim().length < 6) {
                   setSubmitError('Please enter a valid 6-digit pincode.');
                   return;
@@ -2277,9 +2299,12 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Email (for invoice)</label>
+                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                  Email Address * <span className="text-[10px] text-gray-400 font-normal lowercase">(for invoice & tracking updates)</span>
+                </label>
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. customer@example.com"

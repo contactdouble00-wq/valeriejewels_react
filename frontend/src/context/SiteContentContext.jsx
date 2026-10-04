@@ -2,15 +2,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { apiService } from '../services/api';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
+const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v3';
+const CONTENT_CACHE_VERSION = '20261004_v3';
+
 const DEFAULT_SITE_CONTENT = {
   siteIdentity: {
-    siteTitle: 'VALERIE JEWELS | D2C Luxury Everyday Jewelry',
-    faviconUrl: '',
+    siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
+    faviconUrl: 'https://valeriejewels.in/api/uploads/img_652d52ce8e378f9b8d50c7460e783ef1.png',
     metaDescription: 'Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels.',
   },
   topRibbon: {
     enabled: true,
-    text: 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)',
+    text: 'FREE DELIVERY ACROSS INDIA',
     highlightAmount: '',
     suffix: '',
   },
@@ -21,15 +24,15 @@ const DEFAULT_SITE_CONTENT = {
     slides: DEFAULT_MOBILE_SLIDES,
   },
   heroBanner: {
-    badgeText: '18K PVD Anti-Tarnish Everyday Luxury',
-    headline: 'Curated everyday jewelry,',
-    accentText: 'designed to shine forever.',
-    subtitle: 'Waterproof, shower-safe, and hypoallergenic accessories crafted in premium 316L stainless steel and 18K gold. Priced honestly from ₹500 to ₹1,500.',
-    primaryBtnText: 'Shop 4 Jhumka Boxes',
+    badgeText: 'FASHION JEWELLERY',
+    headline: 'YOUR STYLE,',
+    accentText: 'FINISHED BEAUTIFULLY.',
+    subtitle: 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.',
+    primaryBtnText: 'DISCOVER YOUR STYLE',
     primaryBtnLink: '#jhumka-boxes',
     secondaryBtnText: 'All Everyday Jewelry',
     secondaryBtnLink: '#catalog',
-    rightImageUrl: '/hero-jewelry-model.jpg',
+    rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {
     badgeText: '#1 Ad Bestseller Collection • 12,000+ Delivered',
@@ -39,8 +42,9 @@ const DEFAULT_SITE_CONTENT = {
     pill1: '5–6 Curated Pairs Per Box',
     pill2: 'Zero Earache • Featherlight',
     pill3: 'Save up to 50% vs Single Pairs',
+    pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
-    showPricePerPair: false,
+    showPricePerPair: true,
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
@@ -52,7 +56,7 @@ const DEFAULT_SITE_CONTENT = {
     subtitle: 'Expertly styled layered pairings with bundle-exclusive discounts up to 45%.',
   },
   festivalOffer: {
-    enabled: true,
+    enabled: false,
     badgeText: '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
     headline: 'The Royal Festive Edit',
     subtitle: 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
@@ -97,13 +101,13 @@ const DEFAULT_SITE_CONTENT = {
     subtitle: 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.',
   },
   customerSupport: {
-    whatsappNumber: '+91 70163 47945',
-    drawerButtonText: 'Customer Care: +91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
+    drawerButtonText: 'Customer Care: +91 90234 22392',
     phone: '+91 90234 22392',
     email: 'orders@valeriejewels.in',
     address: 'Patel Chowk, Rajkot, Gujarat',
     hours: '7 days a week, 8:00 AM – 4:00 PM',
-    whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
+    whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about an item.',
   },
   amazonStore: {
     enabled: true,
@@ -113,7 +117,7 @@ const DEFAULT_SITE_CONTENT = {
     tagline: 'Verified Marketplace Storefront',
   },
   seoTracking: {
-    googleAnalyticsId: '',
+    googleAnalyticsId: 'G-RCCMMLZFTB',
     googleSearchConsoleTag: '',
   },
 };
@@ -127,20 +131,26 @@ const SiteContentContext = createContext({
 export function SiteContentProvider({ children }) {
   const [content, setContent] = useState(() => {
     try {
-      const cached = localStorage.getItem('valerie_site_content_cache');
+      // Immediately purge any stale legacy caches that caused millisecond flicker
+      localStorage.removeItem('valerie_site_content_cache');
+      localStorage.removeItem('valerie_site_content_cache_v2');
+
+      const cached = localStorage.getItem(CONTENT_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        return {
-          ...DEFAULT_SITE_CONTENT,
-          ...parsed,
-          festivalOffer: {
-            ...DEFAULT_SITE_CONTENT.festivalOffer,
-            ...(parsed.festivalOffer || {}),
-            enabled: parsed.festivalOffer?.enabled !== undefined
-              ? (parsed.festivalOffer.enabled !== false && parsed.festivalOffer.enabled !== 'false' && parsed.festivalOffer.enabled !== 0 && parsed.festivalOffer.enabled !== '0')
-              : true,
-          },
-        };
+        if (parsed?._version === CONTENT_CACHE_VERSION) {
+          return {
+            ...DEFAULT_SITE_CONTENT,
+            ...parsed,
+            festivalOffer: {
+              ...DEFAULT_SITE_CONTENT.festivalOffer,
+              ...(parsed.festivalOffer || {}),
+              enabled: parsed.festivalOffer?.enabled !== undefined
+                ? (parsed.festivalOffer.enabled !== false && parsed.festivalOffer.enabled !== 'false' && parsed.festivalOffer.enabled !== 0 && parsed.festivalOffer.enabled !== '0')
+                : false,
+            },
+          };
+        }
       }
     } catch { }
     return DEFAULT_SITE_CONTENT;
@@ -184,7 +194,7 @@ export function SiteContentProvider({ children }) {
             seoTracking: { ...DEFAULT_SITE_CONTENT.seoTracking, ...(res.data.seoTracking || {}) },
           };
           try {
-            localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
+            localStorage.setItem(CONTENT_CACHE_KEY, JSON.stringify({ ...merged, _version: CONTENT_CACHE_VERSION }));
           } catch { }
           return merged;
         });
@@ -211,11 +221,11 @@ export function SiteContentProvider({ children }) {
               ...(incoming.festivalOffer || {}),
               enabled: incoming.festivalOffer?.enabled !== undefined
                 ? (incoming.festivalOffer.enabled !== false && incoming.festivalOffer.enabled !== 'false' && incoming.festivalOffer.enabled !== 0 && incoming.festivalOffer.enabled !== '0')
-                : (prev.festivalOffer?.enabled ?? true),
+                : (prev.festivalOffer?.enabled ?? false),
             },
           };
           try {
-            localStorage.setItem('valerie_site_content_cache', JSON.stringify(merged));
+            localStorage.setItem(CONTENT_CACHE_KEY, JSON.stringify({ ...merged, _version: CONTENT_CACHE_VERSION }));
           } catch { }
           return merged;
         });

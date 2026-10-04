@@ -221,6 +221,11 @@ class MailerService
                 SELECT 
                     oi.*,
                     COALESCE(
+                        (SELECT p.slug FROM products p WHERE p.id = oi.product_id LIMIT 1),
+                        (SELECT p2.slug FROM products p2 WHERE p2.name = oi.product_name LIMIT 1),
+                        ''
+                    ) AS product_slug,
+                    COALESCE(
                         (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id ORDER BY pi.is_primary DESC, pi.display_order ASC LIMIT 1),
                         (SELECT pi2.image_url FROM product_images pi2 JOIN products p ON pi2.product_id = p.id WHERE p.name = oi.product_name ORDER BY pi2.is_primary DESC LIMIT 1)
                     ) AS product_image
@@ -318,11 +323,39 @@ class MailerService
         $items = self::getOrderItemsWithImages($pdo, $orderId);
         $storeUrl = self::getStoreUrl();
 
+        // Calculate accurate Partial COD / Prepaid amounts
+        $totalVal = (float)($order['total_amount'] ?? 0);
+        $amountPaidVal = (float)($order['amount_paid_upfront'] ?? 0);
+        $amountDueVal = (float)($order['amount_due_on_delivery'] ?? 0);
+
+        $isPartial = ($order['payment_type'] ?? '') === 'partial' || 
+                     ($order['payment_status'] ?? '') === 'partial_paid' ||
+                     (strpos(strtolower($order['payment_type'] ?? ''), 'partial') !== false);
+
+        if ($isPartial && $amountDueVal <= 0 && $totalVal > $amountPaidVal) {
+            $amountDueVal = max(0, $totalVal - $amountPaidVal);
+        }
+        if ($isPartial && $amountPaidVal <= 0 && $totalVal > $amountDueVal) {
+            $amountPaidVal = max(0, $totalVal - $amountDueVal);
+        }
+        if ($isPartial && $amountPaidVal <= 0) {
+            $amountPaidVal = 9.0;
+            $amountDueVal = max(0, $totalVal - 9.0);
+        }
+
+        $firstItemName = !empty($items[0]['product_name']) ? $items[0]['product_name'] : 'Jewelry Set';
+        $shortName = mb_strlen($firstItemName) > 38 ? (mb_substr($firstItemName, 0, 36) . '...') : $firstItemName;
+
+        if ($isPartial && $amountPaidVal > 0) {
+            $advStr = number_format($amountPaidVal, 0);
+            $subject = "Complete Your Order for {$shortName} (Pay just ₹{$advStr} to confirm) — Valerie Jewels";
+        } else {
+            $subject = "Your {$shortName} is Reserved — Complete Your Order — Valerie Jewels";
+        }
+
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_failed.php';
         $htmlBody = ob_get_clean();
-
-        $subject = "Payment Incomplete for {$order['order_number']} — Your Pieces Are Safe — Valerie Jewels";
 
         return self::send(
             $orderId,
@@ -351,11 +384,39 @@ class MailerService
         $storeUrl  = self::getStoreUrl();
         $reason    = 'Pending payment completion';
 
+        // Calculate accurate Partial COD / Prepaid amounts
+        $totalVal = (float)($order['total_amount'] ?? 0);
+        $amountPaidVal = (float)($order['amount_paid_upfront'] ?? 0);
+        $amountDueVal = (float)($order['amount_due_on_delivery'] ?? 0);
+
+        $isPartial = ($order['payment_type'] ?? '') === 'partial' || 
+                     ($order['payment_status'] ?? '') === 'partial_paid' ||
+                     (strpos(strtolower($order['payment_type'] ?? ''), 'partial') !== false);
+
+        if ($isPartial && $amountDueVal <= 0 && $totalVal > $amountPaidVal) {
+            $amountDueVal = max(0, $totalVal - $amountPaidVal);
+        }
+        if ($isPartial && $amountPaidVal <= 0 && $totalVal > $amountDueVal) {
+            $amountPaidVal = max(0, $totalVal - $amountDueVal);
+        }
+        if ($isPartial && $amountPaidVal <= 0) {
+            $amountPaidVal = 9.0;
+            $amountDueVal = max(0, $totalVal - 9.0);
+        }
+
+        $firstItemName = !empty($items[0]['product_name']) ? $items[0]['product_name'] : 'Jewelry Set';
+        $shortName = mb_strlen($firstItemName) > 38 ? (mb_substr($firstItemName, 0, 36) . '...') : $firstItemName;
+
+        if ($isPartial && $amountPaidVal > 0) {
+            $advStr = number_format($amountPaidVal, 0);
+            $subject = "Reminder: Complete Your Order for {$shortName} (Pay just ₹{$advStr} to confirm) — Valerie Jewels";
+        } else {
+            $subject = "Reminder: Complete Your Order for {$shortName} — Valerie Jewels";
+        }
+
         ob_start();
         require dirname(__DIR__) . '/templates/emails/order_failed.php';
         $htmlBody = ob_get_clean();
-
-        $subject = "Complete Your Order #{$order['order_number']} — Your Luxury Jewelry is Waiting — Valerie Jewels";
 
         return self::send(
             $orderId,

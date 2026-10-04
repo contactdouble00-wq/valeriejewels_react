@@ -600,6 +600,20 @@ if ($action === 'send_customer_email') {
         ApiResponse::error('Order not found', 404);
     }
 
+    // If admin provided an updated or real recipient email, update the order record
+    $explicitEmail = trim($input['recipient_email'] ?? '');
+    if (!empty($explicitEmail) && filter_var($explicitEmail, FILTER_VALIDATE_EMAIL)) {
+        if ($explicitEmail !== ($order['customer_email'] ?? '')) {
+            $updEmailStmt = $pdo->prepare("UPDATE orders SET customer_email = ? WHERE id = ?");
+            $updEmailStmt->execute([$explicitEmail, $orderId]);
+            $order['customer_email'] = $explicitEmail;
+        }
+    }
+
+    if (empty($order['customer_email']) || !filter_var($order['customer_email'], FILTER_VALIDATE_EMAIL)) {
+        ApiResponse::error('Order has no valid email address on file. Please enter a valid recipient email.', 422);
+    }
+
     try {
         switch ($emailType) {
             case 'order_confirmation':
@@ -836,6 +850,97 @@ if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
         'sent_orders'   => $sentOrders,
         'failed_orders' => $failedOrders,
     ], $summaryMsg);
+}
+
+// Handle Automated Payment Recovery Job Run (1-click trigger from Admin Orders)
+if ($action === 'run_payment_recovery') {
+    // Scan eligible pending/unpaid orders that haven't received recovery email
+    $query = "
+        SELECT o.id, o.order_number, o.customer_name, o.customer_email, o.customer_phone, 
+               o.total_amount, o.payment_type, o.payment_status, o.order_status, o.created_at
+        FROM orders o
+        WHERE (o.payment_status IN ('pending', 'failed', 'unpaid') OR o.order_status IN ('pending', 'failed'))
+          AND o.payment_status NOT IN ('paid', 'partial_paid')
+          AND o.order_status NOT IN ('confirmed', 'shipped', 'delivered', 'cancelled')
+          AND o.customer_email IS NOT NULL
+          AND o.customer_email != ''
+          AND o.customer_email NOT LIKE '%@valerieclient.in'
+          AND NOT EXISTS (
+              SELECT 1 FROM email_logs el 
+              WHERE el.order_id = o.id 
+                AND el.email_type IN ('order_failed', 'payment_reminder')
+          )
+        ORDER BY o.id DESC
+        LIMIT 50
+    ";
+
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    $pendingOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $sentOrders = [];
+    $failedOrders = [];
+
+    foreach ($pendingOrders as $ord) {
+        $ordId = (int)$ord['id'];
+        $toEmail = trim($ord['customer_email']);
+
+        if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            $failedOrders[] = [
+                'order_id'     => $ordId,
+                'order_number' => $ord['order_number'],
+                'error'        => 'Invalid email format: ' . $toEmail,
+            ];
+            continue;
+        }
+
+        try {
+            $res = MailerService::sendOrderFailed($ordId, 'Pending checkout completion — reserved pieces', false);
+            if (!empty($res['success'])) {
+                $sentOrders[] = [
+                    'order_id'       => $ordId,
+                    'order_number'   => $ord['order_number'],
+                    'customer_name'  => $ord['customer_name'],
+                    'customer_email' => $toEmail,
+                    'status'         => $res['status'] ?? 'sent',
+                    'log_id'         => $res['log_id'] ?? null,
+                ];
+            } else {
+                $failedOrders[] = [
+                    'order_id'       => $ordId,
+                    'order_number'   => $ord['order_number'],
+                    'error'          => $res['error_message'] ?? 'Mailer returned false',
+                ];
+            }
+        } catch (Throwable $e) {
+            $failedOrders[] = [
+                'order_id'       => $ordId,
+                'order_number'   => $ord['order_number'],
+                'error'          => $e->getMessage(),
+            ];
+        }
+    }
+
+    $sentCount = count($sentOrders);
+    $failedCount = count($failedOrders);
+
+    AdminAuth::logActivity($adminUser['id'], 'run_payment_recovery', 'orders', 0, [
+        'scanned_count' => count($pendingOrders),
+        'sent_count'    => $sentCount,
+        'failed_count'  => $failedCount,
+    ]);
+
+    $msg = "Payment recovery completed: {$sentCount} " . ($sentCount === 1 ? 'recovery email' : 'recovery emails') . " dispatched.";
+    if ($failedCount > 0) $msg .= " ({$failedCount} failed).";
+    if ($sentCount === 0 && $failedCount === 0) $msg = "All pending customers have already received recovery emails. No new emails needed.";
+
+    ApiResponse::success([
+        'scanned_count' => count($pendingOrders),
+        'sent_count'    => $sentCount,
+        'failed_count'  => $failedCount,
+        'sent_orders'   => $sentOrders,
+        'failed_orders' => $failedOrders,
+    ], $msg);
 }
 
 // Handle Cancel & Refund

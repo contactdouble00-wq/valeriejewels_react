@@ -89,8 +89,9 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [selectedEmailType, setSelectedEmailType] = useState('order_status_update');
   const [emailCustomMessage, setEmailCustomMessage] = useState('');
   const [emailReason, setEmailReason] = useState('');
-  const [emailTargetStatus, setEmailTargetStatus] = useState('shipped');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [recipientEmailInput, setRecipientEmailInput] = useState('');
+  const [runningRecovery, setRunningRecovery] = useState(false);
 
   // Cancel & Refund Dialog
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -682,10 +683,12 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
   const openEmailModal = (order) => {
     setTargetEmailOrder(order);
-    setSelectedEmailType('order_status_update');
+    const isUnpaid = (order.payment_status === 'pending' || order.payment_status === 'failed' || order.payment_status === 'unpaid');
+    setSelectedEmailType(isUnpaid ? 'order_failed' : 'order_status_update');
     setEmailTargetStatus(order.order_status || 'confirmed');
     setEmailCustomMessage('');
-    setEmailReason('');
+    setEmailReason(isUnpaid ? 'Bank gateway connection interrupted during UPI authorization / Checkout incomplete' : '');
+    setRecipientEmailInput(order.customer_email || '');
     setEmailModalOpen(true);
   };
 
@@ -699,9 +702,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         selectedEmailType,
         emailCustomMessage,
         emailReason,
-        emailTargetStatus
+        emailTargetStatus,
+        recipientEmailInput.trim()
       );
-      showToast(`Email dispatched to ${targetEmailOrder.customer_email}`);
+      showToast(`Email dispatched to ${recipientEmailInput.trim() || targetEmailOrder.customer_email}`);
       setEmailModalOpen(false);
       setEmailCustomMessage('');
       setEmailReason('');
@@ -709,10 +713,26 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         await inspectOrder(selectedOrder.id);
       }
       await loadSentEmailLogs();
+      await loadOrders();
     } catch (err) {
       showToast(err.message || 'Failed to dispatch email');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const handleRunAutoRecovery = async () => {
+    try {
+      setRunningRecovery(true);
+      const res = await adminApi.runPaymentRecovery();
+      const count = res?.sent_count ?? 0;
+      showToast(res?.message || `Auto recovery dispatched ${count} customer emails!`);
+      await loadSentEmailLogs();
+      await loadOrders();
+    } catch (err) {
+      showToast(err.message || 'Failed to run auto payment recovery');
+    } finally {
+      setRunningRecovery(false);
     }
   };
 
@@ -1090,6 +1110,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             >
               <Mail className="w-3.5 h-3.5 text-amber-600" />
               <span>Select All Pending ({pendingPaymentOrders.length})</span>
+            </button>
+
+            {/* 1-Click Automated Recovery Dispatch to All Unpaid Customers */}
+            <button
+              type="button"
+              onClick={handleRunAutoRecovery}
+              disabled={runningRecovery}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-xs border border-purple-300 bg-purple-700 hover:bg-purple-800 text-white cursor-pointer disabled:opacity-50"
+              title="Scan and automatically email luxury product recovery links to all customers with pending or failed payments"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${runningRecovery ? 'animate-spin' : ''}`} />
+              <span>{runningRecovery ? 'Sending...' : '⚡ Auto-Mail Unpaid Customers'}</span>
             </button>
           </div>
         </div>
@@ -2115,6 +2147,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 >
                   <option value="">All Email Types</option>
                   <option value="order_failed">⚠️ Payment Incomplete / Failed</option>
+                  <option value="payment_reminder">💳 Payment Recovery Reminder</option>
                   <option value="order_confirmation">✓ Order Confirmed</option>
                   <option value="order_shipped">📦 Shipped & Tracking</option>
                   <option value="order_on_hold">⏳ Order On Hold</option>
@@ -3000,17 +3033,35 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               </button>
             </div>
 
-            {/* Recipient Snapshot */}
-            <div className="bg-[#FAF8FC] rounded-2xl p-3.5 border border-brand-border/80 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Recipient:</span>
-                <div className="font-semibold text-brand-tertiary">{targetEmailOrder.customer_name}</div>
-                <div className="text-brand-primary font-mono text-[11px]">{targetEmailOrder.customer_email}</div>
+            {/* Recipient Snapshot & Editable Email Address */}
+            <div className="bg-[#FAF8FC] rounded-2xl p-3.5 border border-brand-border/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Customer:</span>
+                  <div className="font-semibold text-brand-tertiary">{targetEmailOrder.customer_name}</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Order Value:</span>
+                  <div className="font-bold text-brand-tertiary font-mono">₹{Number(targetEmailOrder.total_amount).toLocaleString('en-IN')}</div>
+                  <div className="text-[10px] text-brand-muted capitalize">{targetEmailOrder.payment_type?.replace('_', ' ')}</div>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Order Value:</span>
-                <div className="font-bold text-brand-tertiary font-mono">₹{Number(targetEmailOrder.total_amount).toLocaleString('en-IN')}</div>
-                <div className="text-[10px] text-brand-muted capitalize">{targetEmailOrder.payment_type?.replace('_', ' ')}</div>
+
+              <div>
+                <label className="text-[10px] text-brand-muted uppercase font-bold tracking-wider flex items-center justify-between mb-1">
+                  <span>Recipient Email *</span>
+                  {(!recipientEmailInput || recipientEmailInput.includes('@valerieclient.in')) && (
+                    <span className="text-rose-600 font-semibold normal-case">⚠️ Enter customer email to send</span>
+                  )}
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={recipientEmailInput}
+                  onChange={(e) => setRecipientEmailInput(e.target.value)}
+                  placeholder="e.g. customer@example.com"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono"
+                />
               </div>
             </div>
 

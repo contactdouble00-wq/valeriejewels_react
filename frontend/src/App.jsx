@@ -67,11 +67,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
   const parseTrackingOrderFromUrl = () => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
-      const queryOrder = searchParams.get('track') || 
-                         searchParams.get('order') || 
-                         searchParams.get('tracking') || 
-                         searchParams.get('order_number') ||
-                         searchParams.get('ref');
+      const queryOrder = searchParams.get('track') ||
+        searchParams.get('order') ||
+        searchParams.get('tracking') ||
+        searchParams.get('order_number') ||
+        searchParams.get('ref');
       if (queryOrder && queryOrder.trim()) {
         return queryOrder.trim();
       }
@@ -95,7 +95,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       if (path === '/track' || path === '/track-order') {
         return '__prompt__';
       }
-    } catch (_) {}
+    } catch (_) { }
     return '';
   };
 
@@ -254,7 +254,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         apiService.getBundles().catch(() => []),
         apiService.getHealth().catch(() => null),
         apiService.getProducts({ bestseller: 1 }).then(res => res.products || []).catch(() => []),
-        apiService.getProducts({ category: 'jhumka-boxes' }).then(res => res.products || []).catch(() => []),
+        apiService.getProducts({ category: 'jhumkha-box' }).then(res => res.products || []).catch(() => []),
       ]);
       setCategories(cats || []);
       setBundles(bnds || []);
@@ -349,6 +349,49 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
     return () => { isMounted = false; };
   }, [selectedCategory, selectedSort, searchQuery]);
 
+  // Auto-resolve active PDP product from catalog if opened by URL hash with partial or legacy slug
+  useEffect(() => {
+    if (activePdpSlug && !activePdpProduct && products.length > 0) {
+      const target = activePdpSlug.toLowerCase().replace(/[^a-z0-9]/g, ' ');
+      const targetWords = target.split(/\s+/).filter((w) => w.length > 2);
+
+      const exactMatch = products.find((p) => (p.slug || '').toLowerCase() === activePdpSlug.toLowerCase());
+      if (exactMatch) {
+        setActivePdpProduct(exactMatch);
+        return;
+      }
+
+      const partialMatch = products.find((p) => {
+        const s = (p.slug || '').toLowerCase();
+        return s.includes(activePdpSlug.toLowerCase()) || activePdpSlug.toLowerCase().includes(s);
+      });
+      if (partialMatch) {
+        setActivePdpProduct(partialMatch);
+        return;
+      }
+
+      if (targetWords.length > 0) {
+        let best = null;
+        let bestScore = 0;
+        for (const p of products) {
+          const s = (p.slug || '').toLowerCase();
+          const n = (p.name || '').toLowerCase();
+          let score = 0;
+          for (const w of targetWords) {
+            if (s.includes(w) || n.includes(w)) score++;
+          }
+          if (score > bestScore && score >= 2) {
+            bestScore = score;
+            best = p;
+          }
+        }
+        if (best) {
+          setActivePdpProduct(best);
+        }
+      }
+    }
+  }, [products, activePdpSlug, activePdpProduct]);
+
   const refreshHealth = async () => {
     setHealthLoading(true);
     try {
@@ -371,7 +414,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           <span className="truncate sm:overflow-visible">
             {content?.topRibbon?.text && content.topRibbon.text.trim() ? content.topRibbon.text.trim() : (
               !content?.topRibbon?.highlightAmount?.trim() && !content?.topRibbon?.suffix?.trim()
-                ? 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)'
+                ? 'FREE DELIVERY ACROSS INDIA'
                 : ''
             )}
             {Boolean(content?.topRibbon?.highlightAmount && content.topRibbon.highlightAmount.trim()) && (
@@ -552,8 +595,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                     href="#jhumka-boxes"
                     onClick={() => setSelectedCategory(featuredCat.slug)}
                     className={`transition-all px-3 py-1 rounded-full flex items-center space-x-1.5 whitespace-nowrap ${selectedCategory === featuredCat.slug
-                        ? 'bg-brand-primary text-white font-bold shadow-xs'
-                        : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
+                      ? 'bg-brand-primary text-white font-bold shadow-xs'
+                      : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
                       }`}
                   >
                     <span>✨ {featuredCat.name}</span>
@@ -672,10 +715,10 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
           {/* Desktop-Only Creatively Faded Hero Photograph */}
-          {Boolean(content?.heroBanner?.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
+          {Boolean(content?.heroBanner?.rightImageUrl ?? 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png') && (
             <div className="hidden md:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
               <img
-                src={content?.heroBanner?.rightImageUrl || '/hero-jewelry-model.jpg'}
+                src={content?.heroBanner?.rightImageUrl || 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png'}
                 alt="Valerie Everyday Luxury Jewelry"
                 className="w-full h-full object-cover object-[center_15%]"
                 style={{
@@ -690,18 +733,18 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           <div className="relative z-10 max-w-2xl space-y-5">
             <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
               <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
-              <span className="whitespace-normal leading-tight text-left">{content?.heroBanner?.badgeText || '18K PVD Anti-Tarnish Everyday Luxury'}</span>
+              <span className="whitespace-normal leading-tight text-left">{content?.heroBanner?.badgeText || 'FASHION JEWELLERY'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
-              {content?.heroBanner?.headline || 'Curated everyday jewelry,'} <br />
+              {content?.heroBanner?.headline || 'YOUR STYLE,'} <br />
               <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
-                {content?.heroBanner?.accentText || 'designed to shine forever.'}
+                {content?.heroBanner?.accentText || 'FINISHED BEAUTIFULLY.'}
               </span>
             </h1>
 
             <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
-              {content?.heroBanner?.subtitle || 'Waterproof, shower-safe, and hypoallergenic accessories crafted in premium 316L stainless steel and 18K gold. Priced honestly from ₹500 to ₹1,500.'}
+              {content?.heroBanner?.subtitle || 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.'}
             </p>
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
@@ -714,7 +757,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                 }}
                 className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
               >
-                <span>{content?.heroBanner?.primaryBtnText || 'Shop 4 Jhumka Boxes'}</span>
+                <span>{content?.heroBanner?.primaryBtnText || 'DISCOVER YOUR STYLE'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
               <a
@@ -1126,8 +1169,8 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             const support = content?.customerSupport || {};
             const phone = support.phone || '+91 90234 22392';
             const cleanPhone = phone.replace(/\s+/g, '');
-            const waNum = support.whatsappNumber || '+91 70163 47945';
-            const cleanWa = (waNum || '917016347945').replace(/\D/g, '');
+            const waNum = support.whatsappNumber || '+91 90234 22392';
+            const cleanWa = (waNum || '919023422392').replace(/\D/g, '');
             const email = support.email || 'orders@valeriejewels.in';
             const address = support.address || 'Patel Chowk, Rajkot, Gujarat';
             const hours = support.hours || '7 days a week, 8:00 AM – 4:00 PM';

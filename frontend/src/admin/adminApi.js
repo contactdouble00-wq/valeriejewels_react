@@ -298,7 +298,7 @@ export const adminApi = {
     return res.data;
   },
 
-  async sendCustomerEmail(orderId, emailType, customMessage = '', reason = '', status = '') {
+  async sendCustomerEmail(orderId, emailType, customMessage = '', reason = '', status = '', recipientEmail = '') {
     const res = await request('/admin/orders.php?action=send_customer_email', {
       method: 'POST',
       body: JSON.stringify({
@@ -307,7 +307,15 @@ export const adminApi = {
         custom_message: customMessage,
         reason,
         status,
+        recipient_email: recipientEmail,
       }),
+    });
+    return res.data;
+  },
+
+  async runPaymentRecovery() {
+    const res = await request('/admin/orders.php?action=run_payment_recovery', {
+      method: 'POST',
     });
     return res.data;
   },

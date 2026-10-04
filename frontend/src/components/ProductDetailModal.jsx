@@ -136,20 +136,24 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
       }
       try {
         const data = await apiService.getProductDetail(productSlug);
-        if (isMounted && data) {
-          setProduct(data);
-          if (data.variants && data.variants.length > 0) {
-            setSelectedVariant((prev) => {
-              if (prev) {
-                const match = data.variants.find((v) => v.id === prev.id);
-                return match || data.variants[0];
-              }
-              return data.variants[0];
-            });
+        if (isMounted) {
+          if (data) {
+            setProduct(data);
+            if (data.variants && data.variants.length > 0) {
+              setSelectedVariant((prev) => {
+                if (prev) {
+                  const match = data.variants.find((v) => v.id === prev.id);
+                  return match || data.variants[0];
+                }
+                return data.variants[0];
+              });
+            }
+          } else if (!fallbackProduct) {
+            setError('This jewelry piece could not be found or may have been updated.');
           }
         }
       } catch (err) {
-        if (isMounted && !fallbackProduct) setError(err.message);
+        if (isMounted && !fallbackProduct) setError(err.message || 'Unable to load product details');
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -532,7 +536,6 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
           </div>
         </header>
 
-        {/* Scrollable Body Content */}
         {loading && !product ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-12">
             <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
@@ -543,9 +546,25 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             <p className="text-sm text-red-600 font-semibold">{error}</p>
             <button
               onClick={onClose}
-              className="px-6 py-2.5 bg-brand-primary text-white text-xs font-caps uppercase tracking-wider font-bold rounded-xl shadow-md"
+              className="px-6 py-2.5 bg-brand-primary text-white text-xs font-caps uppercase tracking-wider font-bold rounded-xl shadow-md active:scale-95 transition-all"
             >
               Return to Catalog
+            </button>
+          </div>
+        ) : !product ? (
+          <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-[#FAF5FF] border border-[#E9D5FF] flex items-center justify-center text-2xl shadow-sm">
+              💎
+            </div>
+            <h3 className="font-serif text-lg font-bold text-brand-primary">Jewelry Piece Not Found</h3>
+            <p className="text-xs text-brand-muted max-w-xs leading-relaxed">
+              We couldn't locate this piece in the showcase. It may have been updated or moved.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 bg-brand-primary text-white text-xs font-caps uppercase tracking-wider font-bold rounded-xl shadow-md hover:bg-brand-primary-hover active:scale-95 transition-all"
+            >
+              Explore Collection
             </button>
           </div>
         ) : product ? (
@@ -1063,6 +1082,22 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               className="px-6 py-2.5 bg-brand-primary text-white text-xs font-caps uppercase tracking-wider font-bold rounded-xl shadow-md"
             >
               Back to Catalog
+            </button>
+          </div>
+        ) : !product ? (
+          <div className="flex-1 p-16 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-[#FAF5FF] border border-[#E9D5FF] flex items-center justify-center text-3xl shadow-sm">
+              💎
+            </div>
+            <h3 className="font-serif text-xl font-bold text-brand-primary">Jewelry Piece Not Found</h3>
+            <p className="text-sm text-brand-muted max-w-sm leading-relaxed">
+              We couldn't locate this piece in the showcase. It may have been updated or moved.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-8 py-3 bg-brand-primary text-white text-xs font-caps uppercase tracking-wider font-bold rounded-xl shadow-md hover:bg-brand-primary-hover active:scale-95 transition-all"
+            >
+              Explore Valerie Collection
             </button>
           </div>
         ) : product ? (
