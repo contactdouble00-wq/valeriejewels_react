@@ -1298,26 +1298,28 @@ export default function App() {
 
   if (currentRoute === 'admin') {
     return (
-      <React.Suspense
-        fallback={
-          <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
-            <div className="flex flex-col items-center space-y-3">
-              <div className="w-8 h-8 border-2 border-[#8366B0] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-xs uppercase tracking-widest text-[#A19DAA]">Loading Management Portal...</p>
+      <ErrorBoundary>
+        <React.Suspense
+          fallback={
+            <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-8 h-8 border-2 border-[#8366B0] border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs uppercase tracking-widest text-[#A19DAA]">Loading Management Portal...</p>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <AdminPortal
-          onReturnToStore={() => {
-            window.location.hash = '';
-            if (window.location.pathname.startsWith('/vj-manage-x1126')) {
-              window.history.pushState(null, '', '/');
-            }
-            setCurrentRoute('store');
-          }}
-        />
-      </React.Suspense>
+          }
+        >
+          <AdminPortal
+            onReturnToStore={() => {
+              window.location.hash = '';
+              if (window.location.pathname.startsWith('/vj-manage-x1126')) {
+                window.history.pushState(null, '', '/');
+              }
+              setCurrentRoute('store');
+            }}
+          />
+        </React.Suspense>
+      </ErrorBoundary>
     );
   }
 

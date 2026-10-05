@@ -39,6 +39,7 @@ import {
   Check,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
+import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
 const FACTORY_DEFAULTS = {
   customerSupport: {
@@ -49,49 +50,6 @@ const FACTORY_DEFAULTS = {
     address: 'Patel Chowk, Rajkot, Gujarat',
     hours: '7 days a week, 8:00 AM – 4:00 PM',
     whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
-  },
-  mobileSlider: {
-    enabled: true,
-    autoPlay: true,
-    interval: 4500,
-    slides: [
-      {
-        id: 'slide-1',
-        imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=85',
-        title: 'The Everyday Diamond Edit',
-        subtitle: 'Under ₹999 Luxury Collection',
-        buttonText: 'SHOP NOW',
-        linkUrl: '#catalog',
-        isActive: true,
-      },
-      {
-        id: 'slide-2',
-        imageUrl: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=85',
-        title: 'The 4 Signature Jhumka Boxes',
-        subtitle: 'Viral 5 to 6 Pair Festive Keepsakes',
-        buttonText: 'EXPLORE BOXES',
-        linkUrl: '#jhumka-boxes',
-        isActive: true,
-      },
-      {
-        id: 'slide-3',
-        imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=85',
-        title: 'Anti-Tarnish Everyday Edit',
-        subtitle: 'Waterproof & Shower-Safe Luxury Gold',
-        buttonText: 'SHOP COLLECTION',
-        linkUrl: '#catalog',
-        isActive: true,
-      },
-      {
-        id: 'slide-4',
-        imageUrl: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=900&q=85',
-        title: 'Statement Pairings & Duos',
-        subtitle: 'Layered Elegance with Free Express Delivery',
-        buttonText: 'VIEW PIECES',
-        linkUrl: '#jhumka-boxes',
-        isActive: true,
-      },
-    ],
   },
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
