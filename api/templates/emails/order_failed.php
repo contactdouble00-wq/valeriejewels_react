@@ -85,7 +85,7 @@ $retryUrl = $storeUrl . '/#checkout?order=' . urlencode($order['order_number'] ?
                 <img src="<?= htmlspecialchars($logoUrl) ?>" alt="VALERIÉ" height="28" style="height: 28px; width: auto; max-height: 28px; display: block; margin: 0 auto;" />
               </a>
               <p style="margin: 6px 0 0 0; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #8F82A0; font-weight: 600;">
-                Everyday Luxury Jewelry • 18K Anti-Tarnish
+                Everyday Luxury Jewelry • Anti-Tarnish Finish
               </p>
             </td>
           </tr>
@@ -277,7 +277,7 @@ $retryUrl = $storeUrl . '/#checkout?order=' . urlencode($order['order_number'] ?
           <tr>
             <td align="center" style="padding: 25px 35px; background-color: #FAF7FC; border-top: 1px solid #F2ECF7;">
               <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #8F82A0; font-weight: 600;">
-                18K Anti-Tarnish PVD Gold &bull; 100% Waterproof & Shower-Safe &bull; Complimentary Express Shipping Across India
+                Anti-Tarnish Polish &bull; 100% Waterproof & Shower-Safe &bull; Complimentary Express Shipping Across India
               </p>
               <p style="margin: 0; font-size: 10.5px; color: #B3A8C2;">
                 &copy; <?= date('Y') ?> Valerie Jewels. Atelier: Patel Chowk, Rajkot, Gujarat — 360001

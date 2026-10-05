@@ -99,7 +99,7 @@ foreach ($items as $it) {
                 <img src="<?= htmlspecialchars($logoUrl) ?>" alt="VALERIÉ" height="28" style="height: 28px; width: auto; max-height: 28px; display: block; margin: 0 auto;" />
               </a>
               <p style="margin: 6px 0 0 0; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #8F82A0; font-weight: 600;">
-                Everyday Luxury Jewelry • 18K Anti-Tarnish Assurance
+                Everyday Luxury Jewelry • Anti-Tarnish Assurance
               </p>
             </td>
           </tr>
@@ -475,7 +475,7 @@ foreach ($items as $it) {
                 Questions regarding your piece? WhatsApp our Concierge at <a href="https://wa.me/919594477422?text=Hi%20Valerie%20Jewels,%20I%20have%20an%20inquiry%20about%20order%20<?= urlencode($orderNumber) ?>" target="_blank" style="color: #8366B0; font-weight: bold; text-decoration: none;">WhatsApp Concierge</a> or email <a href="mailto:orders@valeriejewels.in" style="color: #8366B0; text-decoration: underline;">orders@valeriejewels.in</a>
               </p>
               <p style="margin: 0; font-size: 10px; color: #A498B2; letter-spacing: 1px; text-transform: uppercase;">
-                © <?= date('Y') ?> VALERIÉ JEWELS. All rights reserved. • 18K Anti-Tarnish Assurance
+                © <?= date('Y') ?> VALERIÉ JEWELS. All rights reserved. • Anti-Tarnish Assurance
               </p>
             </td>
           </tr>

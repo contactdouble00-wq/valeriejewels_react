@@ -30,7 +30,7 @@ export default function FestivalOfferSection({
   // Defaults aligned with Valerie Jewels brand copy
   const badgeText = fOffer.badgeText || '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION';
   const headline = fOffer.headline || 'The Royal Festive Edit';
-  const subtitle = fOffer.subtitle || 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.';
+  const subtitle = fOffer.subtitle || 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.';
   const couponCode = fOffer.couponCode || 'FESTIVE20';
   const couponDiscount = fOffer.couponDiscount || 'FLAT 20% OFF';
   const couponDesc = fOffer.couponDescription || 'Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999.';
@@ -353,7 +353,7 @@ export default function FestivalOfferSection({
                           {product.name}
                         </h4>
                         <p className="text-[11px] text-[#D8CEE8] font-light line-clamp-1">
-                          {product.short_description || '18K Gold Plated • 100% Anti-Tarnish & Waterproof'}
+                          {product.short_description || '100% Anti-Tarnish & Waterproof'}
                         </p>
                       </div>
                     </div>

@@ -389,7 +389,7 @@ export default function MobileSidebarDrawer({
             <div className="grid grid-cols-2 gap-2 text-[10px] text-brand-muted font-light pt-1">
               <div className="flex items-center space-x-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                <span>18K PVD Anti-Tarnish</span>
+                <span>Everyday Luxury</span>
               </div>
               <div className="flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />

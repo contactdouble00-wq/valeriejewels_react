@@ -74,15 +74,15 @@ export const DEFAULT_FAQS_DATA = {
       id: 'faq-6',
       category: 'Jewelry Care & Quality',
       q: 'Are Valerié jewellery pieces anti-tarnish and waterproof?',
-      a: 'Yes! All Valerié pieces are engineered with surgical-grade 316L stainless steel and coated with 18K Gold Physical Vapor Deposition (PVD) vacuum plating. This makes them 10x more resilient than ordinary electroplating, completely hypoallergenic, water-resistant, and sweat-proof for everyday luxury wear.',
+      a: 'Yes! All Valerié pieces are engineered with surgical-grade 316L stainless steel with anti-tarnish protective plating. This makes them 10x more resilient than ordinary electroplating, completely hypoallergenic, water-resistant, and sweat-proof for everyday luxury wear.',
       isActive: true,
       priority: 6
     },
     {
       id: 'faq-7',
       category: 'Jewelry Care & Quality',
-      q: 'How should I care for my 18K PVD jewelry to ensure maximum longevity?',
-      a: 'While our 18K PVD plating is water and sweat resistant, we recommend wiping your jewelry with a soft microfiber cloth after wear and avoiding direct exposure to harsh industrial bleach or concentrated alcohol-based perfumes to preserve the lustrous gold finish for years.',
+      q: 'How should I care for my anti-tarnish jewelry to ensure maximum longevity?',
+      a: 'While our anti-tarnish finish is water and sweat resistant, we recommend wiping your jewelry with a soft microfiber cloth after wear and avoiding direct exposure to harsh industrial bleach or concentrated alcohol-based perfumes to preserve the lustrous gold finish for years.',
       isActive: true,
       priority: 7
     },

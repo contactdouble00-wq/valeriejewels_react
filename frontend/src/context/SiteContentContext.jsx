@@ -59,7 +59,7 @@ const DEFAULT_SITE_CONTENT = {
     enabled: false,
     badgeText: '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
     headline: 'The Royal Festive Edit',
-    subtitle: 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+    subtitle: 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
     countdownEnabled: true,
     countdownEndDate: '2026-11-15T23:59:59',
     countdownLabel: 'FESTIVE CELEBRATION OFFERS END IN:',
@@ -77,7 +77,7 @@ const DEFAULT_SITE_CONTENT = {
     {
       id: 'pillar1',
       title: '100% Anti-Tarnish',
-      desc: 'High-grade 18K PVD coating guaranteed not to fade or tarnish.',
+      desc: 'High-grade protective coating guaranteed not to fade or tarnish.',
     },
     {
       id: 'pillar2',

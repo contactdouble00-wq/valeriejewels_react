@@ -110,7 +110,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
           <div className="bg-brand-primary-light/60 px-4 py-2 border-b border-brand-primary/10 flex items-center justify-between text-[11px] text-brand-tertiary/80">
             <div className="flex items-center space-x-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-              <span>18K PVD Anti-Tarnish Guaranteed</span>
+              <span>Anti-Tarnish Assurance Guaranteed</span>
             </div>
             <span className="text-[10px] font-caps uppercase tracking-wider text-brand-primary font-bold">
               Instant Bag Transfer
@@ -202,7 +202,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
                           </div>
 
                           <p className="text-[10px] text-brand-muted line-clamp-1 mt-0.5 font-light">
-                            {item.material || '18K Gold PVD • Waterproof'}
+                            {item.material || 'Anti-Tarnish Polish • Waterproof'}
                           </p>
                         </div>
 

@@ -448,7 +448,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             <div className="hidden lg:flex items-center space-x-2.5 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[260px]">
               <div className="flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                <span className="font-caps tracking-[0.14em] uppercase text-[10px] xl:text-[10.5px]">18K PVD Anti-Tarnish</span>
+                <span className="font-caps tracking-[0.14em] uppercase text-[10px] xl:text-[10.5px]">Everyday Luxury</span>
               </div>
               <span className="h-3 w-px bg-brand-border/80" />
               <a
@@ -1092,7 +1092,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
             <div className="flex flex-col items-center md:items-start">
               <img src="/valerie.png" alt="VALERIÉ" className="h-7 w-auto object-contain" />
               <p className="text-xs text-brand-muted mt-2 max-w-sm text-center md:text-left font-light">
-                Curated everyday luxury jewelry. Engineered with 18K PVD gold plating for lifetime anti-tarnish elegance.
+                Curated everyday luxury jewelry crafted for timeless elegance and effortless beauty.
               </p>
               <div className="mt-3">
                 <AmazonTrustBadge variant="footer" />

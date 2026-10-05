@@ -12,7 +12,7 @@ export default function TrustStrip() {
   const defaultPillars = [
     {
       title: '100% Anti-Tarnish',
-      desc: 'High-grade 18K PVD coating guaranteed not to fade or tarnish.',
+      desc: 'High-grade protective coating guaranteed not to fade or tarnish.',
     },
     {
       title: 'Water & Sweat Proof',

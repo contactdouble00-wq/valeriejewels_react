@@ -44,7 +44,7 @@ export const VALERIE_FAQS = [
     category: 'Quality',
     icon: Shield,
     q: 'Are your jewellery pieces tarnish-resistant?',
-    a: 'Our pieces are crafted for durability and long-lasting shine. Proper care will help maintain their beauty over time. We use 18K gold plated anti-tarnish materials designed to withstand everyday wear.',
+    a: 'Our pieces are crafted for durability and long-lasting shine. Proper care will help maintain their beauty over time. We use premium anti-tarnish materials designed to withstand everyday wear.',
   },
   {
     category: 'Trust & Authenticity',

@@ -76,8 +76,8 @@ const FACTORY_DEFAULTS = {
       {
         id: 'slide-3',
         imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=85',
-        title: '18K Anti-Tarnish Everyday Edit',
-        subtitle: 'Waterproof & Shower-Safe PVD Gold',
+        title: 'Anti-Tarnish Everyday Edit',
+        subtitle: 'Waterproof & Shower-Safe Luxury Gold',
         buttonText: 'SHOP COLLECTION',
         linkUrl: '#catalog',
         isActive: true,
@@ -146,7 +146,7 @@ const FACTORY_DEFAULTS = {
     enabled: false,
     badgeText: '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
     headline: 'The Royal Festive Edit',
-    subtitle: 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+    subtitle: 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
     countdownEnabled: true,
     countdownEndDate: '2026-11-15T23:59:59',
     countdownLabel: 'FESTIVE CELEBRATION OFFERS END IN:',
@@ -164,7 +164,7 @@ const FACTORY_DEFAULTS = {
     {
       id: 'pillar1',
       title: '100% Anti-Tarnish',
-      desc: 'High-grade 18K PVD coating guaranteed not to fade or tarnish.',
+      desc: 'High-grade protective coating guaranteed not to fade or tarnish.',
     },
     {
       id: 'pillar2',
@@ -1694,7 +1694,7 @@ export default function AdminHomepageView() {
                   value={formData.topRibbon.suffix}
                   onChange={(e) => updateNested('topRibbon', 'suffix', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="e.g. • 18K GOLD PVD ANTI-TARNISH"
+                  placeholder="e.g. • EVERYDAY LUXURY JEWELRY"
                 />
               </div>
             </div>
@@ -1770,7 +1770,7 @@ export default function AdminHomepageView() {
                   value={formData.heroBanner.badgeText}
                   onChange={(e) => updateNested('heroBanner', 'badgeText', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="e.g. 18K PVD Anti-Tarnish Everyday Luxury"
+                  placeholder="e.g. Everyday Luxury Fine Jewelry"
                 />
               </div>
 
@@ -2534,7 +2534,7 @@ export default function AdminHomepageView() {
                     {formData.festivalOffer?.headline || 'The Royal Festive Edit'}
                   </h4>
                   <p className="text-xs text-[#D8CEE8] font-light mt-1 max-w-xl line-clamp-2">
-                    {formData.festivalOffer?.subtitle || 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry.'}
+                    {formData.festivalOffer?.subtitle || 'Celebrate auspicious traditions with handcrafted fine jewelry.'}
                   </p>
                 </div>
 

@@ -49,12 +49,12 @@ export default function UnderDevelopmentGate({ onUnlock }) {
           React.createElement('span', { className: 'bg-gradient-to-r from-[#EDE8F5] via-[#C5A880] to-[#8366B0] bg-clip-text text-transparent italic font-normal' }, 'Extraordinary')
         ),
         React.createElement('p', { className: 'text-sm sm:text-base text-white/60 max-w-lg leading-relaxed mb-8 font-light' },
-          'Our digital atelier is currently undergoing final preparations. We are putting the finishing touches on our exclusive 18K Anti-Tarnish fine jewelry collections.'
+          'Our digital atelier is currently undergoing final preparations. We are putting the finishing touches on our exclusive Anti-Tarnish fine jewelry collections.'
         ),
         React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-10 text-left' },
           React.createElement('div', { className: 'p-4 rounded-xl bg-white/[0.02] border border-white/5 backdrop-blur-md hover:border-[#8366B0]/30 transition-all' },
             React.createElement(Sparkles, { className: 'w-4 h-4 text-[#C5A880] mb-2' }),
-            React.createElement('h4', { className: 'text-xs font-semibold text-white tracking-wide uppercase mb-1' }, '18K Gold PVD'),
+            React.createElement('h4', { className: 'text-xs font-semibold text-white tracking-wide uppercase mb-1' }, 'Anti-Tarnish Polish'),
             React.createElement('p', { className: 'text-[11px] text-white/50 leading-relaxed' }, 'Waterproof, sweatproof, hypoallergenic everyday luxury.')
           ),
           React.createElement('div', { className: 'p-4 rounded-xl bg-white/[0.02] border border-white/5 backdrop-blur-md hover:border-[#8366B0]/30 transition-all' },

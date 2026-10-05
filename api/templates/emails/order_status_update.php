@@ -36,7 +36,7 @@ $statusMeta = [
         'border' => '#E5D9F2',
         'icon' => '✦',
         'headline' => 'Preparing Your Jewelry for Dispatch',
-        'desc' => 'Every piece is undergoing 18K anti-tarnish inspection and micro-polishing prior to secure handover to our courier.'
+        'desc' => 'Every piece is undergoing anti-tarnish quality inspection and micro-polishing prior to secure handover to our courier.'
     ],
     'shipped' => [
         'badge' => 'Dispatched & On The Way',
@@ -357,7 +357,7 @@ $isPrepaid = ($order['payment_type'] ?? '') === 'full_prepaid';
                 Have questions or need instant updates? WhatsApp our Concierge at <a href="https://wa.me/919999999999?text=Hi%20Valerie%20Jewels,%20I%20have%20an%20inquiry%20about%20order%20<?= urlencode($orderNumber) ?>" target="_blank" style="color: #8366B0; font-weight: bold; text-decoration: none;">+91 99999 99999</a> or email <a href="mailto:support@valeriejewels.com" style="color: #8366B0; text-decoration: underline;">support@valeriejewels.com</a>
               </p>
               <p style="margin: 0; font-size: 10px; color: #A498B2; letter-spacing: 1px; text-transform: uppercase;">
-                © <?= date('Y') ?> VALERIÉ JEWELS. All rights reserved. • 18K PVD Gold Plating Anti-Tarnish Assurance
+                © <?= date('Y') ?> VALERIÉ JEWELS. All rights reserved. • Anti-Tarnish Assurance
               </p>
             </td>
           </tr>

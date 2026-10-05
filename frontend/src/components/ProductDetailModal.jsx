@@ -667,12 +667,12 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                           Best Seller
                         </span>
                       )}
-                      {Boolean(product.is_anti_tarnish) && (
-                        <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
-                          <ShieldCheck className="w-3 h-3 text-brand-primary" />
-                          18K Anti-Tarnish
-                        </span>
-                      )}
+                        {Boolean(product.is_anti_tarnish) && (
+                          <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
+                            <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                            Anti-Tarnish Polish
+                          </span>
+                        )}
                     </div>
 
                     {/* Tap to Zoom indicator */}
@@ -876,7 +876,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </span>
                 </div>
                 <p className="text-xs text-brand-tertiary font-medium">
-                  {product.material || '18K Gold Plated 316L Stainless Steel'}
+                  {product.material || 'Premium Gold Plated 316L Stainless Steel'}
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                   Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
@@ -1204,7 +1204,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         {Boolean(product.is_anti_tarnish) && (
                           <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
                             <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
-                            18K Anti-Tarnish
+                            Anti-Tarnish Polish
                           </span>
                         )}
                       </div>
@@ -1329,7 +1329,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-bold text-brand-tertiary block text-xs">18K PVD Anti-Tarnish</span>
+                    <span className="font-bold text-brand-tertiary block text-xs">Anti-Tarnish Finish</span>
                     <span className="text-[10.5px] text-brand-muted font-light">Waterproof &amp; sweat-resistant</span>
                   </div>
                 </div>
@@ -1515,7 +1515,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       Material Specification
                     </span>
                     <p className="text-xs text-brand-tertiary font-medium">
-                      {product.material || '18K Gold Plated 316L Stainless Steel'}
+                      {product.material || 'Premium Gold Plated 316L Stainless Steel'}
                     </p>
                     <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                       Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.

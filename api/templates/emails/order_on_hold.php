@@ -160,7 +160,7 @@ $total = number_format((float)($order['total_amount'] ?? 0), 2);
           <tr>
             <td align="center" style="padding: 25px 35px; background-color: #FAF7FC; border-top: 1px solid #F2ECF7;">
               <p style="margin: 0 0 6px 0; font-size: 11px; color: #8F82A0; font-weight: 600;">
-                18K PVD Anti-Tarnish • 100% Waterproof &amp; Shower-Safe • Complimentary Express Shipping Across India
+                Anti-Tarnish Polish • 100% Waterproof &amp; Shower-Safe • Complimentary Express Shipping Across India
               </p>
               <p style="margin: 0; font-size: 10px; color: #B3A8C2;">
                 &copy; <?= date('Y') ?> Valerie Jewels. Concierge: +91 70163 47945 • orders@valeriejewels.in

@@ -549,7 +549,7 @@ class Database {
                         'suffix'          => '',
                     ],
                     'heroBanner' => [
-                        'badgeText'       => '18K PVD Anti-Tarnish Everyday Luxury',
+                        'badgeText'       => 'Everyday Luxury Fine Jewelry',
                         'headline'        => 'Curated everyday jewelry,',
                         'accentText'      => 'designed to shine forever.',
                         'subtitle'        => 'Waterproof, shower-safe, and hypoallergenic accessories crafted in premium 316L stainless steel and 18K gold. Priced honestly from ₹500 to ₹1,500.',
@@ -581,7 +581,7 @@ class Database {
                         'enabled'             => true,
                         'badgeText'           => '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
                         'headline'            => 'The Royal Festive Edit',
-                        'subtitle'            => 'Celebrate auspicious traditions with 18K gold PVD anti-tarnish jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
+                        'subtitle'            => 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
                         'countdownEnabled'    => true,
                         'countdownEndDate'    => '2026-11-15T23:59:59',
                         'countdownLabel'      => 'FESTIVE CELEBRATION OFFERS END IN:',
@@ -599,7 +599,7 @@ class Database {
                         [
                             'id'    => 'pillar1',
                             'title' => '100% Anti-Tarnish',
-                            'desc'  => 'High-grade 18K PVD coating guaranteed not to fade or tarnish.',
+                            'desc'  => 'High-grade protective coating guaranteed not to fade or tarnish.',
                         ],
                         [
                             'id'    => 'pillar2',

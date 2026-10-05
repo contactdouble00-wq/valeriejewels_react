@@ -557,7 +557,7 @@ if ($method === 'POST') {
         ':stock'      => $stock,
         ':pairs'      => $pairsCount,
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
-        ':mat'        => $input['material'] ?? 'Stainless Steel / 18K Gold PVD',
+        ':mat'        => $input['material'] ?? 'Stainless Steel / Anti-Tarnish Gold Plated',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
         ':vid'        => !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $input['video_url']) : null,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,

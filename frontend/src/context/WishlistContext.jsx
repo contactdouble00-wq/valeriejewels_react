@@ -65,7 +65,7 @@ export function WishlistProvider({ children }) {
         price,
         mrp,
         primary_image: product.primary_image || (product.images && product.images[0]?.image_url) || '',
-        material: product.material || '18K Gold PVD • Stainless Steel',
+        material: product.material || 'Anti-Tarnish Polish • Stainless Steel',
         category_name: product.category_name || '',
         discount_percentage: discount,
         is_anti_tarnish: Boolean(product.is_anti_tarnish),

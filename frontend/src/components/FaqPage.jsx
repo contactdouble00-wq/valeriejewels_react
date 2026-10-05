@@ -188,7 +188,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
           </h1>
 
           <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-2xl mx-auto">
-            Everything you need to know about our 18K PVD anti-tarnish jewelry, 5–7 working days free delivery across all India, prepaid perks, returns, and orders.
+            Everything you need to know about our everyday luxury jewelry, 5–7 working days free delivery across all India, prepaid perks, returns, and orders.
           </p>
 
           {/* Search Box */}
@@ -246,7 +246,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-brand-tertiary">18K PVD Anti-Tarnish</div>
+              <div className="text-xs font-bold text-brand-tertiary">Anti-Tarnish Assurance</div>
               <div className="text-[11px] text-brand-muted font-light">Waterproof &amp; Hypoallergenic 316L Steel</div>
             </div>
           </div>

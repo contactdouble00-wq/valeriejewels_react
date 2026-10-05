@@ -135,8 +135,8 @@ try {
                 ],
                 [
                     'id' => 'color-guarantee',
-                    'heading' => '6. Lifetime 18K PVD Anti-Tarnish Guarantee Claims',
-                    'content' => 'Our everyday luxury pieces are coated with premium 18K Gold Physical Vapor Deposition (PVD) vacuum coating. In the unlikely event that your piece shows tarnish, discoloration, or rust under normal everyday wear (water, sweat, perfume), contact our Atelier concierge for a complimentary warranty replacement.'
+                    'heading' => '6. Lifetime Anti-Tarnish Guarantee Claims',
+                    'content' => 'Our everyday luxury pieces are finished with a premium anti-tarnish protective coating. In the unlikely event that your piece shows tarnish, discoloration, or rust under normal everyday wear (water, sweat, perfume), contact our Atelier concierge for a complimentary warranty replacement.'
                 ]
             ]
         ],

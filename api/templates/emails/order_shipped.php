@@ -106,7 +106,7 @@ $deliveryDate = !empty($order['estimated_delivery_date'])
                     <?= (int)$item['quantity'] ?>× <?= htmlspecialchars($item['product_name']) ?>
                   </td>
                   <td align="right" style="font-size: 12px; color: #6D5E7A;">
-                    <?= !empty($item['variant_title']) ? htmlspecialchars($item['variant_title']) : 'Anti-Tarnish 18K' ?>
+                    <?= !empty($item['variant_title']) ? htmlspecialchars($item['variant_title']) : 'Anti-Tarnish' ?>
                   </td>
                 </tr>
                 <?php endforeach; ?>
