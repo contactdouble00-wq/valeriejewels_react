@@ -369,6 +369,14 @@ try {
         } catch (Throwable $se) {
             error_log('[Shiprocket] COD auto-sync error: ' . $se->getMessage());
         }
+
+        // Dispatch automated confirmation email to customer and admin
+        try {
+            require_once dirname(__DIR__) . '/utils/mailer.php';
+            MailerService::sendOrderConfirmation($orderId);
+        } catch (Throwable $me) {
+            error_log('[COD Mailer] Error dispatching confirmation email: ' . $me->getMessage());
+        }
     }
 
     // Generate Fastrr & Razorpay checkout session payload

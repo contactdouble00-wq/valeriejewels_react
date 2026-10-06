@@ -56,8 +56,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   // View Mode: 'orders' | 'shiprocket_synced' | 'sent_emails'
   const [activeOrdersViewMode, setActiveOrdersViewMode] = useState('orders');
 
-  // In Orders view: sync segment filter ('unsynced' by default to shift synced orders to separate section, or 'all')
-  const [ordersSyncSegment, setOrdersSyncSegment] = useState('unsynced');
+  // In Orders view: sync segment filter ('all' by default so all received orders are visible immediately)
+  const [ordersSyncSegment, setOrdersSyncSegment] = useState('all');
 
   // Dedicated Shiprocket Synced Section States
   const [syncedSearch, setSyncedSearch] = useState('');
@@ -949,7 +949,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               activeOrdersViewMode === 'orders' ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-brand-tertiary'
             }`}>
-              {unsyncedOrders.length}
+              {orders.length}
             </span>
           </button>
 

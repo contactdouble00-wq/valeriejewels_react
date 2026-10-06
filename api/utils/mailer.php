@@ -297,7 +297,7 @@ class MailerService
         require dirname(__DIR__) . '/templates/emails/order_confirmation.php';
         $htmlBody = ob_get_clean();
 
-        return self::send(
+        $result = self::send(
             $orderId,
             'order_confirmation',
             $order['customer_email'],
@@ -306,6 +306,28 @@ class MailerService
             $htmlBody,
             $force
         );
+
+        // Also notify the store owner / atelier concierge on every confirmed order
+        try {
+            $cfg = self::getConfig();
+            $adminEmail = $cfg['from_email'] ?? 'orders@valeriejewels.in';
+            if (!empty($adminEmail) && strtolower(trim($adminEmail)) !== strtolower(trim($order['customer_email'] ?? ''))) {
+                $payTypeLabel = strtoupper(str_replace('_', ' ', $order['payment_type'] ?? ''));
+                $adminSubject = "[NEW ORDER] {$order['order_number']} — ₹" . number_format($totalVal, 2) . " [{$payTypeLabel}] by {$order['customer_name']}";
+                self::sendDirect(
+                    $adminEmail,
+                    'Valerie Jewels Atelier',
+                    $adminSubject,
+                    $htmlBody,
+                    'admin_order_notification',
+                    $orderId
+                );
+            }
+        } catch (Throwable $adminMailErr) {
+            error_log('[MailerService] Admin order notification error: ' . $adminMailErr->getMessage());
+        }
+
+        return $result;
     }
 
     /**
