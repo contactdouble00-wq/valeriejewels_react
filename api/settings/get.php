@@ -25,8 +25,8 @@ try {
             }
             if (!isset($data['customerSupport']) || !is_array($data['customerSupport'])) {
                 $data['customerSupport'] = [
-                    'whatsappNumber'   => '+91 70163 47945',
-                    'drawerButtonText' => 'Customer Care: +91 70163 47945',
+                    'whatsappNumber'   => '+91 90234 22392',
+                    'drawerButtonText' => 'Customer Care: +91 90234 22392',
                     'phone'            => '+91 90234 22392',
                     'email'            => 'orders@valeriejewels.in',
                     'address'          => 'Patel Chowk, Rajkot, Gujarat',
@@ -238,8 +238,8 @@ try {
             'subtitle' => 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.',
         ],
         'customerSupport' => [
-            'whatsappNumber'   => '+91 70163 47945',
-            'drawerButtonText' => 'Customer Care: +91 70163 47945',
+            'whatsappNumber'   => '+91 90234 22392',
+            'drawerButtonText' => 'Customer Care: +91 90234 22392',
             'phone'            => '+91 90234 22392',
             'email'            => 'orders@valeriejewels.in',
             'address'          => 'Patel Chowk, Rajkot, Gujarat',

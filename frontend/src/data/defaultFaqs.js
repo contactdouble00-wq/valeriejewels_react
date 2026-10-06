@@ -8,7 +8,7 @@ export const DEFAULT_FAQS_DATA = {
     lastUpdated: 'September 2026',
     supportEmail: 'orders@valeriejewels.in',
     supportPhone: '+91 90234 22392',
-    whatsappNumber: '+91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
     workingHours: '7 Days a Week, 8:00 AM – 4:00 PM IST',
   },
   concierge: {
@@ -16,7 +16,7 @@ export const DEFAULT_FAQS_DATA = {
     eyebrow: 'Still Have Questions?',
     title: 'Speak with a Valerie Concierge',
     description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
-    whatsappNumber: '+91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
     whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
     phone: '+91 90234 22392',
     hours: '7 days a week from 8:00 AM to 4:00 PM IST',
@@ -114,7 +114,7 @@ export const DEFAULT_FAQS_DATA = {
       id: 'faq-11',
       category: 'Customer Support',
       q: 'How do I contact Valerié Jewels customer concierge?',
-      a: 'We are available 7 days a week, 8:00 AM – 4:00 PM IST:\n• WhatsApp Support: +91 70163 47945\n• Direct Phone: +91 90234 22392\n• Concierge Email: orders@valeriejewels.in\n• Atelier Address: Patel Chowk, Rajkot, Gujarat — 360001',
+      a: 'We are available 7 days a week, 8:00 AM – 4:00 PM IST:\n• WhatsApp Support: +91 90234 22392\n• Direct Phone: +91 90234 22392\n• Concierge Email: orders@valeriejewels.in\n• Atelier Address: Patel Chowk, Rajkot, Gujarat — 360001',
       isActive: true,
       priority: 11
     },

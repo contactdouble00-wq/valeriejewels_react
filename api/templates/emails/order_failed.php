@@ -256,7 +256,7 @@ $retryUrl = $storeUrl . '/#checkout?order=' . urlencode($order['order_number'] ?
                     <table border="0" cellspacing="0" cellpadding="0" align="center">
                       <tr>
                         <td style="padding: 0 6px;">
-                          <a href="https://wa.me/917016347945?text=<?= urlencode("Hello Valerie Jewels, I need help completing my order " . $orderNumber . " for " . $firstItemName) ?>" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: #FFFFFF; text-decoration: none; font-size: 12px; font-weight: 700; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <a href="https://wa.me/919023422392?text=<?= urlencode("Hello Valerie Jewels, I need help completing my order " . $orderNumber . " for " . $firstItemName) ?>" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: #FFFFFF; text-decoration: none; font-size: 12px; font-weight: 700; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
                             💬 Chat on WhatsApp
                           </a>
                         </td>

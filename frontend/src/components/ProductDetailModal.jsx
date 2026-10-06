@@ -1559,8 +1559,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 {/* WhatsApp Concierge Assistance */}
                 <div className="pt-2">
                   {(() => {
-                    const waNum = siteContent?.customerSupport?.whatsappNumber || '+91 70163 47945';
-                    const cleanWa = (waNum || '917016347945').replace(/\D/g, '');
+                    const waNum = siteContent?.customerSupport?.whatsappNumber || '+91 90234 22392';
+                    const cleanWa = (waNum || '919023422392').replace(/\D/g, '');
                     const inquiryMsg = encodeURIComponent(`Hello Valerie Jewels, I need sizing/styling advice regarding ${product?.title || 'your jewelry'}.`);
                     return (
                       <a

@@ -12,7 +12,7 @@ export const DEFAULT_POLICIES = {
     websiteUrl: 'https://valeriejewels.in',
     supportEmail: 'orders@valeriejewels.in',
     supportPhone: '+91 90234 22392',
-    whatsappNumber: '+91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
     registeredAddress: 'Patel Chowk, Rajkot, Gujarat — 360001, India',
     grievanceOfficer: {
       name: 'Nodal Compliance & Grievance Officer',
@@ -68,7 +68,7 @@ export const DEFAULT_POLICIES = {
         id: 'tamper-proof',
         heading: '6. Tamper-Evident Packaging & Delivery Acceptance',
         content:
-          'Every piece of Valerie jewelry is sealed inside branded, tamper-evident outer envelopes with proprietary security seals. If you notice that the outer courier bag is visibly torn, tampered with, or the security seal is broken, please DO NOT accept the parcel and immediately refuse delivery. Take photographs and notify us within 24 hours at orders@valeriejewels.in or via WhatsApp (+91 70163 47945).',
+          'Every piece of Valerie jewelry is sealed inside branded, tamper-evident outer envelopes with proprietary security seals. If you notice that the outer courier bag is visibly torn, tampered with, or the security seal is broken, please DO NOT accept the parcel and immediately refuse delivery. Take photographs and notify us within 24 hours at orders@valeriejewels.in or via WhatsApp (+91 90234 22392).',
       },
     ],
   },
@@ -100,7 +100,7 @@ export const DEFAULT_POLICIES = {
         id: 'return-process',
         heading: '4. Return Pickup & Logistics',
         content:
-          'Once your return request is approved by our team via WhatsApp (+91 70163 47945) or email (orders@valeriejewels.in), we will schedule a reverse pickup through our courier partners. In rare pincodes where reverse courier pickup is unserviceable, our support team will guide you through self-shipment with freight reimbursement.',
+          'Once your return request is approved by our team via WhatsApp (+91 90234 22392) or email (orders@valeriejewels.in), we will schedule a reverse pickup through our courier partners. In rare pincodes where reverse courier pickup is unserviceable, our support team will guide you through self-shipment with freight reimbursement.',
       },
       {
         id: 'refund-timeline',

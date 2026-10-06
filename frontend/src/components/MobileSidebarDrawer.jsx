@@ -363,8 +363,8 @@ export default function MobileSidebarDrawer({
             {/* WhatsApp Quick Assistance */}
             {(() => {
               const support = content?.customerSupport || {};
-              const waNum = support.whatsappNumber || '+91 70163 47945';
-              const cleanDigits = (waNum || '917016347945').replace(/\D/g, '');
+              const waNum = support.whatsappNumber || '+91 90234 22392';
+              const cleanDigits = (waNum || '919023422392').replace(/\D/g, '');
               const btnLabel = support.drawerButtonText || `Customer Care: ${waNum}`;
               const defaultMsg = support.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.';
               const waHref = `https://wa.me/${cleanDigits}?text=${encodeURIComponent(defaultMsg)}`;

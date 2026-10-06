@@ -38,7 +38,7 @@ export default function NotFoundPage({ onNavigateHome, onSelectCategory, onSearc
       {/* Top Editorial Luxury Ribbon */}
       <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[11px] font-medium py-2 px-4 text-center tracking-widest uppercase flex items-center justify-center space-x-2">
         <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-        <span>Valerie Jewels Concierge • Need Assistance? WhatsApp +91 70163 47945</span>
+        <span>Valerie Jewels Concierge • Need Assistance? WhatsApp +91 90234 22392</span>
       </div>
 
       {/* Brand Header */}
@@ -198,7 +198,7 @@ export default function NotFoundPage({ onNavigateHome, onSelectCategory, onSearc
 
           <div className="flex items-center space-x-2">
             <a
-              href="https://wa.me/917016347945"
+              href="https://wa.me/919023422392"
               target="_blank"
               rel="noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-caps tracking-wider uppercase font-semibold flex items-center space-x-1.5 shadow-xs transition-colors"

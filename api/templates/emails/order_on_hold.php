@@ -139,7 +139,7 @@ $total = number_format((float)($order['total_amount'] ?? 0), 2);
                     <table border="0" cellspacing="0" cellpadding="0" align="center">
                       <tr>
                         <td style="padding: 0 6px;">
-                          <a href="https://wa.me/917016347945?text=<?= urlencode("Hello Valerie Jewels, I would like to verify my order " . $orderNumber . " which is on hold.") ?>" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: #FFFFFF; text-decoration: none; font-size: 11.5px; font-weight: 700; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <a href="https://wa.me/919023422392?text=<?= urlencode("Hello Valerie Jewels, I would like to verify my order " . $orderNumber . " which is on hold.") ?>" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: #FFFFFF; text-decoration: none; font-size: 11.5px; font-weight: 700; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                             Verify on WhatsApp &rarr;
                           </a>
                         </td>
@@ -163,7 +163,7 @@ $total = number_format((float)($order['total_amount'] ?? 0), 2);
                 Anti-Tarnish Polish • 100% Waterproof &amp; Shower-Safe • Complimentary Express Shipping Across India
               </p>
               <p style="margin: 0; font-size: 10px; color: #B3A8C2;">
-                &copy; <?= date('Y') ?> Valerie Jewels. Concierge: +91 70163 47945 • orders@valeriejewels.in
+                &copy; <?= date('Y') ?> Valerie Jewels. Concierge: +91 90234 22392 • orders@valeriejewels.in
               </p>
             </td>
           </tr>

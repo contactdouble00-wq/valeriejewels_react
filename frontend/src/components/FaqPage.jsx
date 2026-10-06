@@ -153,7 +153,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
         {/* Quick WhatsApp Support Link */}
         <div className="flex items-center space-x-3">
           <a
-            href="https://wa.me/917016347945"
+            href="https://wa.me/919023422392"
             target="_blank"
             rel="noreferrer"
             className="hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors"
@@ -352,7 +352,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
             eyebrow: 'Still Have Questions?',
             title: 'Speak with a Valerie Concierge',
             description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
-            whatsappNumber: faqsData.meta?.whatsappNumber || '+91 70163 47945',
+            whatsappNumber: faqsData.meta?.whatsappNumber || '+91 90234 22392',
             whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
             phone: faqsData.meta?.supportPhone || '+91 90234 22392',
             hours: faqsData.meta?.workingHours || '7 days a week from 8:00 AM to 4:00 PM IST',
@@ -360,7 +360,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
 
           if (concierge.enabled === false) return null;
 
-          const cleanWa = (concierge.whatsappNumber || '917016347945').replace(/\D/g, '');
+          const cleanWa = (concierge.whatsappNumber || '919023422392').replace(/\D/g, '');
           const waMsg = encodeURIComponent(concierge.whatsappMessage || 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.');
           const cleanPhone = (concierge.phone || '+919023422392').replace(/\s+/g, '');
 

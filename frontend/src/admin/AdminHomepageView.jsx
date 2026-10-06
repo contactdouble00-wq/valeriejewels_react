@@ -43,8 +43,8 @@ import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
 const FACTORY_DEFAULTS = {
   customerSupport: {
-    whatsappNumber: '+91 70163 47945',
-    drawerButtonText: 'Customer Care: +91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
+    drawerButtonText: 'Customer Care: +91 90234 22392',
     phone: '+91 90234 22392',
     email: 'orders@valeriejewels.in',
     address: 'Patel Chowk, Rajkot, Gujarat',
@@ -1368,7 +1368,7 @@ export default function AdminHomepageView() {
 
               <div className="flex items-center gap-2">
                 <a
-                  href={`https://wa.me/${(formData.customerSupport?.whatsappNumber || '917016347945').replace(/\D/g, '')}?text=${encodeURIComponent(formData.customerSupport?.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry.')}`}
+                  href={`https://wa.me/${(formData.customerSupport?.whatsappNumber || '919023422392').replace(/\D/g, '')}?text=${encodeURIComponent(formData.customerSupport?.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry.')}`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
@@ -1397,10 +1397,10 @@ export default function AdminHomepageView() {
                 </div>
                 <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-semibold flex items-center justify-center space-x-2 shadow-2xs">
                   <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
-                  <span>{formData.customerSupport?.drawerButtonText || 'Customer Care: +91 70163 47945'}</span>
+                  <span>{formData.customerSupport?.drawerButtonText || 'Customer Care: +91 90234 22392'}</span>
                 </div>
                 <div className="text-center text-[10px] text-brand-muted font-light">
-                  Target Link: <span className="font-mono text-emerald-700 font-semibold">https://wa.me/{(formData.customerSupport?.whatsappNumber || '917016347945').replace(/\D/g, '')}</span>
+                  Target Link: <span className="font-mono text-emerald-700 font-semibold">https://wa.me/{(formData.customerSupport?.whatsappNumber || '919023422392').replace(/\D/g, '')}</span>
                 </div>
               </div>
 
@@ -1412,7 +1412,7 @@ export default function AdminHomepageView() {
                 <div className="flex flex-wrap items-center gap-4 text-[11px]">
                   <span>📍 {formData.customerSupport?.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
                   <span>📞 {formData.customerSupport?.phone || '+91 90234 22392'}</span>
-                  <span className="text-emerald-700 font-semibold">💬 WA: {formData.customerSupport?.whatsappNumber || '+91 70163 47945'}</span>
+                  <span className="text-emerald-700 font-semibold">💬 WA: {formData.customerSupport?.whatsappNumber || '+91 90234 22392'}</span>
                   <span>✉️ {formData.customerSupport?.email || 'orders@valeriejewels.in'}</span>
                 </div>
               </div>
@@ -1430,7 +1430,7 @@ export default function AdminHomepageView() {
                   type="text"
                   value={formData.customerSupport?.drawerButtonText || ''}
                   onChange={(e) => updateNested('customerSupport', 'drawerButtonText', e.target.value)}
-                  placeholder="Customer Care: +91 70163 47945"
+                  placeholder="Customer Care: +91 90234 22392"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
                 />
                 <p className="text-[11px] text-brand-muted font-light">
@@ -1448,11 +1448,11 @@ export default function AdminHomepageView() {
                   type="text"
                   value={formData.customerSupport?.whatsappNumber || ''}
                   onChange={(e) => updateNested('customerSupport', 'whatsappNumber', e.target.value)}
-                  placeholder="+91 70163 47945"
+                  placeholder="+91 90234 22392"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
                 />
                 <p className="text-[11px] text-brand-muted font-light">
-                  Include country code (e.g. <span className="font-mono">+91 70163 47945</span>). Non-digits are automatically filtered for wa.me links.
+                  Include country code (e.g. <span className="font-mono">+91 90234 22392</span>). Non-digits are automatically filtered for wa.me links.
                 </p>
               </div>
 

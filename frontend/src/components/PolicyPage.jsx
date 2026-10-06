@@ -21,13 +21,136 @@ import {
 import { apiService } from '../services/api';
 import { DEFAULT_POLICIES } from '../data/defaultPolicies';
 
+function renderInlineFormatted(text) {
+  if (!text) return null;
+
+  // 1. Decode HTML entities
+  const decoded = String(text)
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&bull;/g, '•')
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/&nbsp;/g, ' ');
+
+  // 2. Parse bold formatting: <strong>...</strong>, <b>...</b>, or **...**
+  const boldRegex = /(?:<strong>(.*?)<\/strong>|<b>(.*?)<\/b>|\*\*(.*?)\*\*)/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = boldRegex.exec(decoded)) !== null) {
+    if (match.index > lastIndex) {
+      const rawChunk = decoded.substring(lastIndex, match.index).replace(/<[^>]+>/g, '');
+      if (rawChunk) parts.push(rawChunk);
+    }
+    const boldText = (match[1] || match[2] || match[3] || '').replace(/<[^>]+>/g, '');
+    parts.push(
+      <strong key={`b-${match.index}`} className="font-semibold text-brand-tertiary">
+        {boldText}
+      </strong>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < decoded.length) {
+    const trailing = decoded.substring(lastIndex).replace(/<[^>]+>/g, '');
+    if (trailing) parts.push(trailing);
+  }
+
+  return parts.length > 0 ? parts : decoded.replace(/<[^>]+>/g, '');
+}
+
+export function PolicyContentRenderer({ content }) {
+  if (!content) return null;
+
+  // 1. Decode common HTML entities
+  let text = String(content)
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&bull;/g, '•')
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/&nbsp;/g, ' ');
+
+  // 2. Convert HTML break and block container tags into clean newlines and bullets
+  text = text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n• ')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<p[^>]*>/gi, '\n')
+    .replace(/<\/?(?:ul|ol|div|h[1-6])[^>]*>/gi, '\n');
+
+  // 3. Normalize all newlines (including literal escaped `\n` and `\r\n` from JSON/PHP)
+  const normalized = text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+  const lines = normalized.split('\n');
+  const elements = [];
+  let currentBullets = [];
+
+  const flushBullets = (key) => {
+    if (currentBullets.length > 0) {
+      elements.push(
+        <ul key={key} className="space-y-2 my-2.5 pl-1">
+          {currentBullets.map((item, idx) => (
+            <li key={idx} className="flex items-start space-x-2 text-xs sm:text-sm text-brand-muted/90 leading-relaxed">
+              <span className="text-brand-primary font-bold text-sm leading-tight select-none shrink-0">•</span>
+              <span className="flex-1">{renderInlineFormatted(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+      currentBullets = [];
+    }
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushBullets(`bullets-${idx}`);
+      return;
+    }
+
+    const bulletMatch = trimmed.match(/^[•\-\*]\s*(.+)$/);
+    if (bulletMatch) {
+      currentBullets.push(bulletMatch[1]);
+    } else {
+      flushBullets(`bullets-before-${idx}`);
+      elements.push(
+        <p key={`p-${idx}`} className="text-xs sm:text-sm text-brand-muted/90 font-light leading-relaxed mb-2 last:mb-0">
+          {renderInlineFormatted(trimmed)}
+        </p>
+      );
+    }
+  });
+
+  flushBullets('bullets-end');
+
+  return <div className="space-y-1">{elements}</div>;
+}
+
 export default function PolicyPage({
-  initialPolicy = 'shipping',
+  initialPolicy,
+  initialTab = 'shipping',
   onNavigateHome,
+  onReturnToStore,
+  onNavigateTab,
   onOpenPolicy,
   onOpenCart
 }) {
-  const [activeTab, setActiveTab] = useState(initialPolicy || 'shipping');
+  const [activeTab, setActiveTab] = useState(initialPolicy || initialTab || 'shipping');
   const [policies, setPolicies] = useState(() => {
     try {
       const cached = localStorage.getItem('valerie_policies_cache');
@@ -38,10 +161,11 @@ export default function PolicyPage({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (initialPolicy) {
-      setActiveTab(initialPolicy);
+    const tab = initialPolicy || initialTab;
+    if (tab) {
+      setActiveTab(tab);
     }
-  }, [initialPolicy]);
+  }, [initialPolicy, initialTab]);
 
   const fetchPolicies = async () => {
     try {
@@ -73,7 +197,9 @@ export default function PolicyPage({
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    if (onOpenPolicy) {
+    if (onNavigateTab) {
+      onNavigateTab(tab);
+    } else if (onOpenPolicy) {
       onOpenPolicy(tab);
     } else {
       window.location.hash = `#${tab}-policy`;
@@ -91,6 +217,17 @@ export default function PolicyPage({
   const currentPolicy = policies[activeTab] || DEFAULT_POLICIES[activeTab] || DEFAULT_POLICIES.shipping;
   const meta = policies.meta || DEFAULT_POLICIES.meta;
 
+  const handleGoHome = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (onReturnToStore) {
+      onReturnToStore();
+    } else if (onNavigateHome) {
+      onNavigateHome();
+    } else {
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FCFBFE] text-brand-tertiary antialiased flex flex-col">
       {/* 1. Top Global Announcement Ribbon */}
@@ -107,7 +244,7 @@ export default function PolicyPage({
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-brand-border px-4 sm:px-8 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => onNavigateHome ? onNavigateHome() : (window.location.href = '/')}
+            onClick={handleGoHome}
             className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-tertiary hover:text-brand-primary hover:bg-brand-surface transition-all active:scale-95"
           >
             <ArrowLeft className="w-4 h-4 stroke-[2]" />
@@ -116,20 +253,20 @@ export default function PolicyPage({
         </div>
 
         {/* Center Brand Logo */}
-        <a href="/" onClick={(e) => { e.preventDefault(); onNavigateHome ? onNavigateHome() : (window.location.href = '/'); }}>
+        <a href="/" onClick={handleGoHome}>
           <img src="/valerie.png" alt="VALERIÉ" className="h-6 sm:h-7 w-auto object-contain" />
         </a>
 
         {/* Right Action: WhatsApp Concierge Support */}
         <div className="flex items-center space-x-2">
           <a
-            href="https://wa.me/917016347945?text=Hello%20Valerie%20Jewels,%20I%20have%20a%20question%20regarding%20shipping%20and%20policies."
+            href="https://wa.me/919023422392?text=Hello%20Valerie%20Jewels,%20I%20have%20a%20question%20regarding%20shipping%20and%20policies."
             target="_blank"
             rel="noreferrer"
             className="hidden sm:flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors"
           >
             <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Concierge: +91 70163 47945</span>
+            <span>Concierge: +91 90234 22392</span>
           </a>
         </div>
       </header>
@@ -304,8 +441,8 @@ export default function PolicyPage({
                   <h2 className="font-sans text-base sm:text-lg font-bold text-brand-tertiary">
                     {sec.heading}
                   </h2>
-                  <div className="text-xs sm:text-sm text-brand-muted/90 font-light leading-relaxed whitespace-pre-line">
-                    {sec.content}
+                  <div className="text-xs sm:text-sm text-brand-muted/90 font-light leading-relaxed">
+                    <PolicyContentRenderer content={sec.content} />
                   </div>
                 </article>
               ))}
@@ -347,8 +484,8 @@ export default function PolicyPage({
                   <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
                     <span className="text-[10.5px] text-brand-muted block font-semibold uppercase">WhatsApp Concierge</span>
-                    <a href={`https://wa.me/${(meta.whatsappNumber || '917016347945').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="font-medium hover:text-emerald-700 transition-colors">
-                      {meta.whatsappNumber || '+91 70163 47945'}
+                    <a href={`https://wa.me/${(meta.whatsappNumber || '919023422392').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="font-medium hover:text-emerald-700 transition-colors">
+                      {meta.whatsappNumber || '+91 90234 22392'}
                     </a>
                   </div>
                 </div>
@@ -376,7 +513,7 @@ export default function PolicyPage({
             © {new Date().getFullYear()} {meta.brandName || 'VALERIÉ'}. Registered in India under Valerie Jewels Atelier Private Limited.
           </div>
           <button
-            onClick={() => onNavigateHome ? onNavigateHome() : (window.location.href = '/')}
+            onClick={handleGoHome}
             className="px-5 py-2 rounded-xl bg-brand-primary text-white font-semibold hover:bg-brand-primary-hover transition-colors shadow-xs active:scale-95"
           >
             Continue Exploring Jewelry

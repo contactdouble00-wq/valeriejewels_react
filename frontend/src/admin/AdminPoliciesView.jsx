@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import { DEFAULT_POLICIES } from '../data/defaultPolicies';
+import { PolicyContentRenderer } from '../components/PolicyPage';
 
 export default function AdminPoliciesView() {
   const [policies, setPolicies] = useState(DEFAULT_POLICIES);
@@ -323,7 +324,7 @@ export default function AdminPoliciesView() {
             <label className="text-[10px] font-caps uppercase text-brand-muted font-bold block mb-1">WhatsApp Concierge</label>
             <input
               type="text"
-              value={policies.meta?.whatsappNumber || '+91 70163 47945'}
+              value={policies.meta?.whatsappNumber || '+91 90234 22392'}
               onChange={(e) => handleMetaChange('whatsappNumber', e.target.value)}
               className="w-full px-3 py-1.5 rounded-xl border border-brand-border text-xs"
             />
@@ -488,7 +489,9 @@ export default function AdminPoliciesView() {
                 {(currentPolicy.sections || []).map((sec, i) => (
                   <div key={i} className="p-4 rounded-xl bg-brand-surface/50 border border-brand-border/60 space-y-2">
                     <h4 className="text-xs font-bold text-brand-tertiary">{sec.heading}</h4>
-                    <p className="text-xs text-brand-muted font-light leading-relaxed whitespace-pre-line">{sec.content}</p>
+                    <div className="text-xs text-brand-muted font-light leading-relaxed">
+                      <PolicyContentRenderer content={sec.content} />
+                    </div>
                   </div>
                 ))}
               </div>

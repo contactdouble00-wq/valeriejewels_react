@@ -56,7 +56,7 @@ try {
             'websiteUrl' => 'https://valeriejewels.in',
             'supportEmail' => 'orders@valeriejewels.in',
             'supportPhone' => '+91 90234 22392',
-            'whatsappNumber' => '+91 70163 47945',
+            'whatsappNumber' => '+91 90234 22392',
             'registeredAddress' => 'Patel Chowk, Rajkot, Gujarat — 360001, India',
             'quickHighlights' => [
                 'deliveryTimeline' => '5–7 working days',
@@ -89,7 +89,7 @@ try {
                 [
                     'id' => 'prepaid-perks',
                     'heading' => '4. Exclusive Prepaid Order Perks (Free Zircon Necklace + ₹50 OFF)',
-                    'content' => 'To encourage seamless digital transactions and avoid COD handling friction, all prepaid orders (UPI, Google Pay, PhonePe, Paytm, Credit/Debit Cards, NetBanking) automatically qualify for:\n• Extra ₹50 Instant Flat Discount applied automatically during checkout.\n• Complimentary Luxury Zircon Solitaire Necklace packed inside your parcel as an atelier token.\n• Priority express dispatch handling.'
+                    'content' => "To encourage seamless digital transactions and avoid COD handling friction, all prepaid orders (UPI, Google Pay, PhonePe, Paytm, Credit/Debit Cards, NetBanking) automatically qualify for:\n• Extra ₹50 Instant Flat Discount applied automatically during checkout.\n• Complimentary Luxury Zircon Solitaire Necklace packed inside your parcel as an atelier token.\n• Priority express dispatch handling."
                 ],
                 [
                     'id' => 'courier-tracking',
@@ -99,7 +99,7 @@ try {
                 [
                     'id' => 'tamper-proof',
                     'heading' => '6. Tamper-Evident Packaging & Delivery Acceptance',
-                    'content' => 'Every piece of Valerie jewelry is sealed inside branded, tamper-evident outer envelopes with proprietary security seals. If you notice that the outer courier bag is visibly torn, tampered with, or the security seal is broken, please DO NOT accept the parcel and immediately refuse delivery. Take photographs and notify us within 24 hours at orders@valeriejewels.in or via WhatsApp (+91 70163 47945).'
+                    'content' => 'Every piece of Valerie jewelry is sealed inside branded, tamper-evident outer envelopes with proprietary security seals. If you notice that the outer courier bag is visibly torn, tampered with, or the security seal is broken, please DO NOT accept the parcel and immediately refuse delivery. Take photographs and notify us within 24 hours at orders@valeriejewels.in or via WhatsApp (+91 90234 22392).'
                 ]
             ]
         ],
@@ -116,22 +116,22 @@ try {
                 [
                     'id' => 'unboxing-video-mandatory',
                     'heading' => '2. Mandatory Uncut 360° Unboxing Video Requirement',
-                    'content' => 'Because fine jewelry consists of delicate, high-value artisanal items, an uncut, continuous 360° unboxing video recorded right from opening the outer courier bag is MANDATORY for all transit damage, defective piece, or missing item claims.\n• The video must clearly capture the intact outer courier label with AWB number.\n• The video must show the unsealing and opening process without pauses or video cuts.\n• Claims submitted without an unboxing video cannot be approved by our logistics and insurance audit partners.'
+                    'content' => "Because fine jewelry consists of delicate, high-value artisanal items, an uncut, continuous 360° unboxing video recorded right from opening the outer courier bag is MANDATORY for all transit damage, defective piece, or missing item claims.\n• The video must clearly capture the intact outer courier label with AWB number.\n• The video must show the unsealing and opening process without pauses or video cuts.\n• Claims submitted without an unboxing video cannot be approved by our logistics and insurance audit partners."
                 ],
                 [
                     'id' => 'eligibility',
                     'heading' => '3. Return Eligibility Criteria',
-                    'content' => 'To be eligible for a return or replacement:\n• The jewelry piece must be in its original, unworn, and unblemished condition.\n• Must include all original brand packaging, velvet gift boxes, authenticity guarantee cards, and tags.\n• Free promotional gifts (such as the complimentary Zircon Necklace) must be returned if the entire order is being refunded.\n• Personalized or custom-engraved pieces are non-returnable unless defective on arrival.'
+                    'content' => "To be eligible for a return or replacement:\n• The jewelry piece must be in its original, unworn, and unblemished condition.\n• Must include all original brand packaging, velvet gift boxes, authenticity guarantee cards, and tags.\n• Free promotional gifts (such as the complimentary Zircon Necklace) must be returned if the entire order is being refunded.\n• Personalized or custom-engraved pieces are non-returnable unless defective on arrival."
                 ],
                 [
                     'id' => 'return-process',
                     'heading' => '4. Return Pickup & Logistics',
-                    'content' => 'Once your return request is approved by our team via WhatsApp (+91 70163 47945) or email (orders@valeriejewels.in), we will schedule a reverse pickup through our courier partners. In rare pincodes where reverse courier pickup is unserviceable, our support team will guide you through self-shipment with freight reimbursement.'
+                    'content' => 'Once your return request is approved by our team via WhatsApp (+91 90234 22392) or email (orders@valeriejewels.in), we will schedule a reverse pickup through our courier partners. In rare pincodes where reverse courier pickup is unserviceable, our support team will guide you through self-shipment with freight reimbursement.'
                 ],
                 [
                     'id' => 'refund-timeline',
                     'heading' => '5. Refund Timelines & Payment Mode',
-                    'content' => 'Upon arrival at our Rajkot fulfillment atelier, our inspection team verifies the returned piece within 24–48 hours:\n• Prepaid Orders: The refund is initiated directly back to your original payment method (Bank Account / UPI / Card) within 5 to 7 business days.\n• Cash on Delivery (COD) / Partial COD Orders: Refunds are credited via secure direct UPI or NEFT bank transfer upon receiving your verified bank details.'
+                    'content' => "Upon arrival at our Rajkot fulfillment atelier, our inspection team verifies the returned piece within 24–48 hours:\n• Prepaid Orders: The refund is initiated directly back to your original payment method (Bank Account / UPI / Card) within 5 to 7 business days.\n• Cash on Delivery (COD) / Partial COD Orders: Refunds are credited via secure direct UPI or NEFT bank transfer upon receiving your verified bank details."
                 ],
                 [
                     'id' => 'color-guarantee',
@@ -153,17 +153,17 @@ try {
                 [
                     'id' => 'information-collected',
                     'heading' => '2. Information We Collect',
-                    'content' => 'We collect only the essential personal data required to process and fulfill your jewelry orders:\n• Contact & Identity Information: Full name, mobile phone number, email address.\n• Delivery Details: Shipping address, billing address, postal pin code, and landmark.\n• Transaction & Order History: Items purchased, coupon codes applied, payment status, and order tracking numbers.\n• Device & Browser Telemetry: IP address, device type, operating system, and anonymous analytics via cookies to optimize website loading speeds.\n• Sensitive Financial Information: We DO NOT store your credit card numbers, debit card PINs, CVVs, or UPI credentials. All payments are securely processed through RBI-authorized payment gateways (Razorpay / Fastrr).'
+                    'content' => "We collect only the essential personal data required to process and fulfill your jewelry orders:\n• Contact & Identity Information: Full name, mobile phone number, email address.\n• Delivery Details: Shipping address, billing address, postal pin code, and landmark.\n• Transaction & Order History: Items purchased, coupon codes applied, payment status, and order tracking numbers.\n• Device & Browser Telemetry: IP address, device type, operating system, and anonymous analytics via cookies to optimize website loading speeds.\n• Sensitive Financial Information: We DO NOT store your credit card numbers, debit card PINs, CVVs, or UPI credentials. All payments are securely processed through RBI-authorized payment gateways (Razorpay / Fastrr)."
                 ],
                 [
                     'id' => 'purpose-of-processing',
                     'heading' => '3. Purpose of Processing Your Data',
-                    'content' => 'Your personal data is processed strictly on the basis of your explicit consent and contractual necessity:\n• To fulfill, dispatch, and track your jewelry purchases across India.\n• To send transactional SMS, Email, and WhatsApp notifications regarding dispatch status and tracking links.\n• To process returns, replacements, and warranty claims.\n• To prevent fraudulent transactions, fake COD orders, and cyber threats.\n• To provide prompt customer support through our dedicated WhatsApp concierge.'
+                    'content' => "Your personal data is processed strictly on the basis of your explicit consent and contractual necessity:\n• To fulfill, dispatch, and track your jewelry purchases across India.\n• To send transactional SMS, Email, and WhatsApp notifications regarding dispatch status and tracking links.\n• To process returns, replacements, and warranty claims.\n• To prevent fraudulent transactions, fake COD orders, and cyber threats.\n• To provide prompt customer support through our dedicated WhatsApp concierge."
                 ],
                 [
                     'id' => 'data-sharing-third-parties',
                     'heading' => '4. Third-Party Sharing & Safeguards',
-                    'content' => 'We NEVER sell, trade, or rent your personal data to any external advertising agencies or brokers. Data is shared solely with vetted third-party service providers bound by strict confidentiality and data protection agreements:\n• Logistics Providers: Shiprocket, Blue Dart, Delhivery, ExpressBees, DTDC (for delivering your package).\n• Payment Gateways: RBI-compliant payment aggregators (Fastrr / Razorpay) for secure payment tokenization.\n• Cloud & IT Hosting: Encrypted server infrastructure compliant with ISO 27001 standards.\n• Legal Compliance: In response to lawful court orders, law enforcement requests, or regulatory mandates under Indian law.'
+                    'content' => "We NEVER sell, trade, or rent your personal data to any external advertising agencies or brokers. Data is shared solely with vetted third-party service providers bound by strict confidentiality and data protection agreements:\n• Logistics Providers: Shiprocket, Blue Dart, Delhivery, ExpressBees, DTDC (for delivering your package).\n• Payment Gateways: RBI-compliant payment aggregators (Fastrr / Razorpay) for secure payment tokenization.\n• Cloud & IT Hosting: Encrypted server infrastructure compliant with ISO 27001 standards.\n• Legal Compliance: In response to lawful court orders, law enforcement requests, or regulatory mandates under Indian law."
                 ],
                 [
                     'id' => 'data-retention-security',
@@ -173,7 +173,7 @@ try {
                 [
                     'id' => 'user-rights-dpdp',
                     'heading' => '6. Your Rights Under DPDP Act 2023',
-                    'content' => 'As a data principal, you hold the following rights under Indian law:\n• Right to Access: You may request a summary of the personal data we hold about you.\n• Right to Correction & Erasure: You may request the correction of inaccurate data or deletion of your account and personal details.\n• Right to Withdraw Consent: You can opt out of non-essential promotional SMS/WhatsApp updates at any time.\n• Right of Grievance Redressal: You can report any data privacy concern directly to our designated Grievance Officer.'
+                    'content' => "As a data principal, you hold the following rights under Indian law:\n• Right to Access: You may request a summary of the personal data we hold about you.\n• Right to Correction & Erasure: You may request the correction of inaccurate data or deletion of your account and personal details.\n• Right to Withdraw Consent: You can opt out of non-essential promotional SMS/WhatsApp updates at any time.\n• Right of Grievance Redressal: You can report any data privacy concern directly to our designated Grievance Officer."
                 ],
                 [
                     'id' => 'grievance-officer',

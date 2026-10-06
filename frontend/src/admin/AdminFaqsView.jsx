@@ -43,7 +43,7 @@ export default function AdminFaqsView({ currentUser }) {
     eyebrow: 'Still Have Questions?',
     title: 'Speak with a Valerie Concierge',
     description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
-    whatsappNumber: '+91 70163 47945',
+    whatsappNumber: '+91 90234 22392',
     whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
     phone: '+91 90234 22392',
     hours: '7 days a week from 8:00 AM to 4:00 PM IST',
@@ -58,7 +58,7 @@ export default function AdminFaqsView({ currentUser }) {
           eyebrow: 'Still Have Questions?',
           title: 'Speak with a Valerie Concierge',
           description: 'Our dedicated jewelry concierge team is available 7 days a week from 8:00 AM to 4:00 PM IST to assist you with styling advice, orders, or tracking.',
-          whatsappNumber: '+91 70163 47945',
+          whatsappNumber: '+91 90234 22392',
           whatsappMessage: 'Hello Valerie Jewels Concierge, I have an inquiry about my order / jewelry.',
           phone: '+91 90234 22392',
           hours: '7 days a week from 8:00 AM to 4:00 PM IST',
@@ -478,7 +478,7 @@ export default function AdminFaqsView({ currentUser }) {
                       type="text"
                       value={concierge.whatsappNumber || ''}
                       onChange={(e) => updateConcierge('whatsappNumber', e.target.value)}
-                      placeholder="e.g. +91 70163 47945"
+                      placeholder="e.g. +91 90234 22392"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border bg-brand-surface/30 focus:bg-white text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary font-mono font-medium"
                     />
                     <span className="text-[10px] text-brand-muted mt-0.5 block">Used for the green 1-click WhatsApp button</span>

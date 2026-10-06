@@ -56,7 +56,7 @@ export const VALERIE_FAQS = [
     category: 'Contact',
     icon: Phone,
     q: 'How can I contact Valerié Jewels?',
-    a: 'You can reach us via:\n• WhatsApp: +91 70163 47945\n• Phone: +91 90234 22392\n• Email: orders@valeriejewels.in\n• Address: Patel Chowk, Rajkot, Gujarat\n\nWe\'re available 7 days a week, 8:00 AM – 4:00 PM.',
+    a: 'You can reach us via:\n• WhatsApp: +91 90234 22392\n• Phone: +91 90234 22392\n• Email: orders@valeriejewels.in\n• Address: Patel Chowk, Rajkot, Gujarat\n\nWe\'re available 7 days a week, 8:00 AM – 4:00 PM.',
   },
 ];
 

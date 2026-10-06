@@ -16,8 +16,8 @@ import {
 import { adminApi } from './adminApi';
 
 const DEFAULT_SUPPORT = {
-  drawerButtonText: 'Customer Care: +91 70163 47945',
-  whatsappNumber: '+91 70163 47945',
+  drawerButtonText: 'Customer Care: +91 90234 22392',
+  whatsappNumber: '+91 90234 22392',
   whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
   phone: '+91 90234 22392',
   email: 'orders@valeriejewels.in',
@@ -107,7 +107,7 @@ export default function AdminCustomerCareView() {
     );
   }
 
-  const cleanWaNumber = (supportData.whatsappNumber || '917016347945').replace(/\D/g, '');
+  const cleanWaNumber = (supportData.whatsappNumber || '919023422392').replace(/\D/g, '');
   const testWaUrl = `https://wa.me/${cleanWaNumber}?text=${encodeURIComponent(supportData.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry.')}`;
 
   return (
@@ -194,7 +194,7 @@ export default function AdminCustomerCareView() {
           </div>
           <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-semibold flex items-center justify-center space-x-2 shadow-2xs">
             <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
-            <span>{supportData.drawerButtonText || 'Customer Care: +91 70163 47945'}</span>
+            <span>{supportData.drawerButtonText || 'Customer Care: +91 90234 22392'}</span>
           </div>
           <div className="text-center text-[10px] text-brand-muted font-light">
             WhatsApp Target URL: <span className="font-mono text-emerald-700 font-semibold">https://wa.me/{cleanWaNumber}</span>
@@ -209,7 +209,7 @@ export default function AdminCustomerCareView() {
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
             <span>📍 {supportData.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
             <span>📞 {supportData.phone || '+91 90234 22392'}</span>
-            <span className="text-emerald-700 font-semibold">💬 WA: {supportData.whatsappNumber || '+91 70163 47945'}</span>
+            <span className="text-emerald-700 font-semibold">💬 WA: {supportData.whatsappNumber || '+91 90234 22392'}</span>
             <span>✉️ {supportData.email || 'orders@valeriejewels.in'}</span>
           </div>
         </div>
@@ -233,7 +233,7 @@ export default function AdminCustomerCareView() {
               type="text"
               value={supportData.drawerButtonText || ''}
               onChange={(e) => handleFieldChange('drawerButtonText', e.target.value)}
-              placeholder="Customer Care: +91 70163 47945"
+              placeholder="Customer Care: +91 90234 22392"
               className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
             />
             <p className="text-[11px] text-brand-muted font-light">
@@ -251,11 +251,11 @@ export default function AdminCustomerCareView() {
               type="text"
               value={supportData.whatsappNumber || ''}
               onChange={(e) => handleFieldChange('whatsappNumber', e.target.value)}
-              placeholder="+91 70163 47945"
+              placeholder="+91 90234 22392"
               className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
             />
             <p className="text-[11px] text-brand-muted font-light">
-              Include country code (e.g. <span className="font-mono">+91 70163 47945</span>).
+              Include country code (e.g. <span className="font-mono">+91 90234 22392</span>).
             </p>
           </div>
 
