@@ -697,6 +697,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const handleSendCustomEmail = async (e) => {
     e.preventDefault();
     if (!targetEmailOrder) return;
+    const recipient = (recipientEmailInput || '').trim();
+    if (!recipient) {
+      showToast('Please enter a recipient email address');
+      return;
+    }
     setSendingEmail(true);
     try {
       await adminApi.sendCustomerEmail(
@@ -705,9 +710,9 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         emailCustomMessage,
         emailReason,
         emailTargetStatus,
-        recipientEmailInput.trim()
+        recipient
       );
-      showToast(`Email dispatched to ${recipientEmailInput.trim() || targetEmailOrder.customer_email}`);
+      showToast(`Email dispatched to ${recipient}`);
       setEmailModalOpen(false);
       setEmailCustomMessage('');
       setEmailReason('');
@@ -3002,7 +3007,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       {/* SEND CUSTOM LUXURY EMAIL MODAL */}
       {/* ========================================================================= */}
       {emailModalOpen && targetEmailOrder && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             {/* Modal Header with Branding */}
             <div className="flex items-center justify-between pb-3 border-b border-brand-border">
