@@ -87,6 +87,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [targetEmailOrder, setTargetEmailOrder] = useState(null);
   const [selectedEmailType, setSelectedEmailType] = useState('order_status_update');
+  const [emailTargetStatus, setEmailTargetStatus] = useState('confirmed');
   const [emailCustomMessage, setEmailCustomMessage] = useState('');
   const [emailReason, setEmailReason] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -682,6 +683,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   };
 
   const openEmailModal = (order) => {
+    if (!order) return;
     setTargetEmailOrder(order);
     const isUnpaid = (order.payment_status === 'pending' || order.payment_status === 'failed' || order.payment_status === 'unpaid');
     setSelectedEmailType(isUnpaid ? 'order_failed' : 'order_status_update');
@@ -1532,6 +1534,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => openEmailModal(ord)}
                           title="Send Branded Customer Email"
                           className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer"
