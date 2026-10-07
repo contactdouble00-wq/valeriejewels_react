@@ -234,10 +234,25 @@ class ShiprocketService
             return self::createSandboxShipment($order);
         }
 
-        // Fetch order items
-        $itemStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        // Fetch order items with catalog metadata for accurate packaging & dimensions
+        $itemStmt = $pdo->prepare("
+            SELECT oi.*, 
+                   p.sku AS product_sku, 
+                   p.pairs_count AS product_pairs_count, 
+                   p.slug AS product_slug,
+                   c.slug AS category_slug,
+                   c.name AS category_name
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE oi.order_id = ?
+        ");
         $itemStmt->execute([$orderId]);
         $orderItems = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $has16PairJhumkaBox = false;
+        $hasJhumkaBox       = false;
+        $jhumkaBoxCount     = 0;
 
         $formattedItems = [];
         $itemsSubtotal = 0.0;
@@ -245,9 +260,58 @@ class ShiprocketService
             $qty = max(1, (int)($it['quantity'] ?? 1));
             $unitPrice = round((float)($it['unit_price'] ?? 0), 2);
             $itemsSubtotal += ($qty * $unitPrice);
+
+            // Comprehensive detection for 16-pair jhumkha boxes & curated jhumka boxes
+            $prodName   = (string)($it['product_name'] ?? '');
+            $varTitle   = (string)($it['variant_title'] ?? '');
+            $prodSku    = (string)($it['product_sku'] ?? '');
+            $catSlug    = (string)($it['category_slug'] ?? '');
+            $catName    = (string)($it['category_name'] ?? '');
+            $prodSlug   = (string)($it['product_slug'] ?? '');
+            $pairsCount = (int)($it['product_pairs_count'] ?? 0);
+
+            $haystack = strtolower("{$prodName} {$varTitle} {$prodSku} {$catSlug} {$catName} {$prodSlug}");
+
+            // Match 16-pair jhumkha boxes
+            $is16Pair = (
+                $pairsCount === 16 ||
+                stripos($haystack, '16 pair') !== false ||
+                stripos($haystack, '16-pair') !== false ||
+                stripos($haystack, '16 pairs') !== false ||
+                stripos($haystack, '16-pairs') !== false ||
+                stripos($prodSku, 'oxd-016') !== false ||
+                stripos($prodSku, 'nav_16') !== false ||
+                (stripos($haystack, '16') !== false && (stripos($haystack, 'jhumka') !== false || stripos($haystack, 'jhumkha') !== false || stripos($haystack, 'earring') !== false))
+            );
+
+            // Match any jhumka / jhumkha box
+            $isJhumka = (
+                $is16Pair ||
+                stripos($haystack, 'jhumka') !== false ||
+                stripos($haystack, 'jhumkha') !== false ||
+                stripos($catSlug, 'jhumka') !== false ||
+                stripos($catSlug, 'jhumkha') !== false ||
+                stripos($catName, 'jhumka') !== false ||
+                stripos($catName, 'jhumkha') !== false ||
+                stripos($prodSku, 'vj-jhm') !== false ||
+                stripos($prodSku, 'vj-bx-') !== false
+            );
+
+            if ($is16Pair) {
+                $has16PairJhumkaBox = true;
+                $jhumkaBoxCount += $qty;
+            } elseif ($isJhumka) {
+                $hasJhumkaBox = true;
+                $jhumkaBoxCount += $qty;
+            }
+
+            $sku = !empty($it['product_sku'])
+                ? $it['product_sku']
+                : ('VJ-P' . ($it['product_id'] ?? 1) . (!empty($it['variant_id']) ? ('-V' . $it['variant_id']) : ''));
+
             $formattedItems[] = [
-                'name'          => trim($it['product_name'] ?? '') ?: 'Valerie Fine Jewelry',
-                'sku'           => 'VJ-P' . ($it['product_id'] ?? 1) . (!empty($it['variant_id']) ? ('-V' . $it['variant_id']) : ''),
+                'name'          => trim($prodName) ?: 'Valerie Fine Jewelry',
+                'sku'           => $sku,
                 'units'         => $qty,
                 'selling_price' => $unitPrice,
                 'discount'      => 0,
@@ -268,6 +332,22 @@ class ShiprocketService
                 'tax'           => 0,
                 'hsn'           => 7117,
             ];
+        }
+
+        // Package Dimensions Configuration:
+        // For all 16 pair jhumkha boxes (and curated jhumka boxes): Length = 15 cm, Breadth = 13 cm, Height = 9 cm
+        // For standard individual jewelry (pendants, single rings, necklaces): Length = 10 cm, Breadth = 8 cm, Height = 5 cm
+        if ($has16PairJhumkaBox || $hasJhumkaBox) {
+            $packageLength  = 15;
+            $packageBreadth = 13;
+            $packageHeight  = 9;
+            $packageWeight  = max(0.35, round(0.35 * min(4, $jhumkaBoxCount), 2));
+            error_log("[Shiprocket] Order #{$order['order_number']}: 16-pair jhumkha box / jhumka box detected (16-pair: " . ($has16PairJhumkaBox ? 'yes' : 'no') . ", qty: {$jhumkaBoxCount}). Applying dimensions L: {$packageLength}cm, B: {$packageBreadth}cm, H: {$packageHeight}cm, W: {$packageWeight}kg");
+        } else {
+            $packageLength  = 10;
+            $packageBreadth = 8;
+            $packageHeight  = 5;
+            $packageWeight  = 0.15;
         }
 
         // Split customer name into first & last name
@@ -356,10 +436,10 @@ class ShiprocketService
             'transaction_charges'   => 0,
             'total_discount'        => $totalDiscount,
             'sub_total'             => $subTotal,
-            'length'                => 10,
-            'breadth'               => 8,
-            'height'                => 5,
-            'weight'                => 0.15,
+            'length'                => $packageLength,
+            'breadth'               => $packageBreadth,
+            'height'                => $packageHeight,
+            'weight'                => $packageWeight,
         ];
 
         if ($channelId) {
@@ -465,6 +545,14 @@ class ShiprocketService
                 'awb_code'               => $srAwb,
                 'courier_name'           => $courierName,
                 'tracking_url'           => $trackingUrl,
+                'dimensions'             => [
+                    'length'  => $packageLength,
+                    'breadth' => $packageBreadth,
+                    'height'  => $packageHeight,
+                    'weight'  => $packageWeight,
+                ],
+                'is_16_pair_jhumka'      => $has16PairJhumkaBox,
+                'is_jhumka_box'          => ($has16PairJhumkaBox || $hasJhumkaBox),
                 'live'                   => true,
             ];
         }
