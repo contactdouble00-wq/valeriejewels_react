@@ -874,15 +874,22 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '—';
     try {
-      const safe = String(dateStr).replace(' ', 'T');
+      let safe = String(dateStr).trim();
+      // If timestamp is "YYYY-MM-DD HH:MM:SS" without explicit timezone offset,
+      // it is stored in server UTC time — append 'Z' so it correctly renders in IST (Asia/Kolkata)
+      if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(safe)) {
+        safe = safe.replace(' ', 'T') + 'Z';
+      }
       const d = new Date(safe);
       if (isNaN(d.getTime())) return String(dateStr);
       return d.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: true,
       });
     } catch {
       return String(dateStr);
@@ -1365,12 +1372,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             </div>
                           )}
                           <div className="text-[10px] text-brand-muted">
-                            {new Date(ord.created_at).toLocaleDateString('en-IN', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatDateTime(ord.created_at)}
                             {Number(ord.items_count) > 1 && (
                               <span className="ml-1.5 px-1.5 py-0.2 bg-gray-100 text-gray-700 rounded font-semibold text-[9px]">
                                 +{Number(ord.items_count) - 1} more
@@ -1835,12 +1837,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                 </div>
                               )}
                               <div className="text-[10px] text-brand-muted">
-                                {new Date(ord.created_at).toLocaleDateString('en-IN', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                {formatDateTime(ord.created_at)}
                                 {Number(ord.items_count) > 1 && (
                                   <span className="ml-1.5 px-1.5 py-0.2 bg-gray-100 text-gray-700 rounded font-semibold text-[9px]">
                                     +{Number(ord.items_count) - 1} more
@@ -2930,13 +2927,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           {log.email_type === 'order_failed' ? 'Payment Incomplete Recovery' : log.email_type.replace(/_/g, ' ')}
                         </span>
                         <span className="text-[10px] text-brand-muted">
-                          {new Date(log.sent_at).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatDateTime(log.sent_at)}
                         </span>
                       </div>
                       <div className="font-medium text-brand-tertiary truncate" title={log.subject}>

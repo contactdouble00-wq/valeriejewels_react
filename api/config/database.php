@@ -68,6 +68,9 @@ class Database {
                 try {
                     self::$instance = new PDO($dsn, $db['username'] ?? 'root', $db['password'] ?? '', $options);
                     self::$driver = 'mysql';
+                    try {
+                        self::$instance->exec("SET time_zone = '+05:30'");
+                    } catch (Throwable $tzErr) {}
                     if ($isLocalDev) {
                         @file_put_contents($cacheFile, '1');
                     }

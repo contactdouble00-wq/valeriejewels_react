@@ -192,4 +192,7 @@ if (empty($config['smtp']['from_name'])) {
     $config['smtp']['from_name'] = 'Valerie Jewels';
 }
 
+// 6. Set global PHP timezone to Indian Standard Time (Asia/Kolkata)
+date_default_timezone_set($config['app']['timezone'] ?? 'Asia/Kolkata');
+
 return $config;
