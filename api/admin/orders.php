@@ -78,11 +78,40 @@ if ($method === 'GET') {
 
         $reason = $_GET['reason'] ?? 'Standard concierge verification & address validation';
         $customMessage = $_GET['custom_message'] ?? 'We have prepared your handcrafted pieces with signature anti-tarnish micro-polishing and added our complimentary velvet pouch. Enjoy your Valerie jewelry!';
-        $status = $_GET['status'] ?? 'shipped';
+        $status = $_GET['status'] ?? ($order['order_status'] ?? 'shipped');
+
+        // If order_id or id is supplied, load real order data
+        $previewOrderId = (int)($_GET['order_id'] ?? ($_GET['id'] ?? 0));
+        if ($previewOrderId > 0) {
+            $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+            $stmt->execute([$previewOrderId]);
+            $realOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($realOrder) {
+                $order = array_merge($order, $realOrder);
+                $status = $_GET['status'] ?? ($order['order_status'] ?? 'confirmed');
+                $itemStmt = $pdo->prepare("
+                    SELECT oi.*, p.slug, p.sku,
+                           COALESCE(
+                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
+                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+                           ) AS primary_image
+                    FROM order_items oi
+                    LEFT JOIN products p ON oi.product_id = p.id
+                    WHERE oi.order_id = ?
+                ");
+                $itemStmt->execute([$previewOrderId]);
+                $realItems = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($realItems)) {
+                    $items = $realItems;
+                }
+            }
+        }
 
         ob_start();
         switch ($templateType) {
             case 'order_failed':
+            case 'payment_incomplete':
+            case 'payment_recovery':
                 $subject = "Payment Incomplete for {$order['order_number']} — Your Pieces Are Safe — Valerie Jewels";
                 require dirname(__DIR__) . '/templates/emails/order_failed.php';
                 break;
@@ -102,6 +131,12 @@ if ($method === 'GET') {
             case 'order_cancelled':
                 $subject = "Order Cancelled: {$order['order_number']} — Valerie Jewels";
                 require dirname(__DIR__) . '/templates/emails/order_cancelled.php';
+                break;
+            case 'admin_order_notification':
+                $payTypeLabel = strtoupper(str_replace('_', ' ', $order['payment_type'] ?? ''));
+                $totalVal = (float)($order['total_amount'] ?? 0);
+                $subject = "[NEW ORDER] {$order['order_number']} — ₹" . number_format($totalVal, 2) . " [{$payTypeLabel}] by {$order['customer_name']}";
+                require dirname(__DIR__) . '/templates/emails/order_confirmation.php';
                 break;
             case 'order_confirmation':
             default:

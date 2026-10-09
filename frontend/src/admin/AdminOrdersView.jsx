@@ -34,7 +34,12 @@ import {
   Settings,
   Lock,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  Monitor,
+  Smartphone,
+  Info,
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -75,6 +80,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [sentEmailStatusFilter, setSentEmailStatusFilter] = useState('');
   const [copiedLogId, setCopiedLogId] = useState(null);
   const [resendingLogId, setResendingLogId] = useState(null);
+
+  // Dispatched Email Details & Customer Overview Modal State
+  const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false);
+  const [selectedEmailDetailLog, setSelectedEmailDetailLog] = useState(null);
+  const [detailEmailPreviewHtml, setDetailEmailPreviewHtml] = useState('');
+  const [loadingDetailPreview, setLoadingDetailPreview] = useState(false);
+  const [detailPreviewDevice, setDetailPreviewDevice] = useState('desktop');
+  const [detailActiveTab, setDetailActiveTab] = useState('overview');
+  const [detailCustomerAllLogs, setDetailCustomerAllLogs] = useState([]);
+  const [loadingDetailCustomerLogs, setLoadingDetailCustomerLogs] = useState(false);
 
   // Shiprocket sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
@@ -783,6 +798,152 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         })}
       </div>
     );
+  };
+
+  const getEmailPurposeDetails = (log) => {
+    if (!log) return null;
+    const type = String(log.email_type || '').toLowerCase();
+    const isPaymentIncomplete = type === 'order_failed' || type === 'payment_incomplete' || type === 'payment_recovery' || String(log.subject || '').toLowerCase().includes('payment incomplete');
+
+    if (isPaymentIncomplete) {
+      return {
+        badgeLabel: '⚠️ Payment Incomplete / Checkout Recovery',
+        badgeColor: 'bg-rose-100 text-rose-800 border-rose-300',
+        headline: 'Automated Checkout & Bank Gateway Payment Recovery',
+        whatWasItAbout: 'This email was dispatched to re-engage a customer whose checkout or UPI authorization did not finalize. It reassures them that any bank deductions will auto-refund, keeps their jewelry pieces reserved in boutique inventory, and provides a 1-click cart recovery link with all pieces intact.',
+        keyPoints: [
+          'Reassures that bank debits automatically reverse within 24–48 hours if failed.',
+          'Reserves selected jewelry pieces so stock is not sold out.',
+          'Provides 1-click order resumption link with cart items and pricing intact.',
+          'Offers direct concierge WhatsApp support for instant order completion assistance.'
+        ],
+        callToAction: 'Resume & Complete Luxury Jewelry Order'
+      };
+    }
+
+    if (type === 'order_confirmation') {
+      return {
+        badgeLabel: '✨ Order Confirmation & Receipt',
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        headline: 'Official Purchase Confirmation & Itemized Invoice',
+        whatWasItAbout: 'This email was dispatched immediately upon order placement to confirm the purchase, delivering the official order number, itemized jewelry breakdown, estimated delivery timeline, and verified shipping address.',
+        keyPoints: [
+          'Confirms order receipt with unique Valerie Jewels reference number.',
+          'Lists each jewelry piece, variant, quantity, and total paid.',
+          'Specifies doorstep delivery timeline and verified delivery address.',
+          'Includes atelier concierge contact details and authenticity guarantee.'
+        ],
+        callToAction: 'View Order Receipt & Track Transit'
+      };
+    }
+
+    if (type === 'order_shipped') {
+      return {
+        badgeLabel: '📦 Dispatch & Air Express Shipment',
+        badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+        headline: 'Order Dispatched with Air Courier Tracking',
+        whatWasItAbout: 'This email was dispatched once the handcrafted jewelry was packed and handed over to our courier partner (Bluedart Air / Delhivery / Shiprocket), providing the active AWB number and live tracking link.',
+        keyPoints: [
+          'Delivers official courier Air Waybill (AWB) number.',
+          'Provides 1-click live parcel tracking link.',
+          'Confirms anti-tarnish protective packaging handover.',
+          'Estimated doorstep delivery date and OTP delivery notice.'
+        ],
+        callToAction: 'Track Shipment Live on Courier Portal'
+      };
+    }
+
+    if (type === 'order_cancelled') {
+      return {
+        badgeLabel: '🛑 Order Cancellation Notice',
+        badgeColor: 'bg-rose-100 text-rose-800 border-rose-300',
+        headline: 'Cancellation Confirmation & Refund Processing',
+        whatWasItAbout: 'This email was dispatched to notify the customer that their order was cancelled, confirming cancellation terms and detailing the refund reversal to their original payment method.',
+        keyPoints: [
+          'Confirms cancellation of order reference number.',
+          'Outlines the cancellation reason recorded by the atelier.',
+          'Details refund initiation timeline (3–5 business days).',
+          'Provides concierge support contact if cancellation was accidental.'
+        ],
+        callToAction: 'Contact Valerie Jewels Concierge'
+      };
+    }
+
+    if (type === 'admin_order_notification') {
+      return {
+        badgeLabel: '🔔 Admin Atelier Alert',
+        badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+        headline: 'Internal Atelier Notification for New Order',
+        whatWasItAbout: 'Internal alert dispatched to store management with full order and customer details to trigger fulfillment and packaging at the atelier.',
+        keyPoints: [
+          'Alerts fulfillment team of incoming luxury order.',
+          'Summarizes purchased pieces, total paid, and delivery location.',
+          'Flags order for priority packaging and quality inspection.'
+        ],
+        callToAction: 'Manage Order in Admin Portal'
+      };
+    }
+
+    return {
+      badgeLabel: '💌 Customer Concierge Notification',
+      badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+      headline: 'Customer Concierge Communication',
+      whatWasItAbout: 'This email was dispatched to communicate directly with the customer regarding their order status, address verification, or concierge inquiry.',
+      keyPoints: [
+        'Delivered to customer email on record with customized message.',
+        'Preserves audit trail in Valerie Jewels email dispatch system.',
+        'Includes direct atelier response contact information.'
+      ],
+      callToAction: 'View Order Details'
+    };
+  };
+
+  const openSentEmailDetailsModal = async (log) => {
+    if (!log) return;
+    setSelectedEmailDetailLog(log);
+    setEmailDetailsModalOpen(true);
+    setDetailActiveTab('overview');
+    setDetailEmailPreviewHtml('');
+    setDetailPreviewDevice('desktop');
+
+    // 1. Fetch live rendered HTML preview for this order and email type
+    const templateType = log.email_type || 'order_confirmation';
+    const orderId = log.order_id || null;
+    try {
+      setLoadingDetailPreview(true);
+      const params = {};
+      if (orderId) params.order_id = orderId;
+      if (log.subject) params.subject = log.subject;
+      const res = await adminApi.previewEmailTemplate(templateType, params);
+      if (res && res.html) {
+        setDetailEmailPreviewHtml(res.html);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch rendered email template preview:', err);
+    } finally {
+      setLoadingDetailPreview(false);
+    }
+
+    // 2. Fetch all email logs dispatched to this specific customer
+    const targetEmail = (log.recipient_email || log.customer_email || '').trim();
+    if (targetEmail || orderId) {
+      try {
+        setLoadingDetailCustomerLogs(true);
+        const params = {};
+        if (targetEmail) params.email = targetEmail;
+        if (orderId) params.order_id = orderId;
+        const res = await adminApi.getSentEmailLogs(params);
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        setDetailCustomerAllLogs(list.length > 0 ? list : [log]);
+      } catch (err) {
+        console.warn('Failed to load all customer email logs:', err);
+        setDetailCustomerAllLogs([log]);
+      } finally {
+        setLoadingDetailCustomerLogs(false);
+      }
+    } else {
+      setDetailCustomerAllLogs([log]);
+    }
   };
 
   const openCustomerEmailHistory = (log) => {
@@ -2487,8 +2648,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     <th className="py-3.5 px-4">Customer & Contact</th>
                     <th className="py-3.5 px-4">Delivery Address</th>
                     <th className="py-3.5 px-4">Order Reference</th>
-                    <th className="py-3.5 px-4 text-center font-bold text-brand-primary">Email Sent Count</th>
-                    <th className="py-3.5 px-4 font-bold text-brand-primary">Email Types Dispatched</th>
                     <th className="py-3.5 px-4">Dispatched Email</th>
                     <th className="py-3.5 px-4">Status & Timestamp</th>
                     <th className="py-3.5 px-4 text-right">Concierge Actions</th>
@@ -2497,7 +2656,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <tbody className="divide-y divide-brand-border/60">
                   {loadingSentEmails ? (
                     <tr>
-                      <td colSpan={8} className="py-16 text-center text-brand-muted">
+                      <td colSpan={6} className="py-16 text-center text-brand-muted">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <RefreshCw className="w-6 h-6 animate-spin text-brand-primary" />
                           <span className="text-xs font-medium">Loading sent customer email logs...</span>
@@ -2506,7 +2665,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </tr>
                   ) : safeSentLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-16 text-center text-brand-muted">
+                      <td colSpan={6} className="py-16 text-center text-brand-muted">
                         <div className="max-w-md mx-auto space-y-3">
                           <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary flex items-center justify-center mx-auto">
                             <Mail className="w-6 h-6" />
@@ -2633,56 +2792,46 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             )}
                           </td>
 
-                          {/* Emails Sent Count */}
-                          <td className="py-3.5 px-4 text-center">
-                            <div className="inline-flex flex-col items-center">
-                              <button
-                                type="button"
-                                onClick={() => openCustomerEmailHistory(log)}
-                                className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 shadow-2xs cursor-pointer transition-all flex items-center space-x-1.5"
-                                title={`Click to view all ${log.customer_emails_count || 1} emails sent to this customer`}
-                              >
-                                <MailCheck className="w-3.5 h-3.5 text-purple-700" />
-                                <span>{log.customer_emails_count || 1} {(log.customer_emails_count || 1) === 1 ? 'Email' : 'Emails'} Sent</span>
-                              </button>
-                              <span className="text-[10px] text-brand-muted mt-0.5">to this customer</span>
-                            </div>
-                          </td>
-
-                          {/* Email Types Dispatched */}
+                          {/* Dispatched Email Column (Type, Subject, Count & Eye Details Button) */}
                           <td className="py-3.5 px-4">
-                            <div className="space-y-1.5 max-w-[240px]">
-                              <div className="flex flex-wrap items-center gap-1">
-                                {renderEmailTypeBadges(log.customer_email_types || log.email_type)}
+                            <div className="space-y-1.5 max-w-[280px]">
+                              <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                  isPaymentIncomplete
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                    : log.email_type === 'order_confirmation'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    : log.email_type === 'order_shipped'
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                    : 'bg-purple-100 text-purple-800 border border-purple-300'
+                                }`}>
+                                  {isPaymentIncomplete ? '⚠️ Payment Incomplete Recovery' : String(log.email_type || 'Email').replace(/_/g, ' ')}
+                                </span>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => openCustomerEmailHistory(log)}
-                                className="px-2.5 py-1.5 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-[11px] font-semibold transition-all shadow-2xs flex items-center space-x-1.5 cursor-pointer whitespace-nowrap"
-                                title={`View all ${log.customer_emails_count || 1} emails and specific types sent to ${log.recipient_name || log.customer_name || 'this customer'}`}
-                              >
-                                <Eye className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                                <span>View Email Types ({log.customer_emails_count || 1})</span>
-                              </button>
-                            </div>
-                          </td>
 
-                          {/* Dispatched Email Subject & Type */}
-                          <td className="py-3.5 px-4">
-                            <div className="space-y-1 max-w-[240px]">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                                isPaymentIncomplete
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                  : log.email_type === 'order_confirmation'
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                  : log.email_type === 'order_shipped'
-                                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                  : 'bg-purple-100 text-purple-800 border border-purple-300'
-                              }`}>
-                                {isPaymentIncomplete ? '⚠️ Payment Incomplete Recovery' : String(log.email_type || 'Email').replace(/_/g, ' ')}
-                              </span>
-                              <div className="text-[11px] font-medium text-brand-tertiary truncate" title={log.subject}>
+                              <div className="text-[11px] font-semibold text-brand-tertiary truncate leading-tight" title={log.subject}>
                                 {log.subject}
+                              </div>
+
+                              {/* Under Dispatched Email: Count of emails shared to user & Eye Details Button */}
+                              <div className="flex items-center space-x-2 pt-1 flex-wrap gap-y-1.5">
+                                <span
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-900 border border-purple-200 shadow-2xs"
+                                  title={`Total emails shared to this user: ${log.customer_emails_count || 1}`}
+                                >
+                                  <MailCheck className="w-3 h-3 text-purple-700 shrink-0" />
+                                  <span>{log.customer_emails_count || 1} emails shared to user</span>
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openSentEmailDetailsModal(log)}
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-[10px] font-semibold transition-all shadow-2xs hover:shadow-xs cursor-pointer group whitespace-nowrap"
+                                  title="Click to view details of sent email and what it was about"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-amber-300 shrink-0 group-hover:scale-110 transition-transform" />
+                                  <span>View Details</span>
+                                </button>
                               </div>
                             </div>
                           </td>
@@ -4406,6 +4555,456 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* DISPATCHED EMAIL DETAILS & CUSTOMER HISTORY MODAL */}
+      {/* ========================================================================= */}
+      {emailDetailsModalOpen && selectedEmailDetailLog && (() => {
+        const log = selectedEmailDetailLog;
+        const purpose = getEmailPurposeDetails(log);
+        const recipientName = log.recipient_name || log.customer_name || 'Valued Customer';
+        const recipientEmail = log.recipient_email || log.customer_email || '—';
+        const orderNumber = log.order_number || (log.order_id ? `#${log.order_id}` : 'General Inquiry / Session');
+        const totalAmount = log.total_amount ? `₹${Number(log.total_amount).toLocaleString('en-IN')}` : null;
+        const totalEmailsShared = log.customer_emails_count || (detailCustomerAllLogs.length > 0 ? detailCustomerAllLogs.length : 1);
+
+        return (
+          <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl max-w-4xl w-full border border-brand-border shadow-luxury flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95">
+              
+              {/* Modal Top Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border bg-[#FAF8FC] shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center shrink-0 shadow-2xs">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold">
+                        Dispatched Email Details & Audit
+                      </span>
+                      <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${purpose.badgeColor}`}>
+                        <span>{purpose.badgeLabel}</span>
+                      </span>
+                    </div>
+                    <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                      {log.subject || 'Customer Dispatch'}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEmailDetailsModalOpen(false)}
+                  className="p-2 text-brand-muted hover:text-brand-tertiary rounded-xl hover:bg-white cursor-pointer transition-colors shadow-2xs"
+                  title="Close modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Content Area */}
+              <div className="overflow-y-auto p-5 sm:p-6 space-y-5 flex-1">
+                
+                {/* 1. "What Was This Email About?" Spotlight Card */}
+                <div className="bg-gradient-to-br from-[#FAF8FC] via-purple-50/40 to-white rounded-2xl p-4 sm:p-5 border border-purple-200/80 shadow-2xs space-y-3.5">
+                  <div className="flex items-start justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-caps tracking-wider uppercase font-bold text-brand-primary bg-white px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        <span>Email Context & Purpose</span>
+                      </span>
+                      <h4 className="text-sm sm:text-base font-bold text-brand-tertiary font-editorial mt-1.5">
+                        {purpose.headline}
+                      </h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider block">Dispatched Timestamp</span>
+                      <span className="text-xs font-semibold text-brand-tertiary font-mono">{formatDateTime(log.sent_at)}</span>
+                    </div>
+                  </div>
+
+                  {/* Plain-English Explanation */}
+                  <div className="bg-white/95 rounded-xl p-3.5 border border-brand-border/70 space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-purple-900 flex items-center space-x-1.5">
+                      <Info className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>What was this email about?</span>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      {purpose.whatWasItAbout}
+                    </p>
+                  </div>
+
+                  {/* Key Points Communicated to the Customer */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                      Key Information Communicated to the Customer:
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {purpose.keyPoints.map((point, idx) => (
+                        <div key={idx} className="flex items-start space-x-2 bg-white/90 p-2.5 rounded-xl border border-brand-border/60 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span className="text-[11px] text-brand-tertiary leading-snug">{point}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Primary Call to Action */}
+                  <div className="flex items-center justify-between text-xs pt-1 flex-wrap gap-2 text-brand-muted border-t border-purple-100/80">
+                    <span className="text-[11px]">
+                      <strong className="text-brand-tertiary">Customer Action Button:</strong> {purpose.callToAction}
+                    </span>
+                    <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      <Check className="w-3 h-3" />
+                      <span>Includes Anti-Tarnish Lifetime Reassurance</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Customer & Delivery Overview Grid (4 Cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Recipient */}
+                  <div className="bg-[#FAF8FC] p-3 rounded-2xl border border-brand-border/80">
+                    <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider block">Recipient Contact</span>
+                    <div className="font-bold text-brand-tertiary text-xs mt-0.5 truncate">{recipientName}</div>
+                    <div className="text-[11px] font-mono text-brand-primary truncate">{recipientEmail}</div>
+                    {log.customer_phone && (
+                      <div className="text-[10px] text-brand-muted mt-0.5">{log.customer_phone}</div>
+                    )}
+                  </div>
+
+                  {/* Order Reference */}
+                  <div className="bg-[#FAF8FC] p-3 rounded-2xl border border-brand-border/80">
+                    <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider block">Order Reference</span>
+                    <div className="font-bold text-brand-tertiary text-xs mt-0.5">{orderNumber}</div>
+                    <div className="text-[11px] text-brand-muted font-medium">
+                      {totalAmount ? `${totalAmount} • ` : ''}{log.payment_status || 'unpaid'}
+                    </div>
+                    {log.order_status && (
+                      <div className="text-[10px] text-brand-primary capitalize mt-0.5">Status: {log.order_status.replace(/_/g, ' ')}</div>
+                    )}
+                  </div>
+
+                  {/* Delivery Status */}
+                  <div className="bg-[#FAF8FC] p-3 rounded-2xl border border-brand-border/80">
+                    <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider block">Delivery Status</span>
+                    <div className="mt-1">
+                      <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        log.delivery_status === 'sent'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : log.delivery_status === 'simulated'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-100 text-rose-800 border border-rose-300'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${log.delivery_status === 'failed' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                        <span>{log.delivery_status === 'simulated' ? 'Delivered (Simulated)' : log.delivery_status === 'sent' ? 'Delivered (SMTP)' : 'Failed'}</span>
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-brand-muted mt-1 truncate">
+                      Via Hostinger SMTP (SSL)
+                    </div>
+                  </div>
+
+                  {/* Total Emails Shared to User */}
+                  <div className="bg-purple-50/60 p-3 rounded-2xl border border-purple-200">
+                    <span className="text-[10px] text-purple-900 uppercase font-bold tracking-wider block">Total Shared to User</span>
+                    <div className="flex items-center space-x-1.5 mt-0.5">
+                      <MailCheck className="w-4 h-4 text-brand-primary shrink-0" />
+                      <span className="text-base font-bold text-brand-primary font-mono">{totalEmailsShared}</span>
+                      <span className="text-xs text-brand-tertiary font-medium">{totalEmailsShared === 1 ? 'Email' : 'Emails'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDetailActiveTab('customer_all_emails')}
+                      className="text-[10px] font-bold text-brand-primary hover:underline mt-1 block cursor-pointer"
+                    >
+                      View all {totalEmailsShared} logs →
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Tab Buttons Header */}
+                <div className="flex items-center space-x-2 p-1 bg-[#FAF8FC] rounded-2xl border border-brand-border">
+                  <button
+                    type="button"
+                    onClick={() => setDetailActiveTab('overview')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                      detailActiveTab === 'overview'
+                        ? 'bg-[#26153D] text-white shadow-xs'
+                        : 'bg-transparent text-brand-tertiary hover:bg-white'
+                    }`}
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Email Summary</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailActiveTab('preview')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                      detailActiveTab === 'preview'
+                        ? 'bg-[#26153D] text-white shadow-xs'
+                        : 'bg-transparent text-brand-tertiary hover:bg-white'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Live Rendered Preview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailActiveTab('customer_all_emails')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                      detailActiveTab === 'customer_all_emails'
+                        ? 'bg-[#26153D] text-white shadow-xs'
+                        : 'bg-transparent text-brand-tertiary hover:bg-white'
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>All Emails Shared to User ({totalEmailsShared})</span>
+                  </button>
+                </div>
+
+                {/* 4. Tab Content: Overview */}
+                {detailActiveTab === 'overview' && (
+                  <div className="space-y-4">
+                    {/* Subject Line Bar */}
+                    <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">Dispatched Email Subject Line</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(log.subject || '');
+                              showToast('✓ Subject copied to clipboard!');
+                            }
+                          }}
+                          className="text-[11px] text-brand-primary font-semibold hover:underline flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Subject</span>
+                        </button>
+                      </div>
+                      <div className="text-sm font-bold text-brand-tertiary font-mono bg-[#FAF8FC] p-3 rounded-xl border border-brand-border/60">
+                        {log.subject}
+                      </div>
+                    </div>
+
+                    {/* Order Reference details if available */}
+                    {log.order_id && (
+                      <div className="bg-white rounded-2xl p-4 border border-brand-border space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                            Order Pieces & Value
+                          </span>
+                          <span className="text-[11px] font-bold text-brand-primary">
+                            {log.order_number}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-3 text-xs text-brand-tertiary bg-[#FAF8FC] p-3 rounded-xl border border-brand-border/60">
+                          <Package className="w-4 h-4 text-brand-primary shrink-0" />
+                          <div>
+                            <span className="font-semibold">Associated Order Reference: </span>
+                            <span>{log.order_number || log.order_id}</span>
+                            {log.total_amount && (
+                              <span className="ml-2 font-bold text-brand-tertiary">({totalAmount})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Preview Shortcut Callout */}
+                    <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-xl bg-purple-200/70 text-brand-primary flex items-center justify-center shrink-0">
+                          <Eye className="w-4 h-4 text-brand-primary" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-brand-tertiary">Want to see the actual visual email received by {recipientName}?</div>
+                          <div className="text-[11px] text-brand-muted">Switch to the interactive preview tab to view the responsive luxury HTML layout.</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDetailActiveTab('preview')}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer flex items-center space-x-1.5"
+                      >
+                        <span>Open Live Preview</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-amber-300" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Tab Content: Live Rendered Preview */}
+                {detailActiveTab === 'preview' && (
+                  <div className="space-y-3">
+                    {/* Controls Bar */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-1">
+                      <div className="flex items-center space-x-1 bg-[#FAF8FC] p-1 rounded-xl border border-brand-border">
+                        <button
+                          type="button"
+                          onClick={() => setDetailPreviewDevice('desktop')}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                            detailPreviewDevice === 'desktop'
+                              ? 'bg-white text-brand-primary shadow-2xs border border-brand-border'
+                              : 'text-brand-muted hover:text-brand-tertiary'
+                          }`}
+                        >
+                          <Monitor className="w-3.5 h-3.5" />
+                          <span>Desktop View</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDetailPreviewDevice('mobile')}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                            detailPreviewDevice === 'mobile'
+                              ? 'bg-white text-brand-primary shadow-2xs border border-brand-border'
+                              : 'text-brand-muted hover:text-brand-tertiary'
+                          }`}
+                        >
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span>Mobile View (390px)</span>
+                        </button>
+                      </div>
+
+                      <div className="text-[11px] text-brand-muted">
+                        Template: <strong className="text-brand-tertiary uppercase">{log.email_type || 'order_confirmation'}</strong>
+                      </div>
+                    </div>
+
+                    {/* Rendered View Frame */}
+                    <div className="bg-[#FAF8FC] p-4 rounded-2xl border border-brand-border min-h-[420px] flex items-center justify-center">
+                      {loadingDetailPreview ? (
+                        <div className="flex flex-col items-center justify-center space-y-2 py-16 text-brand-muted">
+                          <RefreshCw className="w-6 h-6 animate-spin text-brand-primary" />
+                          <span className="text-xs font-medium">Generating live email template preview...</span>
+                        </div>
+                      ) : detailEmailPreviewHtml ? (
+                        <div className={`transition-all duration-300 w-full ${detailPreviewDevice === 'mobile' ? 'max-w-[400px] mx-auto shadow-xl rounded-3xl border-4 border-[#26153D] overflow-hidden bg-white' : 'max-w-full'}`}>
+                          <iframe
+                            title="Live Dispatched Email Preview"
+                            srcDoc={detailEmailPreviewHtml}
+                            className="w-full h-[520px] rounded-xl border border-brand-border/40 bg-white"
+                            sandbox="allow-same-origin"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 max-w-sm mx-auto space-y-2">
+                          <AlertCircle className="w-6 h-6 text-brand-muted mx-auto" />
+                          <div className="text-xs font-bold text-brand-tertiary">Live HTML Preview Unavailable</div>
+                          <div className="text-[11px] text-brand-muted">
+                            {log.subject ? `Dispatched subject: "${log.subject}"` : 'The preview could not be loaded.'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Tab Content: All Emails Shared to User */}
+                {detailActiveTab === 'customer_all_emails' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-brand-tertiary">Full Email Dispatch Audit Trail</span>
+                        <span className="text-brand-muted ml-2">for {recipientEmail}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded-full">
+                        {detailCustomerAllLogs.length} Records Found
+                      </span>
+                    </div>
+
+                    {loadingDetailCustomerLogs ? (
+                      <div className="flex flex-col items-center justify-center space-y-2 py-12 text-brand-muted">
+                        <RefreshCw className="w-5 h-5 animate-spin text-brand-primary" />
+                        <span className="text-xs font-medium">Loading customer email audit logs...</span>
+                      </div>
+                    ) : detailCustomerAllLogs.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-brand-muted bg-[#FAF8FC] rounded-2xl border border-brand-border">
+                        No additional email records found for this recipient.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-brand-border/60 bg-white rounded-2xl border border-brand-border overflow-hidden">
+                        {detailCustomerAllLogs.map((item, idx) => (
+                          <div key={item.log_id || idx} className="p-3.5 hover:bg-[#FAF8FC] transition-colors flex items-center justify-between flex-wrap gap-2 text-xs">
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                                  {String(item.email_type || 'Email').replace(/_/g, ' ')}
+                                </span>
+                                <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                  item.delivery_status === 'sent'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  <span className={`w-1 h-1 rounded-full ${item.delivery_status === 'sent' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                                  <span>{item.delivery_status === 'sent' ? 'Delivered' : item.delivery_status}</span>
+                                </span>
+                                <span className="text-[10px] text-brand-muted font-mono">{formatDateTime(item.sent_at)}</span>
+                              </div>
+                              <div className="text-xs font-semibold text-brand-tertiary">
+                                {item.subject}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-1.5">
+                              {item.order_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResendEmail(item)}
+                                  disabled={resendingLogId === item.log_id}
+                                  className="px-2.5 py-1 rounded-lg border border-brand-border hover:bg-brand-primary hover:text-white text-[10px] font-semibold transition-all cursor-pointer flex items-center space-x-1"
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${resendingLogId === item.log_id ? 'animate-spin' : ''}`} />
+                                  <span>Resend</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Bottom Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-brand-border bg-[#FAF8FC] shrink-0">
+                <div className="text-[11px] text-brand-muted flex items-center space-x-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Audited via Valerie Jewels Live Dispatch Engine</span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {log.order_id && (
+                    <button
+                      type="button"
+                      onClick={() => handleResendEmail(log)}
+                      disabled={resendingLogId === log.log_id}
+                      className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all cursor-pointer shadow-2xs flex items-center space-x-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${resendingLogId === log.log_id ? 'animate-spin' : ''}`} />
+                      <span>Resend Copy to Customer</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setEmailDetailsModalOpen(false)}
+                    className="px-5 py-2 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Product Visual Assurance Modal */}
       <ProductAssuranceModal
