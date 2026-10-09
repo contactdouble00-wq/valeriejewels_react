@@ -43,7 +43,10 @@ if ($method === 'GET') {
             u.created_at,
             COUNT(o.id) AS total_orders,
             COALESCE(SUM(CASE WHEN o.order_status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spent,
-            COUNT(CASE WHEN o.order_status = 'cancelled' OR o.order_status = 'rto' THEN 1 END) AS rto_cancellations
+            COUNT(CASE WHEN o.order_status = 'cancelled' OR o.order_status = 'rto' THEN 1 END) AS rto_cancellations,
+            (SELECT COUNT(*) FROM email_logs WHERE recipient_email = u.email OR (order_id IN (SELECT id FROM orders WHERE user_id = u.id OR customer_email = u.email))) AS emails_sent_count,
+            (SELECT email_type FROM email_logs WHERE recipient_email = u.email OR (order_id IN (SELECT id FROM orders WHERE user_id = u.id OR customer_email = u.email)) ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_type,
+            (SELECT GROUP_CONCAT(DISTINCT email_type SEPARATOR ', ') FROM email_logs WHERE recipient_email = u.email OR (order_id IN (SELECT id FROM orders WHERE user_id = u.id OR customer_email = u.email))) AS sent_email_types
         FROM users u
         LEFT JOIN orders o ON o.user_id = u.id OR o.customer_email = u.email
         WHERE {$whereSql}

@@ -754,6 +754,54 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     };
   };
 
+  const renderEmailTypeBadges = (typesStringOrArray) => {
+    if (!typesStringOrArray) return null;
+    let types = [];
+    if (Array.isArray(typesStringOrArray)) {
+      types = typesStringOrArray;
+    } else if (typeof typesStringOrArray === 'string') {
+      types = typesStringOrArray.split(',').map((t) => t.trim()).filter(Boolean);
+    }
+    if (types.length === 0) return null;
+
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {types.map((t, idx) => {
+          const badge = getEmailTypeBadgeInfo(t);
+          const IconComp = badge.icon;
+          return (
+            <span
+              key={`${t}-${idx}`}
+              className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}`}
+              title={`Dispatched Email Type: ${badge.label}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
+              <IconComp className="w-2.5 h-2.5 shrink-0" />
+              <span>{badge.label}</span>
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const openCustomerEmailHistory = (log) => {
+    if (!log) return;
+    openEmailModal({
+      id: log.order_id,
+      order_number: log.order_number || (log.order_id ? `#${log.order_id}` : 'General'),
+      customer_name: log.customer_name || log.recipient_name || 'Valued Customer',
+      customer_email: log.customer_email || log.recipient_email || '',
+      customer_phone: log.customer_phone,
+      total_amount: log.total_amount,
+      payment_type: log.payment_type,
+      payment_status: log.payment_status,
+      order_status: log.order_status,
+      emails_sent_count: log.customer_emails_count || 1,
+      sent_email_types: log.customer_email_types || log.email_type,
+    }, 'history');
+  };
+
   const openEmailModal = async (order, defaultTab = null) => {
     if (!order) return;
     setTargetEmailOrder(order);
@@ -1400,19 +1448,20 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <th className="py-3.5 px-4">Payment Breakdown</th>
                 <th className="py-3.5 px-4">Fulfillment Status</th>
                 <th className="py-3.5 px-4">AWB Tracking</th>
+                <th className="py-3.5 px-4 text-center font-bold text-brand-primary">Emails Sent</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border/60">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-brand-muted">
+                  <td colSpan={8} className="py-12 text-center text-brand-muted">
                     Loading orders...
                   </td>
                 </tr>
               ) : displayOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-brand-muted">
+                  <td colSpan={8} className="py-12 text-center text-brand-muted">
                     {ordersSyncSegment === 'unsynced' && syncedOrders.length > 0 ? (
                       <div className="space-y-3 py-6 max-w-md mx-auto">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-xs">
@@ -1612,6 +1661,51 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </button>
                         </div>
                       )}
+                    </td>
+
+                    {/* Emails Sent Count & Types */}
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex flex-col items-center space-y-1.5 min-w-[130px]">
+                        <button
+                          type="button"
+                          onClick={() => openEmailModal(ord, Number(ord.emails_sent_count) > 0 ? 'history' : 'compose')}
+                          className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer flex items-center space-x-1.5 shadow-2xs ${
+                            Number(ord.emails_sent_count) > 0
+                              ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+                          }`}
+                          title={`Click to view customer email history for ${ord.customer_name || 'customer'}`}
+                        >
+                          <MailCheck className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                          <span>{ord.emails_sent_count || 0} Sent</span>
+                        </button>
+
+                        {Number(ord.emails_sent_count) > 0 ? (
+                          <div className="flex flex-col items-center space-y-1">
+                            <div className="max-w-[150px] truncate flex justify-center">
+                              {renderEmailTypeBadges(ord.sent_email_types || ord.latest_email_type)}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => openEmailModal(ord, 'history')}
+                              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#26153D] hover:bg-brand-primary text-white transition-colors cursor-pointer flex items-center space-x-1 shadow-2xs"
+                              title={`View all ${ord.emails_sent_count} email types sent to ${ord.customer_name}`}
+                            >
+                              <Eye className="w-3 h-3 text-amber-300" />
+                              <span>View Types ({ord.emails_sent_count})</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openEmailModal(ord, 'compose')}
+                            className="text-[10px] text-brand-muted hover:text-brand-primary font-medium hover:underline cursor-pointer flex items-center space-x-0.5"
+                          >
+                            <Send className="w-2.5 h-2.5" />
+                            <span>+ Send Email</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -1878,19 +1972,20 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     <th className="py-3.5 px-4">Courier & AWB Tracking</th>
                     <th className="py-3.5 px-4">Payment & Amount</th>
                     <th className="py-3.5 px-4">Delivery Milestone</th>
+                    <th className="py-3.5 px-4 text-center font-bold text-brand-primary">Emails Sent</th>
                     <th className="py-3.5 px-4 text-right">Logistics Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/60">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                      <td colSpan={8} className="py-12 text-center text-brand-muted">
                         Loading Shiprocket synced shipments...
                       </td>
                     </tr>
                   ) : syncedOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                      <td colSpan={8} className="py-12 text-center text-brand-muted">
                         <div className="space-y-3 max-w-sm mx-auto py-6">
                           <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary flex items-center justify-center mx-auto shadow-xs">
                             <Truck className="w-6 h-6" />
@@ -1916,7 +2011,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </tr>
                   ) : filteredSyncedOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-brand-muted">
+                      <td colSpan={8} className="py-12 text-center text-brand-muted">
                         <div className="space-y-2 py-6">
                           <p>No shipments match your current search or filters.</p>
                           <button
@@ -2114,6 +2209,36 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         {/* Fulfillment Status */}
                         <td className="py-3.5 px-4">
                           {renderStatusBadge(ord.order_status)}
+                        </td>
+
+                        {/* Emails Sent Count & Types */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex flex-col items-center space-y-1.5 min-w-[120px]">
+                            <button
+                              type="button"
+                              onClick={() => openEmailModal(ord, Number(ord.emails_sent_count) > 0 ? 'history' : 'compose')}
+                              className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer flex items-center space-x-1.5 shadow-2xs ${
+                                Number(ord.emails_sent_count) > 0
+                                  ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+                              }`}
+                              title={`Customer emails: ${ord.emails_sent_count || 0} sent`}
+                            >
+                              <MailCheck className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                              <span>{ord.emails_sent_count || 0} Sent</span>
+                            </button>
+                            {Number(ord.emails_sent_count) > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => openEmailModal(ord, 'history')}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#26153D] hover:bg-brand-primary text-white transition-colors cursor-pointer flex items-center space-x-1 shadow-2xs"
+                                title={`View email types sent to ${ord.customer_name}`}
+                              >
+                                <Eye className="w-2.5 h-2.5 text-amber-300" />
+                                <span>View Types</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         {/* Logistics Actions */}
@@ -2362,6 +2487,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     <th className="py-3.5 px-4">Customer & Contact</th>
                     <th className="py-3.5 px-4">Delivery Address</th>
                     <th className="py-3.5 px-4">Order Reference</th>
+                    <th className="py-3.5 px-4 text-center font-bold text-brand-primary">Email Sent Count</th>
+                    <th className="py-3.5 px-4 font-bold text-brand-primary">Email Types Dispatched</th>
                     <th className="py-3.5 px-4">Dispatched Email</th>
                     <th className="py-3.5 px-4">Status & Timestamp</th>
                     <th className="py-3.5 px-4 text-right">Concierge Actions</th>
@@ -2370,7 +2497,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <tbody className="divide-y divide-brand-border/60">
                   {loadingSentEmails ? (
                     <tr>
-                      <td colSpan={6} className="py-16 text-center text-brand-muted">
+                      <td colSpan={8} className="py-16 text-center text-brand-muted">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <RefreshCw className="w-6 h-6 animate-spin text-brand-primary" />
                           <span className="text-xs font-medium">Loading sent customer email logs...</span>
@@ -2379,7 +2506,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </tr>
                   ) : safeSentLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-16 text-center text-brand-muted">
+                      <td colSpan={8} className="py-16 text-center text-brand-muted">
                         <div className="max-w-md mx-auto space-y-3">
                           <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary flex items-center justify-center mx-auto">
                             <Mail className="w-6 h-6" />
@@ -2504,6 +2631,40 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                 General Dispatch
                               </span>
                             )}
+                          </td>
+
+                          {/* Emails Sent Count */}
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="inline-flex flex-col items-center">
+                              <button
+                                type="button"
+                                onClick={() => openCustomerEmailHistory(log)}
+                                className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 shadow-2xs cursor-pointer transition-all flex items-center space-x-1.5"
+                                title={`Click to view all ${log.customer_emails_count || 1} emails sent to this customer`}
+                              >
+                                <MailCheck className="w-3.5 h-3.5 text-purple-700" />
+                                <span>{log.customer_emails_count || 1} {(log.customer_emails_count || 1) === 1 ? 'Email' : 'Emails'} Sent</span>
+                              </button>
+                              <span className="text-[10px] text-brand-muted mt-0.5">to this customer</span>
+                            </div>
+                          </td>
+
+                          {/* Email Types Dispatched */}
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1.5 max-w-[240px]">
+                              <div className="flex flex-wrap items-center gap-1">
+                                {renderEmailTypeBadges(log.customer_email_types || log.email_type)}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => openCustomerEmailHistory(log)}
+                                className="px-2.5 py-1.5 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-[11px] font-semibold transition-all shadow-2xs flex items-center space-x-1.5 cursor-pointer whitespace-nowrap"
+                                title={`View all ${log.customer_emails_count || 1} emails and specific types sent to ${log.recipient_name || log.customer_name || 'this customer'}`}
+                              >
+                                <Eye className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                                <span>View Email Types ({log.customer_emails_count || 1})</span>
+                              </button>
+                            </div>
                           </td>
 
                           {/* Dispatched Email Subject & Type */}
@@ -3321,10 +3482,48 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                    <div className="space-y-3">
                     <div className="text-[11px] text-brand-muted font-caps tracking-wider uppercase font-bold flex items-center justify-between">
                       <span>Audit trail of all email types sent to {targetEmailOrder.customer_name}</span>
                       <span className="text-brand-tertiary">{orderEmailHistory.length} total event{orderEmailHistory.length !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    {/* Dispatched Types Summary Strip */}
+                    <div className="p-3.5 bg-gradient-to-r from-purple-50 via-[#FAF8FC] to-purple-50/50 rounded-2xl border border-purple-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-caps tracking-wider uppercase font-bold text-purple-900">
+                        <span className="flex items-center space-x-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                          <span>Dispatched Email Types Breakdown</span>
+                        </span>
+                        <span className="font-mono bg-purple-200/90 text-purple-950 px-2.5 py-0.5 rounded-full font-bold">
+                          {orderEmailHistory.length} {orderEmailHistory.length === 1 ? 'Email' : 'Emails'} Total
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {Object.entries(
+                          orderEmailHistory.reduce((acc, l) => {
+                            const t = l.email_type || 'other';
+                            acc[t] = (acc[t] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map(([type, count]) => {
+                          const badge = getEmailTypeBadgeInfo(type);
+                          const IconComp = badge.icon;
+                          return (
+                            <span
+                              key={type}
+                              className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border shadow-2xs ${badge.bg}`}
+                            >
+                              <span className={`w-2 h-2 rounded-full ${badge.dot}`}></span>
+                              <IconComp className="w-3 h-3 shrink-0" />
+                              <span>{badge.label}</span>
+                              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">
+                                ×{count}
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className="space-y-2.5 max-h-[46vh] overflow-y-auto pr-1">

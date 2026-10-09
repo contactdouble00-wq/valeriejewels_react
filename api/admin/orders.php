@@ -142,6 +142,13 @@ if ($method === 'GET') {
             $params[] = $orderId;
         }
 
+        $customerEmail = trim($_GET['email'] ?? ($_GET['customer_email'] ?? ''));
+        if ($customerEmail !== '') {
+            $where[] = "(el.recipient_email = ? OR o.customer_email = ?)";
+            $params[] = $customerEmail;
+            $params[] = $customerEmail;
+        }
+
         if ($search !== '') {
             $where[] = "(el.recipient_name LIKE ? OR el.recipient_email LIKE ? OR el.subject LIKE ? OR o.order_number LIKE ? OR o.customer_phone LIKE ? OR o.city LIKE ? OR o.customer_name LIKE ?)";
             $term = "%{$search}%";
@@ -177,7 +184,8 @@ if ($method === 'GET') {
                 el.status AS delivery_status,
                 el.error_message,
                 el.sent_at,
-                (SELECT COUNT(*) FROM email_logs WHERE order_id = el.order_id) AS customer_emails_count,
+                (SELECT COUNT(*) FROM email_logs WHERE (order_id IS NOT NULL AND el.order_id IS NOT NULL AND order_id = el.order_id) OR (el.recipient_email IS NOT NULL AND recipient_email = el.recipient_email)) AS customer_emails_count,
+                (SELECT GROUP_CONCAT(DISTINCT email_type SEPARATOR ', ') FROM email_logs WHERE (order_id IS NOT NULL AND el.order_id IS NOT NULL AND order_id = el.order_id) OR (el.recipient_email IS NOT NULL AND recipient_email = el.recipient_email)) AS customer_email_types,
                 o.order_number,
                 COALESCE(o.customer_name, el.recipient_name) AS customer_name,
                 COALESCE(o.customer_email, el.recipient_email) AS customer_email,
@@ -322,9 +330,10 @@ if ($method === 'GET') {
     $stmt = $pdo->prepare("
         SELECT 
             o.*,
-            (SELECT COUNT(*) FROM email_logs WHERE order_id = o.id) AS emails_sent_count,
-            (SELECT email_type FROM email_logs WHERE order_id = o.id ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_type,
-            (SELECT sent_at FROM email_logs WHERE order_id = o.id ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_sent_at,
+            (SELECT COUNT(*) FROM email_logs WHERE order_id = o.id OR (o.customer_email IS NOT NULL AND o.customer_email != '' AND recipient_email = o.customer_email)) AS emails_sent_count,
+            (SELECT email_type FROM email_logs WHERE order_id = o.id OR (o.customer_email IS NOT NULL AND o.customer_email != '' AND recipient_email = o.customer_email) ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_type,
+            (SELECT sent_at FROM email_logs WHERE order_id = o.id OR (o.customer_email IS NOT NULL AND o.customer_email != '' AND recipient_email = o.customer_email) ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_sent_at,
+            (SELECT GROUP_CONCAT(DISTINCT email_type SEPARATOR ', ') FROM email_logs WHERE order_id = o.id OR (o.customer_email IS NOT NULL AND o.customer_email != '' AND recipient_email = o.customer_email)) AS sent_email_types,
             (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS items_count,
             (SELECT oi.product_name FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_name,
             (SELECT p.sku FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_sku,
