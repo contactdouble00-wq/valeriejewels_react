@@ -636,6 +636,53 @@ class ShiprocketService
             ]);
         } catch (Throwable $e) {}
 
+        // Automated real-time customer notification email based on advanced status (idempotent)
+        try {
+            require_once dirname(__DIR__) . '/utils/mailer.php';
+            switch ($newStatus) {
+                case 'shipped':
+                    MailerService::sendOrderShipped($orderId, false);
+                    break;
+                case 'delivered':
+                    MailerService::sendStatusUpdate(
+                        $orderId, 
+                        'delivered', 
+                        'Your Valerie Jewels bespoke order has been successfully delivered to your doorstep. We hope you cherish your exquisite fine jewelry pieces!', 
+                        false
+                    );
+                    break;
+                case 'out_for_delivery':
+                    MailerService::sendStatusUpdate(
+                        $orderId, 
+                        'out_for_delivery', 
+                        'Your Valerie Jewels bespoke order is out for doorstep delivery today.', 
+                        false
+                    );
+                    break;
+                case 'cancelled':
+                    MailerService::sendOrderCancelled($orderId, false);
+                    break;
+                case 'confirmed':
+                    MailerService::sendOrderConfirmation($orderId, false);
+                    break;
+                case 'processing':
+                    MailerService::sendStatusUpdate(
+                        $orderId, 
+                        'processing', 
+                        'Your Valerie Jewels bespoke jewelry order is in active handcrafting and anti-tarnish preparation.', 
+                        false
+                    );
+                    break;
+                default:
+                    if (!in_array($newStatus, ['pending', 'failed'], true)) {
+                        MailerService::sendStatusUpdate($orderId, $newStatus, $note ?: null, false);
+                    }
+                    break;
+            }
+        } catch (Throwable $mailEx) {
+            error_log('[Shiprocket advanceOrderStatus] Real-time mail dispatch warning: ' . $mailEx->getMessage());
+        }
+
         return [
             'success'      => true,
             'order_id'     => $orderId,

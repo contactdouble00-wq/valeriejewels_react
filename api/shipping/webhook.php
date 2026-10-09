@@ -127,6 +127,12 @@ try {
         } catch (Throwable $e) {
             // Log silently
         }
+    } elseif ($mappedStatus === 'out_for_delivery') {
+        try {
+            MailerService::sendStatusUpdate((int)$order['id'], 'out_for_delivery', 'Your Valerie Jewels bespoke order is out for doorstep delivery today.');
+        } catch (Throwable $e) {
+            // Log silently
+        }
     } elseif ($mappedStatus === 'delivered') {
         try {
             MailerService::sendStatusUpdate((int)$order['id'], 'delivered', 'Your Valerie Jewels bespoke order has been successfully delivered to your doorstep. We hope you cherish your exquisite fine jewelry pieces!');

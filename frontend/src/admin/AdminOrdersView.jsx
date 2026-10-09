@@ -33,7 +33,8 @@ import {
   PackageCheck,
   Settings,
   Lock,
-  AlertCircle
+  AlertCircle,
+  CreditCard
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -83,7 +84,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [shipAwb, setShipAwb] = useState('');
   const [shipCourier, setShipCourier] = useState('Bluedart Express Air');
 
-  // Email Dispatch Modal State
+  // Email Dispatch & History Modal State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [targetEmailOrder, setTargetEmailOrder] = useState(null);
   const [selectedEmailType, setSelectedEmailType] = useState('order_status_update');
@@ -93,6 +94,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [sendingEmail, setSendingEmail] = useState(false);
   const [recipientEmailInput, setRecipientEmailInput] = useState('');
   const [runningRecovery, setRunningRecovery] = useState(false);
+  const [orderEmailHistory, setOrderEmailHistory] = useState([]);
+  const [loadingOrderEmailHistory, setLoadingOrderEmailHistory] = useState(false);
+  const [emailModalTab, setEmailModalTab] = useState('history'); // 'history' | 'compose'
+  const [resendingEmailId, setResendingEmailId] = useState(null);
 
   // Cancel & Refund Dialog
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -682,7 +687,74 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
-  const openEmailModal = (order) => {
+  const getEmailTypeBadgeInfo = (emailType) => {
+    const type = String(emailType || '').toLowerCase();
+    if (type === 'order_confirmation') {
+      return {
+        label: 'Order Confirmed',
+        icon: CheckCircle,
+        bg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        dot: 'bg-emerald-500'
+      };
+    }
+    if (type === 'order_failed') {
+      return {
+        label: 'Payment Incomplete / Failed',
+        icon: AlertCircle,
+        bg: 'bg-rose-100 text-rose-800 border-rose-300',
+        dot: 'bg-rose-500'
+      };
+    }
+    if (type === 'payment_reminder') {
+      return {
+        label: 'Payment Reminder',
+        icon: CreditCard,
+        bg: 'bg-purple-100 text-purple-800 border-purple-300',
+        dot: 'bg-purple-500'
+      };
+    }
+    if (type === 'order_shipped') {
+      return {
+        label: 'Order Shipped / Tracking',
+        icon: Truck,
+        bg: 'bg-blue-100 text-blue-800 border-blue-300',
+        dot: 'bg-blue-500'
+      };
+    }
+    if (type === 'order_on_hold') {
+      return {
+        label: 'Order On Hold',
+        icon: Clock,
+        bg: 'bg-amber-100 text-amber-800 border-amber-300',
+        dot: 'bg-amber-500'
+      };
+    }
+    if (type === 'order_cancelled') {
+      return {
+        label: 'Order Cancelled',
+        icon: XCircle,
+        bg: 'bg-red-100 text-red-800 border-red-300',
+        dot: 'bg-red-500'
+      };
+    }
+    if (type.startsWith('status_update_') || type === 'order_status_update') {
+      const milestone = type.replace('status_update_', '').replace('order_status_update', 'milestone').replace(/_/g, ' ');
+      return {
+        label: `Status: ${milestone.toUpperCase()}`,
+        icon: RefreshCw,
+        bg: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+        dot: 'bg-indigo-500'
+      };
+    }
+    return {
+      label: type.replace(/_/g, ' ').toUpperCase(),
+      icon: Mail,
+      bg: 'bg-gray-100 text-gray-800 border-gray-300',
+      dot: 'bg-gray-500'
+    };
+  };
+
+  const openEmailModal = async (order, defaultTab = null) => {
     if (!order) return;
     setTargetEmailOrder(order);
     const isUnpaid = (order.payment_status === 'pending' || order.payment_status === 'failed' || order.payment_status === 'unpaid');
@@ -691,7 +763,60 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     setEmailCustomMessage('');
     setEmailReason(isUnpaid ? 'Bank gateway connection interrupted during UPI authorization / Checkout incomplete' : '');
     setRecipientEmailInput(order.customer_email || '');
+
+    const sentCount = Number(order.emails_sent_count ?? (order.email_logs?.length ?? 0));
+    setEmailModalTab(defaultTab || (sentCount > 0 ? 'history' : 'compose'));
+
+    if (Array.isArray(order.email_logs) && order.email_logs.length > 0) {
+      setOrderEmailHistory(order.email_logs);
+    } else {
+      setOrderEmailHistory([]);
+    }
+
     setEmailModalOpen(true);
+
+    if (order.id) {
+      try {
+        setLoadingOrderEmailHistory(true);
+        const res = await adminApi.getOrderEmailLogs(order.id);
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        setOrderEmailHistory(list);
+      } catch (err) {
+        console.error('Failed to load order email logs:', err);
+      } finally {
+        setLoadingOrderEmailHistory(false);
+      }
+    }
+  };
+
+  const handleModalResendEmail = async (log) => {
+    if (!targetEmailOrder || !targetEmailOrder.id) return;
+    setResendingEmailId(log.log_id || log.id);
+    try {
+      const recipient = (recipientEmailInput || targetEmailOrder.customer_email || log.recipient_email || '').trim();
+      const res = await adminApi.sendCustomerEmail(
+        targetEmailOrder.id,
+        log.email_type || 'order_confirmation',
+        '',
+        '',
+        targetEmailOrder.order_status || '',
+        recipient
+      );
+      if (res?.status === 'failed') {
+        showToast(`❌ Retry dispatch failed: ${res.error_message || 'SMTP error'}`);
+      } else {
+        showToast(`✓ Email successfully re-sent to ${recipient}!`);
+      }
+      const updatedLogs = await adminApi.getOrderEmailLogs(targetEmailOrder.id);
+      const list = Array.isArray(updatedLogs) ? updatedLogs : (Array.isArray(updatedLogs?.data) ? updatedLogs.data : []);
+      setOrderEmailHistory(list);
+      await loadOrders();
+      await loadSentEmailLogs();
+    } catch (err) {
+      showToast(`❌ Failed to resend email: ${err.message}`);
+    } finally {
+      setResendingEmailId(null);
+    }
   };
 
   const handleSendCustomEmail = async (e) => {
@@ -713,9 +838,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         recipient
       );
       showToast(`Email dispatched to ${recipient}`);
-      setEmailModalOpen(false);
       setEmailCustomMessage('');
       setEmailReason('');
+
+      // Refresh customer email history and switch to history tab so user sees sent email immediately
+      const updatedLogs = await adminApi.getOrderEmailLogs(targetEmailOrder.id);
+      const list = Array.isArray(updatedLogs) ? updatedLogs : (Array.isArray(updatedLogs?.data) ? updatedLogs.data : []);
+      setOrderEmailHistory(list);
+      setEmailModalTab('history');
+
       if (selectedOrder && selectedOrder.id === targetEmailOrder.id) {
         await inspectOrder(selectedOrder.id);
       }
@@ -1541,11 +1672,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         <button
                           type="button"
                           onClick={() => openEmailModal(ord)}
-                          title="Send Branded Customer Email"
-                          className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer"
+                          title={`Customer Emails: ${ord.emails_sent_count || 0} sent (Click to view history & sent types)`}
+                          className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer group"
                         >
-                          <SendHorizontal className="w-3 h-3" />
-                          <span className="hidden sm:inline">Email</span>
+                          <SendHorizontal className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                          <span>Email</span>
+                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                            Number(ord.emails_sent_count || 0) > 0
+                              ? 'bg-purple-600 text-white group-hover:bg-white group-hover:text-purple-700'
+                              : 'bg-purple-200/80 text-purple-700'
+                          }`}>
+                            {ord.emails_sent_count || 0}
+                          </span>
                         </button>
                         <button
                           onClick={() => inspectOrder(ord.id)}
@@ -1995,6 +2133,24 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               </a>
                             )}
 
+                            {/* Customer Email & History */}
+                            <button
+                              type="button"
+                              onClick={() => openEmailModal(ord)}
+                              title={`Customer Emails: ${ord.emails_sent_count || 0} sent (Click to view history & sent types)`}
+                              className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer group"
+                            >
+                              <SendHorizontal className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                              <span className="hidden xl:inline">Email</span>
+                              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                Number(ord.emails_sent_count || 0) > 0
+                                  ? 'bg-purple-600 text-white group-hover:bg-white group-hover:text-purple-700'
+                                  : 'bg-purple-200/80 text-purple-700'
+                              }`}>
+                                {ord.emails_sent_count || 0}
+                              </span>
+                            </button>
+
                             {/* Inspect Drawer */}
                             <button
                               type="button"
@@ -2404,6 +2560,29 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           {/* Concierge Actions */}
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end space-x-1.5">
+                              {/* View All Dispatched Emails for this specific customer */}
+                              {log.order_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEmailModal({
+                                    id: log.order_id,
+                                    order_number: log.order_number,
+                                    customer_name: log.customer_name || log.recipient_name,
+                                    customer_email: log.customer_email || log.recipient_email,
+                                    total_amount: log.total_amount,
+                                    payment_type: log.payment_type,
+                                    payment_status: log.payment_status,
+                                    order_status: log.order_status,
+                                    emails_sent_count: log.customer_emails_count
+                                  }, 'history')}
+                                  title={`View all ${log.customer_emails_count || 1} emails dispatched to this customer`}
+                                  className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all cursor-pointer shadow-2xs flex items-center space-x-1"
+                                >
+                                  <History className="w-3 h-3" />
+                                  <span className="text-[10px] font-bold">{log.customer_emails_count || 1} Sent</span>
+                                </button>
+                              )}
+
                               {/* Retry / Resend Email Button */}
                               {log.order_id && (
                                 <button
@@ -3004,51 +3183,64 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       )}
 
       {/* ========================================================================= */}
-      {/* SEND CUSTOM LUXURY EMAIL MODAL */}
+      {/* SEND & AUDIT CUSTOM LUXURY EMAIL MODAL */}
       {/* ========================================================================= */}
       {emailModalOpen && targetEmailOrder && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             {/* Modal Header with Branding */}
             <div className="flex items-center justify-between pb-3 border-b border-brand-border">
               <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center shrink-0 shadow-2xs">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <span className="text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold">
-                    Email Notification Dispatcher
+                    Customer Email Concierge
                   </span>
                   <h3 className="text-base font-editorial font-bold text-brand-tertiary">
-                    Send Customer Email • #{targetEmailOrder.order_number}
+                    Customer Emails • #{targetEmailOrder.order_number}
                   </h3>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEmailModalOpen(false)}
-                className="p-1.5 text-brand-muted hover:text-brand-tertiary rounded-xl hover:bg-gray-100"
+                className="p-1.5 text-brand-muted hover:text-brand-tertiary rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Recipient Snapshot & Editable Email Address */}
-            <div className="bg-[#FAF8FC] rounded-2xl p-3.5 border border-brand-border/80 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
+            <div className="bg-[#FAF8FC] rounded-2xl p-4 border border-brand-border/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Customer:</span>
-                  <div className="font-semibold text-brand-tertiary">{targetEmailOrder.customer_name}</div>
+                  <div className="font-semibold text-brand-tertiary text-sm">{targetEmailOrder.customer_name}</div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Order Value:</span>
-                  <div className="font-bold text-brand-tertiary font-mono">₹{Number(targetEmailOrder.total_amount).toLocaleString('en-IN')}</div>
-                  <div className="text-[10px] text-brand-muted capitalize">{targetEmailOrder.payment_type?.replace('_', ' ')}</div>
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Order Value:</span>
+                    <div className="font-bold text-brand-tertiary font-mono">₹{Number(targetEmailOrder.total_amount).toLocaleString('en-IN')}</div>
+                    <div className="text-[10px] text-brand-muted capitalize">{targetEmailOrder.payment_type?.replace('_', ' ')}</div>
+                  </div>
+                  <div className="pl-3 border-l border-brand-border">
+                    <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider block">Dispatched:</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                      orderEmailHistory.length > 0
+                        ? 'bg-purple-600 text-white shadow-2xs'
+                        : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {orderEmailHistory.length} sent
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] text-brand-muted uppercase font-bold tracking-wider flex items-center justify-between mb-1">
-                  <span>Recipient Email *</span>
+                  <span>Recipient Email Address *</span>
                   {(!recipientEmailInput || recipientEmailInput.includes('@valerieclient.in')) && (
                     <span className="text-rose-600 font-semibold normal-case">⚠️ Enter customer email to send</span>
                   )}
@@ -3059,117 +3251,293 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   value={recipientEmailInput}
                   onChange={(e) => setRecipientEmailInput(e.target.value)}
                   placeholder="e.g. customer@example.com"
-                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono"
+                  className="w-full bg-white border border-brand-border rounded-xl px-3.5 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-mono shadow-2xs"
                 />
               </div>
             </div>
 
-            <form onSubmit={handleSendCustomEmail} className="space-y-4 text-xs">
-              {/* Template Selection */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
-                  Select Email Template *
-                </label>
-                <select
-                  value={selectedEmailType}
-                  onChange={(e) => setSelectedEmailType(e.target.value)}
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-medium"
-                >
-                  <option value="order_confirmation">✦ Order Confirmation / Successful (Full Recap + Gift Callout)</option>
-                  <option value="order_status_update">🚚 Status Update & Milestone (Live Badge + Live Tracking)</option>
-                  <option value="order_on_hold">⏱ Order Temporarily On Hold (Concierge Notice & WhatsApp)</option>
-                  <option value="payment_reminder">💳 Payment Reminder (Incomplete Checkout Recovery Link)</option>
-                  <option value="order_failed">✕ Payment Incomplete / Failed (Reassurance & Retry Link)</option>
-                  <option value="order_shipped">✈️ Order Shipped (Air Express & AWB Tracking)</option>
-                  <option value="order_cancelled">🛑 Order Cancelled & Refund Notice</option>
-                </select>
+            {/* Modal Tabs Header */}
+            <div className="flex items-center space-x-2 p-1 bg-[#FAF8FC] rounded-2xl border border-brand-border">
+              <button
+                type="button"
+                onClick={() => setEmailModalTab('history')}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  emailModalTab === 'history'
+                    ? 'bg-[#26153D] text-white shadow-xs'
+                    : 'bg-transparent text-brand-tertiary hover:bg-white'
+                }`}
+              >
+                <History className="w-3.5 h-3.5 text-brand-accent" />
+                <span>Dispatched History & Types</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  emailModalTab === 'history'
+                    ? 'bg-amber-400 text-amber-950'
+                    : 'bg-gray-200 text-brand-tertiary'
+                }`}>
+                  {orderEmailHistory.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEmailModalTab('compose')}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  emailModalTab === 'compose'
+                    ? 'bg-[#26153D] text-white shadow-xs'
+                    : 'bg-transparent text-brand-tertiary hover:bg-white'
+                }`}
+              >
+                <Send className="w-3.5 h-3.5 text-brand-accent" />
+                <span>Compose Manual Email</span>
+              </button>
+            </div>
+
+            {/* TAB 1: DISPATCHED HISTORY & TYPES */}
+            {emailModalTab === 'history' && (
+              <div className="space-y-4">
+                {loadingOrderEmailHistory ? (
+                  <div className="py-12 flex flex-col items-center justify-center space-y-2 text-brand-muted">
+                    <RefreshCw className="w-6 h-6 animate-spin text-brand-primary" />
+                    <span className="text-xs font-medium">Loading customer email history...</span>
+                  </div>
+                ) : orderEmailHistory.length === 0 ? (
+                  <div className="p-8 rounded-2xl border border-dashed border-brand-border text-center space-y-3 bg-[#FAF8FC]">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-100 text-brand-primary flex items-center justify-center mx-auto shadow-2xs">
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-brand-tertiary">No Emails Dispatched Yet</h4>
+                      <p className="text-xs text-brand-muted mt-1 max-w-sm mx-auto">
+                        Automated real-time emails are sent when operations occur (confirmed, payment failed, shipped, out for delivery, delivered, on hold, cancelled). You can also manually compose an email below.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEmailModalTab('compose')}
+                      className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-secondary text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer inline-flex items-center space-x-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Compose First Email</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-[11px] text-brand-muted font-caps tracking-wider uppercase font-bold flex items-center justify-between">
+                      <span>Audit trail of all email types sent to {targetEmailOrder.customer_name}</span>
+                      <span className="text-brand-tertiary">{orderEmailHistory.length} total event{orderEmailHistory.length !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-[46vh] overflow-y-auto pr-1">
+                      {orderEmailHistory.map((log, idx) => {
+                        const badge = getEmailTypeBadgeInfo(log.email_type);
+                        const IconComp = badge.icon;
+                        const isResending = resendingEmailId === (log.log_id || log.id);
+
+                        return (
+                          <div
+                            key={log.log_id || log.id || idx}
+                            className="p-3.5 rounded-2xl border border-brand-border bg-[#FAF8FC] hover:bg-white transition-all space-y-2 shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center space-x-2">
+                                <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
+                                  <IconComp className="w-3 h-3 shrink-0" />
+                                  <span>{badge.label}</span>
+                                </span>
+                                <span className="text-[10px] font-mono text-brand-muted">
+                                  {log.sent_at ? formatDateTime(log.sent_at) : 'Dispatched'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                  log.delivery_status === 'sent'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    : log.delivery_status === 'simulated'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-100 text-rose-800 border border-rose-300'
+                                }`}>
+                                  {log.delivery_status === 'sent'
+                                    ? 'Delivered (SMTP)'
+                                    : log.delivery_status === 'simulated'
+                                    ? 'Delivered (Simulated)'
+                                    : 'Failed'}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleModalResendEmail(log)}
+                                  disabled={isResending}
+                                  title="Re-send this exact email type to customer via SMTP"
+                                  className="px-2 py-1 rounded-lg bg-white hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-[10px] font-semibold transition-colors flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                                >
+                                  <RefreshCw className={`w-2.5 h-2.5 ${isResending ? 'animate-spin' : ''}`} />
+                                  <span>{isResending ? 'Sending...' : 'Resend'}</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-0.5">
+                              <div className="text-xs font-bold text-brand-tertiary">
+                                {log.subject || 'Valerie Jewels Bespoke Notification'}
+                              </div>
+                              <div className="text-[11px] text-brand-muted flex items-center space-x-1.5">
+                                <span>Recipient:</span>
+                                <span className="font-mono text-brand-secondary font-medium">{log.recipient_email || targetEmailOrder.customer_email}</span>
+                                {log.recipient_name && <span className="text-gray-400">({log.recipient_name})</span>}
+                              </div>
+                            </div>
+
+                            {log.delivery_status === 'failed' && log.error_message && (
+                              <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-[10px] text-rose-700 flex items-start space-x-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                <span className="font-mono">{log.error_message}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between">
+                      <span className="text-[11px] text-brand-muted">
+                        Need to send another notification?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEmailModalTab('compose')}
+                        className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Compose Manual Email</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
 
-              {/* Status Milestone picker (if status update chosen) */}
-              {selectedEmailType === 'order_status_update' && (
-                <div className="space-y-1.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
-                  <label className="text-[10px] font-caps tracking-wider uppercase text-brand-primary font-bold">
-                    Target Milestone Milestone Badge
-                  </label>
-                  <select
-                    value={emailTargetStatus}
-                    onChange={(e) => setEmailTargetStatus(e.target.value)}
-                    className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                  >
-                    <option value="confirmed">Order Confirmed & Allocated</option>
-                    <option value="processing">In Handcrafting & Anti-Tarnish Prep</option>
-                    <option value="shipped">Dispatched & On The Way</option>
-                    <option value="out_for_delivery">Out for Delivery Today</option>
-                    <option value="delivered">Delivered with Care</option>
-                    <option value="on_hold">Temporarily On Hold</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Specific Reason (for On Hold or Failed) */}
-              {(selectedEmailType === 'order_on_hold' || selectedEmailType === 'order_failed') && (
+            {/* TAB 2: COMPOSE MANUAL CUSTOM EMAIL */}
+            {emailModalTab === 'compose' && (
+              <form onSubmit={handleSendCustomEmail} className="space-y-4 text-xs">
+                {/* Template Selection */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
-                    Reason / Context
+                    Select Email Template *
                   </label>
-                  <input
-                    type="text"
-                    value={emailReason}
-                    onChange={(e) => setEmailReason(e.target.value)}
-                    placeholder={
-                      selectedEmailType === 'order_on_hold'
-                        ? 'e.g. Pin code address confirmation required prior to dispatch'
-                        : 'e.g. Bank gateway connection interrupted during UPI authorization'
-                    }
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                  />
+                  <select
+                    value={selectedEmailType}
+                    onChange={(e) => setSelectedEmailType(e.target.value)}
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2.5 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary font-medium"
+                  >
+                    <option value="order_confirmation">✦ Order Confirmation / Successful (Full Recap + Gift Callout)</option>
+                    <option value="order_status_update">🚚 Status Update & Milestone (Live Badge + Live Tracking)</option>
+                    <option value="order_on_hold">⏱ Order Temporarily On Hold (Concierge Notice & WhatsApp)</option>
+                    <option value="payment_reminder">💳 Payment Reminder (Incomplete Checkout Recovery Link)</option>
+                    <option value="order_failed">✕ Payment Incomplete / Failed (Reassurance & Retry Link)</option>
+                    <option value="order_shipped">✈️ Order Shipped (Air Express & AWB Tracking)</option>
+                    <option value="order_cancelled">🛑 Order Cancelled & Refund Notice</option>
+                  </select>
                 </div>
-              )}
 
-              {/* Personal Concierge Note (Optional for any email) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
-                    Personalized Concierge Note (Optional)
-                  </label>
-                  <span className="text-[10px] text-brand-muted">Renders prominently in email</span>
+                {/* Status Milestone picker (if status update chosen) */}
+                {selectedEmailType === 'order_status_update' && (
+                  <div className="space-y-1.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
+                    <label className="text-[10px] font-caps tracking-wider uppercase text-brand-primary font-bold">
+                      Target Milestone Milestone Badge
+                    </label>
+                    <select
+                      value={emailTargetStatus}
+                      onChange={(e) => setEmailTargetStatus(e.target.value)}
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    >
+                      <option value="confirmed">Order Confirmed & Allocated</option>
+                      <option value="processing">In Handcrafting & Anti-Tarnish Prep</option>
+                      <option value="shipped">Dispatched & On The Way</option>
+                      <option value="out_for_delivery">Out for Delivery Today</option>
+                      <option value="delivered">Delivered with Care</option>
+                      <option value="on_hold">Temporarily On Hold</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Specific Reason (for On Hold or Failed) */}
+                {(selectedEmailType === 'order_on_hold' || selectedEmailType === 'order_failed') && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                      Reason / Context
+                    </label>
+                    <input
+                      type="text"
+                      value={emailReason}
+                      onChange={(e) => setEmailReason(e.target.value)}
+                      placeholder={
+                        selectedEmailType === 'order_on_hold'
+                          ? 'e.g. Pin code address confirmation required prior to dispatch'
+                          : 'e.g. Bank gateway connection interrupted during UPI authorization'
+                      }
+                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                )}
+
+                {/* Personal Concierge Note (Optional for any email) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                      Personalized Concierge Note (Optional)
+                    </label>
+                    <span className="text-[10px] text-brand-muted">Renders prominently in email</span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={emailCustomMessage}
+                    onChange={(e) => setEmailCustomMessage(e.target.value)}
+                    placeholder="e.g. We have included an extra velvet pouch for your order as our special gift. Enjoy your jewelry!"
+                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                  ></textarea>
                 </div>
-                <textarea
-                  rows={2}
-                  value={emailCustomMessage}
-                  onChange={(e) => setEmailCustomMessage(e.target.value)}
-                  placeholder="e.g. We have included an extra velvet pouch for your order as our special gift. Enjoy your jewelry!"
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                ></textarea>
-              </div>
 
-              {/* Luxury Guarantee Checklist */}
-              <div className="p-3 bg-[#FAF8FC] rounded-2xl border border-brand-border/60 text-[11px] text-brand-muted space-y-1">
-                <div className="flex items-center space-x-1.5 text-brand-tertiary font-medium">
-                  <span>✨</span>
-                  <span><strong>Luxury Theme Assured:</strong> Includes Valerie Jewels top logo, brand colors, itemized items table, and delivery notes.</span>
+                {/* Luxury Guarantee Checklist */}
+                <div className="p-3 bg-[#FAF8FC] rounded-2xl border border-brand-border/60 text-[11px] text-brand-muted space-y-1">
+                  <div className="flex items-center space-x-1.5 text-brand-tertiary font-medium">
+                    <span>✨</span>
+                    <span><strong>Luxury Theme Assured:</strong> Includes Valerie Jewels top logo, brand colors, itemized items table, and delivery notes.</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Footer Buttons */}
-              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-brand-border/60">
-                <button
-                  type="button"
-                  onClick={() => setEmailModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingEmail}
-                  className="px-5 py-2 rounded-xl bg-brand-primary hover:bg-brand-secondary text-white text-xs font-semibold flex items-center space-x-1.5 shadow-luxury transition-all disabled:opacity-50"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{sendingEmail ? 'Dispatching...' : 'Send Luxury Email Now'}</span>
-                </button>
-              </div>
-            </form>
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-between pt-2 border-t border-brand-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setEmailModalTab('history')}
+                    className="px-3.5 py-2 rounded-xl text-brand-muted hover:text-brand-tertiary text-xs font-semibold flex items-center space-x-1"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>View Dispatched History ({orderEmailHistory.length})</span>
+                  </button>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setEmailModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={sendingEmail}
+                      className="px-5 py-2 rounded-xl bg-brand-primary hover:bg-brand-secondary text-white text-xs font-semibold flex items-center space-x-1.5 shadow-luxury transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{sendingEmail ? 'Dispatching...' : 'Send Luxury Email Now'}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

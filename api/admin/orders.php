@@ -131,10 +131,16 @@ if ($method === 'GET') {
         $search = trim($_GET['search'] ?? '');
         $emailType = trim($_GET['type'] ?? ($_GET['email_type'] ?? ''));
         $deliveryStatus = trim($_GET['delivery_status'] ?? ($_GET['status'] ?? ''));
+        $orderId = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
         $limit = isset($_GET['limit']) ? min(1000, max(1, (int)$_GET['limit'])) : 500;
 
         $where = ["1=1"];
         $params = [];
+
+        if ($orderId > 0) {
+            $where[] = "el.order_id = ?";
+            $params[] = $orderId;
+        }
 
         if ($search !== '') {
             $where[] = "(el.recipient_name LIKE ? OR el.recipient_email LIKE ? OR el.subject LIKE ? OR o.order_number LIKE ? OR o.customer_phone LIKE ? OR o.city LIKE ? OR o.customer_name LIKE ?)";
@@ -171,6 +177,7 @@ if ($method === 'GET') {
                 el.status AS delivery_status,
                 el.error_message,
                 el.sent_at,
+                (SELECT COUNT(*) FROM email_logs WHERE order_id = el.order_id) AS customer_emails_count,
                 o.order_number,
                 COALESCE(o.customer_name, el.recipient_name) AS customer_name,
                 COALESCE(o.customer_email, el.recipient_email) AS customer_email,
@@ -245,6 +252,7 @@ if ($method === 'GET') {
         } catch (Throwable $e) {
             $order['email_logs'] = [];
         }
+        $order['emails_sent_count'] = count($order['email_logs'] ?? []);
 
         ApiResponse::success($order, 'Order retrieved successfully');
     }
@@ -314,6 +322,9 @@ if ($method === 'GET') {
     $stmt = $pdo->prepare("
         SELECT 
             o.*,
+            (SELECT COUNT(*) FROM email_logs WHERE order_id = o.id) AS emails_sent_count,
+            (SELECT email_type FROM email_logs WHERE order_id = o.id ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_type,
+            (SELECT sent_at FROM email_logs WHERE order_id = o.id ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_sent_at,
             (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS items_count,
             (SELECT oi.product_name FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_name,
             (SELECT p.sku FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_sku,
