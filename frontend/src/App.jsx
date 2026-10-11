@@ -731,82 +731,126 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           )}
 
           <div className="relative z-10 max-w-2xl space-y-5">
-            <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
-              <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
-              <span className="whitespace-normal leading-tight text-left">{content?.heroBanner?.badgeText || 'FASHION JEWELLERY'}</span>
-            </div>
+            {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim()) && (
+              <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
+                <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
+                <span className="whitespace-normal leading-tight text-left">{content.heroBanner.badgeText.trim()}</span>
+              </div>
+            )}
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
-              {content?.heroBanner?.headline || 'YOUR STYLE,'} <br />
-              <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
-                {content?.heroBanner?.accentText || 'FINISHED BEAUTIFULLY.'}
-              </span>
-            </h1>
+            {(Boolean(content?.heroBanner?.headline?.trim()) || Boolean(content?.heroBanner?.accentText?.trim())) && (
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
+                {Boolean(content?.heroBanner?.headline?.trim()) && (
+                  <>{content.heroBanner.headline.trim()} </>
+                )}
+                {Boolean(content?.heroBanner?.headline?.trim()) && Boolean(content?.heroBanner?.accentText?.trim()) && <br />}
+                {Boolean(content?.heroBanner?.accentText?.trim()) && (
+                  <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
+                    {content.heroBanner.accentText.trim()}
+                  </span>
+                )}
+              </h1>
+            )}
 
-            <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
-              {content?.heroBanner?.subtitle || 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.'}
-            </p>
+            {Boolean(content?.heroBanner?.subtitle && content.heroBanner.subtitle.trim()) && (
+              <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
+                {content.heroBanner.subtitle.trim()}
+              </p>
+            )}
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <a
-                href={content?.heroBanner?.primaryBtnLink || '#jhumka-boxes'}
-                onClick={() => {
-                  if ((content?.heroBanner?.primaryBtnLink || '#jhumka-boxes') === '#jhumka-boxes') {
-                    setSelectedCategory('jhumka-boxes');
-                  }
-                }}
-                className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
-              >
-                <span>{content?.heroBanner?.primaryBtnText || 'DISCOVER YOUR STYLE'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href={content?.heroBanner?.secondaryBtnLink || '#catalog'}
-                onClick={() => {
-                  if ((content?.heroBanner?.secondaryBtnLink || '#catalog') === '#catalog') {
-                    setSelectedCategory('all');
-                  }
-                }}
-                className="px-5 py-3 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-caps tracking-wider uppercase font-semibold transition-colors"
-              >
-                {content?.heroBanner?.secondaryBtnText || 'All Everyday Jewelry'}
-              </a>
-            </div>
+            {(Boolean(content?.heroBanner?.primaryBtnText?.trim()) || Boolean(content?.heroBanner?.secondaryBtnText?.trim())) && (
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                {Boolean(content?.heroBanner?.primaryBtnText && content.heroBanner.primaryBtnText.trim()) && (
+                  <a
+                    href={content?.heroBanner?.primaryBtnLink || '#jhumka-boxes'}
+                    onClick={() => {
+                      if ((content?.heroBanner?.primaryBtnLink || '#jhumka-boxes') === '#jhumka-boxes') {
+                        setSelectedCategory('jhumka-boxes');
+                      }
+                    }}
+                    className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
+                  >
+                    <span>{content.heroBanner.primaryBtnText.trim()}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {Boolean(content?.heroBanner?.secondaryBtnText && content.heroBanner.secondaryBtnText.trim()) && (
+                  <a
+                    href={content?.heroBanner?.secondaryBtnLink || '#catalog'}
+                    onClick={() => {
+                      if ((content?.heroBanner?.secondaryBtnLink || '#catalog') === '#catalog') {
+                        setSelectedCategory('all');
+                      }
+                    }}
+                    className="px-5 py-3 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-caps tracking-wider uppercase font-semibold transition-colors"
+                  >
+                    {content.heroBanner.secondaryBtnText.trim()}
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* Desktop Hero Trust Reassurance with Original Amazon Logo */}
-            <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-brand-muted font-light">
-              <span className="flex items-center space-x-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-brand-tertiary font-medium">
-                  {content?.heroBanner?.trustPoint1 || '100% Anti-Tarnish'}
-                </span>
-              </span>
-              <span className="text-brand-border">•</span>
-              <span className="flex items-center space-x-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-brand-tertiary font-medium">
-                  {content?.heroBanner?.trustPoint2 || 'Free Express Delivery'}
-                </span>
-              </span>
-              {content?.heroBanner?.showAmazon !== false && (
-                <>
-                  <span className="text-brand-border">•</span>
+            {(() => {
+              const hasTp1 = Boolean(content?.heroBanner?.trustPoint1 && content.heroBanner.trustPoint1.trim());
+              const hasTp2 = Boolean(content?.heroBanner?.trustPoint2 && content.heroBanner.trustPoint2.trim());
+              const hasAmazon = content?.heroBanner?.showAmazon !== false;
+
+              const items = [];
+              if (hasTp1) {
+                items.push(
+                  <span key="tp1" className="flex items-center space-x-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-brand-tertiary font-medium">
+                      {content.heroBanner.trustPoint1.trim()}
+                    </span>
+                  </span>
+                );
+              }
+              if (hasTp2) {
+                items.push(
+                  <span key="tp2" className="flex items-center space-x-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-brand-tertiary font-medium">
+                      {content.heroBanner.trustPoint2.trim()}
+                    </span>
+                  </span>
+                );
+              }
+              if (hasAmazon) {
+                items.push(
                   <a
+                    key="amazon"
                     href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center space-x-1.5 text-brand-tertiary hover:text-brand-primary font-medium transition-colors group"
                     title="Also Available on Amazon India (HOUSE OF VJ)"
                   >
-                    <span>{content?.heroBanner?.amazonText || 'Also on'}</span>
+                    {Boolean(content?.heroBanner?.amazonText && content.heroBanner.amazonText.trim()) && (
+                      <span>{content.heroBanner.amazonText.trim()}</span>
+                    )}
                     <span className="bg-white px-2 py-0.5 rounded-md border border-brand-border/90 shadow-2xs inline-flex items-center">
                       <OriginalAmazonLogo className="h-3 w-auto" />
                     </span>
                     <ExternalLink className="w-3 h-3 text-brand-muted group-hover:text-brand-primary" />
                   </a>
-                </>
-              )}
-            </div>
+                );
+              }
+
+              if (items.length === 0) return null;
+
+              return (
+                <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-brand-muted font-light">
+                  {items.map((item, idx) => (
+                    <React.Fragment key={idx}>
+                      {idx > 0 && <span className="text-brand-border">•</span>}
+                      {item}
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </section>
 

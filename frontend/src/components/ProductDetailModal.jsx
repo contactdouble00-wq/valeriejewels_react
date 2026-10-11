@@ -855,9 +855,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
                     <span>Material Specification</span>
                   </span>
-                  <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
-                    {siteContent?.heroBanner?.trustPoint1 || '100% Anti-Tarnish'}
-                  </span>
+                  {Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
+                    <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
+                      {siteContent.heroBanner.trustPoint1.trim()}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-brand-tertiary font-medium">
                   {product.material || 'Premium Gold Plated 316L Stainless Steel'}
@@ -1353,9 +1355,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         ₹{Math.round(activeMrp).toLocaleString('en-IN')}
                       </span>
                     )}
-                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {siteContent?.heroBanner?.trustPoint2 || 'Free Express Delivery'}
-                    </span>
+                    {Boolean(siteContent?.heroBanner?.trustPoint2 && siteContent.heroBanner.trustPoint2.trim()) && (
+                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        {siteContent.heroBanner.trustPoint2.trim()}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-brand-muted font-light">
                     Inclusive of all taxes • Zero hidden shipping fees across India

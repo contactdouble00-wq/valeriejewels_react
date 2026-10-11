@@ -161,6 +161,10 @@ export function SiteContentProvider({ children }) {
           return {
             ...DEFAULT_SITE_CONTENT,
             ...parsed,
+            heroBanner: {
+              ...DEFAULT_SITE_CONTENT.heroBanner,
+              ...(parsed.heroBanner || {}),
+            },
             festivalOffer: {
               ...DEFAULT_SITE_CONTENT.festivalOffer,
               ...(parsed.festivalOffer || {}),

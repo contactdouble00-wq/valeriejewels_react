@@ -90,9 +90,11 @@ export default function BundleSection({ bundles = [], onSelectBundle }) {
                 <span className="text-sm text-brand-muted line-through font-light">
                   ₹{Math.round(bundle.compare_price).toLocaleString('en-IN')}
                 </span>
-                <span className="text-xs font-semibold text-emerald-600">
-                  {content?.heroBanner?.trustPoint2 || 'Free Express Delivery'}
-                </span>
+                {Boolean(content?.heroBanner?.trustPoint2 && content.heroBanner.trustPoint2.trim()) && (
+                  <span className="text-xs font-semibold text-emerald-600">
+                    {content.heroBanner.trustPoint2.trim()}
+                  </span>
+                )}
               </div>
 
               <button

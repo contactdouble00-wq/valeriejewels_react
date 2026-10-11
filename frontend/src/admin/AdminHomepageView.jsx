@@ -2288,51 +2288,92 @@ export default function AdminHomepageView() {
                 )}
 
                 <div className="relative z-10 space-y-3.5 max-w-xl">
-                  <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] font-caps uppercase tracking-wider">
-                    <Sparkles className="w-3 h-3 text-brand-primary" />
-                    <span>{formData.heroBanner.badgeText || 'FASHION JEWELLERY'}</span>
-                  </div>
+                  {Boolean(formData.heroBanner.badgeText?.trim()) && (
+                    <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] font-caps uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3 text-brand-primary" />
+                      <span>{formData.heroBanner.badgeText.trim()}</span>
+                    </div>
+                  )}
                   <h4 className="text-2xl sm:text-3xl font-cormorant font-medium text-brand-tertiary leading-snug">
-                    {formData.heroBanner.headline || 'YOUR STYLE,'} <br />
-                    <span className="font-cormorant font-normal text-brand-primary">{formData.heroBanner.accentText || 'FINISHED BEAUTIFULLY.'}</span>
+                    {Boolean(formData.heroBanner.headline?.trim()) && (
+                      <>{formData.heroBanner.headline.trim()} </>
+                    )}
+                    {Boolean(formData.heroBanner.headline?.trim()) && Boolean(formData.heroBanner.accentText?.trim()) && <br />}
+                    {Boolean(formData.heroBanner.accentText?.trim()) && (
+                      <span className="font-cormorant font-normal text-brand-primary">{formData.heroBanner.accentText.trim()}</span>
+                    )}
                   </h4>
-                  <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed whitespace-pre-line">
-                    {formData.heroBanner.subtitle || 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.'}
-                  </p>
-                  <div className="flex items-center gap-3 pt-1">
-                    <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5 shadow-sm">
-                      <span>{formData.heroBanner.primaryBtnText || 'DISCOVER YOUR STYLE'}</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </span>
-                    <span className="px-4 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-[11px] font-caps uppercase font-semibold">
-                      {formData.heroBanner.secondaryBtnText || 'ALL EVERYDAY JEWELRY'}
-                    </span>
-                  </div>
+                  {Boolean(formData.heroBanner.subtitle?.trim()) && (
+                    <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed whitespace-pre-line">
+                      {formData.heroBanner.subtitle.trim()}
+                    </p>
+                  )}
+                  {(Boolean(formData.heroBanner.primaryBtnText?.trim()) || Boolean(formData.heroBanner.secondaryBtnText?.trim())) && (
+                    <div className="flex items-center gap-3 pt-1">
+                      {Boolean(formData.heroBanner.primaryBtnText?.trim()) && (
+                        <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5 shadow-sm">
+                          <span>{formData.heroBanner.primaryBtnText.trim()}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
+                      )}
+                      {Boolean(formData.heroBanner.secondaryBtnText?.trim()) && (
+                        <span className="px-4 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-[11px] font-caps uppercase font-semibold">
+                          {formData.heroBanner.secondaryBtnText.trim()}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Reassurance Trust Points Preview */}
-                  <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-brand-muted font-light">
-                    <span className="flex items-center space-x-1 text-emerald-700 font-medium">
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      <span>{formData.heroBanner.trustPoint1 || '100% Anti-Tarnish'}</span>
-                    </span>
-                    <span className="text-brand-border">•</span>
-                    <span className="flex items-center space-x-1 text-emerald-700 font-medium">
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      <span>{formData.heroBanner.trustPoint2 || 'Free Express Delivery'}</span>
-                    </span>
-                    {formData.heroBanner.showAmazon !== false && (
-                      <>
-                        <span className="text-brand-border">•</span>
-                        <span className="inline-flex items-center space-x-1 text-brand-tertiary font-medium">
-                          <span>{formData.heroBanner.amazonText || 'Also on'}</span>
+                  {(() => {
+                    const hasTp1 = Boolean(formData.heroBanner?.trustPoint1 && formData.heroBanner.trustPoint1.trim());
+                    const hasTp2 = Boolean(formData.heroBanner?.trustPoint2 && formData.heroBanner.trustPoint2.trim());
+                    const hasAmazon = formData.heroBanner?.showAmazon !== false;
+
+                    const previewItems = [];
+                    if (hasTp1) {
+                      previewItems.push(
+                        <span key="tp1" className="flex items-center space-x-1 text-emerald-700 font-medium">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span>{formData.heroBanner.trustPoint1.trim()}</span>
+                        </span>
+                      );
+                    }
+                    if (hasTp2) {
+                      previewItems.push(
+                        <span key="tp2" className="flex items-center space-x-1 text-emerald-700 font-medium">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span>{formData.heroBanner.trustPoint2.trim()}</span>
+                        </span>
+                      );
+                    }
+                    if (hasAmazon) {
+                      previewItems.push(
+                        <span key="amazon" className="inline-flex items-center space-x-1 text-brand-tertiary font-medium">
+                          {Boolean(formData.heroBanner?.amazonText && formData.heroBanner.amazonText.trim()) && (
+                            <span>{formData.heroBanner.amazonText.trim()}</span>
+                          )}
                           <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/80 inline-flex items-center shadow-2xs">
                             <OriginalAmazonLogo className="h-2.5 w-auto" />
                           </span>
                           <ExternalLink className="w-2.5 h-2.5 text-brand-muted" />
                         </span>
-                      </>
-                    )}
-                  </div>
+                      );
+                    }
+
+                    if (previewItems.length === 0) return null;
+
+                    return (
+                      <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-brand-muted font-light">
+                        {previewItems.map((item, idx) => (
+                          <React.Fragment key={idx}>
+                            {idx > 0 && <span className="text-brand-border">•</span>}
+                            {item}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -2501,7 +2542,7 @@ export default function AdminHomepageView() {
                       placeholder="e.g. 100% Anti-Tarnish"
                     />
                     <p className="text-[11px] text-brand-muted">
-                      Appears with a green checkmark directly under the CTA buttons.
+                      Appears with a green checkmark directly under the CTA buttons. Leave empty to hide.
                     </p>
                   </div>
 
@@ -2517,7 +2558,7 @@ export default function AdminHomepageView() {
                       placeholder="e.g. Free Express Delivery"
                     />
                     <p className="text-[11px] text-brand-muted">
-                      Appears with a green checkmark next to Trust Point 1.
+                      Appears with a green checkmark next to Trust Point 1. Leave empty to hide.
                     </p>
                   </div>
 
@@ -2705,27 +2746,57 @@ export default function AdminHomepageView() {
               </span>
               <div className="p-5 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-brand-tertiary font-medium">
-                  <span className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold">{formData.heroBanner.trustPoint1 || '100% Anti-Tarnish'}</span>
-                  </span>
-                  <span className="text-brand-border">•</span>
-                  <span className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold">{formData.heroBanner.trustPoint2 || 'Free Express Delivery'}</span>
-                  </span>
-                  {formData.heroBanner.showAmazon !== false && (
-                    <>
-                      <span className="text-brand-border">•</span>
-                      <span className="inline-flex items-center space-x-1.5 text-brand-tertiary bg-white px-3 py-1.5 rounded-lg border border-brand-border shadow-2xs">
-                        <span>{formData.heroBanner.amazonText || 'Also on'}</span>
-                        <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/80 inline-flex items-center shadow-2xs">
-                          <OriginalAmazonLogo className="h-3 w-auto" />
+                  {(() => {
+                    const hasTp1 = Boolean(formData.heroBanner?.trustPoint1 && formData.heroBanner.trustPoint1.trim());
+                    const hasTp2 = Boolean(formData.heroBanner?.trustPoint2 && formData.heroBanner.trustPoint2.trim());
+                    const hasAmazon = formData.heroBanner?.showAmazon !== false;
+
+                    const previewBadges = [];
+                    if (hasTp1) {
+                      previewBadges.push(
+                        <span key="tp1" className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
+                          <Check className="w-4 h-4 text-emerald-600" />
+                          <span className="font-semibold">{formData.heroBanner.trustPoint1.trim()}</span>
                         </span>
-                        <ExternalLink className="w-3 h-3 text-brand-muted" />
-                      </span>
-                    </>
-                  )}
+                      );
+                    }
+                    if (hasTp2) {
+                      previewBadges.push(
+                        <span key="tp2" className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
+                          <Check className="w-4 h-4 text-emerald-600" />
+                          <span className="font-semibold">{formData.heroBanner.trustPoint2.trim()}</span>
+                        </span>
+                      );
+                    }
+                    if (hasAmazon) {
+                      previewBadges.push(
+                        <span key="amazon" className="inline-flex items-center space-x-1.5 text-brand-tertiary bg-white px-3 py-1.5 rounded-lg border border-brand-border shadow-2xs">
+                          {Boolean(formData.heroBanner?.amazonText && formData.heroBanner.amazonText.trim()) && (
+                            <span>{formData.heroBanner.amazonText.trim()}</span>
+                          )}
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/80 inline-flex items-center shadow-2xs">
+                            <OriginalAmazonLogo className="h-3 w-auto" />
+                          </span>
+                          <ExternalLink className="w-3 h-3 text-brand-muted" />
+                        </span>
+                      );
+                    }
+
+                    if (previewBadges.length === 0) {
+                      return (
+                        <span className="text-xs text-brand-muted italic">
+                          (All trust badges currently empty / hidden on storefront)
+                        </span>
+                      );
+                    }
+
+                    return previewBadges.map((badge, idx) => (
+                      <React.Fragment key={idx}>
+                        {idx > 0 && <span className="text-brand-border">•</span>}
+                        {badge}
+                      </React.Fragment>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -2739,8 +2810,12 @@ export default function AdminHomepageView() {
                     <ShieldCheck className="w-4 h-4 text-brand-primary" />
                     <span>Trust Badge 1 (e.g. 100% Anti-Tarnish)</span>
                   </label>
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Live Active
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    Boolean(formData.heroBanner.trustPoint1 && formData.heroBanner.trustPoint1.trim())
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-amber-700 bg-amber-50 border-amber-200'
+                  }`}>
+                    {Boolean(formData.heroBanner.trustPoint1 && formData.heroBanner.trustPoint1.trim()) ? 'Live Active' : 'Hidden (Field Empty)'}
                   </span>
                 </div>
                 <input
@@ -2748,8 +2823,9 @@ export default function AdminHomepageView() {
                   value={formData.heroBanner.trustPoint1 || ''}
                   onChange={(e) => updateNested('heroBanner', 'trustPoint1', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium text-brand-tertiary"
-                  placeholder="e.g. 100% Anti-Tarnish"
+                  placeholder="e.g. 100% Anti-Tarnish (leave empty to hide)"
                 />
+                <p className="text-[11px] text-brand-muted">Leave empty to completely hide this badge from the storefront.</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] text-brand-muted font-light">Quick Presets:</span>
                   {['100% Anti-Tarnish', 'Waterproof & Sweatproof', 'Lifetime Polish Guarantee', 'Hypoallergenic Skin-Safe'].map((preset) => (
@@ -2772,8 +2848,12 @@ export default function AdminHomepageView() {
                     <Truck className="w-4 h-4 text-brand-primary" />
                     <span>Trust Badge 2 (e.g. Free Express Delivery)</span>
                   </label>
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Live Active
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    Boolean(formData.heroBanner.trustPoint2 && formData.heroBanner.trustPoint2.trim())
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-amber-700 bg-amber-50 border-amber-200'
+                  }`}>
+                    {Boolean(formData.heroBanner.trustPoint2 && formData.heroBanner.trustPoint2.trim()) ? 'Live Active' : 'Hidden (Field Empty)'}
                   </span>
                 </div>
                 <input
@@ -2781,8 +2861,9 @@ export default function AdminHomepageView() {
                   value={formData.heroBanner.trustPoint2 || ''}
                   onChange={(e) => updateNested('heroBanner', 'trustPoint2', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium text-brand-tertiary"
-                  placeholder="e.g. Free Express Delivery"
+                  placeholder="e.g. Free Express Delivery (leave empty to hide)"
                 />
+                <p className="text-[11px] text-brand-muted">Leave empty to completely hide this badge from the storefront.</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] text-brand-muted font-light">Quick Presets:</span>
                   {['Free Express Delivery', 'Dispatched within 24h', 'Free All-India Shipping', 'Cash On Delivery Available'].map((preset) => (
