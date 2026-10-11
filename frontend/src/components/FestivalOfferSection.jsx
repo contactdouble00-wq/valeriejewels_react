@@ -314,24 +314,7 @@ export default function FestivalOfferSection({
                           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                         />
                         
-                        {/* Festive Badges */}
-                        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 items-start">
-                          <span className="px-2.5 py-0.5 rounded-full text-[9.5px] font-caps uppercase tracking-wider font-bold bg-[#C5A25D] text-[#1F1033] shadow-sm flex items-center gap-1">
-                            <Sparkles className="w-2.5 h-2.5 text-[#1F1033]" />
-                            <span>Festive Pick</span>
-                          </span>
-                          {product.pairs_count && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/95 text-[#26153D] backdrop-blur-xs shadow-xs">
-                              {product.pairs_count} Pairs Inside
-                            </span>
-                          )}
-                        </div>
 
-                        {discount > 0 && (
-                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white shadow-sm">
-                            {discount}% OFF
-                          </span>
-                        )}
 
                         {/* Quick View Button on Hover */}
                         <button

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X, Star, ShieldCheck, Truck, RefreshCw, ShoppingBag, Heart,
   Sparkles, Check, ChevronRight, ChevronLeft, Share2, HelpCircle, AlertCircle,
-  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Film, Zap
+  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Zap
 } from 'lucide-react';
 import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 import { apiService } from '../services/api';
@@ -615,13 +615,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         className="w-full h-full object-cover rounded-2xl"
                       />
 
-                      {/* Floating REEL / Try-on Tag */}
-                      <div className="absolute top-3 left-3 z-20 pointer-events-none">
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1 shadow-lg">
-                          <Film className="w-3 h-3 text-amber-300" />
-                          <span>Live Try-On Reel</span>
-                        </span>
-                      </div>
+
 
                       {/* Audio Mute/Unmute Toggle */}
                       <button
@@ -656,24 +650,14 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     />
 
                     {/* Badges Overlay */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-                      {product.discount_percentage > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm w-fit">
-                          {product.discount_percentage}% OFF
+                    {Boolean(product.is_anti_tarnish) && (
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                        <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
+                          <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                          Anti-Tarnish Polish
                         </span>
-                      )}
-                      {Boolean(product.is_bestseller) && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                          Best Seller
-                        </span>
-                      )}
-                        {Boolean(product.is_anti_tarnish) && (
-                          <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
-                            <ShieldCheck className="w-3 h-3 text-brand-primary" />
-                            Anti-Tarnish Polish
-                          </span>
-                        )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Tap to Zoom indicator */}
                     <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[9px] flex items-center gap-1 font-medium pointer-events-none">
@@ -1149,13 +1133,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                           className="w-full h-full object-cover rounded-3xl shadow-xl"
                         />
 
-                        {/* Floating REEL Tag */}
-                        <div className="absolute top-4 left-4 z-20 pointer-events-none">
-                          <span className="px-3 py-1 rounded-full text-[10px] font-caps tracking-wider uppercase font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1.5 shadow-lg">
-                            <Film className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Live Try-On Reel</span>
-                          </span>
-                        </div>
+
 
                         {/* Audio Mute/Unmute Toggle */}
                         <button
@@ -1190,24 +1168,14 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       />
 
                       {/* Badges */}
-                      <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
-                        {product.discount_percentage > 0 && (
-                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm w-fit">
-                            {product.discount_percentage}% OFF
-                          </span>
-                        )}
-                        {Boolean(product.is_bestseller) && (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                            Best Seller
-                          </span>
-                        )}
-                        {Boolean(product.is_anti_tarnish) && (
+                      {Boolean(product.is_anti_tarnish) && (
+                        <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
                           <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
                             <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
                             Anti-Tarnish Polish
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Click to zoom badge */}
                       <div className="absolute bottom-4 left-4 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[10px] flex items-center gap-1.5 font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

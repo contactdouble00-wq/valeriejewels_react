@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, Film, ExternalLink } from 'lucide-react';
+import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, ExternalLink } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -221,7 +221,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                 <div className="space-y-1 sm:space-y-1.5">
                   <div className="text-[8.5px] sm:text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold flex items-center space-x-1">
                     <Sparkles className="w-2.5 h-2.5 text-brand-gold shrink-0 sm:hidden" />
-                    <span>{box.category_name || 'Curated Bestseller'}</span>
+                    <span>{box.category_name || 'Curated Signature Set'}</span>
                   </div>
                   <h3
                     onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
