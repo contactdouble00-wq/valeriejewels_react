@@ -60,25 +60,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             loading="lazy"
           />
 
-          {/* Badges Overlay (Hidden on Mobile for a Clean, Minimal Aesthetic) */}
-          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 hidden sm:flex flex-col gap-1 z-10 pointer-events-none">
-            {discount_percentage > 0 && (
-              <span className="hidden sm:inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold bg-emerald-100 text-emerald-800 shadow-sm w-fit">
-                {discount_percentage}% OFF
-              </span>
-            )}
-            {Boolean(is_bestseller) && (
-              <span className="hidden sm:inline-flex px-1.5 sm:px-2.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-tertiary text-white shadow-sm w-fit">
-                Best Seller
-              </span>
-            )}
-            {hasVideo && (
-              <span className="hidden sm:inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm items-center gap-1 w-fit">
-                <Film className="w-2.5 h-2.5 text-amber-300" />
-                <span>Reel</span>
-              </span>
-            )}
-          </div>
+
 
           {/* Floating Wishlist Heart Button */}
           <button
