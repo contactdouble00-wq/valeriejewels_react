@@ -45,6 +45,21 @@ const DEFAULT_SITE_CONTENT = {
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
+    guaranteeStrip: {
+      enabled: true,
+      showPulseDot: true,
+      pulseDotColor: 'emerald',
+      promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
+      couponCode: 'VALERIE10',
+      copyButtonText: 'Copy',
+      perk1Text: '✨ Free Luxury Keepsake Box',
+      perk1Enabled: true,
+      separator: '•',
+      perk2Text: '🚀 Express Dispatch in 24h',
+      perk2Enabled: true,
+      perk3Text: '',
+      perk3Enabled: false,
+    },
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
@@ -168,7 +183,14 @@ export function SiteContentProvider({ children }) {
             siteIdentity: { ...DEFAULT_SITE_CONTENT.siteIdentity, ...(res.data.siteIdentity || {}) },
             topRibbon: { ...DEFAULT_SITE_CONTENT.topRibbon, ...(res.data.topRibbon || {}) },
             heroBanner: { ...DEFAULT_SITE_CONTENT.heroBanner, ...(res.data.heroBanner || {}) },
-            jhumkaHero: { ...DEFAULT_SITE_CONTENT.jhumkaHero, ...(res.data.jhumkaHero || {}) },
+            jhumkaHero: {
+              ...DEFAULT_SITE_CONTENT.jhumkaHero,
+              ...(res.data.jhumkaHero || {}),
+              guaranteeStrip: {
+                ...DEFAULT_SITE_CONTENT.jhumkaHero.guaranteeStrip,
+                ...(res.data.jhumkaHero?.guaranteeStrip || {}),
+              },
+            },
             catalogHeader: { ...DEFAULT_SITE_CONTENT.catalogHeader, ...(res.data.catalogHeader || {}) },
             combosHeader: { ...DEFAULT_SITE_CONTENT.combosHeader, ...(res.data.combosHeader || {}) },
             festivalOffer: {

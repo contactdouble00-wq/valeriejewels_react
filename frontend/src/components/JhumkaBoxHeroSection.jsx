@@ -5,18 +5,61 @@ import { useSiteContent } from '../context/SiteContentContext';
 import { useWishlist } from '../context/WishlistContext';
 import { OriginalAmazonLogo, DEFAULT_AMAZON_STORE_URL } from './AmazonTrustBadge';
 
+const DEFAULT_STRIP = {
+  enabled: true,
+  showPulseDot: true,
+  pulseDotColor: 'emerald',
+  promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
+  couponCode: 'VALERIE10',
+  copyButtonText: 'Copy',
+  perk1Text: '✨ Free Luxury Keepsake Box',
+  perk1Enabled: true,
+  separator: '•',
+  perk2Text: '🚀 Express Dispatch in 24h',
+  perk2Enabled: true,
+  perk3Text: '',
+  perk3Enabled: false,
+};
+
 export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenCheckout }) {
   const { addToCart } = useCart();
   const { content } = useSiteContent();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [copiedCode, setCopiedCode] = useState(false);
   const jHero = content?.jhumkaHero || {};
+  const strip = { ...DEFAULT_STRIP, ...(jHero.guaranteeStrip || {}) };
 
   const handleCopyCode = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText('VALERIE10');
+      navigator.clipboard.writeText(strip.couponCode || 'VALERIE10');
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2500);
+    }
+  };
+
+  const getDotClass = (color) => {
+    switch (color) {
+      case 'gold':
+        return 'bg-amber-500';
+      case 'purple':
+        return 'bg-purple-600';
+      case 'rose':
+        return 'bg-rose-500';
+      default:
+        return 'bg-emerald-500';
+    }
+  };
+
+  const getTextColorClass = (color) => {
+    switch (color) {
+      case 'gold':
+        return 'text-amber-950';
+      case 'purple':
+        return 'text-purple-950';
+      case 'rose':
+        return 'text-rose-950';
+      default:
+        return 'text-emerald-900';
     }
   };
 
@@ -268,38 +311,59 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
       </div>
 
       {/* Ad Guarantee Callout Footer (Interactive Voucher on Mobile) */}
-      <div className="relative z-10 bg-white/95 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-brand-primary/20 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 text-xs text-brand-tertiary shadow-2xs">
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></div>
-            <span className="font-semibold text-[11px] sm:text-xs text-emerald-900">
-              Buy 2 or More → Extra 10% Off with Code <span className="font-bold text-brand-primary">VALERIE10</span>
-            </span>
+      {strip.enabled !== false && (
+        <div className="relative z-10 bg-white/95 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-brand-primary/20 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 text-xs text-brand-tertiary shadow-2xs">
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center space-x-2">
+              {strip.showPulseDot !== false && (
+                <div className={`w-2 h-2 rounded-full shrink-0 animate-ping ${getDotClass(strip.pulseDotColor)}`}></div>
+              )}
+              <span className={`font-semibold text-[11px] sm:text-xs ${getTextColorClass(strip.pulseDotColor)}`}>
+                {strip.promoPrefix || 'Buy 2 or More → Extra 10% Off with Code'}{' '}
+                {strip.couponCode && (
+                  <span className="font-bold text-brand-primary">{strip.couponCode}</span>
+                )}
+              </span>
+            </div>
+            {strip.couponCode && (
+              <button
+                onClick={handleCopyCode}
+                className="sm:hidden px-2 py-1 rounded-lg bg-brand-primary-light text-brand-primary text-[10px] font-bold border border-brand-primary/25 flex items-center space-x-1 shrink-0 active:scale-95 transition-all cursor-pointer"
+                title={`Copy promo code ${strip.couponCode}`}
+              >
+                {copiedCode ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-700">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>{strip.copyButtonText || 'Copy'}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
-          <button
-            onClick={handleCopyCode}
-            className="sm:hidden px-2 py-1 rounded-lg bg-brand-primary-light text-brand-primary text-[10px] font-bold border border-brand-primary/25 flex items-center space-x-1 shrink-0 active:scale-95 transition-all"
-            title="Copy promo code"
-          >
-            {copiedCode ? (
+          <div className="text-brand-muted text-[10px] sm:text-[11px] flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-1.5 sm:pt-0 border-brand-border/60">
+            {strip.perk1Enabled !== false && strip.perk1Text && (
+              <span>{strip.perk1Text}</span>
+            )}
+            {strip.perk1Enabled !== false && strip.perk1Text && strip.perk2Enabled !== false && strip.perk2Text && (
+              <span>{strip.separator || '•'}</span>
+            )}
+            {strip.perk2Enabled !== false && strip.perk2Text && (
+              <span>{strip.perk2Text}</span>
+            )}
+            {strip.perk3Enabled && strip.perk3Text && (
               <>
-                <Check className="w-3 h-3 text-emerald-600" />
-                <span className="text-emerald-700">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                <span>Copy</span>
+                <span>{strip.separator || '•'}</span>
+                <span>{strip.perk3Text}</span>
               </>
             )}
-          </button>
+          </div>
         </div>
-        <div className="text-brand-muted text-[10px] sm:text-[11px] flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-1.5 sm:pt-0 border-brand-border/60">
-          <span>✨ Free Luxury Keepsake Box</span>
-          <span>•</span>
-          <span>🚀 Express Dispatch in 24h</span>
-        </div>
-      </div>
+      )}
     </section>
   );
 }

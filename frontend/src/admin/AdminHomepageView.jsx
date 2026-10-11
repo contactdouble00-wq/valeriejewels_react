@@ -90,6 +90,21 @@ const FACTORY_DEFAULTS = {
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
+    guaranteeStrip: {
+      enabled: true,
+      showPulseDot: true,
+      pulseDotColor: 'emerald',
+      promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
+      couponCode: 'VALERIE10',
+      copyButtonText: 'Copy',
+      perk1Text: '✨ Free Luxury Keepsake Box',
+      perk1Enabled: true,
+      separator: '•',
+      perk2Text: '🚀 Express Dispatch in 24h',
+      perk2Enabled: true,
+      perk3Text: '',
+      perk3Enabled: false,
+    },
   },
   catalogHeader: {
     eyebrow: 'Curated Catalog',
@@ -203,7 +218,14 @@ export default function AdminHomepageView() {
           },
           topRibbon: { ...FACTORY_DEFAULTS.topRibbon, ...(data.topRibbon || {}) },
           heroBanner: { ...FACTORY_DEFAULTS.heroBanner, ...(data.heroBanner || {}) },
-          jhumkaHero: { ...FACTORY_DEFAULTS.jhumkaHero, ...(data.jhumkaHero || {}) },
+          jhumkaHero: {
+            ...FACTORY_DEFAULTS.jhumkaHero,
+            ...(data.jhumkaHero || {}),
+            guaranteeStrip: {
+              ...FACTORY_DEFAULTS.jhumkaHero.guaranteeStrip,
+              ...(data.jhumkaHero?.guaranteeStrip || {}),
+            },
+          },
           catalogHeader: { ...FACTORY_DEFAULTS.catalogHeader, ...(data.catalogHeader || {}) },
           combosHeader: { ...FACTORY_DEFAULTS.combosHeader, ...(data.combosHeader || {}) },
           festivalOffer: { ...FACTORY_DEFAULTS.festivalOffer, ...(data.festivalOffer || {}) },
@@ -418,6 +440,97 @@ export default function AdminHomepageView() {
     });
   };
 
+  const updateGuaranteeStrip = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      jhumkaHero: {
+        ...prev.jhumkaHero,
+        guaranteeStrip: {
+          ...FACTORY_DEFAULTS.jhumkaHero.guaranteeStrip,
+          ...(prev.jhumkaHero?.guaranteeStrip || {}),
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const applyGuaranteeStripPreset = (presetKey) => {
+    const presets = {
+      default: {
+        enabled: true,
+        showPulseDot: true,
+        pulseDotColor: 'emerald',
+        promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
+        couponCode: 'VALERIE10',
+        copyButtonText: 'Copy',
+        perk1Text: '✨ Free Luxury Keepsake Box',
+        perk1Enabled: true,
+        separator: '•',
+        perk2Text: '🚀 Express Dispatch in 24h',
+        perk2Enabled: true,
+        perk3Text: '',
+        perk3Enabled: false,
+      },
+      festive: {
+        enabled: true,
+        showPulseDot: true,
+        pulseDotColor: 'gold',
+        promoPrefix: 'Festive Grand Edit → Flat 20% Off with Code',
+        couponCode: 'FESTIVE20',
+        copyButtonText: 'Copy',
+        perk1Text: '🎁 Free Royal Velvet Box',
+        perk1Enabled: true,
+        separator: '•',
+        perk2Text: '⚡ Same-Day Express Dispatch',
+        perk2Enabled: true,
+        perk3Text: '✨ Complimentary Zircon Gift',
+        perk3Enabled: true,
+      },
+      prepaid: {
+        enabled: true,
+        showPulseDot: true,
+        pulseDotColor: 'purple',
+        promoPrefix: 'Prepaid Special → Instant ₹50 Off with Code',
+        couponCode: 'PREPAID50',
+        copyButtonText: 'Copy',
+        perk1Text: '💎 Free Zircon Necklace on Prepaid',
+        perk1Enabled: true,
+        separator: '•',
+        perk2Text: '🚀 Bluedart Air Express in 24h',
+        perk2Enabled: true,
+        perk3Text: '🛡️ 100% Anti-Tarnish Lifetime Reassurance',
+        perk3Enabled: false,
+      },
+      flashSale: {
+        enabled: true,
+        showPulseDot: true,
+        pulseDotColor: 'rose',
+        promoPrefix: 'Limited Offer → Extra 15% Off with Code',
+        couponCode: 'LUSTRE15',
+        copyButtonText: 'Copy',
+        perk1Text: '✨ Free Luxury Keepsake Box',
+        perk1Enabled: true,
+        separator: '•',
+        perk2Text: '📦 Insured Air Delivery Across India',
+        perk2Enabled: true,
+        perk3Text: '',
+        perk3Enabled: false,
+      },
+    };
+
+    if (presets[presetKey]) {
+      setFormData((prev) => ({
+        ...prev,
+        jhumkaHero: {
+          ...prev.jhumkaHero,
+          guaranteeStrip: {
+            ...presets[presetKey],
+          },
+        },
+      }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -434,11 +547,472 @@ export default function AdminHomepageView() {
     { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
     { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
     { id: 'jhumka', label: 'Bestsellers Spotlight Section', icon: Flame },
+    { id: 'guaranteeStrip', label: 'Bestseller Promo & Guarantee Strip', icon: Gift, badge: 'Voucher Bar' },
     { id: 'festivalOffer', label: 'Festival Offer Panel', icon: Sparkles, badge: 'Festive' },
     { id: 'catalog', label: 'Catalog Headers', icon: Tag },
     { id: 'trust', label: 'Trust Strip (4 Pillars)', icon: ShieldCheck },
     { id: 'telemetry', label: 'Developer System Banner', icon: Eye },
   ];
+
+  const renderGuaranteeStripControls = (isStandalone = false) => {
+    const stripData = {
+      ...FACTORY_DEFAULTS.jhumkaHero.guaranteeStrip,
+      ...(formData.jhumkaHero?.guaranteeStrip || {}),
+    };
+
+    return (
+      <div className="space-y-6">
+        {isStandalone && (
+          <div className="border-b border-brand-border/60 pb-4 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-200">
+                <Gift className="w-3 h-3 text-brand-primary" />
+                <span>Storefront Conversion Voucher & Guarantee Strip</span>
+              </div>
+              <h3 className="text-base font-editorial font-bold text-brand-tertiary mt-1">
+                Bestseller Promo & Guarantee Callout Strip
+              </h3>
+              <p className="text-xs text-brand-muted font-light">
+                Controls the voucher discount message, coupon code (VALERIE10), pulsing live dot indicator, and luxury shipping/keepsake box perks displayed directly under the bestsellers collection.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-xs font-semibold transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+            </button>
+          </div>
+        )}
+
+        {/* 1. Real-time Live Storefront Preview */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#FAF8FC] via-purple-50/40 to-white border border-purple-200/80 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Eye className="w-3.5 h-3.5 text-brand-primary" />
+              <span className="text-xs font-bold text-brand-tertiary">Real-Time Storefront Preview</span>
+              <span className="text-[10px] bg-purple-100 text-purple-900 font-semibold px-2 py-0.5 rounded-full">
+                Interactive
+              </span>
+            </div>
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+              stripData.enabled !== false
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                : 'bg-rose-100 text-rose-800 border-rose-300'
+            }`}>
+              {stripData.enabled !== false ? '● Live on Storefront' : '○ Hidden from Storefront'}
+            </span>
+          </div>
+
+          {/* Exact Replica of Storefront Banner */}
+          <div className={`relative bg-white/95 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-brand-primary/20 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 text-xs text-brand-tertiary shadow-2xs transition-all ${
+            stripData.enabled === false ? 'opacity-40 grayscale' : 'opacity-100'
+          }`}>
+            <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
+              <div className="flex items-center space-x-2">
+                {stripData.showPulseDot !== false && (
+                  <div className={`w-2 h-2 rounded-full shrink-0 animate-ping ${
+                    stripData.pulseDotColor === 'gold'
+                      ? 'bg-amber-500'
+                      : stripData.pulseDotColor === 'purple'
+                      ? 'bg-purple-600'
+                      : stripData.pulseDotColor === 'rose'
+                      ? 'bg-rose-500'
+                      : 'bg-emerald-500'
+                  }`}></div>
+                )}
+                <span className={`font-semibold text-[11px] sm:text-xs ${
+                  stripData.pulseDotColor === 'gold'
+                    ? 'text-amber-950'
+                    : stripData.pulseDotColor === 'purple'
+                    ? 'text-purple-950'
+                    : stripData.pulseDotColor === 'rose'
+                    ? 'text-rose-950'
+                    : 'text-emerald-900'
+                }`}>
+                  {stripData.promoPrefix || 'Buy 2 or More → Extra 10% Off with Code'}{' '}
+                  {stripData.couponCode && (
+                    <span className="font-bold text-brand-primary">{stripData.couponCode}</span>
+                  )}
+                </span>
+              </div>
+              {stripData.couponCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(stripData.couponCode);
+                      setFeedback({
+                        type: 'success',
+                        message: `Preview: Copied promo code "${stripData.couponCode}" to clipboard!`,
+                      });
+                      setTimeout(() => setFeedback(null), 3000);
+                    }
+                  }}
+                  className="sm:hidden px-2 py-1 rounded-lg bg-brand-primary-light text-brand-primary text-[10px] font-bold border border-brand-primary/25 flex items-center space-x-1 shrink-0 cursor-pointer active:scale-95 transition-all"
+                  title="Test copy promo code"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>{stripData.copyButtonText || 'Copy'}</span>
+                </button>
+              )}
+            </div>
+            <div className="text-brand-muted text-[10px] sm:text-[11px] flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-1.5 sm:pt-0 border-brand-border/60">
+              {stripData.perk1Enabled !== false && stripData.perk1Text && (
+                <span>{stripData.perk1Text}</span>
+              )}
+              {stripData.perk1Enabled !== false && stripData.perk1Text && stripData.perk2Enabled !== false && stripData.perk2Text && (
+                <span>{stripData.separator || '•'}</span>
+              )}
+              {stripData.perk2Enabled !== false && stripData.perk2Text && (
+                <span>{stripData.perk2Text}</span>
+              )}
+              {stripData.perk3Enabled && stripData.perk3Text && (
+                <>
+                  <span>{stripData.separator || '•'}</span>
+                  <span>{stripData.perk3Text}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. One-Click Preset Templates */}
+        <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-purple-950 flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+              <span>1-Click Campaign Presets</span>
+            </span>
+            <span className="text-[10px] text-purple-800 font-semibold">Quickly fill standard marketing copy</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => applyGuaranteeStripPreset('default')}
+              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
+            >
+              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
+                <span>VALERIE10</span>
+                <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-mono">Default</span>
+              </div>
+              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Extra 10% Off • Keepsake Box + 24h Dispatch</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyGuaranteeStripPreset('festive')}
+              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
+            >
+              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
+                <span>FESTIVE20</span>
+                <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-mono">20% Off</span>
+              </div>
+              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Flat 20% Off • Royal Velvet Box + Free Gift</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyGuaranteeStripPreset('prepaid')}
+              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
+            >
+              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
+                <span>PREPAID50</span>
+                <span className="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded font-mono">₹50 Off</span>
+              </div>
+              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Extra ₹50 Off • Free Zircon Necklace</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyGuaranteeStripPreset('flashSale')}
+              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
+            >
+              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
+                <span>LUSTRE15</span>
+                <span className="text-[9px] bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded font-mono">15% Off</span>
+              </div>
+              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Limited 15% Off • Keepsake Box + Insured Air</div>
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Master Visibility Toggle */}
+        <div className="p-4 rounded-xl bg-white border border-brand-border flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold text-brand-tertiary block">
+              Enable Promo & Guarantee Strip
+            </span>
+            <span className="text-[11px] text-brand-muted block">
+              Turn off if you want to temporarily hide the entire callout strip without losing your customized text.
+            </span>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={stripData.enabled !== false}
+              onChange={(e) => updateGuaranteeStrip('enabled', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+          </label>
+        </div>
+
+        {/* 4. Left-side Promo Offer & Coupon Settings */}
+        <div className="p-5 rounded-xl bg-white border border-brand-border space-y-4">
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <div className="flex items-center space-x-2">
+              <Percent className="w-4 h-4 text-brand-primary" />
+              <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                Left Section: Offer Message & Coupon Code
+              </h4>
+            </div>
+            <span className="text-[10px] font-bold text-brand-primary bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+              Voucher & Pulse Dot
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2 space-y-1.5">
+              <label className="text-xs font-bold text-brand-tertiary block">
+                Offer Headline / Text Prefix
+              </label>
+              <input
+                type="text"
+                value={stripData.promoPrefix}
+                onChange={(e) => updateGuaranteeStrip('promoPrefix', e.target.value)}
+                placeholder="e.g. Buy 2 or More → Extra 10% Off with Code"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+              />
+              <span className="text-[10px] text-brand-muted block">
+                Text shown before the coupon code. Highlighted in emerald or selected color scheme.
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-brand-tertiary block">
+                Coupon / Promo Code
+              </label>
+              <input
+                type="text"
+                value={stripData.couponCode}
+                onChange={(e) => updateGuaranteeStrip('couponCode', e.target.value.toUpperCase())}
+                placeholder="e.g. VALERIE10"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs font-bold font-mono text-brand-primary uppercase focus:outline-none focus:border-brand-primary"
+              />
+              <span className="text-[10px] text-brand-muted block">
+                Highlighted with signature purple font. Copied automatically when users tap "Copy" on mobile.
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-brand-tertiary block">
+                Mobile "Copy" Button Label
+              </label>
+              <input
+                type="text"
+                value={stripData.copyButtonText || 'Copy'}
+                onChange={(e) => updateGuaranteeStrip('copyButtonText', e.target.value)}
+                placeholder="e.g. Copy"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+              />
+              <span className="text-[10px] text-brand-muted block">
+                Small interactive button displayed on smartphones next to the code.
+              </span>
+            </div>
+
+            {/* Pulsing Status Dot Controls */}
+            <div className="sm:col-span-2 p-3.5 rounded-xl bg-[#FAF8FD] border border-brand-border space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-brand-tertiary block">
+                    Live Pulsing Status Dot
+                  </span>
+                  <span className="text-[10px] text-brand-muted block">
+                    Draws eyes to the coupon offer with subtle live ping animation.
+                  </span>
+                </div>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stripData.showPulseDot !== false}
+                    onChange={(e) => updateGuaranteeStrip('showPulseDot', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                  />
+                  <span className="text-xs font-semibold text-brand-tertiary">Show Dot</span>
+                </label>
+              </div>
+
+              {stripData.showPulseDot !== false && (
+                <div className="pt-1 space-y-1.5">
+                  <label className="text-[11px] font-bold text-brand-tertiary block">
+                    Dot & Text Accent Color
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'emerald', label: 'Emerald Green', dotClass: 'bg-emerald-500', desc: 'Standard / High Trust' },
+                      { id: 'gold', label: 'Gold Amber', dotClass: 'bg-amber-500', desc: 'Festive / Premium' },
+                      { id: 'purple', label: 'Royal Atelier', dotClass: 'bg-purple-600', desc: 'Brand Signature' },
+                      { id: 'rose', label: 'Rose Pink', dotClass: 'bg-rose-500', desc: 'Urgent / Flash Sale' },
+                    ].map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => updateGuaranteeStrip('pulseDotColor', c.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center space-x-2 ${
+                          (stripData.pulseDotColor || 'emerald') === c.id
+                            ? 'bg-white border-brand-primary ring-2 ring-brand-primary/20 shadow-2xs'
+                            : 'bg-white/60 border-brand-border hover:bg-white'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full ${c.dotClass} shrink-0`}></div>
+                        <div>
+                          <div className="text-[11px] font-bold text-brand-tertiary leading-tight">{c.label}</div>
+                          <div className="text-[9px] text-brand-muted">{c.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Right-side Trust & Delivery Guarantee Perks */}
+        <div className="p-5 rounded-xl bg-white border border-brand-border space-y-4">
+          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <div className="flex items-center space-x-2">
+              <Truck className="w-4 h-4 text-brand-primary" />
+              <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                Right Section: Trust, Packaging & Dispatch Perks
+              </h4>
+            </div>
+            <span className="text-[10px] font-bold text-brand-primary bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+              Perk Badges
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Perk 1 */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-[#FAF8FD] border border-brand-border">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-brand-tertiary">Perk 1 (Packaging / Box)</label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stripData.perk1Enabled !== false}
+                    onChange={(e) => updateGuaranteeStrip('perk1Enabled', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-3.5 w-3.5"
+                  />
+                  <span className="text-[11px] text-brand-tertiary">Enabled</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={stripData.perk1Text}
+                onChange={(e) => updateGuaranteeStrip('perk1Text', e.target.value)}
+                placeholder="e.g. ✨ Free Luxury Keepsake Box"
+                className="w-full px-3 py-2 rounded-lg bg-white border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+              />
+            </div>
+
+            {/* Perk 2 */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-[#FAF8FD] border border-brand-border">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-brand-tertiary">Perk 2 (Dispatch Timeline)</label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stripData.perk2Enabled !== false}
+                    onChange={(e) => updateGuaranteeStrip('perk2Enabled', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-3.5 w-3.5"
+                  />
+                  <span className="text-[11px] text-brand-tertiary">Enabled</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={stripData.perk2Text}
+                onChange={(e) => updateGuaranteeStrip('perk2Text', e.target.value)}
+                placeholder="e.g. 🚀 Express Dispatch in 24h"
+                className="w-full px-3 py-2 rounded-lg bg-white border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+              />
+            </div>
+
+            {/* Separator Symbol */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-brand-tertiary block">
+                Separator Character
+              </label>
+              <input
+                type="text"
+                value={stripData.separator || '•'}
+                onChange={(e) => updateGuaranteeStrip('separator', e.target.value)}
+                placeholder="•"
+                className="w-full max-w-[120px] px-3 py-2 rounded-xl border border-brand-border text-xs text-center font-bold focus:outline-none focus:border-brand-primary"
+              />
+              <span className="text-[10px] text-brand-muted block">
+                Symbol separating perks (e.g. • or | or ★)
+              </span>
+            </div>
+
+            {/* Perk 3 (Optional) */}
+            <div className="space-y-2 p-3.5 rounded-xl bg-[#FAF8FD] border border-brand-border">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-brand-tertiary">Perk 3 (Optional Third Badge)</label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(stripData.perk3Enabled)}
+                    onChange={(e) => updateGuaranteeStrip('perk3Enabled', e.target.checked)}
+                    className="rounded text-brand-primary focus:ring-brand-primary h-3.5 w-3.5"
+                  />
+                  <span className="text-[11px] text-brand-tertiary">Enabled</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={stripData.perk3Text || ''}
+                onChange={(e) => updateGuaranteeStrip('perk3Text', e.target.value)}
+                placeholder="e.g. 🛡️ 100% Anti-Tarnish Guarantee"
+                className="w-full px-3 py-2 rounded-lg bg-white border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Action Save Bar */}
+        <div className="p-4 rounded-2xl bg-white border border-brand-border flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center space-x-2 text-xs text-brand-muted">
+            <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <span>Changes broadcast instantly to storefront without restarting server.</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => applyGuaranteeStripPreset('default')}
+              className="px-3.5 py-2 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              Reset to Default
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-5 py-2 rounded-xl bg-[#26153D] hover:bg-brand-primary text-white text-xs font-semibold transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="p-6 sm:p-8 space-y-6 w-full">
@@ -2084,8 +2658,39 @@ export default function AdminHomepageView() {
                   </label>
                 </div>
               </div>
+
+              {/* Bestseller Promo & Guarantee Callout Strip */}
+              <div className="sm:col-span-2 p-5 rounded-2xl bg-white border border-brand-border space-y-4">
+                <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Gift className="w-4 h-4 text-brand-primary" />
+                    <div>
+                      <h4 className="text-sm font-bold text-brand-tertiary">
+                        Bestseller Promo & Guarantee Callout Strip
+                      </h4>
+                      <p className="text-[11px] text-brand-muted">
+                        Controls the interactive voucher strip with coupon code, pulsing live dot, and shipping/keepsake box perks.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('guaranteeStrip')}
+                    className="text-xs font-bold text-brand-primary hover:underline flex items-center space-x-1 cursor-pointer shrink-0"
+                  >
+                    <span>Full Editor View</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+                {renderGuaranteeStripControls(false)}
+              </div>
             </div>
           </div>
+        )}
+
+        {/* BESTSELLER PROMO & GUARANTEE STRIP (STANDALONE SECTION) */}
+        {activeSection === 'guaranteeStrip' && (
+          renderGuaranteeStripControls(true)
         )}
 
         {/* 4. CATALOG & COMBOS HEADERS */}
