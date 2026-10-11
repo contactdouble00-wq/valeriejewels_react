@@ -856,7 +856,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     <span>Material Specification</span>
                   </span>
                   <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
-                    100% Anti-Tarnish
+                    {siteContent?.heroBanner?.trustPoint1 || '100% Anti-Tarnish'}
                   </span>
                 </div>
                 <p className="text-xs text-brand-tertiary font-medium">
@@ -1354,7 +1354,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       </span>
                     )}
                     <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      Free Express Delivery
+                      {siteContent?.heroBanner?.trustPoint2 || 'Free Express Delivery'}
                     </span>
                   </div>
                   <p className="text-[11px] text-brand-muted font-light">

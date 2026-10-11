@@ -91,7 +91,7 @@ export default function BundleSection({ bundles = [], onSelectBundle }) {
                   ₹{Math.round(bundle.compare_price).toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs font-semibold text-emerald-600">
-                  Free Express Delivery
+                  {content?.heroBanner?.trustPoint2 || 'Free Express Delivery'}
                 </span>
               </div>
 

@@ -30,8 +30,12 @@ const DEFAULT_SITE_CONTENT = {
     subtitle: 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.',
     primaryBtnText: 'DISCOVER YOUR STYLE',
     primaryBtnLink: '#jhumka-boxes',
-    secondaryBtnText: 'All Everyday Jewelry',
+    secondaryBtnText: 'ALL EVERYDAY JEWELRY',
     secondaryBtnLink: '#catalog',
+    trustPoint1: '100% Anti-Tarnish',
+    trustPoint2: 'Free Express Delivery',
+    showAmazon: true,
+    amazonText: 'Also on',
     rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {

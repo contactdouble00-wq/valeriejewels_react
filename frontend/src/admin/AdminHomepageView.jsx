@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
+import { OriginalAmazonLogo } from '../components/AmazonTrustBadge';
 
 const FACTORY_DEFAULTS = {
   customerSupport: {
@@ -75,8 +76,12 @@ const FACTORY_DEFAULTS = {
     subtitle: 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.',
     primaryBtnText: 'DISCOVER YOUR STYLE',
     primaryBtnLink: '#jhumka-boxes',
-    secondaryBtnText: 'All Everyday Jewelry',
+    secondaryBtnText: 'ALL EVERYDAY JEWELRY',
     secondaryBtnLink: '#catalog',
+    trustPoint1: '100% Anti-Tarnish',
+    trustPoint2: 'Free Express Delivery',
+    showAmazon: true,
+    amazonText: 'Also on',
     rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {
@@ -187,7 +192,7 @@ export default function AdminHomepageView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
-  const [activeSection, setActiveSection] = useState('siteIdentity');
+  const [activeSection, setActiveSection] = useState('hero');
   const [copiedSitemap, setCopiedSitemap] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingHeroPhoto, setUploadingHeroPhoto] = useState(false);
@@ -540,17 +545,18 @@ export default function AdminHomepageView() {
   }
 
   const sections = [
-    { id: 'siteIdentity', label: 'Site Title, Logo & Favicon', icon: Globe, badge: 'Browser Tab' },
-    { id: 'seoTracking', label: 'Google Analytics & Search Console', icon: BarChart3, badge: 'SEO & Tracking' },
+    { id: 'hero', label: 'Main Hero Banner & Headlines', icon: Sparkles, badge: 'Top Banner' },
+    { id: 'trustBadges', label: '100% Anti-Tarnish & Delivery Badges', icon: ShieldCheck, badge: 'Reassurance' },
     { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
-    { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
-    { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
-    { id: 'hero', label: 'Desktop Hero Banner', icon: Sliders },
     { id: 'jhumka', label: 'Bestsellers Spotlight Section', icon: Flame },
     { id: 'guaranteeStrip', label: 'Bestseller Promo & Guarantee Strip', icon: Gift, badge: 'Voucher Bar' },
     { id: 'festivalOffer', label: 'Festival Offer Panel', icon: Sparkles, badge: 'Festive' },
+    { id: 'ribbon', label: 'Top Announcement Ribbon', icon: Sparkles },
     { id: 'catalog', label: 'Catalog Headers', icon: Tag },
     { id: 'trust', label: 'Trust Strip (4 Pillars)', icon: ShieldCheck },
+    { id: 'siteIdentity', label: 'Site Title, Logo & Favicon', icon: Globe, badge: 'Browser Tab' },
+    { id: 'customerSupport', label: 'Customer Care & WhatsApp Support', icon: MessageCircle, badge: 'Support' },
+    { id: 'seoTracking', label: 'Google Analytics & Search Console', icon: BarChart3, badge: 'SEO & Tracking' },
     { id: 'telemetry', label: 'Developer System Banner', icon: Eye },
   ];
 
@@ -2236,13 +2242,28 @@ export default function AdminHomepageView() {
         {/* 2. HERO BANNER */}
         {activeSection === 'hero' && (
           <div className="space-y-6">
-            <div className="border-b border-brand-border/60 pb-4">
-              <h3 className="text-base font-editorial font-bold text-brand-tertiary">
-                Fast Fashion Hero Banner
-              </h3>
-              <p className="text-xs text-brand-muted font-light">
-                The primary full-width conversion banner at the top of the storefront homepage.
-              </p>
+            <div className="border-b border-brand-border/60 pb-4 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-200">
+                  <Sparkles className="w-3 h-3 text-brand-primary" />
+                  <span>Storefront Fast Fashion Hero Section</span>
+                </div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary mt-1">
+                  Main Hero Banner & Headlines
+                </h3>
+                <p className="text-xs text-brand-muted font-light">
+                  Directly customize all headlines, subtext, call-to-action buttons, trust reassurance points, and photo displayed at the very top of your homepage.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+              </button>
             </div>
 
             {/* Live Preview Card */}
@@ -2250,7 +2271,7 @@ export default function AdminHomepageView() {
               <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
                 Live Storefront Preview (Desktop):
               </span>
-              <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
+              <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-4">
                 {/* Desktop Faded Photograph Preview */}
                 {Boolean(formData.heroBanner.rightImageUrl ?? '/hero-jewelry-model.jpg') && (
                   <div className="hidden sm:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
@@ -2266,137 +2287,277 @@ export default function AdminHomepageView() {
                   </div>
                 )}
 
-                <div className="relative z-10 space-y-3">
+                <div className="relative z-10 space-y-3.5 max-w-xl">
                   <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] font-caps uppercase tracking-wider">
                     <Sparkles className="w-3 h-3 text-brand-primary" />
-                    <span>{formData.heroBanner.badgeText}</span>
+                    <span>{formData.heroBanner.badgeText || 'FASHION JEWELLERY'}</span>
                   </div>
-                  <h4 className="text-2xl font-cormorant font-medium text-brand-tertiary leading-snug">
-                    {formData.heroBanner.headline} <br />
-                    <span className="font-cormorant font-normal text-brand-primary">{formData.heroBanner.accentText}</span>
+                  <h4 className="text-2xl sm:text-3xl font-cormorant font-medium text-brand-tertiary leading-snug">
+                    {formData.heroBanner.headline || 'YOUR STYLE,'} <br />
+                    <span className="font-cormorant font-normal text-brand-primary">{formData.heroBanner.accentText || 'FINISHED BEAUTIFULLY.'}</span>
                   </h4>
-                  <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed">
-                    {formData.heroBanner.subtitle}
+                  <p className="text-xs text-brand-muted font-light max-w-sm sm:max-w-md leading-relaxed whitespace-pre-line">
+                    {formData.heroBanner.subtitle || 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.'}
                   </p>
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5">
-                      <span>{formData.heroBanner.primaryBtnText}</span>
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[11px] font-caps uppercase font-bold flex items-center space-x-1.5 shadow-sm">
+                      <span>{formData.heroBanner.primaryBtnText || 'DISCOVER YOUR STYLE'}</span>
                       <ArrowRight className="w-3 h-3" />
                     </span>
                     <span className="px-4 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-[11px] font-caps uppercase font-semibold">
-                      {formData.heroBanner.secondaryBtnText}
+                      {formData.heroBanner.secondaryBtnText || 'ALL EVERYDAY JEWELRY'}
                     </span>
+                  </div>
+
+                  {/* Reassurance Trust Points Preview */}
+                  <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-brand-muted font-light">
+                    <span className="flex items-center space-x-1 text-emerald-700 font-medium">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>{formData.heroBanner.trustPoint1 || '100% Anti-Tarnish'}</span>
+                    </span>
+                    <span className="text-brand-border">•</span>
+                    <span className="flex items-center space-x-1 text-emerald-700 font-medium">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>{formData.heroBanner.trustPoint2 || 'Free Express Delivery'}</span>
+                    </span>
+                    {formData.heroBanner.showAmazon !== false && (
+                      <>
+                        <span className="text-brand-border">•</span>
+                        <span className="inline-flex items-center space-x-1 text-brand-tertiary font-medium">
+                          <span>{formData.heroBanner.amazonText || 'Also on'}</span>
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/80 inline-flex items-center shadow-2xs">
+                            <OriginalAmazonLogo className="h-2.5 w-auto" />
+                          </span>
+                          <ExternalLink className="w-2.5 h-2.5 text-brand-muted" />
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Eyebrow Badge Text
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.badgeText}
-                  onChange={(e) => updateNested('heroBanner', 'badgeText', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="e.g. Everyday Luxury Fine Jewelry"
-                />
+            {/* Inputs Section */}
+            <div className="space-y-5 pt-2">
+              {/* Group 1: Headline & Typography */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-4">
+                <div className="flex items-center space-x-2 border-b border-brand-border/40 pb-2">
+                  <Sparkles className="w-4 h-4 text-brand-primary" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-brand-tertiary">
+                    1. Headlines & Editorial Typography
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Eyebrow Badge Text (Top Pill)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.badgeText || ''}
+                      onChange={(e) => updateNested('heroBanner', 'badgeText', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+                      placeholder="e.g. FASHION JEWELLERY"
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Displayed inside the purple badge directly above the main title.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Main Headline (Line 1)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.headline || ''}
+                      onChange={(e) => updateNested('heroBanner', 'headline', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
+                      placeholder="e.g. YOUR STYLE,"
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Primary bold Cormorant headline.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Italic Accent Text (Line 2)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.accentText || ''}
+                      onChange={(e) => updateNested('heroBanner', 'accentText', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary text-brand-primary italic font-serif"
+                      placeholder="e.g. FINISHED BEAUTIFULLY."
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Highlighted second line styled in signature brand purple italic.
+                    </p>
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Descriptive Subtitle Paragraph
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.heroBanner.subtitle || ''}
+                      onChange={(e) => updateNested('heroBanner', 'subtitle', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-relaxed"
+                      placeholder="Thoughtfully crafted jewellery with timeless silhouettes, beautiful detailing, and an effortless feel."
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Supports multi-line text and explains the jewelry collection craftsmanship.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Main Headline (Line 1)
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.headline}
-                  onChange={(e) => updateNested('heroBanner', 'headline', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="e.g. Curated everyday jewelry,"
-                />
+              {/* Group 2: Action Buttons */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-4">
+                <div className="flex items-center space-x-2 border-b border-brand-border/40 pb-2">
+                  <ArrowRight className="w-4 h-4 text-brand-primary" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-brand-tertiary">
+                    2. Call-to-Action Buttons & Links
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Primary Button Text (Purple CTA)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.primaryBtnText || ''}
+                      onChange={(e) => updateNested('heroBanner', 'primaryBtnText', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                      placeholder="e.g. DISCOVER YOUR STYLE"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Primary Button Link / Section Anchor
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.primaryBtnLink || ''}
+                      onChange={(e) => updateNested('heroBanner', 'primaryBtnLink', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-mono text-xs"
+                      placeholder="#jhumka-boxes"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Secondary Button Text (Outlined)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.secondaryBtnText || ''}
+                      onChange={(e) => updateNested('heroBanner', 'secondaryBtnText', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                      placeholder="e.g. ALL EVERYDAY JEWELRY"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Secondary Button Link / Section Anchor
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.secondaryBtnLink || ''}
+                      onChange={(e) => updateNested('heroBanner', 'secondaryBtnLink', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-mono text-xs"
+                      placeholder="#catalog"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Italic Accent Text (Line 2)
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.accentText}
-                  onChange={(e) => updateNested('heroBanner', 'accentText', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary text-brand-primary italic font-serif"
-                  placeholder="e.g. designed to shine forever."
-                />
+              {/* Group 3: Trust Reassurance & Badges */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-4">
+                <div className="flex items-center space-x-2 border-b border-brand-border/40 pb-2">
+                  <ShieldCheck className="w-4 h-4 text-brand-primary" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-brand-tertiary">
+                    3. Reassurance Trust Points & Amazon Badge
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Reassurance Trust Point 1
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.trustPoint1 || ''}
+                      onChange={(e) => updateNested('heroBanner', 'trustPoint1', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                      placeholder="e.g. 100% Anti-Tarnish"
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Appears with a green checkmark directly under the CTA buttons.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Reassurance Trust Point 2
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.trustPoint2 || ''}
+                      onChange={(e) => updateNested('heroBanner', 'trustPoint2', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                      placeholder="e.g. Free Express Delivery"
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Appears with a green checkmark next to Trust Point 1.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-brand-tertiary block">
+                      Amazon Marketplace Link Label
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.heroBanner.amazonText || ''}
+                      onChange={(e) => updateNested('heroBanner', 'amazonText', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                      placeholder="e.g. Also on"
+                    />
+                    <p className="text-[11px] text-brand-muted">
+                      Label preceding the official Amazon logo badge.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col justify-center">
+                    <label className="flex items-center space-x-2.5 cursor-pointer pt-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.heroBanner.showAmazon !== false}
+                        onChange={(e) => updateNested('heroBanner', 'showAmazon', e.target.checked)}
+                        className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                      />
+                      <span className="text-xs font-bold text-brand-tertiary">
+                        Display "Also on Amazon" Badge in Hero
+                      </span>
+                    </label>
+                    <p className="text-[11px] text-brand-muted pl-6.5">
+                      Links visitors directly to your verified House of VJ storefront on Amazon.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Subtitle Paragraph
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.heroBanner.subtitle}
-                  onChange={(e) => updateNested('heroBanner', 'subtitle', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-relaxed"
-                  placeholder="Supporting descriptive paragraph..."
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Primary Button Text
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.primaryBtnText}
-                  onChange={(e) => updateNested('heroBanner', 'primaryBtnText', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Primary Button Link / Anchor
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.primaryBtnLink}
-                  onChange={(e) => updateNested('heroBanner', 'primaryBtnLink', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="#jhumka-boxes"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Secondary Button Text
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.secondaryBtnText}
-                  onChange={(e) => updateNested('heroBanner', 'secondaryBtnText', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Secondary Button Link / Anchor
-                </label>
-                <input
-                  type="text"
-                  value={formData.heroBanner.secondaryBtnLink}
-                  onChange={(e) => updateNested('heroBanner', 'secondaryBtnLink', e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
-                  placeholder="#catalog"
-                />
-              </div>
-
-              {/* Hero Photograph Upload & Controls (Desktop) */}
-              <div className="sm:col-span-2 p-4 rounded-xl border border-brand-primary/20 bg-brand-primary-light/30 space-y-3">
+              {/* Group 4: Hero Photograph Upload & Controls (Desktop) */}
+              <div className="p-4 rounded-xl border border-brand-primary/20 bg-brand-primary-light/30 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h5 className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5 flex-wrap">
@@ -2424,7 +2585,7 @@ export default function AdminHomepageView() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => updateNested('heroBanner', 'rightImageUrl', '/hero-jewelry-model.jpg')}
+                      onClick={() => updateNested('heroBanner', 'rightImageUrl', 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png')}
                       className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-brand-tertiary text-xs font-caps tracking-wider uppercase font-semibold hover:border-brand-primary transition-colors cursor-pointer"
                       title="Reset to default luxury model photograph"
                     >
@@ -2486,6 +2647,207 @@ export default function AdminHomepageView() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Bottom Quick Action Save Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/20 gap-3">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-brand-primary shrink-0" />
+                  <span className="text-xs text-brand-tertiary font-medium">
+                    Changes made here publish live to all website visitors immediately upon clicking "Save Live Changes".
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase shadow-xs transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TRUST REASSURANCE BADGES (100% Anti-Tarnish & Free Express Delivery) */}
+        {activeSection === 'trustBadges' && (
+          <div className="space-y-6">
+            <div className="border-b border-brand-border/60 pb-4 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>Storefront Reassurance Trust Badges</span>
+                </div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary mt-1">
+                  100% Anti-Tarnish & Free Express Delivery Controls
+                </h3>
+                <p className="text-xs text-brand-muted font-light">
+                  Directly customize the trust badge reassurance texts displayed under the main hero banner, in the product view modal, and throughout your storefront.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+              </button>
+            </div>
+
+            {/* Live Preview Card */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
+                Live Storefront Display Preview:
+              </span>
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border space-y-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-brand-tertiary font-medium">
+                  <span className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span className="font-semibold">{formData.heroBanner.trustPoint1 || '100% Anti-Tarnish'}</span>
+                  </span>
+                  <span className="text-brand-border">•</span>
+                  <span className="flex items-center space-x-1.5 text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span className="font-semibold">{formData.heroBanner.trustPoint2 || 'Free Express Delivery'}</span>
+                  </span>
+                  {formData.heroBanner.showAmazon !== false && (
+                    <>
+                      <span className="text-brand-border">•</span>
+                      <span className="inline-flex items-center space-x-1.5 text-brand-tertiary bg-white px-3 py-1.5 rounded-lg border border-brand-border shadow-2xs">
+                        <span>{formData.heroBanner.amazonText || 'Also on'}</span>
+                        <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/80 inline-flex items-center shadow-2xs">
+                          <OriginalAmazonLogo className="h-3 w-auto" />
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-brand-muted" />
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Form Controls */}
+            <div className="space-y-4">
+              {/* Badge 1: Anti-Tarnish */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                    <ShieldCheck className="w-4 h-4 text-brand-primary" />
+                    <span>Trust Badge 1 (e.g. 100% Anti-Tarnish)</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Live Active
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={formData.heroBanner.trustPoint1 || ''}
+                  onChange={(e) => updateNested('heroBanner', 'trustPoint1', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium text-brand-tertiary"
+                  placeholder="e.g. 100% Anti-Tarnish"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-brand-muted font-light">Quick Presets:</span>
+                  {['100% Anti-Tarnish', 'Waterproof & Sweatproof', 'Lifetime Polish Guarantee', 'Hypoallergenic Skin-Safe'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => updateNested('heroBanner', 'trustPoint1', preset)}
+                      className="px-2 py-0.5 text-[10px] rounded-md bg-purple-50 text-brand-primary border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Badge 2: Delivery */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                    <Truck className="w-4 h-4 text-brand-primary" />
+                    <span>Trust Badge 2 (e.g. Free Express Delivery)</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Live Active
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={formData.heroBanner.trustPoint2 || ''}
+                  onChange={(e) => updateNested('heroBanner', 'trustPoint2', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium text-brand-tertiary"
+                  placeholder="e.g. Free Express Delivery"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-brand-muted font-light">Quick Presets:</span>
+                  {['Free Express Delivery', 'Dispatched within 24h', 'Free All-India Shipping', 'Cash On Delivery Available'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => updateNested('heroBanner', 'trustPoint2', preset)}
+                      className="px-2 py-0.5 text-[10px] rounded-md bg-purple-50 text-brand-primary border border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amazon Storefront Reassurance */}
+              <div className="p-4 rounded-xl border border-brand-border/80 bg-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary flex items-center space-x-1.5">
+                    <ExternalLink className="w-4 h-4 text-brand-primary" />
+                    <span>Amazon Marketplace Link & Label</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.heroBanner.showAmazon !== false}
+                      onChange={(e) => updateNested('heroBanner', 'showAmazon', e.target.checked)}
+                      className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4"
+                    />
+                    <span className="text-xs font-bold text-brand-tertiary">
+                      {formData.heroBanner.showAmazon !== false ? 'Badge Visible' : 'Badge Hidden'}
+                    </span>
+                  </label>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-brand-muted font-medium block">
+                    Link Prefix Label (default: "Also on")
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.heroBanner.amazonText || ''}
+                    onChange={(e) => updateNested('heroBanner', 'amazonText', e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium"
+                    placeholder="e.g. Also on"
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Quick Action Save Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/20 gap-3">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-brand-primary shrink-0" />
+                  <span className="text-xs text-brand-tertiary font-medium">
+                    Changes made here publish live to all website visitors immediately upon clicking "Save Live Changes".
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold tracking-wider uppercase shadow-xs transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+                </button>
               </div>
             </div>
           </div>

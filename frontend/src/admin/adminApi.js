@@ -489,21 +489,37 @@ export const adminApi = {
   },
 
   async updateHomepageSettings(contentData) {
-    const res = await request('/settings/update.php', {
-      method: 'POST',
-      body: JSON.stringify(contentData),
-    });
+    let res = null;
+    try {
+      res = await request('/settings/update.php', {
+        method: 'POST',
+        body: JSON.stringify(contentData),
+      });
+    } catch (err) {
+      console.warn('Backend settings update warning, persisting to client cache:', err);
+      // Persist locally so client reflects change immediately even if proxy or connection hiccupped
+      try {
+        const payload = contentData;
+        localStorage.setItem('valerie_settings_updated', Date.now().toString());
+        localStorage.setItem('valerie_site_content_cache_v3', JSON.stringify({ ...payload, _version: '20261004_v3' }));
+        window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: payload }));
+      } catch (e) {
+        console.warn('Local cache fallback error:', e);
+      }
+      throw err;
+    }
 
     // Notify storefront instances locally and across browser tabs
     try {
+      const savedData = res?.data || contentData;
       localStorage.setItem('valerie_settings_updated', Date.now().toString());
-      localStorage.setItem('valerie_site_content_cache', JSON.stringify(res.data || contentData));
-      window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: res.data || contentData }));
+      localStorage.setItem('valerie_site_content_cache_v3', JSON.stringify({ ...savedData, _version: '20261004_v3' }));
+      window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: savedData }));
     } catch (e) {
       console.warn('Sync broadcast warning:', e);
     }
 
-    return res.data;
+    return res?.data || contentData;
   },
 
   // Legal Policies Management
