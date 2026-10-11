@@ -167,9 +167,9 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
               key={box.id}
               className="group luxury-card bg-white rounded-2xl overflow-hidden border border-brand-border/90 hover:border-brand-primary/50 transition-all duration-300 hover:shadow-luxury-hover flex flex-col justify-between relative shadow-2xs sm:shadow-sm"
             >
-              {/* Badges on Image */}
+              {/* Badges on Image (Minimal on Mobile) */}
               <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm flex items-center space-x-1">
+                <span className="hidden sm:inline-flex px-2 sm:px-2.5 py-0.5 rounded-full text-[8.5px] sm:text-[10px] font-caps tracking-wider uppercase font-bold bg-brand-primary text-white shadow-sm items-center space-x-1">
                   <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-300 text-amber-300" />
                   <span>Bestseller</span>
                 </span>
@@ -179,12 +179,12 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   </span>
                 )}
                 {discount > 0 && (
-                  <span className="bg-rose-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+                  <span className="hidden sm:inline-block bg-rose-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
                     -{discount}%
                   </span>
                 )}
                 {Boolean(box.video_url || (Array.isArray(box?.images) && box.images.some(img => img.media_type === 'video' || (typeof (img.image_url || img.url) === 'string' && /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(img.image_url || img.url))))) && (
-                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm flex items-center gap-1 w-fit">
+                  <span className="hidden sm:inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-[7.5px] sm:text-[9px] font-bold bg-black/65 backdrop-blur-xs text-white shadow-sm items-center gap-1 w-fit">
                     <Film className="w-2.5 h-2.5 text-amber-300" />
                     <span>Reel</span>
                   </span>
