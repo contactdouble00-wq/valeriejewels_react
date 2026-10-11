@@ -170,11 +170,6 @@ export default function WishlistDrawer({ onSelectProduct }) {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
                         />
-                        {item.discount_percentage > 0 && (
-                          <span className="absolute top-1 left-1 px-1 py-0.5 rounded text-[8px] font-bold bg-emerald-600 text-white">
-                            {item.discount_percentage}% OFF
-                          </span>
-                        )}
                       </div>
 
                       {/* Info & Actions */}
