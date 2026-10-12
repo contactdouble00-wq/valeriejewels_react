@@ -1,22 +1,69 @@
-name: Build & Validate
+name: Deploy Valerie Jewels to Hostinger
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: valerie-production-deploy
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
+    name: Build & Deploy Valerie Jewels
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup Node
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install & Build Frontend
-        working-directory: ./frontend
+        working-directory: frontend
         run: |
-          npm install
+          npm ci || npm install
           npm run build
+
+      - name: Stage Deployment Directory
+        run: |
+          mkdir -p deploy_dist
+          # Copy compiled frontend SPA bundle
+          cp -r frontend/dist/* deploy_dist/
+          # Copy backend API
+          cp -r api deploy_dist/
+          # Copy root server configs and SEO files
+          [ -f .htaccess ] && cp .htaccess deploy_dist/
+          [ -f robots.txt ] && cp robots.txt deploy_dist/
+          [ -f sitemap.xml ] && cp sitemap.xml deploy_dist/
+          [ -f sitemap_index.xml ] && cp sitemap_index.xml deploy_dist/
+          # Version stamp for deployment verification
+          echo "${{ github.sha }}" > deploy_dist/api/deploy_version.txt
+          echo "${{ github.sha }}" > deploy_dist/deploy_version.txt
+
+      - name: Deploy to Hostinger via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_HOST }}
+          username: ${{ secrets.HOSTINGER_FTP_USER }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: ./deploy_dist/
+          server-dir: domains/valeriejewels.in/public_html/
+          protocol: ftps
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            api/.env
+            api/config/config.php
+            api/database/*.sqlite
+            api/database/*.db
+            api/uploads/**
+            uploads/**

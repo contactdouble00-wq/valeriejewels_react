@@ -16,13 +16,18 @@ $config = file_exists($configFile)
 
 $dbCheck = Database::checkConnection();
 
+$deployVersionFile = __DIR__ . '/deploy_version.txt';
+$gitCommit = file_exists($deployVersionFile)
+    ? trim((string)@file_get_contents($deployVersionFile))
+    : trim((string)@file_get_contents(dirname(__DIR__) . '/.git/refs/heads/main') ?: 'unknown');
+
 $healthData = [
     'store'       => 'VALERIE JEWELS',
     'status'      => 'healthy',
     'phase'       => 'Phase 1 - Database Schema & Core Models Active',
     'environment' => $config['app']['env'] ?? 'development',
     'php_version' => PHP_VERSION,
-    'git_commit'  => trim(@file_get_contents(dirname(__DIR__) . '/.git/refs/heads/main') ?: 'unknown'),
+    'git_commit'  => $gitCommit,
     'database'    => $dbCheck,
     'server_time' => date('c'),
 ];
