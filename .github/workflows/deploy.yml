@@ -48,12 +48,25 @@ jobs:
           echo "${{ github.sha }}" > deploy_dist/api/deploy_version.txt
           echo "${{ github.sha }}" > deploy_dist/deploy_version.txt
 
+      - name: Normalize FTP Credentials
+        id: ftp_creds
+        run: |
+          RAW_SERVER="${{ secrets.HOSTINGER_FTP_HOST || secrets.FTP_SERVER }}"
+          CLEAN_SERVER=$(echo "$RAW_SERVER" | sed -e 's|^[^/]*://||' -e 's|:.*$||' -e 's|/.*$||' | tr -d '[:space:]')
+          CLEAN_SERVER="${CLEAN_SERVER:-217.21.94.247}"
+          
+          RAW_USER="${{ secrets.HOSTINGER_FTP_USER || secrets.FTP_USERNAME }}"
+          CLEAN_USER=$(echo "$RAW_USER" | tr -d '[:space:]')
+          
+          echo "server=$CLEAN_SERVER" >> $GITHUB_OUTPUT
+          echo "username=$CLEAN_USER" >> $GITHUB_OUTPUT
+
       - name: Deploy to Hostinger via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.HOSTINGER_FTP_HOST }}
-          username: ${{ secrets.HOSTINGER_FTP_USER }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          server: ${{ steps.ftp_creds.outputs.server }}
+          username: ${{ steps.ftp_creds.outputs.username }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD || secrets.FTP_PASSWORD }}
           local-dir: ./deploy_dist/
           server-dir: domains/valeriejewels.in/public_html/
           protocol: ftps
