@@ -686,67 +686,7 @@ export default function AdminHomepageView() {
           </div>
         </div>
 
-        {/* 2. One-Click Preset Templates */}
-        <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-950 flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-              <span>1-Click Campaign Presets</span>
-            </span>
-            <span className="text-[10px] text-purple-800 font-semibold">Quickly fill standard marketing copy</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => applyGuaranteeStripPreset('default')}
-              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
-            >
-              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
-                <span>VALERIE10</span>
-                <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-mono">Default</span>
-              </div>
-              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Extra 10% Off • Keepsake Box + 24h Dispatch</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyGuaranteeStripPreset('festive')}
-              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
-            >
-              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
-                <span>FESTIVE20</span>
-                <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-mono">20% Off</span>
-              </div>
-              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Flat 20% Off • Royal Velvet Box + Free Gift</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyGuaranteeStripPreset('prepaid')}
-              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
-            >
-              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
-                <span>PREPAID50</span>
-                <span className="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded font-mono">₹50 Off</span>
-              </div>
-              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Extra ₹50 Off • Free Zircon Necklace</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyGuaranteeStripPreset('flashSale')}
-              className="p-2.5 rounded-xl bg-white border border-purple-200 hover:border-brand-primary hover:bg-purple-50/50 text-left transition-all text-xs cursor-pointer shadow-2xs group"
-            >
-              <div className="font-bold text-brand-tertiary group-hover:text-brand-primary flex items-center justify-between">
-                <span>LUSTRE15</span>
-                <span className="text-[9px] bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded font-mono">15% Off</span>
-              </div>
-              <div className="text-[10px] text-brand-muted mt-0.5 leading-snug">Limited 15% Off • Keepsake Box + Insured Air</div>
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Master Visibility Toggle */}
+        {/* 2. Master Visibility Toggle */}
         <div className="p-4 rounded-xl bg-white border border-brand-border flex items-center justify-between">
           <div className="space-y-0.5">
             <span className="text-xs font-bold text-brand-tertiary block">
