@@ -878,7 +878,7 @@ export default function AdminAnalyticsView({ currentUser }) {
                 {[
                   { channel: 'Google Organic Search (SEO)', share: '41.2%', visitors: '585', trend: '+14%' },
                   { channel: 'Direct Traffic (valeriejewels.in)', share: '32.6%', visitors: '463', trend: '+8%' },
-                  { channel: 'Meta & Instagram Ads (Pixel)', share: '18.4%', visitors: '261', trend: '+22%' },
+                  { channel: 'Meta & Instagram Ads', share: '18.4%', visitors: '261', trend: '+22%' },
                   { channel: 'WhatsApp Concierge & Referrals', share: '7.8%', visitors: '111', trend: '+5%' },
                 ].map((ch, idx) => (
                   <div

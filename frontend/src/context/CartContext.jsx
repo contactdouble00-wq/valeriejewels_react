@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { trackPixel } from '../utils/pixel';
+import { trackGAAddToCart } from '../utils/analytics';
 
 const CartContext = createContext(null);
 
@@ -65,13 +65,7 @@ export function CartProvider({ children }) {
       }
     });
 
-    trackPixel('AddToCart', {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: 'product',
-      value: (variant && variant.price ? Number(variant.price) : Number(product.price)) * quantity,
-      currency: 'INR',
-    });
+    trackGAAddToCart(product, variant, quantity);
 
     if (openDrawer) {
       setIsCartOpen(true);
@@ -114,13 +108,12 @@ export function CartProvider({ children }) {
       }
     });
 
-    trackPixel('AddToCart', {
-      content_name: bundle.title || bundle.name,
-      content_ids: [bundle.id],
-      content_type: 'product_group',
-      value: Number(bundle.bundle_price || 0) * quantity,
-      currency: 'INR',
-    });
+    trackGAAddToCart({
+      id: bundle.id,
+      name: bundle.title || bundle.name,
+      price: bundle.bundle_price,
+      category_name: 'Combo Bundle',
+    }, null, quantity);
 
     if (openDrawer) {
       setIsCartOpen(true);

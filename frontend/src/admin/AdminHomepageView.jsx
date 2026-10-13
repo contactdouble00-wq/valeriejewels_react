@@ -1320,7 +1320,7 @@ export default function AdminHomepageView() {
                   Automatic E-Commerce Funnel Tracking Enabled
                 </span>
                 <p className="text-[11px] text-brand-muted">
-                  Once your Measurement ID is entered, Valerie Jewels automatically transmits standard GA4 e-commerce events synced alongside Meta Pixel:
+                  Once your Measurement ID is entered, Valerie Jewels automatically transmits standard GA4 e-commerce events:
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {[

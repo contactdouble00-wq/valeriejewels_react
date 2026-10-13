@@ -9,7 +9,7 @@ import { apiService } from '../services/api';
 import { SEED_PRODUCTS } from '../data/seedCatalog';
 import { useWishlist } from '../context/WishlistContext';
 import { useSiteContent } from '../context/SiteContentContext';
-import { trackPixel } from '../utils/pixel';
+import { trackGAViewItem } from '../utils/analytics';
 import ProductReviewsSection from './ProductReviewsSection';
 import AmazonTrustBadge from './AmazonTrustBadge';
 
@@ -53,15 +53,12 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     return () => window.removeEventListener('valerie_payment_settings_updated', onSettingsUpdate);
   }, []);
 
-  // Track Meta Pixel ViewContent event
+  // Track Product View event
   useEffect(() => {
     if (product && product.id) {
-      trackPixel('ViewContent', {
-        content_name: product.name,
-        content_ids: [product.id],
-        content_type: 'product',
-        value: Number(selectedVariant?.price || product.price || 0),
-        currency: 'INR',
+      trackGAViewItem({
+        ...product,
+        price: selectedVariant?.price || product.price,
       });
     }
   }, [product?.id]);

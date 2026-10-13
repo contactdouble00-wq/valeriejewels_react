@@ -36,7 +36,7 @@ import {
 import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { trackPixel } from '../utils/pixel';
+import { trackGABeginCheckout, trackGAPurchase } from '../utils/analytics';
 
 // Pincode directory lookup helper for instant city/state auto-fill
 const PINCODE_MAP = {
@@ -240,33 +240,28 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
     }
   }, [user, isOpen]);
 
-  // Meta Pixel InitiateCheckout tracking
+  // InitiateCheckout tracking
   const hasTrackedCheckout = useRef(false);
   useEffect(() => {
     if (isOpen && cartItems.length > 0 && !hasTrackedCheckout.current) {
       hasTrackedCheckout.current = true;
-      trackPixel('InitiateCheckout', {
-        num_items: cartItems.length,
-        value: calcData?.final_total || cartItems.reduce((acc, i) => acc + (Number(i.price) * (i.quantity || 1)), 0),
-        currency: 'INR',
-        content_type: 'product',
-      });
+      const total = calcData?.final_total || cartItems.reduce((acc, i) => acc + (Number(i.price) * (i.quantity || 1)), 0);
+      trackGABeginCheckout(cartItems, total);
     }
     if (!isOpen) {
       hasTrackedCheckout.current = false;
     }
   }, [isOpen, cartItems.length, calcData?.final_total]);
 
-  // Meta Pixel Purchase tracking
+  // Purchase conversion tracking
   const hasTrackedPurchase = useRef(false);
   useEffect(() => {
     if (step === 'confirmed' && placedOrder && !hasTrackedPurchase.current) {
       hasTrackedPurchase.current = true;
-      trackPixel('Purchase', {
-        value: Number(placedOrder.total || calcData?.final_total || 0),
-        currency: 'INR',
-        content_type: 'product',
-        order_id: placedOrder.order_number || placedOrder.id,
+      trackGAPurchase({
+        orderId: placedOrder.order_number || placedOrder.id,
+        totalAmount: Number(placedOrder.total || calcData?.final_total || 0),
+        items: cartItems,
       });
     }
     if (step !== 'confirmed') {
