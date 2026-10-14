@@ -3,6 +3,7 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /vj-manage-x1126
+Allow: /api/uploads/
 Disallow: /api/
 
 # Official Sitemap for Google Search Console

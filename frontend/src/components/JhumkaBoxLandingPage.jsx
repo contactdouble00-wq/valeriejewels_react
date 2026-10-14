@@ -129,6 +129,30 @@ export default function JhumkaBoxLandingPage({
     const originalCanonical = canonical.getAttribute('href');
     canonical.setAttribute('href', 'https://valeriejewels.in/jhumka-box');
 
+    // Helper to set or update meta tag
+    const setMetaTag = (property, content) => {
+      let el = document.querySelector(`meta[property="${property}"]`) || document.querySelector(`meta[name="${property}"]`);
+      let created = false;
+      let prev = null;
+      if (!el) {
+        el = document.createElement('meta');
+        if (property.startsWith('og:')) el.setAttribute('property', property);
+        else el.setAttribute('name', property);
+        document.head.appendChild(el);
+        created = true;
+      } else {
+        prev = el.getAttribute('content');
+      }
+      el.setAttribute('content', content);
+      return { el, created, prev };
+    };
+
+    const ogTitle = setMetaTag('og:title', 'Jhumka Box - 16 Pairs Luxury Oxidized & Gold Jhumki Organizer Box | Valerie Jewels');
+    const ogDesc = setMetaTag('og:description', 'Shop the viral Jhumka Box online in India at Valerie Jewels. Handcrafted 16-pair oxidized & 6-pair 18K micro-gold plated jhumkas in a velvet luxury organizer. Free shipping & COD available.');
+    const ogImage = setMetaTag('og:image', 'https://valeriejewels.in/api/uploads/img_24a8464b38f849eb7ab6a286e7d9782a.png');
+    const ogUrl = setMetaTag('og:url', 'https://valeriejewels.in/jhumka-box');
+    const twitterImg = setMetaTag('twitter:image', 'https://valeriejewels.in/api/uploads/img_24a8464b38f849eb7ab6a286e7d9782a.png');
+
     // Inject Google Rich Snippet JSON-LD Schema (Product + FAQPage)
     const schemaScript = document.createElement('script');
     schemaScript.type = 'application/ld+json';
@@ -201,6 +225,20 @@ export default function JhumkaBoxLandingPage({
       } else if (canonical && originalCanonical) {
         canonical.setAttribute('href', originalCanonical);
       }
+      const revertMeta = (info) => {
+        if (!info) return;
+        if (info.created && info.el && info.el.parentNode) {
+          info.el.parentNode.removeChild(info.el);
+        } else if (info.el && info.prev !== null) {
+          info.el.setAttribute('content', info.prev);
+        }
+      };
+      revertMeta(ogTitle);
+      revertMeta(ogDesc);
+      revertMeta(ogImage);
+      revertMeta(ogUrl);
+      revertMeta(twitterImg);
+
       const existingSchema = document.getElementById('vj-jhumka-box-schema');
       if (existingSchema && existingSchema.parentNode) {
         existingSchema.parentNode.removeChild(existingSchema);
