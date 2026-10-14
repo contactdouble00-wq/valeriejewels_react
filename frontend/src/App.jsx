@@ -41,10 +41,19 @@ import NotFoundPage from './components/NotFoundPage';
 import PolicyPage from './components/PolicyPage';
 import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
+import JhumkaBoxLandingPage from './components/JhumkaBoxLandingPage';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
-function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearchQuery = '', onOpenPolicy, onOpenFaqs }) {
+function StorefrontContent({
+  onOpenAdmin,
+  initialCategory = 'all',
+  initialSearchQuery = '',
+  onOpenPolicy,
+  onOpenFaqs,
+  isJhumkaLanding = false,
+  onNavigateHome
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -466,7 +475,20 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
             {/* Center: Brand Logo (Optimized & Balanced Proportions) */}
             <div className="flex-1 lg:flex-initial flex items-center justify-center">
-              <a href="#" className="flex items-center justify-center group py-1">
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onNavigateHome) {
+                    onNavigateHome();
+                  } else {
+                    window.history.pushState(null, '', '/');
+                    window.location.hash = '';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className="flex items-center justify-center group py-1"
+              >
                 <img
                   src="/valerie.png"
                   alt="VALERIÉ"
@@ -606,8 +628,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
 
               <a
                 href="#catalog"
-                onClick={() => setSelectedCategory('all')}
-                className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === 'all' ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                onClick={() => {
+                  if (onNavigateHome) onNavigateHome();
+                  setSelectedCategory('all');
+                }}
+                className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === 'all' && !isJhumkaLanding ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
                   }`}
               >
                 All Jewelry
@@ -622,8 +647,11 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
                   <a
                     key={cat.id}
                     href="#catalog"
-                    onClick={() => setSelectedCategory(cat.slug)}
-                    className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === cat.slug ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                    onClick={() => {
+                      if (onNavigateHome) onNavigateHome();
+                      setSelectedCategory(cat.slug);
+                    }}
+                    className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === cat.slug && !isJhumkaLanding ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
                       }`}
                   >
                     {cat.name}
@@ -698,11 +726,23 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-12 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
-        {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
-        {content?.mobileSlider?.enabled !== false && (
-          <div className="md:hidden">
-            <MobileHeroSlider
-              slides={content?.mobileSlider?.slides}
+        {isJhumkaLanding ? (
+          <>
+            <JhumkaBoxLandingPage
+              onOpenPdp={(slug, p) => openPdp(slug, p)}
+              onBuyNow={(p) => handleTriggerFastrr([p])}
+              onNavigateHome={onNavigateHome}
+              allProducts={products}
+            />
+            <TrustStrip />
+          </>
+        ) : (
+          <>
+            {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
+            {content?.mobileSlider?.enabled !== false && (
+              <div className="md:hidden">
+                <MobileHeroSlider
+                  slides={content?.mobileSlider?.slides}
               autoPlay={content?.mobileSlider?.autoPlay ?? true}
               interval={content?.mobileSlider?.interval ?? 4500}
               onSelectCategory={setSelectedCategory}
@@ -1024,11 +1064,13 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
           </section>
         )}
 
-        {/* Trust Badges Strip */}
-        <TrustStrip />
+            {/* Trust Badges Strip */}
+            <TrustStrip />
 
-        {/* Expandable FAQs Block */}
-        <FaqSection onOpenFaqs={onOpenFaqs} />
+            {/* Expandable FAQs Block */}
+            <FaqSection onOpenFaqs={onOpenFaqs} />
+          </>
+        )}
 
       </main>
 
@@ -1070,6 +1112,7 @@ function StorefrontContent({ onOpenAdmin, initialCategory = 'all', initialSearch
         categories={categories}
         selectedCategory={selectedCategory}
         onSelectCategory={(slug) => {
+          if (onNavigateHome) onNavigateHome();
           setSelectedCategory(slug);
           const catalogEl = document.getElementById('catalog');
           if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
@@ -1304,6 +1347,16 @@ export default function App() {
       return 'faqs';
     }
 
+    // 3b. Dedicated SEO Jhumka Box Landing Page Routes
+    const jhumkaPaths = [
+      '/jhumka-box', '/pages/jhumka-box',
+      '/jhumkha-box', '/pages/jhumkha-box',
+      '/jhumka-boxes', '/pages/jhumka-boxes'
+    ];
+    if (jhumkaPaths.includes(rawPath) || hash === '#jhumka-box' || hash === '#jhumkha-box') {
+      return 'jhumka-box';
+    }
+
     // 4. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
@@ -1312,6 +1365,9 @@ export default function App() {
     // 5. Known valid routes in this Single Page Application
     const validPaths = [
       '/', '', '/shop', '/index.html',
+      '/jhumka-box', '/pages/jhumka-box',
+      '/jhumkha-box', '/pages/jhumkha-box',
+      '/jhumka-boxes', '/pages/jhumka-boxes',
       '/track', '/track-order', '/order-tracking',
       '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
@@ -1460,6 +1516,13 @@ export default function App() {
           <WishlistProvider>
 
             <StorefrontContent
+              isJhumkaLanding={currentRoute === 'jhumka-box'}
+              onNavigateHome={() => {
+                window.history.pushState(null, '', '/');
+                window.location.hash = '';
+                setCurrentRoute('store');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               initialCategory={initialCategory}
               initialSearchQuery={initialSearchQuery}
               onOpenAdmin={() => {

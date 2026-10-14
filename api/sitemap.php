@@ -19,6 +19,21 @@ $staticPages = [
         'priority' => '1.0'
     ],
     [
+        'loc' => $baseUrl . '/jhumka-box',
+        'changefreq' => 'daily',
+        'priority' => '1.0'
+    ],
+    [
+        'loc' => $baseUrl . '/pages/jhumka-box',
+        'changefreq' => 'daily',
+        'priority' => '0.9'
+    ],
+    [
+        'loc' => $baseUrl . '/jhumkha-box',
+        'changefreq' => 'daily',
+        'priority' => '0.9'
+    ],
+    [
         'loc' => $baseUrl . '/faqs',
         'changefreq' => 'weekly',
         'priority' => '0.8'
