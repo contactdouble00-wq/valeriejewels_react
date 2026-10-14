@@ -272,7 +272,7 @@ export default function JhumkaBoxLandingPage({
 
   return (
     <div className="space-y-10 sm:space-y-16 animate-in fade-in duration-300">
-      
+
       {/* Breadcrumb Navigation */}
       <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-xs text-brand-muted">
         <button
@@ -330,26 +330,24 @@ export default function JhumkaBoxLandingPage({
 
       {/* Main Interactive Showcase (Selector between 16-Pair Oxidized and 6-Pair Gold) */}
       <section className="bg-gradient-to-b from-[#FAF7FD] via-white to-[#FAF7FD] rounded-2xl sm:rounded-3xl border border-brand-border p-4 sm:p-8 lg:p-10 shadow-sm space-y-6">
-        
+
         {/* Edition Selector Tabs */}
         <div className="flex items-center justify-center gap-2 max-w-md mx-auto p-1 bg-brand-primary-light/40 rounded-xl border border-brand-border">
           <button
             onClick={() => setActiveTab('16-pairs')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${
-              activeTab === '16-pairs'
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${activeTab === '16-pairs'
                 ? 'bg-brand-primary text-white shadow-sm'
                 : 'text-brand-tertiary hover:text-brand-primary'
-            }`}
+              }`}
           >
             🔥 16-Pair Oxidized (₹1,299)
           </button>
           <button
             onClick={() => setActiveTab('6-pairs-gold')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${
-              activeTab === '6-pairs-gold'
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${activeTab === '6-pairs-gold'
                 ? 'bg-brand-primary text-white shadow-sm'
                 : 'text-brand-tertiary hover:text-brand-primary'
-            }`}
+              }`}
           >
             ✨ 6-Pair 18K Gold (₹1,799)
           </button>
@@ -357,7 +355,7 @@ export default function JhumkaBoxLandingPage({
 
         {/* Product Card Showcase Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-          
+
           {/* Left Column: Visual Showcase */}
           <div className="lg:col-span-6 space-y-3">
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-brand-border shadow-md group">
@@ -366,7 +364,7 @@ export default function JhumkaBoxLandingPage({
                 alt={activeProduct.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              
+
               {/* Badges */}
               <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                 <span className="px-2.5 py-1 rounded-full bg-brand-primary text-white text-[10px] font-caps tracking-wider uppercase font-bold shadow-sm">
@@ -384,11 +382,10 @@ export default function JhumkaBoxLandingPage({
                 title="Save to Wishlist"
               >
                 <Heart
-                  className={`w-4 h-4 ${
-                    isInWishlist(activeProduct.id)
+                  className={`w-4 h-4 ${isInWishlist(activeProduct.id)
                       ? 'fill-rose-500 text-rose-500'
                       : 'text-brand-tertiary'
-                  }`}
+                    }`}
                 />
               </button>
 
@@ -412,7 +409,7 @@ export default function JhumkaBoxLandingPage({
 
           {/* Right Column: Pricing & Conversion Engine */}
           <div className="lg:col-span-6 space-y-5">
-            
+
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-xs">
                 <div className="flex items-center text-amber-500">
