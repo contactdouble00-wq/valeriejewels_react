@@ -6,6 +6,7 @@ import {
   ChevronUp, Sparkles, Film, Play, Eye,
 } from 'lucide-react';
 import ProductAssuranceModal from './ProductAssuranceModal';
+import FormattedDescription from '../components/FormattedDescription';
 import {
   DndContext,
   closestCenter,
@@ -1047,14 +1048,34 @@ export default function AdminProductsView({ currentUser }) {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold text-brand-tertiary">Detailed Description</label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-brand-tertiary">Detailed Description (About This Piece)</label>
+                  <span className="text-[11px] text-brand-muted">Supports paragraphs, points & **bold**</span>
+                </div>
                 <textarea
-                  rows={3}
+                  rows={5}
                   value={editingProduct.description || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
+                  placeholder="Write as paragraphs, or start lines with •, -, 1., or emojis (✨, 💎) to show as points. E.g.:&#10;&#10;✨ **16 Pairs Oxidized Earrings Set**&#10;💎 Beautiful collection of traditional oxidized silver earrings&#10;🌸 Perfect for sarees, kurtis, and festive wear"
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-sans text-xs focus:outline-none focus:border-brand-primary"
                 />
+                <div className="flex items-start justify-between gap-2 text-[11px] text-brand-muted font-light pt-0.5">
+                  <p>
+                    💡 <strong>Smart Formatting:</strong> If you write paragraphs, they will appear as paragraphs. If you write points (using bullet dots •, dashes -, numbers 1., or emojis ✨), they automatically render as clean bulleted points on the store.
+                  </p>
+                </div>
+
+                {editingProduct.description && (
+                  <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-200/60 mt-1.5 space-y-1">
+                    <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-primary block">
+                      Live Storefront Preview
+                    </span>
+                    <div className="text-xs">
+                      <FormattedDescription content={editingProduct.description} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Row 5: Media — Drag-to-Reorder + Upload + Dimension Guidelines */}

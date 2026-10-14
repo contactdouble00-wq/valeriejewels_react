@@ -12,6 +12,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import { trackGAViewItem } from '../utils/analytics';
 import ProductReviewsSection from './ProductReviewsSection';
 import AmazonTrustBadge from './AmazonTrustBadge';
+import FormattedDescription from './FormattedDescription';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -896,7 +897,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 <div className="font-caps uppercase tracking-wider text-brand-muted text-[10px] font-bold">
                   About This Piece
                 </div>
-                <p>{product.description || product.short_description}</p>
+                <FormattedDescription content={product.description || product.short_description} />
               </div>
 
               {/* Customer Reviews Section */}
@@ -1521,7 +1522,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     <div className="font-caps uppercase tracking-wider text-brand-muted text-[10px] font-bold">
                       About This Piece
                     </div>
-                    <p>{product.description || product.short_description}</p>
+                    <FormattedDescription content={product.description || product.short_description} />
                   </div>
                 </div>
 
