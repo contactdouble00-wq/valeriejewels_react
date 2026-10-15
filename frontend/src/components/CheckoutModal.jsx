@@ -669,7 +669,7 @@ export default function CheckoutModal({
         if (onOrderConfirmed) {
           onOrderConfirmed(finalOrderNumber);
         } else {
-          window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
+          window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
           window.dispatchEvent(new Event('popstate'));
         }
         return;
@@ -744,7 +744,7 @@ export default function CheckoutModal({
               if (onOrderConfirmed) {
                 onOrderConfirmed(finalOrderNumber);
               } else {
-                window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
+                window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
                 window.dispatchEvent(new Event('popstate'));
               }
             } catch (verErr) {
@@ -818,7 +818,7 @@ export default function CheckoutModal({
         if (onOrderConfirmed) {
           onOrderConfirmed(finalOrderNumber);
         } else {
-          window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
+          window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
           window.dispatchEvent(new Event('popstate'));
         }
       }, 1400);

@@ -41,9 +41,9 @@ export default function OrderConfirmationPage({
     if (initialOrderId && initialOrderId.trim()) return initialOrderId.trim();
     if (typeof window === 'undefined') return '';
 
-    // Check path: /order-success/VJ-123456, /order-failed/VJ-123456, /order-confirmation/VJ-123456, etc.
+    // Check path: /order-confirmation/VJ-123456 or /order-failed/VJ-123456
     const path = window.location.pathname || '';
-    const pathMatch = path.match(/\/(?:order-confirmation|order-success|thank-you|order-failed|order-cancelled|payment-failed)\/([A-Za-z0-9-]+)/i);
+    const pathMatch = path.match(/\/(?:order-confirmation|order-failed)\/([A-Za-z0-9-]+)/i);
     if (pathMatch && pathMatch[1]) return pathMatch[1].trim();
 
     // Check query params: ?order_id=VJ-123456 or ?order=...
@@ -56,7 +56,7 @@ export default function OrderConfirmationPage({
 
     // Check hash: #order-confirmation/VJ-123456 or #order-failed/...
     const hash = window.location.hash || '';
-    const hashMatch = hash.match(/(?:order-confirmation\/|order-success\/|thank-you\/|order-failed\/|order-cancelled\/|payment-failed\/|order_id=|order=)([A-Za-z0-9-]+)/i);
+    const hashMatch = hash.match(/(?:order-confirmation\/|order-failed\/|order_id=|order=)([A-Za-z0-9-]+)/i);
     if (hashMatch && hashMatch[1]) return hashMatch[1].trim();
 
     return '';
@@ -159,11 +159,11 @@ export default function OrderConfirmationPage({
         setLoading(false);
         setIsVerifying(false);
 
-        // 1. Update URL to order-success if needed
+        // 1. Update URL to order-confirmation if needed
         if (typeof window !== 'undefined' && orderNumber) {
           const curPath = window.location.pathname || '';
-          if (curPath.includes('/order-failed') || curPath.includes('/order-cancelled') || curPath.includes('/payment-failed')) {
-            window.history.replaceState(null, '', `/order-success/${orderNumber}`);
+          if (curPath.includes('/order-failed')) {
+            window.history.replaceState(null, '', `/order-confirmation/${orderNumber}`);
           }
         }
 
@@ -188,11 +188,7 @@ export default function OrderConfirmationPage({
         // Order exists but payment is not confirmed yet (initial checkout failed/timed out)
         const isExplicitFail = isFailedMode || (typeof window !== 'undefined' && (
           window.location.pathname.includes('/order-failed') ||
-          window.location.pathname.includes('/order-cancelled') ||
-          window.location.pathname.includes('/payment-failed') ||
-          window.location.hash.includes('#order-failed') ||
-          window.location.hash.includes('#order-cancelled') ||
-          window.location.hash.includes('#payment-failed')
+          window.location.hash.includes('#order-failed')
         ));
 
         if (!isExplicitFail && pollCount < MAX_POLL_ATTEMPTS) {
@@ -294,6 +290,9 @@ export default function OrderConfirmationPage({
               razorpay_order_id: rpResponse.razorpay_order_id || retryData?.razorpay_order_id,
               razorpay_signature: rpResponse.razorpay_signature,
             });
+            if (typeof window !== 'undefined' && orderNumber) {
+              window.history.replaceState(null, '', `/order-confirmation/${orderNumber}`);
+            }
             await verifyAndLoadOrder(false);
           } catch (verErr) {
             setRetryError(verErr.message || 'Payment received! Your order is syncing and will verify in a few seconds.');
@@ -402,6 +401,11 @@ export default function OrderConfirmationPage({
 
   // 1. Skeleton Loading / Payment Verification State
   if (loading || isVerifying) {
+    const isFailedRoute = isFailedMode || (typeof window !== 'undefined' && (
+      window.location.pathname.includes('/order-failed') ||
+      window.location.hash.includes('#order-failed')
+    ));
+
     return (
       <div className="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6">
         <div className="max-w-md w-full bg-white rounded-3xl border border-brand-border p-8 text-center space-y-6 shadow-luxury">
@@ -414,13 +418,15 @@ export default function OrderConfirmationPage({
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full text-[11px] font-caps tracking-widest uppercase font-bold bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-              Verifying Payment
+              {isFailedRoute ? 'Order Details' : 'Verifying Payment'}
             </span>
             <h2 className="text-xl sm:text-2xl font-editorial font-bold text-brand-tertiary">
-              Confirming Your Order...
+              {isFailedRoute ? 'Loading Order Details...' : 'Confirming Your Order...'}
             </h2>
             <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed">
-              We're securely communicating with your payment gateway. This usually takes just a few seconds.
+              {isFailedRoute 
+                ? 'Retrieving your order information...' 
+                : "We're securely communicating with your payment gateway. This usually takes just a few seconds."}
             </p>
           </div>
 
@@ -430,10 +436,10 @@ export default function OrderConfirmationPage({
               <span className="font-mono font-bold text-brand-tertiary">#{orderNumber}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-brand-muted">Verification Status:</span>
+              <span className="text-brand-muted">Status:</span>
               <span className="text-brand-primary font-semibold flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
-                Secure handshake in progress
+                {isFailedRoute ? 'Syncing...' : 'Secure handshake in progress'}
               </span>
             </div>
           </div>
@@ -446,121 +452,84 @@ export default function OrderConfirmationPage({
     );
   }
 
-  // 2. High-Converting Psychological Payment Retry & Recovery View
+  // 2. High-Converting Payment Failed / Retry View
   if ((error?.type === 'unconfirmed' || (!order && pendingOrder)) && pendingOrder) {
     const custFirstName = (pendingOrder.customer_name || 'Valued Customer').trim().split(' ')[0];
     const upfrontAmount = Number(pendingOrder.total_amount || 0);
 
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 space-y-6 animate-in fade-in duration-300">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-6 animate-in fade-in duration-300">
         
-        {/* Urgency & Reservation Banner */}
-        <div className="rounded-3xl bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600 p-[2px] shadow-luxury">
-          <div className="rounded-[22px] bg-white p-5 sm:p-7 space-y-5">
-            
-            {/* Top Status Header + Countdown */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-150">
-              <div className="flex items-center space-x-2 text-rose-600 font-bold text-xs sm:text-sm">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                <span className="font-caps tracking-wider uppercase">Order Held • Payment Pending</span>
-              </div>
-              
-              {/* Ticking 15-Minute Reservation Timer */}
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-mono font-bold self-start sm:self-auto">
-                <Timer className="w-4 h-4 text-amber-600 animate-pulse" />
-                <span>RESERVATION EXPIRES IN {formatReservationTime()}</span>
-              </div>
-            </div>
-
-            {/* Headline & Empathy Message */}
-            <div className="space-y-1.5">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-editorial font-bold text-brand-tertiary leading-tight">
-                Almost yours, {custFirstName}! Complete payment to secure your order.
-              </h2>
-              <p className="text-xs sm:text-sm text-brand-muted leading-relaxed">
-                Your payment session timed out or was interrupted. Don&apos;t worry—your pieces are temporarily held in our atelier so you don&apos;t lose your selection. Choose an option below to complete your order now.
-              </p>
-            </div>
-
-            {/* Order Reference Pill */}
-            <div className="p-3.5 rounded-xl bg-[#FAF7FC] border border-brand-border flex items-center justify-between text-xs">
-              <span className="text-brand-muted">
-                Order Reference: <strong className="text-brand-tertiary font-mono font-bold">#{orderNumber}</strong>
-              </span>
-              <span className="text-brand-primary font-bold text-sm">
-                Total: ₹{upfrontAmount.toLocaleString('en-IN')}
-              </span>
-            </div>
-
-            {retryError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span>{retryError}</span>
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════
-                ACTION 1: Primary Online Payment Retry CTA (1-Click UPI/Cards)
-                ══════════════════════════════════════════════════════════════ */}
-            <div className="pt-1 space-y-2">
-              <button
-                type="button"
-                disabled={isRetrying || isConvertingToCod}
-                onClick={() => handleRetryPayment('full_prepaid')}
-                className="w-full py-4 px-6 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.99] text-white text-xs sm:text-sm font-caps tracking-widest uppercase font-bold shadow-lg hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
-              >
-                {isRetrying ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 text-brand-gold fill-brand-gold" />
-                    <span>TRY PAYMENT AGAIN — ₹{upfrontAmount.toLocaleString('en-IN')} (UPI &amp; CARDS)</span>
-                  </>
-                )}
-              </button>
-              <p className="text-[11px] text-center text-brand-muted">
-                ⚡ Instant confirmation via GPay, PhonePe, Paytm, All UPI, Credit/Debit Cards &amp; NetBanking
-              </p>
-            </div>
-
-            {/* ══════════════════════════════════════════════════════════════
-                ACTION 2: Psychological Fallback - Switch to Cash on Delivery
-                ══════════════════════════════════════════════════════════════ */}
-            <div className="pt-3 border-t border-gray-150 space-y-2">
-              <div className="text-center">
-                <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-semibold">
-                  Prefer Doorstep Cash on Delivery Instead?
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={isRetrying || isConvertingToCod}
-                onClick={handleSwitchToCod}
-                className="w-full py-3.5 px-6 rounded-2xl bg-white border-2 border-emerald-600 hover:bg-emerald-50 active:scale-[0.99] text-emerald-800 text-xs sm:text-sm font-caps tracking-wider uppercase font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                {isConvertingToCod ? (
-                  <div className="w-4 h-4 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Truck className="w-4 h-4 text-emerald-600" />
-                    <span>SWITCH TO CASH ON DELIVERY (PAY AT DOORSTEP)</span>
-                  </>
-                )}
-              </button>
-              <p className="text-[10.5px] text-center text-emerald-700">
-                ✓ Zero online payment required right now • Pay cash or UPI to courier upon doorstep delivery
-              </p>
-            </div>
-
+        {/* Payment Failed Card */}
+        <div className="rounded-3xl bg-white border border-rose-200 p-6 sm:p-8 space-y-6 shadow-luxury text-center">
+          
+          {/* Failed Icon */}
+          <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center border-2 border-rose-200 shadow-sm">
+            <AlertCircle className="w-8 h-8 stroke-[2]" />
           </div>
+
+          {/* Headline & Notice */}
+          <div className="space-y-2">
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-caps tracking-widest uppercase font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              Payment Incomplete
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-brand-tertiary">
+              Payment Could Not Be Completed
+            </h2>
+            <p className="text-xs sm:text-sm text-brand-muted max-w-md mx-auto leading-relaxed">
+              Your payment session timed out or was interrupted. Don&apos;t worry, your selection for order <strong className="text-brand-tertiary font-mono">#{orderNumber}</strong> is saved.
+            </p>
+          </div>
+
+          {/* Order Reference Pill */}
+          <div className="p-4 rounded-2xl bg-[#FAF7FC] border border-brand-border flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-brand-muted">
+              Order Reference: <strong className="text-brand-tertiary font-mono font-bold">#{orderNumber}</strong>
+            </span>
+            <span className="text-brand-primary font-bold text-sm sm:text-base">
+              Total: ₹{upfrontAmount.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          {retryError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start space-x-2 text-left">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{retryError}</span>
+            </div>
+          )}
+
+          {/* Primary Action: Try Again */}
+          <div className="space-y-2.5 pt-2">
+            <button
+              type="button"
+              disabled={isRetrying}
+              onClick={() => handleRetryPayment('full_prepaid')}
+              className="w-full py-4 px-6 rounded-2xl bg-brand-primary hover:bg-brand-primary-hover active:scale-[0.99] text-white text-xs sm:text-sm font-caps tracking-widest uppercase font-bold shadow-lg hover:shadow-luxury-hover transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+            >
+              {isRetrying ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>OPENING PAYMENT GATEWAY...</span>
+                </div>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>TRY AGAIN — ₹{upfrontAmount.toLocaleString('en-IN')}</span>
+                </>
+              )}
+            </button>
+            <p className="text-[11px] text-brand-muted">
+              ⚡ Instant checkout via UPI (GPay, PhonePe, Paytm), Cards &amp; NetBanking
+            </p>
+          </div>
+
         </div>
 
         {/* Itemized Order Preview */}
         {pendingItems.length > 0 && (
           <div className="bg-white rounded-2xl border border-brand-border p-5 space-y-3">
             <h4 className="text-xs font-caps tracking-widest uppercase font-bold text-brand-tertiary">
-              Reserved Jewelry in This Order ({pendingItems.length})
+              Items in this Order ({pendingItems.length})
             </h4>
             <div className="divide-y divide-gray-100">
               {pendingItems.map((item, idx) => (
@@ -585,52 +554,12 @@ export default function OrderConfirmationPage({
           </div>
         )}
 
-        {/* Trust & Psychological Reassurance Grid */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-          <div className="p-3 bg-white rounded-xl border border-brand-border space-y-1">
-            <ShieldCheck className="w-5 h-5 text-brand-primary mx-auto" />
-            <p className="text-[10px] sm:text-xs font-bold text-brand-tertiary">100% Anti-Tarnish</p>
-            <p className="text-[9px] text-brand-muted">Lifetime Polish Promise</p>
-          </div>
-          <div className="p-3 bg-white rounded-xl border border-brand-border space-y-1">
-            <Lock className="w-5 h-5 text-emerald-600 mx-auto" />
-            <p className="text-[10px] sm:text-xs font-bold text-brand-tertiary">256-Bit Encrypted</p>
-            <p className="text-[9px] text-brand-muted">RBI &amp; NPCI Verified</p>
-          </div>
-          <div className="p-3 bg-white rounded-xl border border-brand-border space-y-1">
-            <Truck className="w-5 h-5 text-amber-600 mx-auto" />
-            <p className="text-[10px] sm:text-xs font-bold text-brand-tertiary">Free Express Insured</p>
-            <p className="text-[9px] text-brand-muted">3-5 Days Across India</p>
-          </div>
-        </div>
-
-        {/* Secondary Actions: WhatsApp Concierge + Manual Status Check */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <a
-            href={`https://wa.me/917984024500?text=${encodeURIComponent(`Hi Valerie Jewels, my payment for order #${orderNumber} was interrupted. Can you help me complete it?`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center space-x-2 transition-all shadow-xs"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>Chat With Concierge On WhatsApp</span>
-          </a>
-
-          <button
-            onClick={() => verifyAndLoadOrder(false)}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
-            <span>I Already Paid, Check Status</span>
-          </button>
-        </div>
-
         <div className="text-center pt-2">
           <button
             onClick={onNavigateHome}
             className="text-xs text-brand-muted hover:text-brand-primary transition-colors underline underline-offset-4 cursor-pointer"
           >
-            Return to Store Catalog
+            ← Return to Store Catalog
           </button>
         </div>
 

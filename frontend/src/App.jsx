@@ -1151,7 +1151,7 @@ function StorefrontContent({
             setIsCheckoutOpen(false);
             setActivePdpSlug(null);
             setActivePdpProduct(null);
-            window.history.replaceState(null, '', `/order-success/${orderNum}`);
+            window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
             if (typeof onNavigateOrderConfirmation === 'function') {
               onNavigateOrderConfirmation(orderNum);
             } else {
@@ -1392,32 +1392,20 @@ export default function App() {
       return 'jhumka-box';
     }
 
-    // 3c. Dedicated Order Confirmation / Success Routes
+    // 3c. Dedicated Order Confirmation Route (Strictly /order-confirmation for Meta tracking)
     if (
       rawPath === '/order-confirmation' ||
       rawPath.startsWith('/order-confirmation/') ||
-      rawPath === '/order-success' ||
-      rawPath.startsWith('/order-success/') ||
-      rawPath === '/thank-you' ||
-      rawPath.startsWith('/thank-you/') ||
-      hash.startsWith('#order-confirmation') ||
-      hash.startsWith('#order-success') ||
-      hash.startsWith('#thank-you')
+      hash.startsWith('#order-confirmation')
     ) {
       return 'order-confirmation';
     }
 
-    // 3d. Dedicated Order Cancellation / Payment Failed Routes
+    // 3d. Dedicated Order Failed Route (Strictly /order-failed for Meta tracking)
     if (
       rawPath === '/order-failed' ||
       rawPath.startsWith('/order-failed/') ||
-      rawPath === '/order-cancelled' ||
-      rawPath.startsWith('/order-cancelled/') ||
-      rawPath === '/payment-failed' ||
-      rawPath.startsWith('/payment-failed/') ||
-      hash.startsWith('#order-failed') ||
-      hash.startsWith('#order-cancelled') ||
-      hash.startsWith('#payment-failed')
+      hash.startsWith('#order-failed')
     ) {
       return 'order-failed';
     }
@@ -1433,8 +1421,8 @@ export default function App() {
       '/jhumka-box', '/pages/jhumka-box',
       '/jhumkha-box', '/pages/jhumkha-box',
       '/jhumka-boxes', '/pages/jhumka-boxes',
-      '/order-confirmation', '/order-success', '/thank-you',
-      '/order-failed', '/order-cancelled', '/payment-failed',
+      '/order-confirmation',
+      '/order-failed',
       '/track', '/track-order', '/order-tracking',
       '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
@@ -1444,18 +1432,10 @@ export default function App() {
       '/policies',
       '/faqs', '/faq'
     ];
-    if (
-      rawPath.startsWith('/order-confirmation/') ||
-      rawPath.startsWith('/order-success/') ||
-      rawPath.startsWith('/thank-you/')
-    ) {
+    if (rawPath.startsWith('/order-confirmation/')) {
       return 'order-confirmation';
     }
-    if (
-      rawPath.startsWith('/order-failed/') ||
-      rawPath.startsWith('/order-cancelled/') ||
-      rawPath.startsWith('/payment-failed/')
-    ) {
+    if (rawPath.startsWith('/order-failed/')) {
       return 'order-failed';
     }
     if (rawPath.startsWith('/track/')) {
@@ -1601,7 +1581,7 @@ export default function App() {
               isOrderConfirmation={currentRoute === 'order-confirmation'}
               isOrderFailed={currentRoute === 'order-failed'}
               onNavigateOrderConfirmation={(orderNum) => {
-                window.history.replaceState(null, '', `/order-success/${orderNum}`);
+                window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
                 setCurrentRoute('order-confirmation');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
