@@ -42,6 +42,7 @@ import PolicyPage from './components/PolicyPage';
 import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
 import JhumkaBoxLandingPage from './components/JhumkaBoxLandingPage';
+import OrderConfirmationPage from './components/OrderConfirmationPage';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
 
@@ -52,7 +53,9 @@ function StorefrontContent({
   onOpenPolicy,
   onOpenFaqs,
   isJhumkaLanding = false,
-  onNavigateHome
+  isOrderConfirmation = false,
+  onNavigateHome,
+  onNavigateOrderConfirmation
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -726,7 +729,12 @@ function StorefrontContent({
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-12 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
-        {isJhumkaLanding ? (
+        {isOrderConfirmation ? (
+          <OrderConfirmationPage
+            onNavigateHome={onNavigateHome}
+            onOpenTracking={(num) => openTracking(num)}
+          />
+        ) : isJhumkaLanding ? (
           <>
             <JhumkaBoxLandingPage
               onOpenPdp={(slug, p) => openPdp(slug, p)}
@@ -1136,6 +1144,17 @@ function StorefrontContent({
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           onTrackOrder={(orderNum) => openTracking(orderNum)}
+          onOrderConfirmed={(orderNum) => {
+            setIsCheckoutOpen(false);
+            window.history.pushState(null, '', `/order-confirmation/${orderNum}`);
+            window.location.hash = '';
+            if (typeof onNavigateOrderConfirmation === 'function') {
+              onNavigateOrderConfirmation(orderNum);
+            } else {
+              window.dispatchEvent(new Event('popstate'));
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           initialPaymentType={checkoutInitialPaymentType}
         />
       </ErrorBoundary>
@@ -1357,6 +1376,18 @@ export default function App() {
       return 'jhumka-box';
     }
 
+    // 3c. Dedicated Order Confirmation / Thank You Route
+    if (
+      rawPath === '/order-confirmation' ||
+      rawPath.startsWith('/order-confirmation/') ||
+      rawPath === '/thank-you' ||
+      rawPath.startsWith('/thank-you/') ||
+      hash.startsWith('#order-confirmation') ||
+      hash.startsWith('#thank-you')
+    ) {
+      return 'order-confirmation';
+    }
+
     // 4. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
@@ -1368,6 +1399,7 @@ export default function App() {
       '/jhumka-box', '/pages/jhumka-box',
       '/jhumkha-box', '/pages/jhumkha-box',
       '/jhumka-boxes', '/pages/jhumka-boxes',
+      '/order-confirmation', '/thank-you',
       '/track', '/track-order', '/order-tracking',
       '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
@@ -1377,8 +1409,14 @@ export default function App() {
       '/policies',
       '/faqs', '/faq'
     ];
-    if (rawPath.startsWith('/track/')) {
-      return 'store';
+    if (
+      rawPath.startsWith('/order-confirmation/') ||
+      rawPath.startsWith('/thank-you/') ||
+      rawPath.startsWith('/track/')
+    ) {
+      return (rawPath.startsWith('/order-confirmation/') || rawPath.startsWith('/thank-you/'))
+        ? 'order-confirmation'
+        : 'store';
     }
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
@@ -1517,6 +1555,11 @@ export default function App() {
 
             <StorefrontContent
               isJhumkaLanding={currentRoute === 'jhumka-box'}
+              isOrderConfirmation={currentRoute === 'order-confirmation'}
+              onNavigateOrderConfirmation={(orderNum) => {
+                setCurrentRoute('order-confirmation');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               onNavigateHome={() => {
                 window.history.pushState(null, '', '/');
                 window.location.hash = '';

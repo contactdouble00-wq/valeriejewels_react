@@ -59,7 +59,13 @@ const PINCODE_MAP = {
   '781': { city: 'Guwahati', state: 'Assam', days: '4–5 Days' },
 };
 
-export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPaymentType = 'full_prepaid' }) {
+export default function CheckoutModal({
+  isOpen,
+  onClose,
+  onTrackOrder,
+  initialPaymentType = 'full_prepaid',
+  onOrderConfirmed,
+}) {
   const { cartItems, clearCart } = useCart();
   const { user, token } = useAuth();
 
@@ -657,8 +663,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
       if (targetPaymentType === 'cod') {
         setPlacedOrder(orderData);
         clearCart();
-        setStep('confirmed');
         setIsSubmitting(false);
+        if (onOrderConfirmed) {
+          onOrderConfirmed(finalOrderNumber);
+        } else {
+          window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+          window.dispatchEvent(new Event('popstate'));
+          onClose();
+        }
         return;
       }
 
@@ -734,7 +746,13 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
                 transaction_id: rpResponse.razorpay_payment_id,
               });
               clearCart();
-              setStep('confirmed');
+              if (onOrderConfirmed) {
+                onOrderConfirmed(finalOrderNumber);
+              } else {
+                window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+                window.dispatchEvent(new Event('popstate'));
+                onClose();
+              }
             } catch (verErr) {
               setSubmitError(verErr.message || 'Payment confirmation failed. If debited, your order will sync automatically via webhook.');
               setStep('details_payment');
@@ -785,8 +803,14 @@ export default function CheckoutModal({ isOpen, onClose, onTrackOrder, initialPa
         } catch (e) {}
 
         clearCart();
-        setStep('confirmed');
         setIsSubmitting(false);
+        if (onOrderConfirmed) {
+          onOrderConfirmed(finalOrderNumber);
+        } else {
+          window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+          window.dispatchEvent(new Event('popstate'));
+          onClose();
+        }
       }, 1400);
 
     } catch (err) {

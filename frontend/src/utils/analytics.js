@@ -160,3 +160,104 @@ export const trackGAPurchase = ({ orderId, totalAmount, items = [] }) => {
     })),
   });
 };
+
+/**
+ * Deduplicated Google Tag Manager (GTM) -> Meta Pixel / CAPI Purchase Event Trigger
+ * Pushes exactly once per order, stores 'purchase_fired_<orderId>' in sessionStorage and localStorage.
+ * Clears ecommerce object first (dataLayer.push({ ecommerce: null })) to avoid stale parameters.
+ * No raw PII in dataLayer.
+ *
+ * @param {Object} order - Verified order object from backend
+ * @returns {boolean} - true if event was dispatched, false if skipped due to dedupe
+ */
+export const trackPurchase = (order) => {
+  if (!order) return false;
+  const orderNumber = String(order.order_number || order.id || '').trim();
+  if (!orderNumber) return false;
+
+  const dedupeKey = `purchase_fired_${orderNumber}`;
+
+  // Check deduplication in both sessionStorage and localStorage
+  try {
+    const alreadyFiredSession = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(dedupeKey) : null;
+    const alreadyFiredLocal = typeof localStorage !== 'undefined' ? localStorage.getItem(dedupeKey) : null;
+    if (alreadyFiredSession === 'true' || alreadyFiredLocal === 'true') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.info(`[GTM] Purchase event already fired for order ${orderNumber}. Skipping duplicate.`);
+      }
+      return false;
+    }
+  } catch (_) {
+    // If storage is restricted, proceed safely
+  }
+
+  // Format payment type
+  const isPartial = order.payment_type === 'partial';
+  const paymentTypeStr = isPartial ? 'partial_cod' : (order.payment_type === 'cod' ? 'cod' : 'prepaid');
+
+  // Value calculation:
+  // For Meta conversion tracking and Google Ads ROAS:
+  // - Full order value represents the total purchase contract (e.g. ₹1,299)
+  // - Amount paid upfront represents online cash collected immediately (e.g. ₹100 for partial COD)
+  const fullOrderValue = Number(order.total_amount ?? order.total ?? 0);
+  const upfrontPaidValue = Number(order.amount_paid_upfront ?? fullOrderValue);
+  const purchaseValue = isPartial ? fullOrderValue : fullOrderValue;
+
+  // Format line items according to GA4 / GTM / Meta e-commerce standards
+  const rawItems = Array.isArray(order.items) ? order.items : [];
+  const formattedItems = rawItems.map((item, idx) => ({
+    item_id: String(item.product_id || item.variant_id || item.id || `item_${idx + 1}`),
+    item_name: String(item.product_name || item.name || 'Valerie Fine Jewelry'),
+    price: Number(item.unit_price || item.price || 0),
+    quantity: Number(item.quantity || 1),
+    item_variant: item.variant_title || item.variant || undefined,
+  }));
+
+  // GTM dataLayer push
+  if (typeof window !== 'undefined') {
+    window.dataLayer = window.dataLayer || [];
+
+    // Step 1: Clear the previous ecommerce object to prevent parameter leakage
+    window.dataLayer.push({ ecommerce: null });
+
+    // Step 2: Push the official 'purchase' event with event_id for Meta deduplication
+    const payload = {
+      event: 'purchase',
+      event_id: orderNumber, // Matches Meta Pixel <-> CAPI event_id for 100% deduplication
+      ecommerce: {
+        transaction_id: orderNumber,
+        value: purchaseValue,
+        currency: 'INR',
+        payment_type: paymentTypeStr,
+        amount_paid_now: upfrontPaidValue,
+        balance_due_on_delivery: Number(order.amount_due_on_delivery || 0),
+        tax: 0,
+        shipping: Number(order.shipping_fee || 0),
+        coupon: order.coupon_code || undefined,
+        items: formattedItems,
+      },
+    };
+
+    window.dataLayer.push(payload);
+
+    // Also record local telemetry for real-time Admin Portal activity stream
+    logLocalTelemetry('purchase', {
+      orderId: orderNumber,
+      value: purchaseValue,
+      payment_type: paymentTypeStr,
+      itemCount: formattedItems.length,
+    });
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[GTM] Purchase event successfully pushed for order ${orderNumber}:`, payload);
+    }
+  }
+
+  // Mark as fired in both sessionStorage and localStorage to guarantee zero duplicates on refresh or back
+  try {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(dedupeKey, 'true');
+    if (typeof localStorage !== 'undefined') localStorage.setItem(dedupeKey, 'true');
+  } catch (_) {}
+
+  return true;
+};

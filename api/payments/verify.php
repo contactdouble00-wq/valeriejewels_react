@@ -160,10 +160,12 @@ try {
 
     // Fetch order items
     $itemStmt = $pdo->prepare("
-        SELECT id, product_id, variant_id, product_name, variant_title, quantity, unit_price, total_price
-        FROM order_items
-        WHERE order_id = ?
-        ORDER BY id ASC
+        SELECT 
+            oi.id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_title, oi.quantity, oi.unit_price, oi.total_price,
+            (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_url
+        FROM order_items oi
+        WHERE oi.order_id = ?
+        ORDER BY oi.id ASC
     ");
     $itemStmt->execute([$order['id']]);
     $items = $itemStmt->fetchAll();
@@ -203,6 +205,7 @@ try {
                 'quantity'      => (int)$item['quantity'],
                 'unit_price'    => (float)$item['unit_price'],
                 'total_price'   => (float)$item['total_price'],
+                'image_url'     => $item['image_url'] ?? null,
             ];
         }, $items),
     ];

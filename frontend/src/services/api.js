@@ -399,6 +399,43 @@ export const apiService = {
   },
 
   /**
+   * Fetch verified order confirmation details
+   */
+  async getOrderConfirmation(orderNumber) {
+    if (!orderNumber || !orderNumber.trim()) {
+      throw new Error('Order reference number is required');
+    }
+    const cleanNum = encodeURIComponent(orderNumber.trim());
+
+    // 1. Try verify.php endpoint
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/verify.php?order_number=${cleanNum}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result && result.success && result.data?.order) {
+          return result.data;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback to track.php endpoint
+    const response2 = await fetch(`${API_BASE_URL}/orders/track.php?order_number=${cleanNum}&_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    });
+    return handleResponse(response2);
+  },
+
+  /**
    * Phase 6: Fetch customer order history
    */
   async getCustomerOrders({ token = null, email = '', phone = '' } = {}) {

@@ -62,10 +62,12 @@ try {
 
     // Fetch order items
     $itemStmt = $pdo->prepare("
-        SELECT id, product_id, variant_id, product_name, variant_title, quantity, unit_price, total_price 
-        FROM order_items 
-        WHERE order_id = ? 
-        ORDER BY id ASC
+        SELECT 
+            oi.id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_title, oi.quantity, oi.unit_price, oi.total_price,
+            (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_url
+        FROM order_items oi 
+        WHERE oi.order_id = ? 
+        ORDER BY oi.id ASC
     ");
     $itemStmt->execute([$order['id']]);
     $items = $itemStmt->fetchAll();
@@ -167,11 +169,14 @@ try {
         'items' => array_map(function($it) {
             return [
                 'id'            => (int)$it['id'],
+                'product_id'    => (int)$it['product_id'],
+                'variant_id'    => $it['variant_id'] ? (int)$it['variant_id'] : null,
                 'product_name'  => $it['product_name'],
                 'variant_title' => $it['variant_title'],
                 'quantity'      => (int)$it['quantity'],
                 'unit_price'    => (float)$it['unit_price'],
                 'total_price'   => (float)$it['total_price'],
+                'image_url'     => $it['image_url'] ?? null,
             ];
         }, $items),
         'milestones' => $milestoneSteps,
