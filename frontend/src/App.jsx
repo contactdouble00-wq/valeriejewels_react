@@ -1083,7 +1083,7 @@ function StorefrontContent({
       </main>
 
       {/* Product Detail Modal (PDP) */}
-      {activePdpSlug && (
+      {!isOrderConfirmation && activePdpSlug && (
         <ProductDetailModal
           productSlug={activePdpSlug}
           initialProduct={activePdpProduct}
@@ -1146,8 +1146,9 @@ function StorefrontContent({
           onTrackOrder={(orderNum) => openTracking(orderNum)}
           onOrderConfirmed={(orderNum) => {
             setIsCheckoutOpen(false);
-            window.history.pushState(null, '', `/order-confirmation/${orderNum}`);
-            window.location.hash = '';
+            setActivePdpSlug(null);
+            setActivePdpProduct(null);
+            window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
             if (typeof onNavigateOrderConfirmation === 'function') {
               onNavigateOrderConfirmation(orderNum);
             } else {

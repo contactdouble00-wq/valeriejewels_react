@@ -664,12 +664,12 @@ export default function CheckoutModal({
         setPlacedOrder(orderData);
         clearCart();
         setIsSubmitting(false);
+        if (onClose) onClose();
         if (onOrderConfirmed) {
           onOrderConfirmed(finalOrderNumber);
         } else {
-          window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+          window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
           window.dispatchEvent(new Event('popstate'));
-          onClose();
         }
         return;
       }

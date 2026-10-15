@@ -407,6 +407,10 @@ try {
         'sandbox'                => !$isLive,
     ];
 
+    if ($pdo->inTransaction()) {
+        $pdo->commit();
+    }
+
     ApiResponse::success($fastrrSession, 'Order initiated successfully', 201);
 
 } catch (Throwable $e) {
