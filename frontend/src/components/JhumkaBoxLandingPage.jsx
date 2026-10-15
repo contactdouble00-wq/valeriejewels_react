@@ -374,8 +374,8 @@ export default function JhumkaBoxLandingPage({
           <button
             onClick={() => setActiveTab('16-pairs')}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${activeTab === '16-pairs'
-                ? 'bg-brand-primary text-white shadow-sm'
-                : 'text-brand-tertiary hover:text-brand-primary'
+              ? 'bg-brand-primary text-white shadow-sm'
+              : 'text-brand-tertiary hover:text-brand-primary'
               }`}
           >
             🔥 16-Pair Oxidized (₹1,299)
@@ -383,8 +383,8 @@ export default function JhumkaBoxLandingPage({
           <button
             onClick={() => setActiveTab('6-pairs-gold')}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-caps tracking-wider uppercase font-bold transition-all ${activeTab === '6-pairs-gold'
-                ? 'bg-brand-primary text-white shadow-sm'
-                : 'text-brand-tertiary hover:text-brand-primary'
+              ? 'bg-brand-primary text-white shadow-sm'
+              : 'text-brand-tertiary hover:text-brand-primary'
               }`}
           >
             ✨ 6-Pair 18K Gold (₹1,799)
@@ -421,8 +421,8 @@ export default function JhumkaBoxLandingPage({
               >
                 <Heart
                   className={`w-4 h-4 ${isInWishlist(activeProduct.id)
-                      ? 'fill-rose-500 text-rose-500'
-                      : 'text-brand-tertiary'
+                    ? 'fill-rose-500 text-rose-500'
+                    : 'text-brand-tertiary'
                     }`}
                 />
               </button>

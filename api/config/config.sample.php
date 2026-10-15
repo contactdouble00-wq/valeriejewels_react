@@ -39,7 +39,7 @@ return [
             'https://shop.valeriejewels.in',
         ],
         'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],
+        'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept'],
     ],
 
     // Third-party placeholders (configured in Phase 5 & 6)

@@ -32,7 +32,7 @@ function handleCors(): void {
     }
 
     $methods = implode(', ', $config['cors']['allowed_methods'] ?? ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
-    $headers = implode(', ', $config['cors']['allowed_headers'] ?? ['Content-Type', 'Authorization', 'X-Requested-With']);
+    $headers = implode(', ', $config['cors']['allowed_headers'] ?? ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept']);
 
     if ($originAllowed) {
         header("Access-Control-Allow-Methods: {$methods}");

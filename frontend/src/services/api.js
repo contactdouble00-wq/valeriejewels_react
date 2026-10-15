@@ -409,13 +409,7 @@ export const apiService = {
 
     // 1. Try verify.php endpoint
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/verify.php?order_number=${cleanNum}&_t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-        },
-      });
+      const response = await fetch(`${API_BASE_URL}/payments/verify.php?order_number=${cleanNum}&_t=${Date.now()}`);
       if (response.ok) {
         const result = await response.json();
         if (result && result.success && result.data?.order) {
@@ -425,13 +419,7 @@ export const apiService = {
     } catch (_) {}
 
     // 2. Fallback to track.php endpoint
-    const response2 = await fetch(`${API_BASE_URL}/orders/track.php?order_number=${cleanNum}&_t=${Date.now()}`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
-    });
+    const response2 = await fetch(`${API_BASE_URL}/orders/track.php?order_number=${cleanNum}&_t=${Date.now()}`);
     return handleResponse(response2);
   },
 
