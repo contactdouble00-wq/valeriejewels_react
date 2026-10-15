@@ -203,7 +203,6 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   <span className="flex items-center space-x-0.5 text-amber-300 font-bold">
                     <Star className="w-2.5 h-2.5 fill-amber-300" />
                     <span>4.9</span>
-                    <span className="text-white/80 font-normal">(1.2k)</span>
                   </span>
                 </div>
 
