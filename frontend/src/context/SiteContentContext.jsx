@@ -8,7 +8,7 @@ const CONTENT_CACHE_VERSION = '20261004_v3';
 const DEFAULT_SITE_CONTENT = {
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
-    faviconUrl: 'https://valeriejewels.in/api/uploads/img_652d52ce8e378f9b8d50c7460e783ef1.png',
+    faviconUrl: '/v-logo.png',
     metaDescription: 'Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels.',
   },
   topRibbon: {
