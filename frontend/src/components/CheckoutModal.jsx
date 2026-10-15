@@ -65,6 +65,7 @@ export default function CheckoutModal({
   onTrackOrder,
   initialPaymentType = 'full_prepaid',
   onOrderConfirmed,
+  onOrderFailed,
 }) {
   const { cartItems, clearCart } = useCart();
   const { user, token } = useAuth();
@@ -668,7 +669,7 @@ export default function CheckoutModal({
         if (onOrderConfirmed) {
           onOrderConfirmed(finalOrderNumber);
         } else {
-          window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
+          window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
           window.dispatchEvent(new Event('popstate'));
         }
         return;
@@ -718,13 +719,6 @@ export default function CheckoutModal({
           theme: {
             color: '#8366B0',
           },
-          modal: {
-            ondismiss: () => {
-              setIsSubmitting(false);
-            },
-            backdropclose: false,
-            escape: true,
-          },
           retry: {
             enabled: true,
             max_count: 3,
@@ -746,12 +740,12 @@ export default function CheckoutModal({
                 transaction_id: rpResponse.razorpay_payment_id,
               });
               clearCart();
+              if (onClose) onClose();
               if (onOrderConfirmed) {
                 onOrderConfirmed(finalOrderNumber);
               } else {
-                window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+                window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
                 window.dispatchEvent(new Event('popstate'));
-                onClose();
               }
             } catch (verErr) {
               setSubmitError(verErr.message || 'Payment confirmation failed. If debited, your order will sync automatically via webhook.');
@@ -769,7 +763,16 @@ export default function CheckoutModal({
                   reason: 'Customer closed payment window without completing transaction',
                 }).catch(() => {});
               } catch (_) {}
+              if (onClose) onClose();
+              if (onOrderFailed) {
+                onOrderFailed(finalOrderNumber, 'Customer closed payment window without completing transaction');
+              } else {
+                window.history.replaceState(null, '', `/order-failed/${finalOrderNumber}`);
+                window.dispatchEvent(new Event('popstate'));
+              }
             },
+            backdropclose: false,
+            escape: true,
           },
         };
 
@@ -784,6 +787,13 @@ export default function CheckoutModal({
               reason: desc,
             }).catch(() => {});
           } catch (_) {}
+          if (onClose) onClose();
+          if (onOrderFailed) {
+            onOrderFailed(finalOrderNumber, desc);
+          } else {
+            window.history.replaceState(null, '', `/order-failed/${finalOrderNumber}`);
+            window.dispatchEvent(new Event('popstate'));
+          }
         });
         rzpInstance.open();
         return;
@@ -804,12 +814,12 @@ export default function CheckoutModal({
 
         clearCart();
         setIsSubmitting(false);
+        if (onClose) onClose();
         if (onOrderConfirmed) {
           onOrderConfirmed(finalOrderNumber);
         } else {
-          window.history.pushState(null, '', `/order-confirmation/${finalOrderNumber}`);
+          window.history.replaceState(null, '', `/order-success/${finalOrderNumber}`);
           window.dispatchEvent(new Event('popstate'));
-          onClose();
         }
       }, 1400);
 

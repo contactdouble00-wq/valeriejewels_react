@@ -53,7 +53,7 @@ $firstItemName = !empty($firstItem['product_name']) ? $firstItem['product_name']
 
 // Primary recovery destination URL
 $firstProductUrl = !empty($firstItemSlug) ? ($storeUrl . '/#product-' . rawurlencode($firstItemSlug)) : ($storeUrl . '/#shop');
-$retryUrl = $storeUrl . '/#checkout?order=' . urlencode($order['order_number'] ?? '');
+$retryUrl = $storeUrl . '/order-failed/' . urlencode($order['order_number'] ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="en">

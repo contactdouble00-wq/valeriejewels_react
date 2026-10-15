@@ -54,8 +54,10 @@ function StorefrontContent({
   onOpenFaqs,
   isJhumkaLanding = false,
   isOrderConfirmation = false,
+  isOrderFailed = false,
   onNavigateHome,
-  onNavigateOrderConfirmation
+  onNavigateOrderConfirmation,
+  onNavigateOrderFailed
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -729,10 +731,11 @@ function StorefrontContent({
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-12 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
-        {isOrderConfirmation ? (
+        {(isOrderConfirmation || isOrderFailed) ? (
           <OrderConfirmationPage
             onNavigateHome={onNavigateHome}
             onOpenTracking={(num) => openTracking(num)}
+            isFailedMode={isOrderFailed}
           />
         ) : isJhumkaLanding ? (
           <>
@@ -1148,9 +1151,21 @@ function StorefrontContent({
             setIsCheckoutOpen(false);
             setActivePdpSlug(null);
             setActivePdpProduct(null);
-            window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
+            window.history.replaceState(null, '', `/order-success/${orderNum}`);
             if (typeof onNavigateOrderConfirmation === 'function') {
               onNavigateOrderConfirmation(orderNum);
+            } else {
+              window.dispatchEvent(new Event('popstate'));
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOrderFailed={(orderNum, reason) => {
+            setIsCheckoutOpen(false);
+            setActivePdpSlug(null);
+            setActivePdpProduct(null);
+            window.history.replaceState(null, '', `/order-failed/${orderNum}`);
+            if (typeof onNavigateOrderFailed === 'function') {
+              onNavigateOrderFailed(orderNum);
             } else {
               window.dispatchEvent(new Event('popstate'));
             }
@@ -1377,16 +1392,34 @@ export default function App() {
       return 'jhumka-box';
     }
 
-    // 3c. Dedicated Order Confirmation / Thank You Route
+    // 3c. Dedicated Order Confirmation / Success Routes
     if (
       rawPath === '/order-confirmation' ||
       rawPath.startsWith('/order-confirmation/') ||
+      rawPath === '/order-success' ||
+      rawPath.startsWith('/order-success/') ||
       rawPath === '/thank-you' ||
       rawPath.startsWith('/thank-you/') ||
       hash.startsWith('#order-confirmation') ||
+      hash.startsWith('#order-success') ||
       hash.startsWith('#thank-you')
     ) {
       return 'order-confirmation';
+    }
+
+    // 3d. Dedicated Order Cancellation / Payment Failed Routes
+    if (
+      rawPath === '/order-failed' ||
+      rawPath.startsWith('/order-failed/') ||
+      rawPath === '/order-cancelled' ||
+      rawPath.startsWith('/order-cancelled/') ||
+      rawPath === '/payment-failed' ||
+      rawPath.startsWith('/payment-failed/') ||
+      hash.startsWith('#order-failed') ||
+      hash.startsWith('#order-cancelled') ||
+      hash.startsWith('#payment-failed')
+    ) {
+      return 'order-failed';
     }
 
     // 4. Explicit 404 hash or trigger
@@ -1400,7 +1433,8 @@ export default function App() {
       '/jhumka-box', '/pages/jhumka-box',
       '/jhumkha-box', '/pages/jhumkha-box',
       '/jhumka-boxes', '/pages/jhumka-boxes',
-      '/order-confirmation', '/thank-you',
+      '/order-confirmation', '/order-success', '/thank-you',
+      '/order-failed', '/order-cancelled', '/payment-failed',
       '/track', '/track-order', '/order-tracking',
       '/admin', '/vj-manage-x1126',
       '/shipping-policy', '/shipping',
@@ -1412,12 +1446,20 @@ export default function App() {
     ];
     if (
       rawPath.startsWith('/order-confirmation/') ||
-      rawPath.startsWith('/thank-you/') ||
-      rawPath.startsWith('/track/')
+      rawPath.startsWith('/order-success/') ||
+      rawPath.startsWith('/thank-you/')
     ) {
-      return (rawPath.startsWith('/order-confirmation/') || rawPath.startsWith('/thank-you/'))
-        ? 'order-confirmation'
-        : 'store';
+      return 'order-confirmation';
+    }
+    if (
+      rawPath.startsWith('/order-failed/') ||
+      rawPath.startsWith('/order-cancelled/') ||
+      rawPath.startsWith('/payment-failed/')
+    ) {
+      return 'order-failed';
+    }
+    if (rawPath.startsWith('/track/')) {
+      return 'store';
     }
     if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
       return '404';
@@ -1557,8 +1599,15 @@ export default function App() {
             <StorefrontContent
               isJhumkaLanding={currentRoute === 'jhumka-box'}
               isOrderConfirmation={currentRoute === 'order-confirmation'}
+              isOrderFailed={currentRoute === 'order-failed'}
               onNavigateOrderConfirmation={(orderNum) => {
+                window.history.replaceState(null, '', `/order-success/${orderNum}`);
                 setCurrentRoute('order-confirmation');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onNavigateOrderFailed={(orderNum) => {
+                window.history.replaceState(null, '', `/order-failed/${orderNum}`);
+                setCurrentRoute('order-failed');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onNavigateHome={() => {

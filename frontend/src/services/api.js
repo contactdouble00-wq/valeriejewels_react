@@ -424,6 +424,37 @@ export const apiService = {
   },
 
   /**
+   * Retry online payment via Razorpay for an existing pending order
+   */
+  async retryPaymentOrder({ orderNumber, paymentType = 'full_prepaid' }) {
+    const response = await fetch(`${API_BASE_URL}/payments/retry.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_number: orderNumber,
+        action: 'pay_online',
+        payment_type: paymentType,
+      }),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Psychological conversion: Switch a pending/failed payment order directly to Cash on Delivery
+   */
+  async convertOrderToCod({ orderNumber }) {
+    const response = await fetch(`${API_BASE_URL}/payments/retry.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_number: orderNumber,
+        action: 'switch_to_cod',
+      }),
+    });
+    return handleResponse(response);
+  },
+
+  /**
    * Phase 6: Fetch customer order history
    */
   async getCustomerOrders({ token = null, email = '', phone = '' } = {}) {
