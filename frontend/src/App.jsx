@@ -41,7 +41,6 @@ import NotFoundPage from './components/NotFoundPage';
 import PolicyPage from './components/PolicyPage';
 import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
-import JhumkaBoxLandingPage from './components/JhumkaBoxLandingPage';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
 
 const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
@@ -52,7 +51,6 @@ function StorefrontContent({
   initialSearchQuery = '',
   onOpenPolicy,
   onOpenFaqs,
-  isJhumkaLanding = false,
   isOrderConfirmation = false,
   isOrderFailed = false,
   onNavigateHome,
@@ -637,7 +635,7 @@ function StorefrontContent({
                   if (onNavigateHome) onNavigateHome();
                   setSelectedCategory('all');
                 }}
-                className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === 'all' && !isJhumkaLanding ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === 'all' ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
                   }`}
               >
                 All Jewelry
@@ -656,7 +654,7 @@ function StorefrontContent({
                       if (onNavigateHome) onNavigateHome();
                       setSelectedCategory(cat.slug);
                     }}
-                    className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === cat.slug && !isJhumkaLanding ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
+                    className={`transition-colors py-1 whitespace-nowrap relative ${selectedCategory === cat.slug ? 'text-brand-primary font-bold' : 'hover:text-brand-primary'
                       }`}
                   >
                     {cat.name}
@@ -737,16 +735,6 @@ function StorefrontContent({
             onOpenTracking={(num) => openTracking(num)}
             isFailedMode={isOrderFailed}
           />
-        ) : isJhumkaLanding ? (
-          <>
-            <JhumkaBoxLandingPage
-              onOpenPdp={(slug, p) => openPdp(slug, p)}
-              onBuyNow={(p) => handleTriggerFastrr([p])}
-              onNavigateHome={onNavigateHome}
-              allProducts={products}
-            />
-            <TrustStrip />
-          </>
         ) : (
           <>
             {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
@@ -1382,15 +1370,6 @@ export default function App() {
       return 'faqs';
     }
 
-    // 3b. Dedicated SEO Jhumka Box Landing Page Routes
-    const jhumkaPaths = [
-      '/jhumka-box', '/pages/jhumka-box',
-      '/jhumkha-box', '/pages/jhumkha-box',
-      '/jhumka-boxes', '/pages/jhumka-boxes'
-    ];
-    if (jhumkaPaths.includes(rawPath) || hash === '#jhumka-box' || hash === '#jhumkha-box') {
-      return 'jhumka-box';
-    }
 
     // 3c. Dedicated Order Confirmation Route (Strictly /order-confirmation for Meta tracking)
     if (
@@ -1577,7 +1556,6 @@ export default function App() {
           <WishlistProvider>
 
             <StorefrontContent
-              isJhumkaLanding={currentRoute === 'jhumka-box'}
               isOrderConfirmation={currentRoute === 'order-confirmation'}
               isOrderFailed={currentRoute === 'order-failed'}
               onNavigateOrderConfirmation={(orderNum) => {
