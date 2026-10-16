@@ -37,22 +37,6 @@ import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { trackGABeginCheckout, trackGAPurchase } from '../utils/analytics';
-import {
-  UpiLogo,
-  GooglePayLogo,
-  PhonePeLogo,
-  PaytmLogo,
-  BhimLogo,
-  UpiLeadIcon,
-  UpiBrandBadges,
-  CardLeadIcon,
-  CardBrandBadges,
-  NetBankingLeadIcon,
-  NetBankingBrandBadges,
-  WalletLeadIcon,
-  WalletBrandBadges,
-  CodLeadIcon,
-} from './PaymentLogos';
 
 // Pincode directory lookup helper for instant city/state auto-fill
 const PINCODE_MAP = {
@@ -1012,35 +996,61 @@ export default function CheckoutModal({
   // Dynamic calculation for green savings banner (e.g. ₹900.00 saved so far)
   const totalSavings = Math.max(0, totalMrp - dueNow + (calcData?.discount_amount || 0));
 
-  // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop with real official logos)
+  // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop)
   const UPI_APPS = [
     {
       id: 'google_pay',
       razorpayApp: 'google_pay',
       name: 'Google Pay',
       hasCashback: false,
-      icon: <GooglePayLogo className="w-8 h-8" />
+      icon: (
+        <svg viewBox="0 0 48 48" className="w-8 h-8" fill="none">
+          <path fill="#4285F4" d="M23.9 19.5c0-1.2-.1-2.4-.3-3.5H12v6.7h6.7c-.3 1.6-1.2 3-2.6 3.9v3.3h4.2c2.4-2.2 3.6-5.5 3.6-10.4z"/>
+          <path fill="#34A853" d="M12 31.6c3.4 0 6.2-1.1 8.3-3.1l-4.2-3.3c-1.1.8-2.6 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5.1H1v3.4c2.1 4.1 6.4 6.9 11 6.9z"/>
+          <path fill="#FBBC05" d="M5.2 21.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3v-3.4H1C.4 14.6 0 16.3 0 18s.4 3.4 1 4.7l4.2-3.4z"/>
+          <path fill="#EA4335" d="M12 10.4c1.8 0 3.5.6 4.8 1.9l3.6-3.6C18.2 6.6 15.4 5.5 12 5.5 7.4 5.5 3.1 8.3 1 12.4l4.2 3.4c.9-3 3.6-5.4 6.8-5.4z"/>
+        </svg>
+      )
     },
     {
       id: 'phonepe',
       razorpayApp: 'phonepe',
       name: 'PhonePe',
       hasCashback: false,
-      icon: <PhonePeLogo className="w-7 h-7 sm:w-8 sm:h-8 shadow-xs" />
+      icon: (
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#5f259f] flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-xs">
+          पे
+        </div>
+      )
     },
     {
       id: 'paytm',
       razorpayApp: 'paytm',
       name: 'Paytm',
       hasCashback: true,
-      icon: <PaytmLogo className="w-12 h-auto" />
+      icon: (
+        <div className="flex items-center tracking-tight font-black text-xs sm:text-sm">
+          <span className="text-[#002e6e]">Pay</span>
+          <span className="text-[#00baf2]">tm</span>
+        </div>
+      )
     },
     {
       id: 'bhim',
       razorpayApp: 'bhim',
       name: 'BHIM',
       hasCashback: false,
-      icon: <BhimLogo className="w-10 h-auto" />
+      icon: (
+        <div className="flex flex-col items-center justify-center leading-none">
+          <div className="flex items-center text-xs font-black italic tracking-tighter">
+            <span className="text-[#108A44]">BH</span>
+            <span className="text-[#09579F]">IM</span>
+          </div>
+          <span className="text-[5px] font-bold text-gray-400 tracking-tighter uppercase mt-0.5 scale-90 whitespace-nowrap">
+            BHARAT INTERFACE
+          </span>
+        </div>
+      )
     },
     {
       id: 'others',
@@ -1049,8 +1059,18 @@ export default function CheckoutModal({
       hasCashback: false,
       icon: (
         <div className="flex flex-col items-center justify-center">
-          <UpiLogo className="w-8 h-auto" />
-          <span className="text-[8.5px] font-bold text-gray-500 mt-0.5">Any UPI</span>
+          <div className="flex items-center -space-x-1.5">
+            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[7px] text-white font-bold border border-white">
+              ₹
+            </div>
+            <div className="w-4 h-4 rounded-full bg-[#5f259f] flex items-center justify-center text-[7px] text-white font-bold border border-white">
+              पे
+            </div>
+            <div className="w-4 h-4 rounded-full bg-[#00baf2] flex items-center justify-center text-[6px] text-white font-bold border border-white">
+              tm
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-gray-700 mt-0.5">+10</span>
         </div>
       )
     },
@@ -1079,7 +1099,15 @@ export default function CheckoutModal({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <CodLeadIcon isSelected={isSelected} />
+            <div
+              className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
+                isSelected
+                  ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                  : 'border-gray-200 bg-gray-50 text-gray-700'
+              }`}
+            >
+              <Banknote className="w-4 h-4" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-900">Partial COD</span>
@@ -1163,7 +1191,10 @@ export default function CheckoutModal({
           className="p-4 flex items-center justify-between transition-colors cursor-pointer hover:bg-gray-50/60"
         >
           <div className="flex items-center gap-3">
-            <UpiLeadIcon isSelected={false} />
+            <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
+              <Smartphone className="w-4 h-4 text-gray-700" />
+              <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-900">UPI payment</span>
@@ -1174,7 +1205,6 @@ export default function CheckoutModal({
               <p className="text-[10px] text-gray-500 mt-0.5">
                 Google Pay, PhonePe, Paytm &amp; UPI • Pay 100% online &amp; save flat ₹{prepaidDiscount}
               </p>
-              <UpiBrandBadges />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1196,7 +1226,10 @@ export default function CheckoutModal({
           className="flex items-center justify-between cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
-            <UpiLeadIcon isSelected={true} />
+            <div className="w-8 h-8 rounded-lg border border-brand-primary/30 flex items-center justify-center bg-brand-primary text-white relative shrink-0 shadow-xs">
+              <Smartphone className="w-4 h-4" />
+              <Zap className="w-2.5 h-2.5 text-amber-300 fill-amber-300 absolute -top-1 -right-1" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-900 block">UPI payment</span>
@@ -1205,7 +1238,6 @@ export default function CheckoutModal({
                 </span>
               </div>
               <span className="text-[10px] text-emerald-700 font-semibold block">Flat ₹{prepaidDiscount} off for prepaid order</span>
-              <UpiBrandBadges />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1236,7 +1268,7 @@ export default function CheckoutModal({
           <span>⚡ 1-Click Fastrr UPI (Google Pay • PhonePe • Paytm)</span>
         </button>
 
-        {/* 5 UPI Apps Grid with Official Logos */}
+        {/* 5 UPI Apps Grid (Google Pay, PhonePe, Paytm, BHIM, Others) */}
         <div className="grid grid-cols-5 gap-2 pt-1">
           {UPI_APPS.map((app) => {
             const isThisLoading = isSubmitting && selectedUpiApp === app.razorpayApp;
@@ -1316,7 +1348,7 @@ export default function CheckoutModal({
     );
   };
 
-  // Render Credit/Debit Card Option with Official Visa, Mastercard & RuPay Logos
+  // Render Credit/Debit Card Option
   const renderCardOption = () => {
     const isSelected = selectedPaymentMethod === 'card' && paymentType === 'full_prepaid';
     return (
@@ -1333,23 +1365,18 @@ export default function CheckoutModal({
         }`}
       >
         <div className="flex items-center gap-3">
-          <CardLeadIcon isSelected={isSelected} />
+          <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
+            <CreditCard className="w-4 h-4 text-gray-700" />
+            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-bold text-gray-900">Credit/Debit Card</p>
-              {isSelected && (
-                <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-brand-primary text-white uppercase tracking-wider">
-                  Selected
-                </span>
-              )}
-            </div>
+            <p className="text-xs font-bold text-gray-900">Credit/Debit Card</p>
             <div className="mt-0.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                 <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
                 <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
               </span>
             </div>
-            <CardBrandBadges />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1369,7 +1396,7 @@ export default function CheckoutModal({
     );
   };
 
-  // Render Net Banking Option with Official Bank Logos
+  // Render Net Banking Option
   const renderNetbankingOption = () => {
     const isSelected = selectedPaymentMethod === 'netbanking' && paymentType === 'full_prepaid';
     return (
@@ -1386,23 +1413,18 @@ export default function CheckoutModal({
         }`}
       >
         <div className="flex items-center gap-3">
-          <NetBankingLeadIcon isSelected={isSelected} />
+          <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
+            <Landmark className="w-4 h-4 text-gray-700" />
+            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-bold text-gray-900">Net Banking</p>
-              {isSelected && (
-                <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-brand-primary text-white uppercase tracking-wider">
-                  Selected
-                </span>
-              )}
-            </div>
+            <p className="text-xs font-bold text-gray-900">Net Banking</p>
             <div className="mt-0.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                 <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
                 <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
               </span>
             </div>
-            <NetBankingBrandBadges />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1422,7 +1444,7 @@ export default function CheckoutModal({
     );
   };
 
-  // Render Wallet Option with Official Wallet Logos
+  // Render Wallet Option
   const renderWalletOption = () => {
     const isSelected = selectedPaymentMethod === 'wallet' && paymentType === 'full_prepaid';
     return (
@@ -1439,23 +1461,18 @@ export default function CheckoutModal({
         }`}
       >
         <div className="flex items-center gap-3">
-          <WalletLeadIcon isSelected={isSelected} />
+          <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
+            <Wallet className="w-4 h-4 text-gray-700" />
+            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-bold text-gray-900">Wallets</p>
-              {isSelected && (
-                <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-brand-primary text-white uppercase tracking-wider">
-                  Selected
-                </span>
-              )}
-            </div>
+            <p className="text-xs font-bold text-gray-900">Wallets</p>
             <div className="mt-0.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E7F8EE] text-[#0A803D] text-[10px] font-bold">
                 <Percent className="w-2.5 h-2.5 text-[#0A803D]" />
                 <span>{prepaidDiscount > 0 ? `₹${prepaidDiscount} off for prepaid order` : 'Free Delivery'}</span>
               </span>
             </div>
-            <WalletBrandBadges />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1493,7 +1510,15 @@ export default function CheckoutModal({
         }`}
       >
         <div className="flex items-center gap-3">
-          <CodLeadIcon isSelected={isSelected} />
+          <div
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
+              isSelected
+                ? 'bg-brand-primary text-white border-brand-primary'
+                : 'border-gray-200 bg-gray-50 text-gray-700'
+            }`}
+          >
+            <Banknote className="w-4 h-4" />
+          </div>
           <div>
             <p className="text-xs font-bold text-gray-900">Cash on Delivery (Full COD)</p>
             <p className="text-[10.5px] text-gray-500">
