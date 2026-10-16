@@ -106,6 +106,15 @@ export default function CheckoutModal({
 
   // Modal / Drawer to Change Delivery Address
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressErrors, setAddressErrors] = useState({});
+  const [addressModalError, setAddressModalError] = useState(null);
+  const nameInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const addressLine1InputRef = useRef(null);
+  const pincodeInputRef = useRef(null);
+  const cityInputRef = useRef(null);
+  const stateInputRef = useRef(null);
 
   // OTP State
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -392,6 +401,94 @@ export default function CheckoutModal({
     }
   };
 
+  // Reusable comprehensive address validation
+  const validateAddress = () => {
+    const cleanP = (phone || '').replace(/\D/g, '').slice(-10);
+    const errs = {};
+    if (!name || !name.trim()) {
+      errs.name = 'Full name is required';
+    }
+    if (!cleanP || cleanP.length !== 10) {
+      errs.phone = 'Valid 10-digit mobile number is required';
+    }
+    if (!email || !email.trim() || !email.includes('@') || !email.includes('.')) {
+      errs.email = 'Valid email is required (for invoice & tracking updates)';
+    }
+    if (!addressLine1 || !addressLine1.trim()) {
+      errs.addressLine1 = 'Flat, house no., or building name is required';
+    }
+    const cleanPin = (pincode || '').replace(/\D/g, '').slice(0, 6);
+    if (!cleanPin || cleanPin.length !== 6) {
+      errs.pincode = 'Valid 6-digit pincode is required';
+    }
+    if (!city || !city.trim()) {
+      errs.city = 'City is required';
+    }
+    if (!state || !state.trim()) {
+      errs.state = 'State is required';
+    }
+    return errs;
+  };
+
+  // Auto-focus and scroll to the first invalid field
+  const focusFirstAddressError = (errs) => {
+    setTimeout(() => {
+      if (errs.name && nameInputRef.current) {
+        nameInputRef.current.focus();
+        nameInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.phone && phoneInputRef.current) {
+        phoneInputRef.current.focus();
+        phoneInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.email && emailInputRef.current) {
+        emailInputRef.current.focus();
+        emailInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.addressLine1 && addressLine1InputRef.current) {
+        addressLine1InputRef.current.focus();
+        addressLine1InputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.pincode && pincodeInputRef.current) {
+        pincodeInputRef.current.focus();
+        pincodeInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.city && cityInputRef.current) {
+        cityInputRef.current.focus();
+        cityInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.state && stateInputRef.current) {
+        stateInputRef.current.focus();
+        stateInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  };
+
+  // Save address from slide-up drawer
+  const handleSaveAddress = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const errs = validateAddress();
+    if (Object.keys(errs).length > 0) {
+      setAddressErrors(errs);
+      setAddressModalError('Please fill in the required fields highlighted in red below.');
+      focusFirstAddressError(errs);
+      return;
+    }
+
+    const cleanP = phone.replace(/\D/g, '').slice(-10);
+    try {
+      localStorage.setItem('valerie_saved_checkout_address', JSON.stringify({
+        name: name.trim(),
+        email: email.trim(),
+        phone: cleanP,
+        addressLine1: addressLine1.trim(),
+        addressLine2: addressLine2.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+      }));
+    } catch (err) {}
+
+    setAddressErrors({});
+    setAddressModalError(null);
+    setSubmitError(null);
+    setIsAddressModalOpen(false);
+  };
+
   // Step 1: Submit Phone Number -> Dispatch Fast2SMS OTP -> Go to OTP Verification
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -587,15 +684,20 @@ export default function CheckoutModal({
   const handlePlaceOrder = async (e, options = {}) => {
     if (e && e.preventDefault) e.preventDefault();
 
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    if (!name.trim() || !cleanPhone || cleanPhone.length !== 10 || !addressLine1.trim() || pincode.trim().length < 6) {
+    const errs = validateAddress();
+    if (Object.keys(errs).length > 0) {
+      setAddressErrors(errs);
+      setAddressModalError('Please complete all required delivery details marked in red before proceeding with payment.');
+      setSubmitError('Please complete your name, mobile number, and delivery address before proceeding.');
       setIsAddressModalOpen(true);
-      setSubmitError('Please complete your name, 10-digit mobile number, delivery address, and 6-digit pincode.');
+      focusFirstAddressError(errs);
       return;
     }
 
     setIsSubmitting(true);
     setSubmitError(null);
+    setAddressModalError(null);
+    setAddressErrors({});
 
     const targetPaymentType = options.paymentType || paymentType;
     const targetMethod = options.method || selectedPaymentMethod;
@@ -2178,7 +2280,7 @@ export default function CheckoutModal({
             DOCKED BOTTOM ACTION BAR (Step 3: Details & Payment)
             Always 100% visible on Mobile & Desktop above home indicator
         ══════════════════════════════════════════════════════════════ */}
-        {step === 'details_payment' && (
+        {step === 'details_payment' && !isAddressModalOpen && (
           <div className="shrink-0 z-40 bg-white/98 backdrop-blur-md border-t border-gray-200/90 px-4 py-3.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] shadow-2xl flex items-center justify-between">
             <div>
               <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
@@ -2228,185 +2330,276 @@ export default function CheckoutModal({
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
-          SLIDE-UP ADDRESS MODAL / DRAWER (Triggered by "Change")
+          SLIDE-UP ADDRESS MODAL / DRAWER (Triggered by "Change" or Missing Details)
       ══════════════════════════════════════════════════════════════ */}
       {isAddressModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div 
-            className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
+            className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-gray-150 pb-3">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-gray-150 pb-3 shrink-0">
               <div className="flex items-center gap-2">
                 <Truck className="w-4 h-4 text-brand-primary" />
                 <h3 className="text-sm font-bold text-gray-900">Delivery Address</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setIsAddressModalOpen(false)}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+                onClick={() => {
+                  setIsAddressModalOpen(false);
+                  setAddressModalError(null);
+                }}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors"
+                title="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Error Notice inside Address Drawer */}
+            {addressModalError && (
+              <div className="mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2.5 animate-shake shrink-0 shadow-2xs">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-bold text-rose-900">Information Required</p>
+                  <p className="text-[11px] text-rose-700 font-medium leading-tight mt-0.5">
+                    {addressModalError}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const cleanP = phone.replace(/\D/g, '').slice(-10);
-                if (!name.trim()) {
-                  setSubmitError('Please enter your full name.');
-                  return;
-                }
-                if (!cleanP || cleanP.length !== 10) {
-                  setSubmitError('Please enter a valid 10-digit mobile number.');
-                  return;
-                }
-                if (!addressLine1.trim()) {
-                  setSubmitError('Please enter your flat, house no., or building name.');
-                  return;
-                }
-                if (!email.trim() || !email.includes('@') || !email.includes('.')) {
-                  setSubmitError('Please enter a valid email address for order confirmation & delivery updates.');
-                  return;
-                }
-                if (pincode.trim().length < 6) {
-                  setSubmitError('Please enter a valid 6-digit pincode.');
-                  return;
-                }
-
-                // Immediately persist to localStorage for future 1-click orders
-                try {
-                  localStorage.setItem('valerie_saved_checkout_address', JSON.stringify({
-                    name: name.trim(),
-                    email: email.trim(),
-                    phone: cleanP,
-                    addressLine1: addressLine1.trim(),
-                    addressLine2: addressLine2.trim(),
-                    city: city.trim(),
-                    state: state.trim(),
-                    pincode: pincode.trim(),
-                  }));
-                } catch (err) {}
-
-                setSubmitError(null);
-                setIsAddressModalOpen(false);
-              }}
-              className="space-y-3"
+              onSubmit={handleSaveAddress}
+              className="flex flex-col flex-1 overflow-hidden"
             >
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Priya Sharma"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
-                />
-              </div>
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto space-y-3 py-3 pr-0.5">
+                {/* Full Name */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                    Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (addressErrors.name) setAddressErrors((prev) => ({ ...prev, name: null }));
+                    }}
+                    placeholder="e.g. Priya Sharma"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-gray-900 transition-all focus:outline-none ${
+                      addressErrors.name
+                        ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                        : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                    }`}
+                  />
+                  {addressErrors.name && (
+                    <p className="text-[10.5px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{addressErrors.name}</span>
+                    </p>
+                  )}
+                </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                  Mobile Number * <span className="text-[10px] text-gray-400 font-normal lowercase">(for delivery updates & tracking)</span>
-                </label>
-                <div className="flex items-center border border-gray-300 rounded-xl bg-white overflow-hidden focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
-                  <div className="flex items-center space-x-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-800 select-none">
-                    <span className="text-sm">🇮🇳</span>
-                    <span>+91</span>
+                {/* Mobile Number */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                    Mobile Number <span className="text-rose-500">*</span>{' '}
+                    <span className="text-[10px] text-gray-400 font-normal lowercase">(for delivery updates &amp; tracking)</span>
+                  </label>
+                  <div className={`flex items-center border rounded-xl bg-white overflow-hidden transition-all ${
+                    addressErrors.phone
+                      ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/20'
+                      : 'border-gray-300 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20'
+                  }`}>
+                    <div className="flex items-center space-x-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-800 select-none">
+                      <span className="text-sm">🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      ref={phoneInputRef}
+                      type="tel"
+                      maxLength={10}
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+                        if (addressErrors.phone) setAddressErrors((prev) => ({ ...prev, phone: null }));
+                      }}
+                      placeholder="10-digit mobile number"
+                      className="flex-1 px-3.5 py-2.5 text-xs font-mono font-medium text-gray-900 focus:outline-none bg-transparent placeholder:font-normal placeholder:text-gray-400"
+                    />
                   </div>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="10-digit mobile number"
-                    className="flex-1 px-3.5 py-2.5 text-xs font-mono font-medium text-gray-900 focus:outline-none bg-transparent placeholder:font-normal placeholder:text-gray-400"
-                  />
+                  {addressErrors.phone && (
+                    <p className="text-[10.5px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{addressErrors.phone}</span>
+                    </p>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                  Email Address * <span className="text-[10px] text-gray-400 font-normal lowercase">(for invoice & tracking updates)</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. customer@example.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Flat, House no., Building *</label>
-                <input
-                  type="text"
-                  required
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                  placeholder="e.g. Flat 402, Golden Heights"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Street, Area, Landmark</label>
-                <input
-                  type="text"
-                  value={addressLine2}
-                  onChange={(e) => setAddressLine2(e.target.value)}
-                  placeholder="e.g. Near Indiranagar Club, 100 Feet Road"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
+                {/* Email Address */}
                 <div>
-                  <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Pincode *</label>
+                  <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                    Email Address <span className="text-rose-500">*</span>{' '}
+                    <span className="text-[10px] text-gray-400 font-normal lowercase">(for invoice &amp; tracking updates)</span>
+                  </label>
                   <input
-                    type="tel"
-                    required
-                    maxLength={6}
-                    value={pincode}
-                    onChange={(e) => handlePincodeChange(e.target.value)}
-                    placeholder="6 digits"
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 font-mono focus:border-brand-primary focus:outline-none"
+                    ref={emailInputRef}
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (addressErrors.email) setAddressErrors((prev) => ({ ...prev, email: null }));
+                    }}
+                    placeholder="e.g. customer@example.com"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-gray-900 transition-all focus:outline-none ${
+                      addressErrors.email
+                        ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                        : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                    }`}
                   />
+                  {addressErrors.email && (
+                    <p className="text-[10.5px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{addressErrors.email}</span>
+                    </p>
+                  )}
                 </div>
+
+                {/* Flat, House no., Building */}
                 <div>
-                  <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">City *</label>
+                  <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                    Flat, House no., Building <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={addressLine1InputRef}
+                    type="text"
+                    value={addressLine1}
+                    onChange={(e) => {
+                      setAddressLine1(e.target.value);
+                      if (addressErrors.addressLine1) setAddressErrors((prev) => ({ ...prev, addressLine1: null }));
+                    }}
+                    placeholder="e.g. Flat 402, Golden Heights"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-gray-900 transition-all focus:outline-none ${
+                      addressErrors.addressLine1
+                        ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                        : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                    }`}
+                  />
+                  {addressErrors.addressLine1 && (
+                    <p className="text-[10.5px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{addressErrors.addressLine1}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Street, Area, Landmark */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                    Street, Area, Landmark <span className="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
+                  </label>
                   <input
                     type="text"
-                    required
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="City"
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    placeholder="e.g. Near Indiranagar Club, 100 Feet Road"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">State *</label>
-                  <input
-                    type="text"
-                    required
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    placeholder="State"
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:border-brand-primary focus:outline-none"
-                  />
+
+                {/* Pincode, City, State */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                      Pincode <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      ref={pincodeInputRef}
+                      type="tel"
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => {
+                        handlePincodeChange(e.target.value);
+                        if (addressErrors.pincode) setAddressErrors((prev) => ({ ...prev, pincode: null }));
+                      }}
+                      placeholder="6 digits"
+                      className={`w-full px-3 py-2.5 rounded-xl border text-xs text-gray-900 font-mono transition-all focus:outline-none ${
+                        addressErrors.pincode
+                          ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                          : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                      }`}
+                    />
+                    {addressErrors.pincode && (
+                      <p className="text-[10px] text-rose-600 font-semibold mt-1">
+                        {addressErrors.pincode}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                      City <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      ref={cityInputRef}
+                      type="text"
+                      value={city}
+                      onChange={(e) => {
+                        setCity(e.target.value);
+                        if (addressErrors.city) setAddressErrors((prev) => ({ ...prev, city: null }));
+                      }}
+                      placeholder="City"
+                      className={`w-full px-3 py-2.5 rounded-xl border text-xs text-gray-900 transition-all focus:outline-none ${
+                        addressErrors.city
+                          ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                          : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                      }`}
+                    />
+                    {addressErrors.city && (
+                      <p className="text-[10px] text-rose-600 font-semibold mt-1">
+                        {addressErrors.city}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                      State <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      ref={stateInputRef}
+                      type="text"
+                      value={state}
+                      onChange={(e) => {
+                        setState(e.target.value);
+                        if (addressErrors.state) setAddressErrors((prev) => ({ ...prev, state: null }));
+                      }}
+                      placeholder="State"
+                      className={`w-full px-3 py-2.5 rounded-xl border text-xs text-gray-900 transition-all focus:outline-none ${
+                        addressErrors.state
+                          ? 'border-rose-500 bg-rose-50/20 ring-2 ring-rose-200'
+                          : 'border-gray-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20'
+                      }`}
+                    />
+                    {addressErrors.state && (
+                      <p className="text-[10px] text-rose-600 font-semibold mt-1">
+                        {addressErrors.state}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2">
+              {/* Sticky Submit Button inside the Address Drawer */}
+              <div className="pt-3 border-t border-gray-150 shrink-0 bg-white">
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl bg-brand-primary text-white text-xs font-bold uppercase tracking-wider shadow-md hover:bg-brand-primary-hover active:scale-[0.99] transition-all cursor-pointer"
+                  className="w-full py-3.5 rounded-xl bg-brand-primary text-white text-xs font-bold uppercase tracking-wider shadow-md hover:bg-brand-primary-hover active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center space-x-2"
                 >
-                  Save Delivery Address
+                  <span>SAVE &amp; CONTINUE TO PAYMENT</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </form>
@@ -2418,7 +2611,7 @@ export default function CheckoutModal({
           EXIT-INTENT RETENTION POPUP (High Conversion Safeguard)
       ══════════════════════════════════════════════════════════════ */}
       {showExitIntent && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 animate-fade-in bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-fade-in bg-black/60 backdrop-blur-sm">
           <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl border border-gray-200 space-y-4">
             <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center">
               <Sparkles className="w-7 h-7" />
