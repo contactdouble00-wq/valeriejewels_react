@@ -85,13 +85,13 @@ const FACTORY_DEFAULTS = {
     rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {
-    badgeText: '#1 Ad Bestseller Collection • 12,000+ Delivered',
-    titleLine1: 'The 4 Signature',
-    titleLine2: 'Jhumka Treasure Boxes',
-    subtitle: 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.',
-    pill1: '5–6 Curated Pairs Per Box',
+    badgeText: '🔥 Customer Bestsellers • Most Loved Pieces',
+    titleLine1: 'Our Curated',
+    titleLine2: 'Bestseller Collection',
+    subtitle: 'Our highest rated handcrafted pieces and viral jewelry, curated for everyday luxury and timeless elegance.',
+    pill1: 'Curated Bestselling Designs',
     pill2: 'Zero Earache • Featherlight',
-    pill3: 'Save up to 50% vs Single Pairs',
+    pill3: 'Save up to 50% vs Individual Pieces',
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
@@ -639,13 +639,19 @@ export default function AdminHomepageView() {
                     ? 'text-rose-950'
                     : 'text-emerald-900'
                 }`}>
-                  {stripData.promoPrefix || 'Buy 2 or More → Extra 10% Off with Code'}{' '}
-                  {stripData.couponCode && (
-                    <span className="font-bold text-brand-primary">{stripData.couponCode}</span>
+                  {(Boolean(stripData.promoPrefix?.trim()) || Boolean(stripData.couponCode?.trim())) && (
+                    <>
+                      {Boolean(stripData.promoPrefix?.trim()) && (
+                        <span>{stripData.promoPrefix.trim()}{Boolean(stripData.couponCode?.trim()) ? ' ' : ''}</span>
+                      )}
+                      {Boolean(stripData.couponCode?.trim()) && (
+                        <span className="font-bold text-brand-primary">{stripData.couponCode.trim()}</span>
+                      )}
+                    </>
                   )}
                 </span>
               </div>
-              {stripData.couponCode && (
+              {Boolean(stripData.couponCode?.trim()) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -2888,85 +2894,113 @@ export default function AdminHomepageView() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Ad Campaign Badge
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Ad Campaign Badge
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide from storefront</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.badgeText}
+                  value={formData.jhumkaHero?.badgeText ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'badgeText', e.target.value)}
+                  placeholder="e.g. 🔥 Customer Bestsellers • Most Loved Pieces"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Title Line 1
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Title Line 1
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.titleLine1}
+                  value={formData.jhumkaHero?.titleLine1 ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'titleLine1', e.target.value)}
+                  placeholder="e.g. Our Curated"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Title Line 2 (Accent)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Title Line 2 (Accent)
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.titleLine2}
+                  value={formData.jhumkaHero?.titleLine2 ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'titleLine2', e.target.value)}
+                  placeholder="e.g. Bestseller Collection"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary text-brand-primary italic font-serif"
                 />
               </div>
 
               <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Section Description
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Section Description
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <textarea
                   rows={2}
-                  value={formData.jhumkaHero.subtitle}
+                  value={formData.jhumkaHero?.subtitle ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'subtitle', e.target.value)}
+                  placeholder="e.g. Our highest rated handcrafted pieces and viral jewelry, curated for everyday luxury and timeless elegance."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary leading-relaxed"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Feature Pill 1
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Feature Pill 1
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.pill1}
+                  value={formData.jhumkaHero?.pill1 ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'pill1', e.target.value)}
+                  placeholder="e.g. Curated Bestselling Designs"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Feature Pill 2
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Feature Pill 2
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.pill2}
+                  value={formData.jhumkaHero?.pill2 ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'pill2', e.target.value)}
+                  placeholder="e.g. Zero Earache • Featherlight"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
               </div>
 
               <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-brand-tertiary block">
-                  Feature Pill 3 (Savings / Value)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-brand-tertiary block">
+                    Feature Pill 3 (Savings / Value)
+                  </label>
+                  <span className="text-[10px] text-brand-muted">Leave empty to hide</span>
+                </div>
                 <input
                   type="text"
-                  value={formData.jhumkaHero.pill3}
+                  value={formData.jhumkaHero?.pill3 ?? ''}
                   onChange={(e) => updateNested('jhumkaHero', 'pill3', e.target.value)}
+                  placeholder="e.g. Save up to 50% vs Individual Pieces"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary"
                 />
               </div>

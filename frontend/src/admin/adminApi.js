@@ -501,7 +501,7 @@ export const adminApi = {
       try {
         const payload = contentData;
         localStorage.setItem('valerie_settings_updated', Date.now().toString());
-        localStorage.setItem('valerie_site_content_cache_v3', JSON.stringify({ ...payload, _version: '20261004_v3' }));
+        localStorage.setItem('valerie_site_content_cache_v4', JSON.stringify({ ...payload, _version: '20261017_v4' }));
         window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: payload }));
       } catch (e) {
         console.warn('Local cache fallback error:', e);
@@ -513,7 +513,7 @@ export const adminApi = {
     try {
       const savedData = res?.data || contentData;
       localStorage.setItem('valerie_settings_updated', Date.now().toString());
-      localStorage.setItem('valerie_site_content_cache_v3', JSON.stringify({ ...savedData, _version: '20261004_v3' }));
+      localStorage.setItem('valerie_site_content_cache_v4', JSON.stringify({ ...savedData, _version: '20261017_v4' }));
       window.dispatchEvent(new CustomEvent('valerie_settings_updated', { detail: savedData }));
     } catch (e) {
       console.warn('Sync broadcast warning:', e);

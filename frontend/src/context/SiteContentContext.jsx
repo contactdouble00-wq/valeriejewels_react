@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { apiService } from '../services/api';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
-const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v3';
-const CONTENT_CACHE_VERSION = '20261004_v3';
+const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v4';
+const CONTENT_CACHE_VERSION = '20261017_v4';
 
 const DEFAULT_SITE_CONTENT = {
   siteIdentity: {
@@ -39,13 +39,13 @@ const DEFAULT_SITE_CONTENT = {
     rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {
-    badgeText: '#1 Ad Bestseller Collection • 12,000+ Delivered',
-    titleLine1: 'The 4 Signature',
-    titleLine2: 'Jhumka Treasure Boxes',
-    subtitle: 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.',
-    pill1: '5–6 Curated Pairs Per Box',
+    badgeText: '🔥 Customer Bestsellers • Most Loved Pieces',
+    titleLine1: 'Our Curated',
+    titleLine2: 'Bestseller Collection',
+    subtitle: 'Our highest rated handcrafted pieces and viral jewelry, curated for everyday luxury and timeless elegance.',
+    pill1: 'Curated Bestselling Designs',
     pill2: 'Zero Earache • Featherlight',
-    pill3: 'Save up to 50% vs Single Pairs',
+    pill3: 'Save up to 50% vs Individual Pieces',
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
@@ -153,6 +153,7 @@ export function SiteContentProvider({ children }) {
       // Immediately purge any stale legacy caches that caused millisecond flicker
       localStorage.removeItem('valerie_site_content_cache');
       localStorage.removeItem('valerie_site_content_cache_v2');
+      localStorage.removeItem('valerie_site_content_cache_v3');
 
       const cached = localStorage.getItem(CONTENT_CACHE_KEY);
       if (cached) {
@@ -164,6 +165,14 @@ export function SiteContentProvider({ children }) {
             heroBanner: {
               ...DEFAULT_SITE_CONTENT.heroBanner,
               ...(parsed.heroBanner || {}),
+            },
+            jhumkaHero: {
+              ...DEFAULT_SITE_CONTENT.jhumkaHero,
+              ...(parsed.jhumkaHero || {}),
+              guaranteeStrip: {
+                ...DEFAULT_SITE_CONTENT.jhumkaHero.guaranteeStrip,
+                ...(parsed.jhumkaHero?.guaranteeStrip || {}),
+              },
             },
             festivalOffer: {
               ...DEFAULT_SITE_CONTENT.festivalOffer,
@@ -246,6 +255,14 @@ export function SiteContentProvider({ children }) {
           const merged = {
             ...prev,
             ...incoming,
+            jhumkaHero: {
+              ...prev.jhumkaHero,
+              ...(incoming.jhumkaHero || {}),
+              guaranteeStrip: {
+                ...(prev.jhumkaHero?.guaranteeStrip || {}),
+                ...(incoming.jhumkaHero?.guaranteeStrip || {}),
+              },
+            },
             festivalOffer: {
               ...prev.festivalOffer,
               ...(incoming.festivalOffer || {}),
