@@ -12,7 +12,7 @@ try {
 
     // 1. Seed Admin User
     echo "Seeding Admin user...\n";
-    $adminPasswordHash = password_hash('Admin@Valerie2026!', PASSWORD_BCRYPT);
+    $adminPasswordHash = password_hash('secure@VALERIE11_', PASSWORD_BCRYPT);
     $stmt = $pdo->prepare("
         INSERT INTO `users` (`name`, `email`, `phone`, `password_hash`, `role`, `is_blocked_rto`)
         VALUES (:name, :email, :phone, :hash, 'admin', 0)
@@ -20,7 +20,7 @@ try {
     ");
     $stmt->execute([
         ':name'        => 'Valerie Jewels Admin',
-        ':email'       => 'admin@valeriejewels.com',
+        ':email'       => 'contact.valeriejewels@gmail.com',
         ':phone'       => '+91 98765 43210',
         ':hash'        => $adminPasswordHash,
         ':hash_update' => $adminPasswordHash,
@@ -453,7 +453,7 @@ try {
     }
 
     // 8. Log Initial Activity
-    $adminId = $pdo->query("SELECT id FROM users WHERE email = 'admin@valeriejewels.com'")->fetchColumn();
+    $adminId = $pdo->query("SELECT id FROM users WHERE email = 'contact.valeriejewels@gmail.com'")->fetchColumn();
     $logStmt = $pdo->prepare("
         INSERT INTO `admin_activity_log` (`admin_id`, `action`, `target_entity`, `target_id`, `details`, `ip_address`)
         VALUES (?, 'system_seed', 'database', 'phase1', ?, '127.0.0.1')

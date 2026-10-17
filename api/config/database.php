@@ -849,20 +849,36 @@ class Database {
      */
     private static function seedAdminUser(PDO $pdo): void {
         try {
-            $hash = password_hash('Admin@Valerie2026!', PASSWORD_BCRYPT);
+            $newEmail = 'contact.valeriejewels@gmail.com';
+            $hash = password_hash('secure@VALERIE11_', PASSWORD_BCRYPT);
+
+            // Check if target admin account exists
             $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
-            $stmt->execute(['admin@valeriejewels.com']);
+            $stmt->execute([$newEmail]);
             $existing = $stmt->fetch();
 
             if (!$existing) {
-                $ins = $pdo->prepare("
-                    INSERT INTO users (name, email, phone, password_hash, role, is_blocked_rto)
-                    VALUES (?, ?, ?, ?, 'admin', 0)
-                ");
-                $ins->execute(['Valerie Jewels Admin', 'admin@valeriejewels.com', '+91 98765 43210', $hash]);
+                // If legacy admin exists, update it to the new credentials
+                $stmtOld = $pdo->prepare("SELECT id FROM users WHERE email = 'admin@valeriejewels.com' LIMIT 1");
+                $stmtOld->execute();
+                $oldExisting = $stmtOld->fetch();
+
+                if ($oldExisting) {
+                    $upd = $pdo->prepare("UPDATE users SET email = ?, password_hash = ?, role = 'admin' WHERE id = ?");
+                    $upd->execute([$newEmail, $hash, $oldExisting['id']]);
+                } else {
+                    $ins = $pdo->prepare("
+                        INSERT INTO users (name, email, phone, password_hash, role, is_blocked_rto)
+                        VALUES (?, ?, ?, ?, 'admin', 0)
+                    ");
+                    $ins->execute(['Valerie Jewels Admin', $newEmail, '+91 98765 43210', $hash]);
+                }
             } else {
                 $upd = $pdo->prepare("UPDATE users SET password_hash = ?, role = 'admin' WHERE id = ?");
                 $upd->execute([$hash, $existing['id']]);
+
+                // Clean up legacy admin if separate row
+                $pdo->prepare("DELETE FROM users WHERE email = 'admin@valeriejewels.com' AND id != ?")->execute([$existing['id']]);
             }
         } catch (Throwable $e) {
             error_log('seedAdminUser error: ' . $e->getMessage());

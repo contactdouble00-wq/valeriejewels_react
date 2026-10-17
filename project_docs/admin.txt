@@ -21,8 +21,8 @@ Prompted by the browser before the admin panel bundle can download:
 LAYER 2: ADMIN PORTAL LOGIN (Inside React / Backend)
 -----------------------------------------------------
 Entered in the Valerie Jewels Admin login screen:
-   Email:    admin@valeriejewels.com
-   Password: Admin@Valerie2026!
+   Email:    contact.valeriejewels@gmail.com
+   Password: secure@VALERIE11_
    * Security Note: 5 consecutive failed login attempts will lock out
      the account / IP for 15 minutes (HTTP 429 Too Many Requests).
    * Session lifetime: Persistent (30-minute auto logout removed).

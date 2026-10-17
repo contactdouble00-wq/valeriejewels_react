@@ -7,8 +7,8 @@ import { adminApi } from './adminApi';
 
 export default function AdminLogin({ onLoginSuccess }) {
   // Step 1: Credentials
-  const [email, setEmail] = useState('admin@valeriejewels.com');
-  const [password, setPassword] = useState('Admin@Valerie2026!');
+  const [email, setEmail] = useState('contact.valeriejewels@gmail.com');
+  const [password, setPassword] = useState('secure@VALERIE11_');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -154,7 +154,7 @@ export default function AdminLogin({ onLoginSuccess }) {
                     type="email" required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@valeriejewels.com"
+                    placeholder="contact.valeriejewels@gmail.com"
                     className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-4 py-2.5 pl-10 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary focus:bg-white transition-all shadow-2xs"
                   />
                   <Mail className="w-4 h-4 text-brand-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -193,12 +193,12 @@ export default function AdminLogin({ onLoginSuccess }) {
               </span>
               <button
                 type="button"
-                onClick={() => { setEmail('admin@valeriejewels.com'); setPassword('Admin@Valerie2026!'); }}
+                onClick={() => { setEmail('contact.valeriejewels@gmail.com'); setPassword('secure@VALERIE11_'); }}
                 className="w-full text-left p-2.5 rounded-xl bg-[#FAF8FC] border border-brand-border hover:border-brand-primary text-xs flex items-center justify-between transition-colors"
               >
                 <div>
                   <span className="font-semibold text-brand-tertiary">Valerie Owner (Full Admin)</span>
-                  <span className="block text-[10px] text-brand-muted">admin@valeriejewels.com</span>
+                  <span className="block text-[10px] text-brand-muted">contact.valeriejewels@gmail.com</span>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
                   All Privileges
