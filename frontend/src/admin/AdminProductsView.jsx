@@ -4,7 +4,7 @@ import {
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
   ChevronUp, Sparkles, Film, Play, Eye, ExternalLink, Zap,
-  Layers, Package, Tag
+  Layers, Package, Tag, Gift
 } from 'lucide-react';
 import ProductAssuranceModal from './ProductAssuranceModal';
 import AdminProductPreviewModal from './AdminProductPreviewModal';
@@ -360,25 +360,62 @@ export default function AdminProductsView({ currentUser }) {
     }
   };
 
+  // ── Category & Mystery Jar Helper ─────────────────────────────────────────
+  const checkIsMysteryJar = (product, catList = categories) => {
+    if (!product) return false;
+    const cat = catList.find((c) => c.id === product.category_id);
+    const catSlug = (cat?.slug || '').toLowerCase();
+    const catName = (cat?.name || '').toLowerCase();
+    const prodName = (product.name || '').toLowerCase();
+    const prodSku = (product.sku || '').toUpperCase();
+    return (
+      catSlug === 'mystery-jar' ||
+      catSlug.includes('mystery') ||
+      catName.includes('mystery') ||
+      prodName.includes('mystery jar') ||
+      prodName.includes('mystery') ||
+      prodSku.includes('MJAR')
+    );
+  };
+
   // ── Variant & Size Management Handlers ────────────────────────────────────
   const handleAddVariant = (customProps = {}) => {
     setEditingProduct((prev) => {
       if (!prev) return prev;
       const vars = Array.isArray(prev.variants) ? [...prev.variants] : [];
       const idx = vars.length + 1;
-      const baseSku = prev.sku || 'VJ';
+      const isMystery = checkIsMysteryJar(prev);
+      const baseSku = prev.sku || (isMystery ? 'VJ-MJAR-01' : 'VJ');
+
+      const defaultTitle = isMystery ? `Custom Mystery Jar #${idx}` : `Size ${idx}`;
+      const defaultOption = isMystery ? `Jar Tier ${idx}` : `Size ${idx}`;
+
       const newVar = {
         id: null,
-        title: customProps.title || `Size ${idx}`,
+        title: customProps.title || defaultTitle,
         option1_name: customProps.option1_name || 'Size',
-        option1_value: customProps.option1_value || customProps.title || `Size ${idx}`,
-        price: customProps.price !== undefined ? customProps.price : (prev.price || ''),
-        mrp: customProps.mrp !== undefined ? customProps.mrp : (prev.mrp || ''),
-        stock_quantity: customProps.stock_quantity !== undefined ? customProps.stock_quantity : 25,
-        sku: customProps.sku || `${baseSku}-SZ${idx}`,
+        option1_value: customProps.option1_value || defaultOption,
+        price: customProps.price !== undefined ? customProps.price : (prev.price || (isMystery ? 599 : '')),
+        mrp: customProps.mrp !== undefined ? customProps.mrp : (prev.mrp || (isMystery ? 1199 : '')),
+        stock_quantity: customProps.stock_quantity !== undefined ? customProps.stock_quantity : 30,
+        sku: customProps.sku || `${baseSku}-T${idx}`,
         is_active: 1,
       };
-      return { ...prev, variants: [...vars, newVar] };
+
+      const updatedVars = [...vars, newVar];
+      const activeVars = updatedVars.filter((v) => Number(v.is_active) !== 0 && v.price);
+      let newPrice = prev.price;
+      let newMrp = prev.mrp;
+      if (activeVars.length > 0) {
+        const prices = activeVars.map((v) => Number(v.price)).filter((n) => !isNaN(n) && n > 0);
+        if (prices.length > 0) {
+          newPrice = Math.min(...prices);
+          const minVar = activeVars.find((v) => Number(v.price) === newPrice);
+          if (minVar && minVar.mrp) newMrp = minVar.mrp;
+        }
+      }
+
+      return { ...prev, variants: updatedVars, price: newPrice, mrp: newMrp };
     });
   };
 
@@ -391,7 +428,24 @@ export default function AdminProductsView({ currentUser }) {
       if (field === 'title' && (!vars[index].option1_value || vars[index].option1_value === vars[index].title)) {
         vars[index].option1_value = value;
       }
-      return { ...prev, variants: vars };
+
+      const activeVars = vars.filter((v) => Number(v.is_active) !== 0 && v.price);
+      let newPrice = prev.price;
+      let newMrp = prev.mrp;
+      let newStock = prev.stock_quantity;
+
+      if (activeVars.length > 0) {
+        const prices = activeVars.map((v) => Number(v.price)).filter((n) => !isNaN(n) && n > 0);
+        if (prices.length > 0) {
+          newPrice = Math.min(...prices);
+          const matchingVar = activeVars.find((v) => Number(v.price) === newPrice);
+          if (matchingVar && matchingVar.mrp) newMrp = matchingVar.mrp;
+        }
+        const totalStock = vars.reduce((acc, v) => acc + (parseInt(v.stock_quantity, 10) || 0), 0);
+        if (totalStock > 0) newStock = totalStock;
+      }
+
+      return { ...prev, variants: vars, price: newPrice, mrp: newMrp, stock_quantity: newStock };
     });
   };
 
@@ -400,12 +454,29 @@ export default function AdminProductsView({ currentUser }) {
       if (!prev) return prev;
       const vars = Array.isArray(prev.variants) ? [...prev.variants] : [];
       vars.splice(index, 1);
-      return { ...prev, variants: vars };
+
+      const activeVars = vars.filter((v) => Number(v.is_active) !== 0 && v.price);
+      let newPrice = prev.price;
+      let newMrp = prev.mrp;
+      let newStock = prev.stock_quantity;
+
+      if (activeVars.length > 0) {
+        const prices = activeVars.map((v) => Number(v.price)).filter((n) => !isNaN(n) && n > 0);
+        if (prices.length > 0) {
+          newPrice = Math.min(...prices);
+          const matchingVar = activeVars.find((v) => Number(v.price) === newPrice);
+          if (matchingVar && matchingVar.mrp) newMrp = matchingVar.mrp;
+        }
+        const totalStock = vars.reduce((acc, v) => acc + (parseInt(v.stock_quantity, 10) || 0), 0);
+        if (totalStock > 0) newStock = totalStock;
+      }
+
+      return { ...prev, variants: vars, price: newPrice, mrp: newMrp, stock_quantity: newStock };
     });
   };
 
   const handleApplyMysteryJarPreset = () => {
-    const baseSku = editingProduct?.sku || 'VJ-MJAR';
+    const baseSku = editingProduct?.sku && editingProduct.sku !== 'VJ' ? editingProduct.sku : 'VJ-MJAR-01';
     const presetVariants = [
       {
         id: null,
@@ -444,11 +515,12 @@ export default function AdminProductsView({ currentUser }) {
 
     setEditingProduct((prev) => ({
       ...prev,
-      price: prev.price || 499,
-      mrp: prev.mrp || 999,
+      price: 499,
+      mrp: 999,
+      stock_quantity: 130,
       variants: presetVariants,
     }));
-    showToast('✨ Mystery Jar Trio preset applied (Mini ₹499, Classic ₹899, Grand ₹1499)');
+    showToast('✨ Mystery Jar 3-tier preset applied (Mini ₹499, Classic ₹899, Grand ₹1499)');
   };
 
   const handleApplyStandardSizesPreset = () => {
@@ -494,6 +566,85 @@ export default function AdminProductsView({ currentUser }) {
       variants: presetVariants,
     }));
     showToast('📦 Standard Small / Medium / Large sizes preset applied');
+  };
+
+  const handleCategoryChange = (catId) => {
+    const selectedCat = categories.find((c) => c.id === catId);
+    const isMystery =
+      selectedCat?.slug === 'mystery-jar' ||
+      (selectedCat?.name || '').toLowerCase().includes('mystery');
+
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+      const baseSku = prev.sku && prev.sku !== 'VJ' ? prev.sku : (isMystery ? 'VJ-MJAR-01' : 'VJ');
+      const currentVars = Array.isArray(prev.variants) ? prev.variants : [];
+
+      let newVariants = currentVars;
+      let newPrice = prev.price;
+      let newMrp = prev.mrp;
+      let newStock = prev.stock_quantity;
+      let newMaterial = prev.material;
+      let newPairsCount = prev.pairs_count;
+
+      if (isMystery) {
+        newPairsCount = null; // No earring box pairs for mystery jars
+        if (!newMaterial || newMaterial === '18K Gold Plated Stainless Steel') {
+          newMaterial = 'Curated Anti-Tarnish Jewels in Glass Jar';
+        }
+        if (currentVars.length === 0) {
+          newVariants = [
+            {
+              id: null,
+              title: 'Mini Mystery Jar (5 Surprise Pieces)',
+              option1_name: 'Size',
+              option1_value: 'Mini (5 Pieces)',
+              price: 499,
+              mrp: 999,
+              stock_quantity: 50,
+              sku: `${baseSku}-MINI`,
+              is_active: 1,
+            },
+            {
+              id: null,
+              title: 'Classic Mystery Jar (10 Surprise Pieces)',
+              option1_name: 'Size',
+              option1_value: 'Classic (10 Pieces)',
+              price: 899,
+              mrp: 1799,
+              stock_quantity: 50,
+              sku: `${baseSku}-CLASSIC`,
+              is_active: 1,
+            },
+            {
+              id: null,
+              title: 'Grand Mystery Jar (18 Surprise Pieces)',
+              option1_name: 'Size',
+              option1_value: 'Grand (18 Pieces)',
+              price: 1499,
+              mrp: 2999,
+              stock_quantity: 30,
+              sku: `${baseSku}-GRAND`,
+              is_active: 1,
+            },
+          ];
+          newPrice = 499;
+          newMrp = 999;
+          newStock = 130;
+        }
+      }
+
+      return {
+        ...prev,
+        category_id: catId,
+        variants: newVariants,
+        price: newPrice,
+        mrp: newMrp,
+        stock_quantity: newStock,
+        material: newMaterial,
+        pairs_count: newPairsCount,
+        sku: baseSku,
+      };
+    });
   };
 
   // ── Open Editor ───────────────────────────────────────────────────────────
@@ -791,18 +942,83 @@ export default function AdminProductsView({ currentUser }) {
           )}
 
           <button
-            onClick={() =>
+            onClick={() => {
+              const defaultCat =
+                categories.find(
+                  (c) =>
+                    c.slug === categoryFilter ||
+                    String(c.id) === String(categoryFilter) ||
+                    (c.name || '').toLowerCase() === (categoryFilter || '').toLowerCase()
+                ) || categories[0];
+
+              const isMystery =
+                defaultCat?.slug === 'mystery-jar' ||
+                (defaultCat?.name || '').toLowerCase().includes('mystery') ||
+                categoryFilter === 'mystery-jar';
+
+              const baseSku = isMystery ? 'VJ-MJAR-01' : '';
+
               setEditingProduct({
-                name: '', sku: '', price: '', mrp: '', cost_price: '',
-                category_id: categories[0]?.id || 1,
-                stock_quantity: 50, is_anti_tarnish: 0,
-                pairs_count: 6,
-                material: '18K Gold Plated Stainless Steel',
-                is_bestseller: 0, short_description: '', description: '',
-                slug: '', meta_title: '', meta_description: '', images: [],
-                variants: [],
-              })
-            }
+                name: isMystery ? 'Luxury Mystery Jar — Surprise Jewelry' : '',
+                sku: baseSku,
+                price: isMystery ? 499 : '',
+                mrp: isMystery ? 999 : '',
+                cost_price: '',
+                category_id: defaultCat?.id || 1,
+                stock_quantity: isMystery ? 130 : 50,
+                is_anti_tarnish: isMystery ? 1 : 0,
+                pairs_count: isMystery ? null : 6,
+                material: isMystery
+                  ? 'Curated Anti-Tarnish Jewels in Glass Jar'
+                  : '18K Gold Plated Stainless Steel',
+                is_bestseller: 0,
+                short_description: isMystery
+                  ? 'Curated luxury surprise jewelry inside an aesthetic glass jar with satin ribbon.'
+                  : '',
+                description: '',
+                slug: isMystery ? 'luxury-mystery-jar-surprise-jewelry' : '',
+                meta_title: isMystery ? 'Luxury Mystery Jar | Valerie Jewels' : '',
+                meta_description: '',
+                images: [],
+                variants: isMystery
+                  ? [
+                      {
+                        id: null,
+                        title: 'Mini Mystery Jar (5 Surprise Pieces)',
+                        option1_name: 'Size',
+                        option1_value: 'Mini (5 Pieces)',
+                        price: 499,
+                        mrp: 999,
+                        stock_quantity: 50,
+                        sku: 'VJ-MJAR-01-MINI',
+                        is_active: 1,
+                      },
+                      {
+                        id: null,
+                        title: 'Classic Mystery Jar (10 Surprise Pieces)',
+                        option1_name: 'Size',
+                        option1_value: 'Classic (10 Pieces)',
+                        price: 899,
+                        mrp: 1799,
+                        stock_quantity: 50,
+                        sku: 'VJ-MJAR-01-CLASSIC',
+                        is_active: 1,
+                      },
+                      {
+                        id: null,
+                        title: 'Grand Mystery Jar (18 Surprise Pieces)',
+                        option1_name: 'Size',
+                        option1_value: 'Grand (18 Pieces)',
+                        price: 1499,
+                        mrp: 2999,
+                        stock_quantity: 30,
+                        sku: 'VJ-MJAR-01-GRAND',
+                        is_active: 1,
+                      },
+                    ]
+                  : [],
+              });
+            }}
             className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold transition-all shadow-md"
           >
             <Plus className="w-4 h-4" />
@@ -1208,421 +1424,487 @@ export default function AdminProductsView({ currentUser }) {
 
             <form onSubmit={handleModalSubmit} className="space-y-5 text-xs">
 
-              {/* Row 1: Name & SKU */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Product Title *</label>
-                  <input
-                    type="text" required
-                    value={editingProduct.name || ''}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">SKU Code *</label>
-                  <input
-                    type="text" required
-                    value={editingProduct.sku || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Category, Stock, Pairs Count, Material */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="space-y-1 sm:col-span-1">
-                  <label className="font-semibold text-brand-tertiary">Category</label>
-                  <select
-                    value={editingProduct.category_id || categories[0]?.id || 1}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category_id: parseInt(e.target.value, 10) })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs"
-                  >
-                    {categories.length > 0 ? (
-                      categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.slug === 'jhumka-boxes' ? '🔥 ' : ''}{cat.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value={1}>Necklaces</option>
-                        <option value={2}>Rings</option>
-                        <option value={3}>Earrings</option>
-                        <option value={4}>Bracelets</option>
-                        <option value={5}>Combos & Sets</option>
-                        <option value={6}>🔥 Jhumka Boxes</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Stock Quantity</label>
-                  <input
-                    type="number" min="0" required
-                    value={editingProduct.stock_quantity ?? 50}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value, 10) })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary flex items-center justify-between">
-                    <span>Pairs Inside</span>
-                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1 rounded">Boxes</span>
-                  </label>
-                  <input
-                    type="number" min="1" max="50"
-                    value={editingProduct.pairs_count ?? ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
-                    placeholder="e.g. 6 (or 5)"
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Material</label>
-                  <input
-                    type="text"
-                    value={editingProduct.material || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, material: e.target.value })}
-                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Jhumka Box Hero Showcase Dedicated Configuration Banner */}
-              {(editingProduct.category_id === 6 ||
-                categories.find((c) => c.id === editingProduct.category_id)?.slug === 'jhumka-boxes' ||
-                editingProduct.name?.toLowerCase().includes('jhumka') ||
-                editingProduct.sku?.startsWith('VJ-JHM')) && (
-                  <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
-                    <div className="space-y-0.5">
-                      <div className="font-bold flex items-center gap-1.5 text-amber-900">
-                        <Flame className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
-                      </div>
-                      <p className="text-[11px] text-amber-800 font-light">
-                        Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Box # and per-pair badges are removed for clean visuals
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <label className="text-[11px] font-semibold text-amber-900">Pairs inside box:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={editingProduct.pairs_count ?? (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)}
-                        onChange={(e) =>
-                          setEditingProduct({
-                            ...editingProduct,
-                            pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10),
-                          })
-                        }
-                        className="w-16 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-amber-900 shadow-2xs focus:outline-none focus:border-amber-600"
-                      />
-                    </div>
-                  </div>
-                )}
-
-              {/* Row 3: Pricing */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Selling Price (₹) *</label>
-                  <input
-                    type="number" step="0.01" disabled={isStaff} required
-                    value={editingProduct.price || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
-                    className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'}`}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">MRP / Strike Price (₹)</label>
-                  <input
-                    type="number" step="0.01" disabled={isStaff}
-                    value={editingProduct.mrp || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, mrp: e.target.value })}
-                    className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'}`}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-semibold text-brand-tertiary">Cost Price (₹)</label>
-                  <input
-                    type="number" step="0.01" disabled={isStaff}
-                    value={editingProduct.cost_price || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, cost_price: e.target.value })}
-                    className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'}`}
-                  />
-                </div>
-              </div>
-
-              {/* Product Sizes & Pricing (Variants) Section - Specially Tailored for Mystery Jar & Multi-Size Products */}
+              {/* Contextual Category Determinations & Dynamic Form Rows */}
               {(() => {
                 const currentCat = categories.find((c) => c.id === editingProduct.category_id);
-                const isMysteryJar =
-                  currentCat?.slug === 'mystery-jar' ||
-                  (currentCat?.name || '').toLowerCase().includes('mystery') ||
-                  (editingProduct.name || '').toLowerCase().includes('mystery jar') ||
-                  (editingProduct.sku || '').toUpperCase().includes('MJAR');
-
+                const isMysteryJar = checkIsMysteryJar(editingProduct);
+                const isJhumka =
+                  editingProduct.category_id === 6 ||
+                  currentCat?.slug === 'jhumka-boxes' ||
+                  (editingProduct.name || '').toLowerCase().includes('jhumka') ||
+                  (editingProduct.sku || '').startsWith('VJ-JHM');
                 const variantsList = Array.isArray(editingProduct.variants) ? editingProduct.variants : [];
+                const activeVars = variantsList.filter((v) => Number(v.is_active) !== 0 && v.price);
+                const pricesList = activeVars.map((v) => Number(v.price)).filter((p) => !isNaN(p) && p > 0);
+                const minPrice = pricesList.length > 0 ? Math.min(...pricesList) : null;
+                const maxPrice = pricesList.length > 0 ? Math.max(...pricesList) : null;
 
                 return (
-                  <div className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-4 ${
-                    isMysteryJar
-                      ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-[#FDF4FF] border-brand-primary/40 shadow-xs'
-                      : 'bg-[#FAF8FC] border-brand-border'
-                  }`}>
-                    {/* Header Strip */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                            isMysteryJar ? 'bg-brand-primary text-white' : 'bg-purple-100 text-brand-primary'
-                          }`}>
-                            <Layers className="w-4 h-4" />
-                          </div>
-                          <span className="font-editorial text-sm font-bold text-brand-tertiary">
-                            {isMysteryJar ? '✨ Mystery Jar Sizes & Pricing (Variants)' : 'Product Sizes & Pricing (Variants)'}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-brand-primary border border-brand-primary/30 shadow-2xs">
-                            {variantsList.length} {variantsList.length === 1 ? 'Size' : 'Sizes'} Configured
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-brand-muted font-light leading-relaxed">
-                          {isMysteryJar
-                            ? 'Configure multiple sizes/versions (e.g. Small / Medium / Large) with individual selling prices, MRPs, and inventory. Customers will be able to select their desired size on the storefront!'
-                            : 'Optionally offer multiple sizes, finishes, or editions for this piece, each with its own selling price and strike-through MRP.'}
-                        </p>
+                  <>
+                    {/* Row 1: Name & SKU */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="font-semibold text-brand-tertiary">Product Title *</label>
+                        <input
+                          type="text" required
+                          value={editingProduct.name || ''}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder={isMysteryJar ? 'e.g. Valerie Luxe Mystery Jar — Curated Surprise Jewels' : 'e.g. Royal Kundan Choker Set'}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                        />
                       </div>
-
-                      {/* Quick Preset Buttons */}
-                      <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {isMysteryJar && (
-                          <button
-                            type="button"
-                            onClick={handleApplyMysteryJarPreset}
-                            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-semibold shadow-xs hover:bg-brand-primary-hover active:scale-95 transition-all"
-                            title="Pre-populate 3-tier Mystery Jar sizes (Mini, Classic, Grand)"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Apply Mystery Jar Trio Preset</span>
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleApplyStandardSizesPreset}
-                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-tertiary text-xs font-semibold shadow-2xs hover:bg-brand-surface transition-all"
-                          title="Apply Small, Medium, Large preset"
-                        >
-                          <Package className="w-3.5 h-3.5 text-brand-muted" />
-                          <span>Small/Med/Large Preset</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAddVariant()}
-                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-all active:scale-95"
-                          title="Add a new custom size/variant row"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>+ Add Size</span>
-                        </button>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-tertiary">SKU Code *</label>
+                        <input
+                          type="text" required
+                          value={editingProduct.sku || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
+                          placeholder={isMysteryJar ? 'VJ-MJAR-01' : 'VJ-NK-01'}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono focus:outline-none focus:border-brand-primary"
+                        />
                       </div>
                     </div>
 
-                    {/* Variants List */}
-                    {variantsList.length === 0 ? (
-                      <div className="py-6 px-4 rounded-xl border border-dashed border-brand-border bg-white text-center space-y-2">
-                        <p className="text-xs text-brand-muted font-light">
-                          {isMysteryJar
-                            ? 'No jar sizes added yet. Mystery Jars require multiple sizes with different pricing. Click below to add the standard Mystery Jar sizes in 1 click!'
-                            : 'Currently selling as a single size at the base price above.'}
-                        </p>
-                        <div className="flex justify-center gap-2 pt-1">
-                          {isMysteryJar ? (
-                            <button
-                              type="button"
-                              onClick={handleApplyMysteryJarPreset}
-                              className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold shadow-sm hover:bg-brand-primary-hover transition-all"
-                            >
-                              ✨ Add Standard Mystery Jar Sizes (Mini ₹499 / Classic ₹899 / Grand ₹1499)
-                            </button>
+                    {/* Row 2: Category, Stock, Pairs Count (Jhumka only), Packaging/Material */}
+                    <div className={`grid grid-cols-1 ${isJhumka ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
+                      <div className="space-y-1 sm:col-span-1">
+                        <label className="font-semibold text-brand-tertiary">Category</label>
+                        <select
+                          value={editingProduct.category_id || categories[0]?.id || 1}
+                          onChange={(e) => handleCategoryChange(parseInt(e.target.value, 10))}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs focus:outline-none focus:border-brand-primary cursor-pointer"
+                        >
+                          {categories.length > 0 ? (
+                            categories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.slug === 'jhumka-boxes' ? '🔥 ' : cat.slug === 'mystery-jar' || (cat.name || '').toLowerCase().includes('mystery') ? '✨ ' : ''}{cat.name}
+                              </option>
+                            ))
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAddVariant()}
-                              className="px-3.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-primary text-xs font-semibold shadow-2xs"
-                            >
-                              + Add First Size / Variant
-                            </button>
+                            <>
+                              <option value={1}>Necklaces</option>
+                              <option value={2}>Rings</option>
+                              <option value={3}>Earrings</option>
+                              <option value={4}>Bracelets</option>
+                              <option value={5}>Combos & Sets</option>
+                              <option value={6}>🔥 Jhumka Boxes</option>
+                              <option value={7}>✨ Mystery Jar</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-tertiary flex items-center justify-between">
+                          <span>{isMysteryJar ? 'Total Jar Stock' : 'Stock Quantity'}</span>
+                          {isMysteryJar && variantsList.length > 0 && (
+                            <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                              Auto-summed
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="number" min="0" required
+                          value={editingProduct.stock_quantity ?? (isMysteryJar ? 130 : 50)}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value, 10) || 0 })}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono focus:outline-none focus:border-brand-primary"
+                        />
+                      </div>
+
+                      {/* Only show Pairs Inside if this is Jhumka Boxes */}
+                      {isJhumka && !isMysteryJar && (
+                        <div className="space-y-1">
+                          <label className="font-semibold text-brand-tertiary flex items-center justify-between">
+                            <span>Pairs Inside</span>
+                            <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1 rounded">Boxes</span>
+                          </label>
+                          <input
+                            type="number" min="1" max="50"
+                            value={editingProduct.pairs_count ?? ''}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                            placeholder="e.g. 6 (or 5)"
+                            className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary font-mono focus:outline-none focus:border-brand-primary"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-tertiary">
+                          {isMysteryJar ? 'Packaging / Presentation' : 'Material'}
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.material || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, material: e.target.value })}
+                          placeholder={isMysteryJar ? 'e.g. Aesthetic Glass Jar with Satin Ribbon & Bow' : '18K Gold Plated Stainless Steel'}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs focus:outline-none focus:border-brand-primary"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Jhumka Box Hero Showcase Dedicated Configuration Banner */}
+                    {isJhumka && !isMysteryJar && (
+                      <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+                        <div className="space-y-0.5">
+                          <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                            <Flame className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>4 Signature Jhumka Boxes Ad Showcase Configuration</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800 font-light">
+                            Badge on card: <strong className="font-semibold underline">"{editingProduct.pairs_count || (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside"</strong> • Box # and per-pair badges are removed for clean visuals
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <label className="text-[11px] font-semibold text-amber-900">Pairs inside box:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            value={editingProduct.pairs_count ?? (editingProduct.name?.match(/(\d+)\s*Pair/i)?.[1] || 6)}
+                            onChange={(e) =>
+                              setEditingProduct({
+                                ...editingProduct,
+                                pairs_count: e.target.value === '' ? '' : parseInt(e.target.value, 10),
+                              })
+                            }
+                            className="w-16 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-center font-mono font-bold text-amber-900 shadow-2xs focus:outline-none focus:border-amber-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 3: Pricing */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="font-semibold text-brand-tertiary">
+                            {isMysteryJar || variantsList.length > 0 ? 'Starting Price (₹) *' : 'Selling Price (₹) *'}
+                          </label>
+                          {(isMysteryJar || variantsList.length > 0) && (
+                            <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                              Lowest Size
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="number" step="0.01" disabled={isStaff} required
+                          value={editingProduct.price || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                          placeholder={isMysteryJar ? '499' : ''}
+                          className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'} focus:outline-none focus:border-brand-primary`}
+                        />
+                        {(isMysteryJar || variantsList.length > 0) && (
+                          <p className="text-[10px] text-brand-muted">
+                            Shows as "From ₹{editingProduct.price || '499'}" on catalog cards. Tier pricing is set below.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="font-semibold text-brand-tertiary">
+                            {isMysteryJar || variantsList.length > 0 ? 'Strike MRP (₹)' : 'MRP / Strike Price (₹)'}
+                          </label>
+                          {(isMysteryJar || variantsList.length > 0) && (
+                            <span className="text-[10px] text-brand-muted">Strike-through</span>
+                          )}
+                        </div>
+                        <input
+                          type="number" step="0.01" disabled={isStaff}
+                          value={editingProduct.mrp || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, mrp: e.target.value })}
+                          placeholder={isMysteryJar ? '999' : ''}
+                          className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'} focus:outline-none focus:border-brand-primary`}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-tertiary">Cost Price (₹)</label>
+                        <input
+                          type="number" step="0.01" disabled={isStaff}
+                          value={editingProduct.cost_price || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, cost_price: e.target.value })}
+                          className={`w-full border border-brand-border rounded-xl px-3 py-2 font-mono ${isStaff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAF8FC] text-brand-tertiary'} focus:outline-none focus:border-brand-primary`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Product Sizes & Pricing (Variants) Section */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-4 ${
+                      isMysteryJar
+                        ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-[#FDF4FF] border-brand-primary/40 shadow-xs'
+                        : 'bg-[#FAF8FC] border-brand-border'
+                    }`}>
+                      {/* Header Strip */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              isMysteryJar ? 'bg-brand-primary text-white' : 'bg-purple-100 text-brand-primary'
+                            }`}>
+                              {isMysteryJar ? <Gift className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+                            </div>
+                            <span className="font-editorial text-sm font-bold text-brand-tertiary">
+                              {isMysteryJar ? '✨ Mystery Jar Tiered Sizes & Pricing' : 'Product Sizes & Pricing (Variants)'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-brand-primary border border-brand-primary/30 shadow-2xs">
+                              {variantsList.length} {variantsList.length === 1 ? 'Size' : 'Sizes'} Configured
+                            </span>
+                            {minPrice !== null && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                                ₹{minPrice.toLocaleString('en-IN')}{maxPrice && maxPrice !== minPrice ? ` — ₹${maxPrice.toLocaleString('en-IN')}` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-brand-muted font-light leading-relaxed">
+                            {isMysteryJar
+                              ? 'Configure multiple jar sizes (e.g. Mini 5 Pcs, Classic 10 Pcs, Grand 18 Pcs) with individual selling prices, strike MRPs, and stock. Customers will select their desired size on the storefront!'
+                              : 'Optionally offer multiple sizes, finishes, or editions for this piece, each with its own selling price and strike-through MRP.'}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {isMysteryJar ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleApplyMysteryJarPreset}
+                                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-purple-50 text-brand-primary border border-purple-200 hover:bg-purple-100 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                                title="Reset to standard 3-tier Mystery Jar sizes (Mini, Classic, Grand)"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Reset 3 Tiers</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddVariant()}
+                                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                                title="Add custom jar tier"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Jar Size</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleApplyStandardSizesPreset}
+                                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-tertiary text-xs font-semibold shadow-2xs hover:bg-brand-surface transition-all cursor-pointer"
+                                title="Apply Small, Medium, Large preset"
+                              >
+                                <Package className="w-3.5 h-3.5 text-brand-muted" />
+                                <span>Small/Med/Large Preset</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddVariant()}
+                                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                                title="Add a new custom size/variant row"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Size</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {variantsList.map((variant, vIdx) => {
-                          const vPrice = Number(variant.price || 0);
-                          const vMrp = Number(variant.mrp || 0);
-                          const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
-                          const vActive = Number(variant.is_active) !== 0;
 
-                          return (
-                            <div
-                              key={variant.id || `var-${vIdx}`}
-                              className={`p-3.5 rounded-xl border transition-all ${
-                                vActive
-                                  ? 'bg-white border-brand-border hover:border-brand-primary/40 shadow-2xs'
-                                  : 'bg-gray-50/80 border-gray-200 opacity-75'
-                              }`}
-                            >
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                                {/* Size / Edition Title */}
-                                <div className="sm:col-span-4 space-y-1">
-                                  <label className="text-[11px] font-semibold text-brand-tertiary flex items-center justify-between">
-                                    <span>Size / Edition Title *</span>
-                                    <span className="text-[10px] text-brand-muted font-light">Shown to customer</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={variant.title || ''}
-                                    onChange={(e) => handleUpdateVariant(vIdx, 'title', e.target.value)}
-                                    placeholder="e.g. Mini Mystery Jar (5 Pairs)"
-                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-brand-tertiary font-medium focus:outline-none focus:border-brand-primary"
-                                  />
+                      {/* Variants List */}
+                      {variantsList.length === 0 ? (
+                        <div className="py-6 px-4 rounded-xl border border-dashed border-brand-border bg-white text-center space-y-2">
+                          <p className="text-xs text-brand-muted font-light">
+                            {isMysteryJar
+                              ? 'No jar sizes added yet. Mystery Jars require multiple sizes with different pricing. Click below to add the standard Mystery Jar sizes in 1 click!'
+                              : 'Currently selling as a single size at the base price above.'}
+                          </p>
+                          <div className="flex justify-center gap-2 pt-1">
+                            {isMysteryJar ? (
+                              <button
+                                type="button"
+                                onClick={handleApplyMysteryJarPreset}
+                                className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold shadow-sm hover:bg-brand-primary-hover transition-all cursor-pointer"
+                              >
+                                ✨ Add Standard Mystery Jar Sizes (Mini ₹499 / Classic ₹899 / Grand ₹1499)
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddVariant()}
+                                className="px-3.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-primary text-xs font-semibold shadow-2xs cursor-pointer"
+                              >
+                                + Add First Size / Variant
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {variantsList.map((variant, vIdx) => {
+                            const vPrice = Number(variant.price || 0);
+                            const vMrp = Number(variant.mrp || 0);
+                            const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                            const vActive = Number(variant.is_active) !== 0;
+
+                            return (
+                              <div
+                                key={variant.id || `var-${vIdx}`}
+                                className={`p-4 rounded-xl border transition-all ${
+                                  vActive
+                                    ? 'bg-white border-brand-border hover:border-brand-primary/50 shadow-2xs'
+                                    : 'bg-gray-50/80 border-gray-200 opacity-75'
+                                }`}
+                              >
+                                {/* Tier Card Top Bar */}
+                                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-brand-border/60">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-brand-primary font-mono uppercase">
+                                      {isMysteryJar ? `Jar Tier #${vIdx + 1}` : `Size #${vIdx + 1}`}
+                                    </span>
+                                    <span className="font-semibold text-brand-tertiary text-xs">
+                                      {variant.title || (isMysteryJar ? `Jar Size ${vIdx + 1}` : `Size ${vIdx + 1}`)}
+                                    </span>
+                                    {vPrice > 0 && (
+                                      <span className="font-bold text-brand-primary text-xs">
+                                        ₹{Math.round(vPrice).toLocaleString('en-IN')}
+                                      </span>
+                                    )}
+                                    {vDiscount > 0 && (
+                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                        {vDiscount}% OFF (Save ₹{Math.round(vMrp - vPrice)})
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateVariant(vIdx, 'is_active', vActive ? 0 : 1)}
+                                      className={`inline-flex items-center space-x-1 px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
+                                        vActive
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                          : 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200'
+                                      }`}
+                                      title={vActive ? 'Active on storefront (click to hide)' : 'Hidden from storefront (click to enable)'}
+                                    >
+                                      <Check className={`w-3 h-3 ${vActive ? 'stroke-[2.5]' : 'opacity-40'}`} />
+                                      <span>{vActive ? 'Live on Store' : 'Hidden'}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveVariant(vIdx)}
+                                      className="p-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                                      title="Remove this size tier"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
 
-                                {/* Selling Price (₹) */}
-                                <div className="sm:col-span-2 space-y-1">
-                                  <label className="text-[11px] font-semibold text-brand-tertiary">
-                                    Selling Price (₹) *
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    required
-                                    value={variant.price ?? ''}
-                                    onChange={(e) => handleUpdateVariant(vIdx, 'price', e.target.value)}
-                                    placeholder="499"
-                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                                  />
-                                </div>
+                                {/* Tier Card Inputs Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                                  {/* Size / Edition Title */}
+                                  <div className="sm:col-span-5 space-y-1">
+                                    <label className="text-[11px] font-semibold text-brand-tertiary flex items-center justify-between">
+                                      <span>{isMysteryJar ? 'Jar Tier Name *' : 'Size / Edition Title *'}</span>
+                                      <span className="text-[10px] text-brand-muted font-light">Shown to customer</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      required
+                                      value={variant.title || ''}
+                                      onChange={(e) => handleUpdateVariant(vIdx, 'title', e.target.value)}
+                                      placeholder={isMysteryJar ? 'e.g. Mini Mystery Jar (5 Surprise Pieces)' : 'e.g. Small / 16 inch'}
+                                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-brand-tertiary font-medium focus:outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
 
-                                {/* Strike MRP (₹) */}
-                                <div className="sm:col-span-2 space-y-1">
-                                  <label className="text-[11px] font-semibold text-brand-tertiary">
-                                    MRP (₹)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={variant.mrp ?? ''}
-                                    onChange={(e) => handleUpdateVariant(vIdx, 'mrp', e.target.value)}
-                                    placeholder="999"
-                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-muted focus:outline-none focus:border-brand-primary"
-                                  />
-                                </div>
+                                  {/* Selling Price (₹) */}
+                                  <div className="sm:col-span-2 space-y-1">
+                                    <label className="text-[11px] font-semibold text-brand-tertiary">
+                                      Price (₹) *
+                                    </label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      required
+                                      value={variant.price ?? ''}
+                                      onChange={(e) => handleUpdateVariant(vIdx, 'price', e.target.value)}
+                                      placeholder="499"
+                                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-brand-primary focus:outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
 
-                                {/* Stock Quantity */}
-                                <div className="sm:col-span-1 space-y-1">
-                                  <label className="text-[11px] font-semibold text-brand-tertiary">
-                                    Stock
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={variant.stock_quantity ?? 25}
-                                    onChange={(e) => handleUpdateVariant(vIdx, 'stock_quantity', parseInt(e.target.value, 10) || 0)}
-                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2 py-1.5 text-xs font-mono text-center text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                                  />
-                                </div>
+                                  {/* Strike MRP (₹) */}
+                                  <div className="sm:col-span-2 space-y-1">
+                                    <label className="text-[11px] font-semibold text-brand-tertiary">
+                                      Strike MRP (₹)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={variant.mrp ?? ''}
+                                      onChange={(e) => handleUpdateVariant(vIdx, 'mrp', e.target.value)}
+                                      placeholder="999"
+                                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-muted focus:outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
 
-                                {/* Variant SKU */}
-                                <div className="sm:col-span-2 space-y-1">
-                                  <label className="text-[11px] font-semibold text-brand-tertiary">
-                                    Variant SKU
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={variant.sku || ''}
-                                    onChange={(e) => handleUpdateVariant(vIdx, 'sku', e.target.value)}
-                                    placeholder="VJ-MJAR-MINI"
-                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                                  />
-                                </div>
+                                  {/* Stock Quantity */}
+                                  <div className="sm:col-span-1 space-y-1">
+                                    <label className="text-[11px] font-semibold text-brand-tertiary text-center block">
+                                      Stock
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={variant.stock_quantity ?? 50}
+                                      onChange={(e) => handleUpdateVariant(vIdx, 'stock_quantity', parseInt(e.target.value, 10) || 0)}
+                                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2 py-1.5 text-xs font-mono text-center text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
 
-                                {/* Actions & Toggle */}
-                                <div className="sm:col-span-1 flex items-center justify-end space-x-1.5 pb-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateVariant(vIdx, 'is_active', vActive ? 0 : 1)}
-                                    className={`p-1.5 rounded-lg border transition-all ${
-                                      vActive
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                        : 'bg-gray-100 text-gray-400 border-gray-300'
-                                    }`}
-                                    title={vActive ? 'Size is active on storefront (click to hide)' : 'Size is hidden (click to enable)'}
-                                  >
-                                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveVariant(vIdx)}
-                                    className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
-                                    title="Remove this size"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                  {/* Variant SKU */}
+                                  <div className="sm:col-span-2 space-y-1">
+                                    <label className="text-[11px] font-semibold text-brand-tertiary">
+                                      Tier SKU
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={variant.sku || ''}
+                                      onChange={(e) => handleUpdateVariant(vIdx, 'sku', e.target.value)}
+                                      placeholder={isMysteryJar ? `VJ-MJAR-T${vIdx + 1}` : `VJ-SZ${vIdx + 1}`}
+                                      className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
                                 </div>
                               </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
 
-                              {/* Size Badge & Live Discount Preview */}
-                              <div className="flex items-center justify-between pt-2 mt-2 border-t border-brand-border/60 text-[11px] text-brand-muted">
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-semibold text-brand-tertiary">
-                                    {variant.title || `Size #${vIdx + 1}`}
-                                  </span>
-                                  {vPrice > 0 && (
-                                    <span className="font-bold text-brand-primary">
-                                      ₹{Math.round(vPrice).toLocaleString('en-IN')}
-                                    </span>
-                                  )}
-                                  {vDiscount > 0 && (
-                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                      {vDiscount}% OFF (Save ₹{Math.round(vMrp - vPrice)})
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                  <span className={vActive ? 'text-emerald-700 font-semibold' : 'text-gray-400 font-medium'}>
-                                    {vActive ? '● Live on Store' : '○ Disabled'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                    {/* Row 4: Descriptions */}
+                    <div className="space-y-1">
+                      <label className="font-semibold text-brand-tertiary">Short Ad Hook / Summary</label>
+                      <input
+                        type="text"
+                        value={editingProduct.short_description || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, short_description: e.target.value })}
+                        placeholder={
+                          isMysteryJar
+                            ? 'e.g. 100% surprise selection of premium waterproof jewelry packed in an aesthetic ribbon-tied jar...'
+                            : 'e.g. 6 handcrafted antique gold & pearl jhumka pairs...'
+                        }
+                        className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                      />
+                    </div>
+                  </>
                 );
               })()}
-
-              {/* Row 4: Descriptions */}
-              <div className="space-y-1">
-                <label className="font-semibold text-brand-tertiary">Short Ad Hook / Summary</label>
-                <input
-                  type="text"
-                  value={editingProduct.short_description || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, short_description: e.target.value })}
-                  placeholder="e.g. 6 handcrafted antique gold & pearl jhumka pairs..."
-                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary"
-                />
-              </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
