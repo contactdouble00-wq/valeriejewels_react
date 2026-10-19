@@ -93,6 +93,94 @@ class AdminAuth {
     }
 
     /**
+     * Safely attempt to authenticate admin or staff user from JWT token without throwing 401.
+     * Returns decoded admin user array if valid, null otherwise.
+     *
+     * @param array $allowedRoles
+     * @return array|null
+     */
+    public static function tryAuthenticate(array $allowedRoles = ['admin', 'staff']): ?array {
+        try {
+            handleCors();
+
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+
+            if (empty($authHeader) && function_exists('apache_request_headers')) {
+                $headers = apache_request_headers();
+                $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+            }
+
+            if (empty($authHeader) && !empty($_SERVER['HTTP_X_ADMIN_TOKEN'])) {
+                $authHeader = 'Bearer ' . trim($_SERVER['HTTP_X_ADMIN_TOKEN']);
+            }
+
+            if (empty($authHeader) && !empty($_GET['token'])) {
+                $authHeader = 'Bearer ' . $_GET['token'];
+            }
+
+            if (empty($authHeader) && !empty($_GET['preview_token'])) {
+                $authHeader = 'Bearer ' . $_GET['preview_token'];
+            }
+
+            if (empty($authHeader) && !empty($_COOKIE['valerie_admin_token'])) {
+                $authHeader = 'Bearer ' . $_COOKIE['valerie_admin_token'];
+            }
+
+            if (empty($authHeader) || !preg_match('/Bearer\s+(.+)$/i', $authHeader, $matches)) {
+                return null;
+            }
+
+            $jwtToken = trim($matches[1]);
+            $tokenHash = hash('sha256', $jwtToken);
+
+            $pdo = Database::getConnection();
+
+            try {
+                $blStmt = $pdo->prepare("SELECT 1 FROM token_blacklist WHERE token_hash = ? AND expires_at > ? LIMIT 1");
+                $blStmt->execute([$tokenHash, time()]);
+                if ($blStmt->fetchColumn()) {
+                    return null;
+                }
+            } catch (Throwable $e) {}
+
+            $configFile = dirname(__DIR__) . '/config/config.php';
+            $config = file_exists($configFile)
+                ? require $configFile
+                : require dirname(__DIR__) . '/config/config.sample.php';
+
+            $jwtSecret = $config['jwt']['secret'] ?? 'valerie_default_secret_key_2026';
+
+            $payload = JWT::decode($jwtToken, $jwtSecret);
+            $userId = (int)($payload['sub'] ?? 0);
+            if ($userId <= 0) {
+                return null;
+            }
+
+            $userCheckStmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1");
+            $userCheckStmt->execute([$userId]);
+            $activeUser = $userCheckStmt->fetch();
+
+            if (!$activeUser) {
+                return null;
+            }
+
+            $role = $activeUser['role'] ?? ($payload['role'] ?? 'customer');
+            if (!in_array($role, $allowedRoles, true)) {
+                return null;
+            }
+
+            return [
+                'id'    => (int)$activeUser['id'],
+                'name'  => $activeUser['name'],
+                'email' => $activeUser['email'],
+                'role'  => $role,
+            ];
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Log an administrative action to admin_activity_log
      */
     public static function logActivity(int $adminId, string $action, string $targetEntity, $targetId, $details = null): void {

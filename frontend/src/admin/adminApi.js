@@ -164,6 +164,18 @@ export const adminApi = {
     return res.data;
   },
 
+  async toggleProductLive(productId, isActive = null) {
+    const payload = { product_id: productId };
+    if (isActive !== null) {
+      payload.is_active = isActive ? 1 : 0;
+    }
+    const res = await request('/admin/products.php?action=toggle_live', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  },
+
   async duplicateProduct(productId) {
     const res = await request('/admin/products.php?action=duplicate', {
       method: 'POST',

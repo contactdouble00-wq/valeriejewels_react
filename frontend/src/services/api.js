@@ -38,7 +38,7 @@ import { DEFAULT_FAQS_DATA } from '../data/defaultFaqs';
 import { normalizeProductMedia } from '../utils/mediaUtils';
 
 function filterSeedProducts(params = {}) {
-  let list = [...SEED_PRODUCTS];
+  let list = SEED_PRODUCTS.filter((p) => p.is_active === undefined || Number(p.is_active) === 1);
 
   if (params.category && params.category !== 'all') {
     list = list.filter((p) => p.category_slug === params.category || String(p.category_id) === String(params.category));
@@ -198,22 +198,34 @@ export const apiService = {
   /**
    * Fetch full product details by slug or id with seed fallback and fuzzy resolution
    */
-  async getProductDetail(slugOrId) {
+  async getProductDetail(slugOrId, options = {}) {
     if (!slugOrId) return null;
     const isId = typeof slugOrId === 'number' || /^\d+$/.test(slugOrId);
     const param = isId ? `id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
+
+    const adminToken = (typeof window !== 'undefined') ? (localStorage.getItem('valerie_admin_token') || '') : '';
+    const headers = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    };
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+      headers['X-Admin-Token'] = adminToken;
+    }
+    const tokenQuery = (adminToken || options.preview) ? `&preview=1&token=${encodeURIComponent(adminToken)}` : '';
+
     try {
-      const url = `${API_BASE_URL}/products/detail.php?${param}&_t=${Date.now()}`;
+      const url = `${API_BASE_URL}/products/detail.php?${param}${tokenQuery}&_t=${Date.now()}`;
       const response = await fetch(url, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-        },
+        headers,
       });
       if (response.ok) {
         const result = await response.json();
         if (result.data) return normalizeProductMedia(result.data);
+      }
+      if (response.status === 404) {
+        return null;
       }
     } catch (err) {
       console.warn('API getProductDetail error, checking catalog fallback:', err);

@@ -146,12 +146,17 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 return data.variants[0];
               });
             }
-          } else if (!fallbackProduct) {
-            setError('This jewelry piece could not be found or may have been updated.');
+          } else {
+            // Data is null: product is inactive on storefront or not found
+            setProduct(null);
+            setError('This jewelry piece is currently inactive or not available on the storefront.');
           }
         }
       } catch (err) {
-        if (isMounted && !fallbackProduct) setError(err.message || 'Unable to load product details');
+        if (isMounted) {
+          setProduct(null);
+          setError(err.message || 'Unable to load product details');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -533,6 +538,23 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             </button>
           </div>
         </header>
+
+        {/* Admin Preview Mode Notice Banner */}
+        {Boolean(product && (product.is_preview || Number(product.is_active) === 0)) && (
+          <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md z-30 shrink-0 border-b border-amber-500/40">
+            <div className="flex items-center space-x-2">
+              <span className="text-base">👁️</span>
+              <div>
+                <span className="font-bold uppercase tracking-wider text-[10px] bg-black/30 px-1.5 py-0.5 rounded mr-1.5">
+                  ADMIN PREVIEW
+                </span>
+                <span className="text-amber-100 text-[11px]">
+                  This product is currently <strong>HIDDEN</strong> from the live storefront. Only authorized admins can see this preview.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && !product ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-12">

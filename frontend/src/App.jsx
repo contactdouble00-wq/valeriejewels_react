@@ -1444,162 +1444,167 @@ export default function App() {
   }, []);
 
 
-  if (currentRoute === 'admin') {
-    return (
-      <ErrorBoundary>
-        <React.Suspense
-          fallback={
-            <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
-              <div className="flex flex-col items-center space-y-3">
-                <div className="w-8 h-8 border-2 border-[#8366B0] border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-xs uppercase tracking-widest text-[#A19DAA]">Loading Management Portal...</p>
+  const renderRouteContent = () => {
+    if (currentRoute === 'admin') {
+      return (
+        <ErrorBoundary>
+          <React.Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-[#8366B0] border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs uppercase tracking-widest text-[#A19DAA]">Loading Management Portal...</p>
+                </div>
               </div>
-            </div>
-          }
-        >
-          <AdminPortal
-            onReturnToStore={() => {
-              window.location.hash = '';
-              if (window.location.pathname.startsWith('/vj-manage-x1126')) {
-                window.history.pushState(null, '', '/');
-              }
-              setCurrentRoute('store');
-            }}
-          />
-        </React.Suspense>
-      </ErrorBoundary>
-    );
-  }
+            }
+          >
+            <AdminPortal
+              onReturnToStore={() => {
+                window.location.hash = '';
+                if (window.location.pathname.startsWith('/vj-manage-x1126')) {
+                  window.history.pushState(null, '', '/');
+                }
+                setCurrentRoute('store');
+              }}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
+      );
+    }
 
-  if (currentRoute.startsWith('policy-')) {
-    const policyTab = currentRoute.replace('policy-', '') || 'shipping';
-    return (
-      <PolicyPage
-        initialTab={policyTab}
-        onNavigateTab={(tab) => {
-          const slugMap = {
-            shipping: 'shipping-policy',
-            refund: 'refund-policy',
-            privacy: 'privacy-policy',
-            terms: 'terms-and-conditions',
-          };
-          const slug = slugMap[tab] || 'shipping-policy';
-          window.history.pushState(null, '', `/${slug}`);
-          window.location.hash = `#${slug}`;
-          setCurrentRoute(`policy-${tab}`);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onReturnToStore={() => {
-          window.history.pushState(null, '', '/');
-          window.location.hash = '';
-          setCurrentRoute('store');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
-    );
-  }
+    if (currentRoute.startsWith('policy-')) {
+      const policyTab = currentRoute.replace('policy-', '') || 'shipping';
+      return (
+        <PolicyPage
+          initialTab={policyTab}
+          onNavigateTab={(tab) => {
+            const slugMap = {
+              shipping: 'shipping-policy',
+              refund: 'refund-policy',
+              privacy: 'privacy-policy',
+              terms: 'terms-and-conditions',
+            };
+            const slug = slugMap[tab] || 'shipping-policy';
+            window.history.pushState(null, '', `/${slug}`);
+            window.location.hash = `#${slug}`;
+            setCurrentRoute(`policy-${tab}`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onReturnToStore={() => {
+            window.history.pushState(null, '', '/');
+            window.location.hash = '';
+            setCurrentRoute('store');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      );
+    }
 
-  if (currentRoute === 'faqs') {
-    return (
-      <FaqPage
-        onReturnToStore={() => {
-          window.history.pushState(null, '', '/');
-          window.location.hash = '';
-          setCurrentRoute('store');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onNavigatePolicy={(tab) => {
-          const slugMap = {
-            shipping: 'shipping-policy',
-            refund: 'refund-policy',
-            privacy: 'privacy-policy',
-            terms: 'terms-and-conditions',
-          };
-          const slug = slugMap[tab] || 'shipping-policy';
-          window.history.pushState(null, '', `/${slug}`);
-          window.location.hash = `#${slug}`;
-          setCurrentRoute(`policy-${tab}`);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
-    );
-  }
+    if (currentRoute === 'faqs') {
+      return (
+        <FaqPage
+          onReturnToStore={() => {
+            window.history.pushState(null, '', '/');
+            window.location.hash = '';
+            setCurrentRoute('store');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onNavigatePolicy={(tab) => {
+            const slugMap = {
+              shipping: 'shipping-policy',
+              refund: 'refund-policy',
+              privacy: 'privacy-policy',
+              terms: 'terms-and-conditions',
+            };
+            const slug = slugMap[tab] || 'shipping-policy';
+            window.history.pushState(null, '', `/${slug}`);
+            window.location.hash = `#${slug}`;
+            setCurrentRoute(`policy-${tab}`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      );
+    }
 
-  if (currentRoute === '404') {
+    if (currentRoute === '404') {
+      return (
+        <NotFoundPage
+          onNavigateHome={() => {
+            window.history.pushState(null, '', '/');
+            window.location.hash = '';
+            setCurrentRoute('store');
+          }}
+          onSelectCategory={(catSlug) => {
+            setInitialCategory(catSlug);
+            window.history.pushState(null, '', '/');
+            window.location.hash = '#catalog';
+            setCurrentRoute('store');
+          }}
+          onSearch={(query) => {
+            setInitialSearchQuery(query);
+            window.history.pushState(null, '', '/');
+            window.location.hash = '#catalog';
+            setCurrentRoute('store');
+          }}
+        />
+      );
+    }
+
     return (
-      <NotFoundPage
+      <StorefrontContent
+        isOrderConfirmation={currentRoute === 'order-confirmation'}
+        isOrderFailed={currentRoute === 'order-failed'}
+        onNavigateOrderConfirmation={(orderNum) => {
+          window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
+          setCurrentRoute('order-confirmation');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateOrderFailed={(orderNum) => {
+          window.history.replaceState(null, '', `/order-failed/${orderNum}`);
+          setCurrentRoute('order-failed');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         onNavigateHome={() => {
           window.history.pushState(null, '', '/');
           window.location.hash = '';
           setCurrentRoute('store');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onSelectCategory={(catSlug) => {
-          setInitialCategory(catSlug);
-          window.history.pushState(null, '', '/');
-          window.location.hash = '#catalog';
-          setCurrentRoute('store');
+        initialCategory={initialCategory}
+        initialSearchQuery={initialSearchQuery}
+        onOpenAdmin={() => {
+          window.location.hash = '#vj-manage-x1126';
+          setCurrentRoute('admin');
         }}
-        onSearch={(query) => {
-          setInitialSearchQuery(query);
-          window.history.pushState(null, '', '/');
-          window.location.hash = '#catalog';
-          setCurrentRoute('store');
+        onOpenPolicy={(tab) => {
+          const slugMap = {
+            shipping: 'shipping-policy',
+            refund: 'refund-policy',
+            privacy: 'privacy-policy',
+            terms: 'terms-and-conditions',
+          };
+          const slug = slugMap[tab] || 'shipping-policy';
+          window.history.pushState(null, '', `/${slug}`);
+          window.location.hash = `#${slug}`;
+          setCurrentRoute(`policy-${tab}`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onOpenFaqs={() => {
+          window.history.pushState(null, '', '/faqs');
+          window.location.hash = '#faqs';
+          setCurrentRoute('faqs');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
     );
-  }
+  };
 
   return (
     <SiteContentProvider>
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-
-            <StorefrontContent
-              isOrderConfirmation={currentRoute === 'order-confirmation'}
-              isOrderFailed={currentRoute === 'order-failed'}
-              onNavigateOrderConfirmation={(orderNum) => {
-                window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
-                setCurrentRoute('order-confirmation');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              onNavigateOrderFailed={(orderNum) => {
-                window.history.replaceState(null, '', `/order-failed/${orderNum}`);
-                setCurrentRoute('order-failed');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              onNavigateHome={() => {
-                window.history.pushState(null, '', '/');
-                window.location.hash = '';
-                setCurrentRoute('store');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              initialCategory={initialCategory}
-              initialSearchQuery={initialSearchQuery}
-              onOpenAdmin={() => {
-                window.location.hash = '#vj-manage-x1126';
-                setCurrentRoute('admin');
-              }}
-              onOpenPolicy={(tab) => {
-                const slugMap = {
-                  shipping: 'shipping-policy',
-                  refund: 'refund-policy',
-                  privacy: 'privacy-policy',
-                  terms: 'terms-and-conditions',
-                };
-                const slug = slugMap[tab] || 'shipping-policy';
-                window.history.pushState(null, '', `/${slug}`);
-                window.location.hash = `#${slug}`;
-                setCurrentRoute(`policy-${tab}`);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              onOpenFaqs={() => {
-                window.history.pushState(null, '', '/faqs');
-                window.location.hash = '#faqs';
-                setCurrentRoute('faqs');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-            />
+            {renderRouteContent()}
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>

@@ -82,8 +82,18 @@ if ($method === 'GET') {
     $search = trim($_GET['search'] ?? '');
     $category = trim($_GET['category'] ?? '');
     $isBestseller = isset($_GET['is_bestseller']) ? (int)$_GET['is_bestseller'] : null;
+    $status = strtolower(trim($_GET['status'] ?? ''));
 
-    $where = [isset($_GET['include_inactive']) ? "1=1" : "p.is_active = 1"];
+    // Admin catalog management shows all products (both Live and Draft/Hidden) by default
+    if ($status === 'live' || $status === 'active') {
+        $where = ["p.is_active = 1"];
+    } elseif ($status === 'draft' || $status === 'hidden' || $status === 'inactive') {
+        $where = ["p.is_active = 0"];
+    } elseif (isset($_GET['include_inactive']) && ($_GET['include_inactive'] === '0' || $_GET['include_inactive'] === 'false')) {
+        $where = ["p.is_active = 1"];
+    } else {
+        $where = ["1=1"];
+    }
     $params = [];
 
     if ($search !== '') {
@@ -251,6 +261,49 @@ if ($action === 'quick_stock') {
     );
 
     ApiResponse::success(['product_id' => $productId, 'stock_quantity' => $newStock], 'Stock updated successfully');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST?action=toggle_live — Quick Toggle Live/Draft Status on Storefront
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'toggle_live' || $action === 'quick_status' || $action === 'toggle_status') {
+    $productId = (int)($input['product_id'] ?? ($input['id'] ?? ($_GET['id'] ?? 0)));
+    if ($productId <= 0) {
+        ApiResponse::error('Valid product ID is required', 422);
+    }
+
+    $currStmt = $pdo->prepare("SELECT id, name, is_active FROM products WHERE id = ?");
+    $currStmt->execute([$productId]);
+    $prod = $currStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$prod) {
+        ApiResponse::error('Product not found', 404);
+    }
+
+    $newActive = isset($input['is_active'])
+        ? ((int)$input['is_active'] === 1 ? 1 : 0)
+        : ((int)$prod['is_active'] === 1 ? 0 : 1);
+
+    $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
+    $stmt->execute([$newActive, $productId]);
+
+    AdminAuth::logActivity(
+        $adminUser['id'],
+        $newActive ? 'publish_product' : 'unpublish_product',
+        'product',
+        $productId,
+        ['name' => $prod['name'], 'is_active' => $newActive]
+    );
+
+    ApiResponse::success([
+        'product_id' => $productId,
+        'id'         => $productId,
+        'name'       => $prod['name'],
+        'is_active'  => $newActive,
+        'is_live'    => $newActive === 1,
+    ], $newActive === 1 
+        ? "'{$prod['name']}' is now Live on storefront" 
+        : "'{$prod['name']}' is now Hidden from storefront (Admin preview only)");
 }
 
 // Handle Duplicate Product

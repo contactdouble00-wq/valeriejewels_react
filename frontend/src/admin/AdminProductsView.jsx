@@ -3,9 +3,10 @@ import {
   Plus, Search, Filter, Copy, Trash2, Edit2, Star,
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
-  ChevronUp, Sparkles, Film, Play, Eye,
+  ChevronUp, Sparkles, Film, Play, Eye, ExternalLink, Zap
 } from 'lucide-react';
 import ProductAssuranceModal from './ProductAssuranceModal';
+import AdminProductPreviewModal from './AdminProductPreviewModal';
 import FormattedDescription from '../components/FormattedDescription';
 import {
   DndContext,
@@ -188,6 +189,9 @@ export default function AdminProductsView({ currentUser }) {
   const [seoOpen, setSeoOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
   const [assuranceProduct, setAssuranceProduct] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'live' | 'draft'
+  const [togglingLiveId, setTogglingLiveId] = useState(null);
+  const [previewProduct, setPreviewProduct] = useState(null);
   const csvImportRef = useRef(null);
   const isStaff = currentUser?.role === 'staff';
 
@@ -251,6 +255,53 @@ export default function AdminProductsView({ currentUser }) {
       showToast('Stock updated');
     } catch (err) {
       showToast(err.message || 'Failed to update stock');
+    }
+  };
+
+  // ── Toggle Live / Storefront Visibility ──────────────────────────────────
+  const handleToggleLive = async (product) => {
+    const isCurrentLive = Number(product.is_active) !== 0;
+    const nextActive = isCurrentLive ? 0 : 1;
+    setTogglingLiveId(product.id);
+
+    // Optimistic update
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, is_active: nextActive } : p))
+    );
+
+    // If currently previewing this product, update preview modal state as well
+    setPreviewProduct((prev) => (prev && prev.id === product.id ? { ...prev, is_active: nextActive } : prev));
+
+    try {
+      const res = await adminApi.toggleProductLive(product.id, nextActive);
+      showToast(
+        nextActive === 1
+          ? `🟢 "${product.name}" is now Live on Storefront`
+          : `⚪ "${product.name}" is now Hidden (Admin preview only)`
+      );
+      notifyCatalogChange();
+    } catch (err) {
+      // Revert optimistic update
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, is_active: isCurrentLive ? 1 : 0 } : p))
+      );
+      setPreviewProduct((prev) => (prev && prev.id === product.id ? { ...prev, is_active: isCurrentLive ? 1 : 0 } : prev));
+      showToast(err.message || 'Failed to update live status');
+    } finally {
+      setTogglingLiveId(null);
+    }
+  };
+
+  // ── Open Storefront Product Preview ───────────────────────────────────────
+  const handleOpenPreview = async (product) => {
+    setPreviewProduct(product);
+    try {
+      const full = await adminApi.getProduct(product.id);
+      if (full && full.id === product.id) {
+        setPreviewProduct((curr) => (curr && curr.id === product.id ? full : curr));
+      }
+    } catch {
+      // Retain initial product on failure
     }
   };
 
@@ -526,6 +577,15 @@ export default function AdminProductsView({ currentUser }) {
     }));
   };
 
+  const liveCount = products.filter((p) => Number(p.is_active) !== 0).length;
+  const draftCount = products.filter((p) => Number(p.is_active) === 0).length;
+
+  const filteredProducts = products.filter((p) => {
+    if (statusFilter === 'live') return Number(p.is_active) !== 0;
+    if (statusFilter === 'draft') return Number(p.is_active) === 0;
+    return true;
+  });
+
   return (
     <div className="p-6 sm:p-8 space-y-6 w-full">
       {/* Toast */}
@@ -595,19 +655,60 @@ export default function AdminProductsView({ currentUser }) {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-brand-border flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
-        <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, SKU, or tag..."
-            className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
-          />
-          <Search className="w-3.5 h-3.5 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
-        </form>
+      <div className="bg-white rounded-2xl p-4 border border-brand-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-72">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, SKU, or tag..."
+              className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+            />
+            <Search className="w-3.5 h-3.5 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          </form>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
+          {/* Live / Draft Visibility Segmented Control */}
+          <div className="flex items-center p-1 bg-[#FAF8FC] border border-brand-border rounded-xl shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                statusFilter === 'all'
+                  ? 'bg-white text-brand-tertiary shadow-xs'
+                  : 'text-brand-muted hover:text-brand-tertiary'
+              }`}
+            >
+              All ({products.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('live')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                statusFilter === 'live'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'live' ? 'bg-white' : 'bg-emerald-500 animate-pulse'}`} />
+              <span>Live ({liveCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('draft')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                statusFilter === 'draft'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-amber-800 hover:bg-amber-50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'draft' ? 'bg-white' : 'bg-amber-500'}`} />
+              <span>Hidden ({draftCount})</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto scrollbar-thin">
           <button
             onClick={() => setCategoryFilter('')}
             className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${categoryFilter === ''
@@ -615,7 +716,7 @@ export default function AdminProductsView({ currentUser }) {
               : 'bg-[#FAF8FC] text-brand-tertiary hover:bg-brand-primary-light'
               }`}
           >
-            All
+            All Categories
           </button>
           {/* Dynamic category pills from API */}
           {categories.map((cat) => (
@@ -646,6 +747,7 @@ export default function AdminProductsView({ currentUser }) {
                 <th className="py-3.5 px-4">Category</th>
                 <th className="py-3.5 px-4">Selling Price</th>
                 <th className="py-3.5 px-4">Stock (Quick Edit)</th>
+                <th className="py-3.5 px-4">Live on Store</th>
                 <th className="py-3.5 px-4">Status / Ad Hero</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
@@ -653,20 +755,21 @@ export default function AdminProductsView({ currentUser }) {
             <tbody className="divide-y divide-brand-border/60">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-brand-muted">
+                  <td colSpan={7} className="py-12 text-center text-brand-muted">
                     Loading catalog inventory...
                   </td>
                 </tr>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-brand-muted">
+                  <td colSpan={7} className="py-12 text-center text-brand-muted">
                     No products found matching criteria.
                   </td>
                 </tr>
               ) : (
-                products.map((p) => {
+                filteredProducts.map((p) => {
                   const isJhumkaBox = p.category_slug === 'jhumka-boxes' || (p.sku && p.sku.startsWith('VJ-JHM'));
                   const isLow = Number(p.stock_quantity) <= 25;
+                  const isLive = Number(p.is_active) !== 0;
 
                   return (
                     <tr key={p.id} className="hover:bg-[#FAF8FC] transition-colors">
@@ -777,6 +880,43 @@ export default function AdminProductsView({ currentUser }) {
                         )}
                       </td>
 
+                      {/* Live / Storefront Toggle Column */}
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col space-y-1">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isLive}
+                            onClick={() => handleToggleLive(p)}
+                            disabled={togglingLiveId === p.id}
+                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
+                              isLive ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-gray-300 hover:bg-gray-400'
+                            } ${togglingLiveId === p.id ? 'opacity-60 cursor-wait' : ''}`}
+                            title={isLive ? 'Click to disable (hide from storefront)' : 'Click to make live on storefront'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                                isLive ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            >
+                              {togglingLiveId === p.id ? (
+                                <RefreshCw className="w-2.5 h-2.5 text-gray-500 animate-spin" />
+                              ) : isLive ? (
+                                <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                              ) : (
+                                <X className="w-2.5 h-2.5 text-gray-400 stroke-[3]" />
+                              )}
+                            </span>
+                          </button>
+                          <div className="flex items-center space-x-1">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                            <span className={`text-[10px] font-bold whitespace-nowrap ${isLive ? 'text-emerald-700' : 'text-gray-500'}`}>
+                              {isLive ? 'Live on Store' : 'Hidden / Draft'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
                       <td className="py-3 px-4 space-y-1">
                         {isJhumkaBox && (
                           <div className="space-y-0.5">
@@ -807,14 +947,33 @@ export default function AdminProductsView({ currentUser }) {
                       </td>
 
                       <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        {/* Storefront PDP Preview Action */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(p)}
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all shadow-2xs cursor-pointer mr-1 ${
+                            !isLive
+                              ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                              : 'bg-sky-50 hover:bg-sky-600 hover:text-white text-sky-700 border-sky-200'
+                          }`}
+                          title={!isLive ? "Admin Preview (Preview draft on storefront PDP)" : "Preview Piece on Storefront"}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Preview</span>
+                          {!isLive && (
+                            <span className="text-[8px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold uppercase">
+                              Draft
+                            </span>
+                          )}
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleOpenAssurance(p)}
                           className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer mr-1"
-                          title="View Product Image (Assurance Preview)"
+                          title="Inspect High-Res Photos (Visual Quality Assurance)"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Image</span>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Photos</span>
                         </button>
                         <button
                           onClick={() => handleOpenEdit(p)}
@@ -1190,26 +1349,83 @@ export default function AdminProductsView({ currentUser }) {
 
               </div>
 
-              {/* Row 6: Toggles */}
-              <div className="flex flex-wrap gap-6 pt-2 border-t border-brand-border">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editingProduct.is_bestseller}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, is_bestseller: e.target.checked ? 1 : 0 })}
-                    className="rounded text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span className="text-brand-tertiary font-medium">Add to Bestselling Section (Homepage Spotlight)</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingProduct.is_active !== 0}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, is_active: e.target.checked ? 1 : 0 })}
-                    className="rounded text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span className="text-brand-tertiary font-medium">Published (visible on storefront)</span>
-                </label>
+              {/* Row 6: Toggles & Storefront Visibility Card */}
+              <div className="space-y-3 pt-2 border-t border-brand-border">
+                {/* Storefront Live Status Toggle Card */}
+                <div className="p-4 rounded-2xl border border-brand-border bg-[#FAF8FC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-brand-tertiary">Storefront Live Status</span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          editingProduct.is_active !== 0
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-amber-100 text-amber-900 border border-amber-300'
+                        }`}
+                      >
+                        {editingProduct.is_active !== 0 ? '🟢 Live on Storefront' : '⚪ Hidden / Draft'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-brand-muted mt-1 leading-normal max-w-lg">
+                      {editingProduct.is_active !== 0
+                        ? 'Active piece — live on the customer storefront across homepage, catalog, search, and bundles.'
+                        : 'Hidden piece — unpublished from the customer storefront. Only admins can preview this product.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPreview(editingProduct)}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white text-brand-primary border border-purple-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                      title="Preview how this piece looks on storefront"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
+
+                    {/* Toggle Switch */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={editingProduct.is_active !== 0}
+                      onClick={() =>
+                        setEditingProduct((prev) => ({
+                          ...prev,
+                          is_active: prev.is_active === 0 ? 1 : 0,
+                        }))
+                      }
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
+                        editingProduct.is_active !== 0 ? 'bg-emerald-500' : 'bg-gray-300'
+                      }`}
+                      title="Toggle live storefront visibility"
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                          editingProduct.is_active !== 0 ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      >
+                        {editingProduct.is_active !== 0 ? (
+                          <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                        ) : (
+                          <X className="w-2.5 h-2.5 text-gray-400 stroke-[3]" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-6 pt-1">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!editingProduct.is_bestseller}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, is_bestseller: e.target.checked ? 1 : 0 })}
+                      className="rounded text-brand-primary focus:ring-brand-primary"
+                    />
+                    <span className="text-brand-tertiary font-medium">Add to Bestselling Section (Homepage Spotlight)</span>
+                  </label>
+                </div>
               </div>
 
               {/* Row 7: SEO Accordion */}
@@ -1287,21 +1503,33 @@ export default function AdminProductsView({ currentUser }) {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-brand-border">
+              <div className="flex items-center justify-between pt-4 border-t border-brand-border">
                 <button
                   type="button"
-                  onClick={() => setEditingProduct(null)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold transition-colors"
+                  onClick={() => handleOpenPreview(editingProduct)}
+                  className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-primary border border-purple-200 text-xs font-semibold transition-colors flex items-center space-x-1.5"
+                  title="Preview Storefront PDP"
                 >
-                  Cancel
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Storefront</span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={modalSaving}
-                  className="px-6 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold transition-colors shadow-md disabled:opacity-50"
-                >
-                  {modalSaving ? 'Saving Product...' : 'Save & Publish'}
-                </button>
+
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(null)}
+                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={modalSaving}
+                    className="px-6 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold transition-colors shadow-md disabled:opacity-50"
+                  >
+                    {modalSaving ? 'Saving Product...' : editingProduct.is_active !== 0 ? 'Save & Publish Live' : 'Save as Hidden (Draft)'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1351,6 +1579,19 @@ export default function AdminProductsView({ currentUser }) {
         onClose={() => setAssuranceProduct(null)}
         onEdit={(prod) => {
           setAssuranceProduct(null);
+          handleOpenEdit(prod);
+        }}
+      />
+
+      {/* Admin Storefront Product Preview Modal */}
+      <AdminProductPreviewModal
+        isOpen={Boolean(previewProduct)}
+        product={previewProduct}
+        onClose={() => setPreviewProduct(null)}
+        onToggleLive={handleToggleLive}
+        isTogglingLive={previewProduct ? togglingLiveId === previewProduct.id : false}
+        onEdit={(prod) => {
+          setPreviewProduct(null);
           handleOpenEdit(prod);
         }}
       />

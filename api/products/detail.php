@@ -7,6 +7,7 @@
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/config/database.php';
+require_once dirname(__DIR__) . '/utils/admin_auth.php';
 
 handleCors();
 
@@ -20,6 +21,11 @@ try {
         ApiResponse::error('Please provide a product slug or id', 400);
     }
 
+    // Check if requester is an authenticated admin or staff member (allows preview of hidden/draft products)
+    $adminUser = AdminAuth::tryAuthenticate(['admin', 'staff']);
+    $isAdmin = !empty($adminUser);
+    $activeCondition = $isAdmin ? '1=1' : 'p.is_active = 1';
+
     // 1. Fetch Product
     if (!empty($slug)) {
         $stmt = $pdo->prepare("
@@ -30,7 +36,7 @@ try {
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.slug = :slug AND p.is_active = 1
+            WHERE p.slug = :slug AND {$activeCondition}
             LIMIT 1
         ");
         $stmt->execute([':slug' => $slug]);
@@ -48,7 +54,7 @@ try {
                     ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                WHERE (p.slug LIKE :prefix OR p.slug LIKE :kw OR p.name LIKE :prefix) AND p.is_active = 1
+                WHERE (p.slug LIKE :prefix OR p.slug LIKE :kw OR p.name LIKE :prefix) AND {$activeCondition}
                 LIMIT 1
             ");
             $stmt->execute([':prefix' => $prefix, ':kw' => $kw]);
@@ -63,7 +69,7 @@ try {
                 ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.id = :id AND p.is_active = 1
+            WHERE p.id = :id AND {$activeCondition}
             LIMIT 1
         ");
         $stmt->execute([':id' => $id]);
@@ -72,6 +78,12 @@ try {
 
     if (!$product) {
         ApiResponse::error('Product not found or inactive', 404);
+    }
+
+    // Attach admin preview indicator if product is not currently live on storefront
+    if ((int)($product['is_active'] ?? 1) === 0) {
+        $product['is_preview'] = true;
+        $product['preview_notice'] = 'Admin Preview: This product is currently hidden/draft and only visible to authorized administrators.';
     }
 
     $productId = (int)$product['id'];
@@ -87,10 +99,11 @@ try {
     $images = $imgStmt->fetchAll();
 
     // 3. Fetch Product Variants
+    $varActiveCondition = $isAdmin ? '1=1' : 'is_active = 1';
     $varStmt = $pdo->prepare("
         SELECT id, sku, title, option1_name, option1_value, mrp, price, stock_quantity, is_active
         FROM product_variants
-        WHERE product_id = :product_id AND is_active = 1
+        WHERE product_id = :product_id AND {$varActiveCondition}
         ORDER BY id ASC
     ");
     $varStmt->execute([':product_id' => $productId]);
