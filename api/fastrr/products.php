@@ -92,7 +92,7 @@ try {
                 'weight'           => 0.05,
                 'weight_unit'      => 'kg',
                 'option_values'    => [
-                    'Material' => $r['material'] ?: '18K Gold Plated Stainless Steel'
+                    'Material' => ($r['material'] && stripos($r['material'], '18') === false) ? $r['material'] : 'Lightweight Stainless Steel'
                 ]
             ];
         }

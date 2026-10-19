@@ -77,7 +77,7 @@ CREATE TABLE `products` (
     `stock_quantity` INT NOT NULL DEFAULT 0,
     `pairs_count` INT UNSIGNED DEFAULT NULL COMMENT 'Curated set / jhumka box: number of pairs included',
     `is_anti_tarnish` TINYINT(1) NOT NULL DEFAULT 1,
-    `material` VARCHAR(150) NOT NULL DEFAULT '18K Gold Plated Stainless Steel (Anti-Tarnish)',
+    `material` VARCHAR(150) NOT NULL DEFAULT 'Lightweight Stainless Steel',
     `is_bestseller` TINYINT(1) NOT NULL DEFAULT 0,
     `is_active` TINYINT(1) NOT NULL DEFAULT 1,
     `meta_title` VARCHAR(255) DEFAULT NULL,

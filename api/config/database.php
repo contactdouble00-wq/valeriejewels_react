@@ -278,7 +278,7 @@ class Database {
                     stock_quantity INTEGER NOT NULL DEFAULT 0,
                     pairs_count INTEGER DEFAULT NULL,
                     is_anti_tarnish INTEGER NOT NULL DEFAULT 1,
-                    material TEXT NOT NULL DEFAULT '18K Gold Plated Stainless Steel',
+                    material TEXT NOT NULL DEFAULT 'Lightweight Stainless Steel',
                     is_bestseller INTEGER NOT NULL DEFAULT 0,
                     is_active INTEGER NOT NULL DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP

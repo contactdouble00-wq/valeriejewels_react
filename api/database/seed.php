@@ -170,7 +170,7 @@ try {
             'sku'               => 'VJ-NCK-001',
             'stock'             => 65,
             'is_bestseller'     => 1,
-            'material'          => '18K Gold Plated Stainless Steel (Anti-Tarnish)',
+            'material'          => 'Lightweight Stainless Steel',
             'images'            => [
                 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
                 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=800&q=80',
@@ -234,7 +234,7 @@ try {
             'sku'               => 'VJ-BRC-004',
             'stock'             => 40,
             'is_bestseller'     => 0,
-            'material'          => '18K Gold Plated Stainless Steel',
+            'material'          => 'Lightweight Stainless Steel',
             'images'            => [
                 'https://images.unsplash.com/photo-1611591475887-236b2803bcf4?auto=format&fit=crop&w=800&q=80',
             ],
@@ -274,7 +274,7 @@ try {
             'sku'               => 'VJ-RNG-006',
             'stock'             => 55,
             'is_bestseller'     => 0,
-            'material'          => '18K Gold Plated Stainless Steel',
+            'material'          => 'Lightweight Stainless Steel',
             'images'            => [
                 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=800&q=80',
             ],

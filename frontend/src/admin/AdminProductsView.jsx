@@ -588,7 +588,7 @@ export default function AdminProductsView({ currentUser }) {
 
       if (isMystery) {
         newPairsCount = null; // No earring box pairs for mystery jars
-        if (!newMaterial || newMaterial === '18K Gold Plated Stainless Steel') {
+        if (!newMaterial || newMaterial === '18K Gold Plated Stainless Steel' || newMaterial === 'Lightweight Stainless Steel') {
           newMaterial = 'Curated Anti-Tarnish Jewels in Glass Jar';
         }
         if (currentVars.length === 0) {
@@ -970,7 +970,7 @@ export default function AdminProductsView({ currentUser }) {
                 pairs_count: isMystery ? null : 6,
                 material: isMystery
                   ? 'Curated Anti-Tarnish Jewels in Glass Jar'
-                  : '18K Gold Plated Stainless Steel',
+                  : 'Lightweight Stainless Steel',
                 is_bestseller: 0,
                 short_description: isMystery
                   ? 'Curated luxury surprise jewelry inside an aesthetic glass jar with satin ribbon.'
@@ -1536,7 +1536,7 @@ export default function AdminProductsView({ currentUser }) {
                           type="text"
                           value={editingProduct.material || ''}
                           onChange={(e) => setEditingProduct({ ...editingProduct, material: e.target.value })}
-                          placeholder={isMysteryJar ? 'e.g. Aesthetic Glass Jar with Satin Ribbon & Bow' : '18K Gold Plated Stainless Steel'}
+                          placeholder={isMysteryJar ? 'e.g. Aesthetic Glass Jar with Satin Ribbon & Bow' : 'Lightweight Stainless Steel'}
                           className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-brand-tertiary text-xs focus:outline-none focus:border-brand-primary"
                         />
                       </div>

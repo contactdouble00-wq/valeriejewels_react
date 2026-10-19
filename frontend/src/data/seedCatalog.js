@@ -196,7 +196,7 @@ export const SEED_PRODUCTS = [
     sku: 'VJ-NCK-001',
     stock_quantity: 65,
     is_anti_tarnish: 1,
-    material: 'Gold Plated Stainless Steel (Anti-Tarnish)',
+    material: 'Lightweight Stainless Steel',
     is_bestseller: 1,
     primary_image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
     video_url: '/api/uploads/sample_jewelry_reel_1.mp4',

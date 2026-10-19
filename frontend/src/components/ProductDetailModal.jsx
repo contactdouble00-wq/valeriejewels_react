@@ -936,7 +936,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   )}
                 </div>
                 <p className="text-xs text-brand-tertiary font-medium">
-                  {product.material || 'Premium Gold Plated 316L Stainless Steel'}
+                  {product.material &&
+                  !product.material.toLowerCase().includes('18k gold plated') &&
+                  !product.material.toLowerCase().includes('18 gold plated')
+                    ? product.material
+                    : 'Lightweight Stainless Steel'}
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                   Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
@@ -1616,7 +1620,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       Material Specification
                     </span>
                     <p className="text-xs text-brand-tertiary font-medium">
-                      {product.material || 'Premium Gold Plated 316L Stainless Steel'}
+                      {product.material &&
+                      !product.material.toLowerCase().includes('18k gold plated') &&
+                      !product.material.toLowerCase().includes('18 gold plated')
+                        ? product.material
+                        : 'Lightweight Stainless Steel'}
                     </p>
                     <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                       Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
