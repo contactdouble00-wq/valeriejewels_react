@@ -366,6 +366,31 @@ if ($action === 'duplicate') {
         FROM product_images WHERE product_id = {$productId}
     ");
 
+    // Copy variants
+    $origVarsStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ?");
+    $origVarsStmt->execute([$productId]);
+    $origVars = $origVarsStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($origVars)) {
+        $dupVarStmt = $pdo->prepare("
+            INSERT INTO product_variants (product_id, sku, title, option1_name, option1_value, mrp, price, stock_quantity, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        foreach ($origVars as $ov) {
+            $newVarSku = $ov['sku'] . '-CPY-' . rand(100, 999);
+            $dupVarStmt->execute([
+                $newProductId,
+                $newVarSku,
+                $ov['title'],
+                $ov['option1_name'] ?: 'Size',
+                $ov['option1_value'],
+                $ov['mrp'],
+                $ov['price'],
+                $ov['stock_quantity'],
+                $ov['is_active'],
+            ]);
+        }
+    }
+
     AdminAuth::logActivity($adminUser['id'], 'duplicate_product', 'product', $newProductId, ['original_id' => $productId]);
 
     ApiResponse::success(['id' => $newProductId, 'name' => $newName], 'Product duplicated successfully');
@@ -552,6 +577,107 @@ if ($isUpdateAction) {
         }
     }
 
+    // Update variants if provided
+    if (isset($input['variants']) && is_array($input['variants'])) {
+        $submittedVariantIds = [];
+        $existingVarStmt = $pdo->prepare("SELECT id FROM product_variants WHERE product_id = ?");
+        $existingVarStmt->execute([$id]);
+        $existingVarIds = $existingVarStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $varUpdateStmt = $pdo->prepare("
+            UPDATE product_variants SET
+                sku = :sku,
+                title = :title,
+                option1_name = :opt_name,
+                option1_value = :opt_val,
+                mrp = :mrp,
+                price = :price,
+                stock_quantity = :stock,
+                is_active = :active
+            WHERE id = :id AND product_id = :product_id
+        ");
+
+        $varInsertStmt = $pdo->prepare("
+            INSERT INTO product_variants (product_id, sku, title, option1_name, option1_value, mrp, price, stock_quantity, is_active)
+            VALUES (:product_id, :sku, :title, :opt_name, :opt_val, :mrp, :price, :stock, :active)
+        ");
+
+        foreach ($input['variants'] as $vIdx => $v) {
+            $vTitle = trim($v['title'] ?? ($v['option1_value'] ?? ''));
+            if ($vTitle === '') continue;
+
+            $vOptionVal = trim($v['option1_value'] ?? $vTitle);
+            $vOptionName = trim($v['option1_name'] ?? 'Size');
+            $vPrice = isset($v['price']) && $v['price'] !== '' ? (float)$v['price'] : $newPrice;
+            $vMrp = isset($v['mrp']) && $v['mrp'] !== '' ? (float)$v['mrp'] : ($newMrp ?: $vPrice);
+            $vStock = isset($v['stock_quantity']) && $v['stock_quantity'] !== '' ? (int)$v['stock_quantity'] : 10;
+            $vActive = isset($v['is_active']) ? ((int)$v['is_active'] ? 1 : 0) : 1;
+
+            $vId = !empty($v['id']) ? (int)$v['id'] : 0;
+
+            // Generate or sanitize variant SKU
+            $vSku = trim($v['sku'] ?? '');
+            if (empty($vSku)) {
+                $baseSku = !empty($input['sku']) ? trim($input['sku']) : ($orig['sku'] ?? 'VJ');
+                $slugifiedVal = preg_replace('/[^a-zA-Z0-9]+/', '', $vOptionVal);
+                $vSku = $baseSku . '-' . strtoupper(substr($slugifiedVal, 0, 4) ?: 'SZ') . '-' . ($vIdx + 1);
+            }
+
+            if ($vId > 0 && in_array($vId, $existingVarIds, false)) {
+                // Ensure unique SKU
+                $skuDup = $pdo->prepare("SELECT id FROM product_variants WHERE sku = ? AND id != ? LIMIT 1");
+                $skuDup->execute([$vSku, $vId]);
+                if ($skuDup->fetch()) {
+                    $vSku .= '-' . rand(10, 99);
+                }
+
+                $varUpdateStmt->execute([
+                    ':id'         => $vId,
+                    ':product_id' => $id,
+                    ':sku'        => $vSku,
+                    ':title'      => $vTitle,
+                    ':opt_name'   => $vOptionName ?: 'Size',
+                    ':opt_val'    => $vOptionVal,
+                    ':mrp'        => $vMrp,
+                    ':price'      => $vPrice,
+                    ':stock'      => $vStock,
+                    ':active'     => $vActive,
+                ]);
+                $submittedVariantIds[] = $vId;
+            } else {
+                // Insert new variant
+                $skuDup = $pdo->prepare("SELECT id FROM product_variants WHERE sku = ? LIMIT 1");
+                $skuDup->execute([$vSku]);
+                if ($skuDup->fetch()) {
+                    $vSku .= '-' . rand(100, 999);
+                }
+
+                $varInsertStmt->execute([
+                    ':product_id' => $id,
+                    ':sku'        => $vSku,
+                    ':title'      => $vTitle,
+                    ':opt_name'   => $vOptionName ?: 'Size',
+                    ':opt_val'    => $vOptionVal,
+                    ':mrp'        => $vMrp,
+                    ':price'      => $vPrice,
+                    ':stock'      => $vStock,
+                    ':active'     => $vActive,
+                ]);
+                $submittedVariantIds[] = (int)$pdo->lastInsertId();
+            }
+        }
+
+        // Delete removed variants that were omitted from submission
+        if (!empty($existingVarIds)) {
+            $toDelete = array_diff($existingVarIds, $submittedVariantIds);
+            if (!empty($toDelete)) {
+                $delPlaceholders = implode(',', array_fill(0, count($toDelete), '?'));
+                $delStmt = $pdo->prepare("DELETE FROM product_variants WHERE product_id = ? AND id IN ({$delPlaceholders})");
+                $delStmt->execute(array_merge([$id], array_values($toDelete)));
+            }
+        }
+    }
+
     AdminAuth::logActivity($adminUser['id'], 'update_product', 'product', $id, [
         'name' => $input['name'] ?? '',
         'price_changed' => $newPrice != (float)$orig['price'],
@@ -645,6 +771,50 @@ if ($method === 'POST') {
                 $isPri = ($idx === $targetPrimaryIndex) ? 1 : 0;
                 $imgStmt->execute([$newId, $imgUrl, $name, $idx, $isPri]);
             }
+        }
+    }
+
+    // Insert Variants if provided
+    if (!empty($input['variants']) && is_array($input['variants'])) {
+        $varInsertStmt = $pdo->prepare("
+            INSERT INTO product_variants (product_id, sku, title, option1_name, option1_value, mrp, price, stock_quantity, is_active)
+            VALUES (:product_id, :sku, :title, :opt_name, :opt_val, :mrp, :price, :stock, :active)
+        ");
+
+        foreach ($input['variants'] as $vIdx => $v) {
+            $vTitle = trim($v['title'] ?? ($v['option1_value'] ?? ''));
+            if ($vTitle === '') continue;
+
+            $vOptionVal = trim($v['option1_value'] ?? $vTitle);
+            $vOptionName = trim($v['option1_name'] ?? 'Size');
+            $vPrice = isset($v['price']) && $v['price'] !== '' ? (float)$v['price'] : $price;
+            $vMrp = isset($v['mrp']) && $v['mrp'] !== '' ? (float)$v['mrp'] : ($mrp ?: $vPrice);
+            $vStock = isset($v['stock_quantity']) && $v['stock_quantity'] !== '' ? (int)$v['stock_quantity'] : 10;
+            $vActive = isset($v['is_active']) ? ((int)$v['is_active'] ? 1 : 0) : 1;
+
+            $vSku = trim($v['sku'] ?? '');
+            if (empty($vSku)) {
+                $slugifiedVal = preg_replace('/[^a-zA-Z0-9]+/', '', $vOptionVal);
+                $vSku = $sku . '-' . strtoupper(substr($slugifiedVal, 0, 4) ?: 'SZ') . '-' . ($vIdx + 1);
+            }
+
+            $skuDup = $pdo->prepare("SELECT id FROM product_variants WHERE sku = ? LIMIT 1");
+            $skuDup->execute([$vSku]);
+            if ($skuDup->fetch()) {
+                $vSku .= '-' . rand(100, 999);
+            }
+
+            $varInsertStmt->execute([
+                ':product_id' => $newId,
+                ':sku'        => $vSku,
+                ':title'      => $vTitle,
+                ':opt_name'   => $vOptionName ?: 'Size',
+                ':opt_val'    => $vOptionVal,
+                ':mrp'        => $vMrp,
+                ':price'      => $vPrice,
+                ':stock'      => $vStock,
+                ':active'     => $vActive,
+            ]);
         }
     }
 

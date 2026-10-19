@@ -478,31 +478,92 @@ export default function AdminProductPreviewModal({
                 )}
               </div>
 
-              {/* Product Variants (if applicable) */}
-              {product.variants && product.variants.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-brand-tertiary block">
-                    Select Option / Size:
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {product.variants.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setSelectedVariant(v)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                          selectedVariant?.id === v.id
-                            ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
-                            : 'bg-white text-brand-tertiary border-brand-border hover:bg-gray-50'
-                        }`}
-                      >
-                        {v.title || v.option1_value}
-                        {v.price && <span className="ml-1 opacity-80">· ₹{Number(v.price).toLocaleString('en-IN')}</span>}
-                      </button>
-                    ))}
+              {/* Product Variants / Multi-Size Selector */}
+              {product.variants && product.variants.length > 0 && (() => {
+                const isMysteryJar =
+                  product.category_slug === 'mystery-jar' ||
+                  (product.category_name || '').toLowerCase().includes('mystery') ||
+                  (product.name || '').toLowerCase().includes('mystery jar');
+
+                return (
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="font-caps uppercase tracking-wider font-bold text-brand-tertiary flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                        <span>{isMysteryJar ? 'Select Mystery Jar Size / Edition:' : `Select ${product.variants[0]?.option1_name || 'Size / Option'}:`}</span>
+                      </label>
+                      <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                        {selectedVariant?.title || selectedVariant?.option1_value}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {product.variants.map((v) => {
+                        const isSelected = selectedVariant?.id === v.id;
+                        const vPrice = Number(v.price || product.price || 0);
+                        const vMrp = Number(v.mrp || product.mrp || 0);
+                        const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+
+                        return (
+                          <div
+                            key={v.id}
+                            onClick={() => setSelectedVariant(v)}
+                            className={`p-3 rounded-2xl border transition-all cursor-pointer select-none text-left relative ${
+                              isSelected
+                                ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-purple-50/30 border-brand-primary ring-2 ring-brand-primary/25 shadow-xs'
+                                : 'bg-white border-brand-border/80 hover:border-brand-primary/40 hover:bg-[#FAF8FC]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
+                                {v.title || v.option1_value}
+                              </span>
+                              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                                isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
+                              }`}>
+                                {isSelected && <Check className="w-2 h-2 stroke-[3]" />}
+                              </div>
+                            </div>
+
+                            <div className="flex items-baseline space-x-1.5">
+                              <span className="text-sm font-bold text-brand-tertiary">
+                                ₹{Math.round(vPrice).toLocaleString('en-IN')}
+                              </span>
+                              {vMrp > vPrice && (
+                                <span className="text-[10px] text-brand-muted line-through font-light">
+                                  ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+
+                            {vDiscount > 0 && (
+                              <div className="mt-1 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                  Save {vDiscount}%
+                                </span>
+                                {v.stock_quantity !== undefined && (
+                                  <span className="text-[9px] text-brand-muted font-mono">
+                                    Stock: {v.stock_quantity}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {isMysteryJar && (
+                      <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2 text-[11px] text-purple-900">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                        <span>
+                          <strong>Storefront Notice:</strong> Customers see these size cards and prices update in real-time when selected.
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Simulated Customer Actions */}
               <div className="space-y-2 pt-2">

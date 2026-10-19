@@ -834,39 +834,93 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 </span>
               </div>
 
-              {/* Variant Selector (if variants exist) */}
-              {product.variants && product.variants.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-caps uppercase tracking-wider font-bold text-brand-tertiary">
-                      Select {product.variants[0]?.option1_name || 'Finish / Size'}:
-                    </span>
-                    <span className="text-brand-primary font-semibold">
-                      {selectedVariant?.option1_value || selectedVariant?.title}
-                    </span>
-                  </div>
+              {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
+              {product.variants && product.variants.length > 0 && (() => {
+                const isMysteryJar =
+                  product.category_slug === 'mystery-jar' ||
+                  (product.category_name || '').toLowerCase().includes('mystery') ||
+                  (product.name || '').toLowerCase().includes('mystery jar');
 
-                  <div className="flex flex-wrap gap-2">
-                    {product.variants.map((v) => {
-                      const isSelected = selectedVariant?.id === v.id;
+                return (
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-caps uppercase tracking-wider font-bold text-brand-tertiary flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                        <span>{isMysteryJar ? 'Select Mystery Jar Size / Edition:' : `Select ${product.variants[0]?.option1_name || 'Size / Option'}:`}</span>
+                      </span>
+                      <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                        {selectedVariant?.title || selectedVariant?.option1_value}
+                      </span>
+                    </div>
 
-                      return (
-                        <button
-                          key={v.id}
-                          onClick={() => setSelectedVariant(v)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
-                            isSelected
-                              ? 'border-brand-primary bg-brand-primary-light text-brand-primary font-bold shadow-sm'
-                              : 'border-brand-border bg-white text-brand-tertiary hover:border-brand-primary/40'
-                          }`}
-                        >
-                          {v.option1_value || v.title}
-                        </button>
-                      );
-                    })}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {product.variants.map((v) => {
+                        const isSelected = selectedVariant?.id === v.id;
+                        const vPrice = Number(v.price || product.price || 0);
+                        const vMrp = Number(v.mrp || product.mrp || 0);
+                        const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                        const isLowStock = v.stock_quantity !== undefined && Number(v.stock_quantity) > 0 && Number(v.stock_quantity) <= 10;
+
+                        return (
+                          <div
+                            key={v.id}
+                            onClick={() => setSelectedVariant(v)}
+                            className={`p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer select-none text-left relative ${
+                              isSelected
+                                ? 'bg-gradient-to-br from-[#FAF5FF] to-white border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                                : 'bg-white border-brand-border/80 hover:border-brand-primary/40 hover:bg-[#FAF8FC]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
+                                {v.title || v.option1_value}
+                              </span>
+                              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                                isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
+                              }`}>
+                                {isSelected && <Check className="w-2 h-2 stroke-[3]" />}
+                              </div>
+                            </div>
+
+                            <div className="flex items-baseline space-x-1.5">
+                              <span className="text-sm font-bold text-brand-tertiary">
+                                ₹{Math.round(vPrice).toLocaleString('en-IN')}
+                              </span>
+                              {vMrp > vPrice && (
+                                <span className="text-[10.5px] text-brand-muted line-through font-light">
+                                  ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+
+                            {vDiscount > 0 && (
+                              <div className="mt-1 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  Save {vDiscount}%
+                                </span>
+                                {isLowStock && (
+                                  <span className="text-[9px] font-semibold text-amber-700">
+                                    Only {v.stock_quantity} left!
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {isMysteryJar && (
+                      <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2 text-[11px] text-purple-900">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                        <span>
+                          <strong>Surprise Guarantee:</strong> Each jar is hand-curated with anti-tarnish jewelry pieces worth higher than the price!
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Material Specification Card */}
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-surface to-[#F9F5FD] border border-brand-border/90 space-y-2">
@@ -1397,38 +1451,93 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </p>
                 </div>
 
-                {/* Variant Selector */}
-                {product.variants && product.variants.length > 0 && (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-caps uppercase tracking-wider font-bold text-brand-tertiary">
-                        Select {product.variants[0]?.option1_name || 'Size / Option'}:
-                      </span>
-                      <span className="text-brand-primary font-semibold">
-                        {selectedVariant?.option1_value || selectedVariant?.title}
-                      </span>
-                    </div>
+                {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
+                {product.variants && product.variants.length > 0 && (() => {
+                  const isMysteryJar =
+                    product.category_slug === 'mystery-jar' ||
+                    (product.category_name || '').toLowerCase().includes('mystery') ||
+                    (product.name || '').toLowerCase().includes('mystery jar');
 
-                    <div className="flex flex-wrap gap-2.5">
-                      {product.variants.map((v) => {
-                        const isSelected = selectedVariant?.id === v.id;
-                        return (
-                          <button
-                            key={v.id}
-                            onClick={() => setSelectedVariant(v)}
-                            className={`px-4 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
-                              isSelected
-                                ? 'border-brand-primary bg-brand-primary text-white font-bold shadow-sm'
-                                : 'border-brand-border bg-white text-brand-tertiary hover:border-brand-primary/40 hover:bg-brand-surface'
-                            }`}
-                          >
-                            {v.option1_value || v.title}
-                          </button>
-                        );
-                      })}
+                  return (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-caps uppercase tracking-wider font-bold text-brand-tertiary flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                          <span>{isMysteryJar ? 'Select Mystery Jar Size / Edition:' : `Select ${product.variants[0]?.option1_name || 'Size / Option'}:`}</span>
+                        </span>
+                        <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs">
+                          {selectedVariant?.title || selectedVariant?.option1_value}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {product.variants.map((v) => {
+                          const isSelected = selectedVariant?.id === v.id;
+                          const vPrice = Number(v.price || product.price || 0);
+                          const vMrp = Number(v.mrp || product.mrp || 0);
+                          const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                          const isLowStock = v.stock_quantity !== undefined && Number(v.stock_quantity) > 0 && Number(v.stock_quantity) <= 10;
+
+                          return (
+                            <div
+                              key={v.id}
+                              onClick={() => setSelectedVariant(v)}
+                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none text-left relative ${
+                                isSelected
+                                  ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-purple-50/40 border-brand-primary ring-2 ring-brand-primary/25 shadow-sm'
+                                  : 'bg-white border-brand-border/80 hover:border-brand-primary/40 hover:bg-[#FAF8FC]'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
+                                  {v.title || v.option1_value}
+                                </span>
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                                  isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
+                                }`}>
+                                  {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                </div>
+                              </div>
+
+                              <div className="flex items-baseline space-x-2">
+                                <span className="text-base font-bold text-brand-tertiary">
+                                  ₹{Math.round(vPrice).toLocaleString('en-IN')}
+                                </span>
+                                {vMrp > vPrice && (
+                                  <span className="text-xs text-brand-muted line-through font-light">
+                                    ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {vDiscount > 0 && (
+                                <div className="mt-1.5 flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    Save {vDiscount}%
+                                  </span>
+                                  {isLowStock && (
+                                    <span className="text-[10px] font-semibold text-amber-700">
+                                      Only {v.stock_quantity} left
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {isMysteryJar && (
+                        <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2.5 text-xs text-purple-900 shadow-2xs">
+                          <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
+                          <span>
+                            <strong>Mystery Value Guarantee:</strong> Handcrafted surprises crafted with water-safe anti-tarnish stainless steel.
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Primary Fastrr 1-Click Order & Add to Bag CTAs (MadeWidLove Format) */}
                 <div className="pt-2 space-y-3">

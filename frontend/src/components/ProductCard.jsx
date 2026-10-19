@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Heart } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Heart, Layers, Sparkles } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { normalizeMediaUrl } from '../utils/mediaUtils';
 
@@ -18,7 +18,13 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     video_url,
     material,
     short_description,
+    variants,
+    min_variant_price,
   } = product;
+
+  const hasMultiVariants = Boolean(variants && variants.length > 1);
+  const displayPrice = hasMultiVariants && min_variant_price ? min_variant_price : price;
+  const displayMrp = hasMultiVariants && variants[0]?.mrp ? variants[0].mrp : mrp;
 
   const cardVideoUrl = React.useMemo(() => {
     if (video_url) return normalizeMediaUrl(video_url);
@@ -125,29 +131,48 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
           {/* Pricing Row */}
           <div className="flex items-baseline flex-wrap gap-1 sm:gap-2 pt-0.5">
+            {hasMultiVariants && (
+              <span className="text-[11px] text-brand-muted font-medium mr-0.5">From</span>
+            )}
             <span className="text-sm sm:text-lg font-bold text-brand-tertiary">
-              ₹{Math.round(price).toLocaleString('en-IN')}
+              ₹{Math.round(displayPrice).toLocaleString('en-IN')}
             </span>
-            {mrp > price && (
+            {displayMrp > displayPrice && (
               <span className="text-[10px] sm:text-xs text-brand-muted line-through font-light">
-                ₹{Math.round(mrp).toLocaleString('en-IN')}
+                ₹{Math.round(displayMrp).toLocaleString('en-IN')}
               </span>
             )}
-            <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600">
-              Free Express
-            </span>
+            {hasMultiVariants ? (
+              <span className="text-[9px] sm:text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                {variants.length} Sizes
+              </span>
+            ) : (
+              <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600">
+                Free Express
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Add To Cart CTA Button */}
-      <button
-        onClick={() => onAddToCart ? onAddToCart(product) : onQuickView(product)}
-        className="mt-2.5 sm:mt-4 w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg sm:rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-[10px] sm:text-xs font-caps tracking-wider sm:tracking-widest uppercase transition-all shadow-sm active:scale-[0.98] flex items-center justify-center space-x-1 sm:space-x-2"
-      >
-        <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-        <span>Add to Cart</span>
-      </button>
+      {/* Add To Cart or Select Size CTA Button */}
+      {hasMultiVariants ? (
+        <button
+          onClick={() => onQuickView(product)}
+          className="mt-2.5 sm:mt-4 w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg sm:rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-brand-primary/40 text-brand-primary text-[10px] sm:text-xs font-caps tracking-wider sm:tracking-widest uppercase transition-all shadow-2xs active:scale-[0.98] flex items-center justify-center space-x-1 sm:space-x-1.5 font-bold cursor-pointer"
+        >
+          <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <span>Select Size</span>
+        </button>
+      ) : (
+        <button
+          onClick={() => onAddToCart ? onAddToCart(product) : onQuickView(product)}
+          className="mt-2.5 sm:mt-4 w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg sm:rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-[10px] sm:text-xs font-caps tracking-wider sm:tracking-widest uppercase transition-all shadow-sm active:scale-[0.98] flex items-center justify-center space-x-1 sm:space-x-2"
+        >
+          <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <span>Add to Cart</span>
+        </button>
+      )}
     </div>
   );
 }

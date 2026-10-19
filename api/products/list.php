@@ -167,6 +167,37 @@ try {
     }
     unset($prod);
 
+    // Batch fetch active variants for all retrieved products
+    $productIds = array_column($products, 'id');
+    if (!empty($productIds)) {
+        $inPlaceholders = implode(',', array_fill(0, count($productIds), '?'));
+        $varStmt = $pdo->prepare("
+            SELECT id, product_id, sku, title, option1_name, option1_value, mrp, price, stock_quantity, is_active
+            FROM product_variants
+            WHERE product_id IN ({$inPlaceholders}) AND is_active = 1
+            ORDER BY id ASC
+        ");
+        $varStmt->execute($productIds);
+        $allVars = $varStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $varsByProduct = [];
+        foreach ($allVars as $v) {
+            $varsByProduct[$v['product_id']][] = $v;
+        }
+
+        foreach ($products as &$p) {
+            $p['variants'] = $varsByProduct[$p['id']] ?? [];
+            if (!empty($p['variants'])) {
+                $prices = array_filter(array_map(fn($v) => (float)$v['price'], $p['variants']), fn($pr) => $pr > 0);
+                if (!empty($prices)) {
+                    $p['min_variant_price'] = min($prices);
+                    $p['max_variant_price'] = max($prices);
+                }
+            }
+        }
+        unset($p);
+    }
+
     $meta = [
         'page'        => $page,
         'limit'       => $limit,

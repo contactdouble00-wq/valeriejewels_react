@@ -3,7 +3,8 @@ import {
   Plus, Search, Filter, Copy, Trash2, Edit2, Star,
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
-  ChevronUp, Sparkles, Film, Play, Eye, ExternalLink, Zap
+  ChevronUp, Sparkles, Film, Play, Eye, ExternalLink, Zap,
+  Layers, Package, Tag
 } from 'lucide-react';
 import ProductAssuranceModal from './ProductAssuranceModal';
 import AdminProductPreviewModal from './AdminProductPreviewModal';
@@ -359,6 +360,142 @@ export default function AdminProductsView({ currentUser }) {
     }
   };
 
+  // ── Variant & Size Management Handlers ────────────────────────────────────
+  const handleAddVariant = (customProps = {}) => {
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+      const vars = Array.isArray(prev.variants) ? [...prev.variants] : [];
+      const idx = vars.length + 1;
+      const baseSku = prev.sku || 'VJ';
+      const newVar = {
+        id: null,
+        title: customProps.title || `Size ${idx}`,
+        option1_name: customProps.option1_name || 'Size',
+        option1_value: customProps.option1_value || customProps.title || `Size ${idx}`,
+        price: customProps.price !== undefined ? customProps.price : (prev.price || ''),
+        mrp: customProps.mrp !== undefined ? customProps.mrp : (prev.mrp || ''),
+        stock_quantity: customProps.stock_quantity !== undefined ? customProps.stock_quantity : 25,
+        sku: customProps.sku || `${baseSku}-SZ${idx}`,
+        is_active: 1,
+      };
+      return { ...prev, variants: [...vars, newVar] };
+    });
+  };
+
+  const handleUpdateVariant = (index, field, value) => {
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+      const vars = Array.isArray(prev.variants) ? [...prev.variants] : [];
+      if (!vars[index]) return prev;
+      vars[index] = { ...vars[index], [field]: value };
+      if (field === 'title' && (!vars[index].option1_value || vars[index].option1_value === vars[index].title)) {
+        vars[index].option1_value = value;
+      }
+      return { ...prev, variants: vars };
+    });
+  };
+
+  const handleRemoveVariant = (index) => {
+    setEditingProduct((prev) => {
+      if (!prev) return prev;
+      const vars = Array.isArray(prev.variants) ? [...prev.variants] : [];
+      vars.splice(index, 1);
+      return { ...prev, variants: vars };
+    });
+  };
+
+  const handleApplyMysteryJarPreset = () => {
+    const baseSku = editingProduct?.sku || 'VJ-MJAR';
+    const presetVariants = [
+      {
+        id: null,
+        title: 'Mini Mystery Jar (5 Surprise Pieces)',
+        option1_name: 'Size',
+        option1_value: 'Mini (5 Pieces)',
+        price: 499,
+        mrp: 999,
+        stock_quantity: 50,
+        sku: `${baseSku}-MINI`,
+        is_active: 1,
+      },
+      {
+        id: null,
+        title: 'Classic Mystery Jar (10 Surprise Pieces)',
+        option1_name: 'Size',
+        option1_value: 'Classic (10 Pieces)',
+        price: 899,
+        mrp: 1799,
+        stock_quantity: 50,
+        sku: `${baseSku}-CLASSIC`,
+        is_active: 1,
+      },
+      {
+        id: null,
+        title: 'Grand Mystery Jar (18 Surprise Pieces)',
+        option1_name: 'Size',
+        option1_value: 'Grand (18 Pieces)',
+        price: 1499,
+        mrp: 2999,
+        stock_quantity: 30,
+        sku: `${baseSku}-GRAND`,
+        is_active: 1,
+      },
+    ];
+
+    setEditingProduct((prev) => ({
+      ...prev,
+      price: prev.price || 499,
+      mrp: prev.mrp || 999,
+      variants: presetVariants,
+    }));
+    showToast('✨ Mystery Jar Trio preset applied (Mini ₹499, Classic ₹899, Grand ₹1499)');
+  };
+
+  const handleApplyStandardSizesPreset = () => {
+    const baseSku = editingProduct?.sku || 'VJ-SZ';
+    const presetVariants = [
+      {
+        id: null,
+        title: 'Small',
+        option1_name: 'Size',
+        option1_value: 'Small',
+        price: editingProduct?.price || 499,
+        mrp: editingProduct?.mrp || 999,
+        stock_quantity: 30,
+        sku: `${baseSku}-SM`,
+        is_active: 1,
+      },
+      {
+        id: null,
+        title: 'Medium',
+        option1_name: 'Size',
+        option1_value: 'Medium',
+        price: editingProduct?.price ? Number(editingProduct.price) + 200 : 699,
+        mrp: editingProduct?.mrp ? Number(editingProduct.mrp) + 400 : 1399,
+        stock_quantity: 30,
+        sku: `${baseSku}-MD`,
+        is_active: 1,
+      },
+      {
+        id: null,
+        title: 'Large',
+        option1_name: 'Size',
+        option1_value: 'Large',
+        price: editingProduct?.price ? Number(editingProduct.price) + 400 : 899,
+        mrp: editingProduct?.mrp ? Number(editingProduct.mrp) + 800 : 1799,
+        stock_quantity: 20,
+        sku: `${baseSku}-LG`,
+        is_active: 1,
+      },
+    ];
+
+    setEditingProduct((prev) => ({
+      ...prev,
+      variants: presetVariants,
+    }));
+    showToast('📦 Standard Small / Medium / Large sizes preset applied');
+  };
+
   // ── Open Editor ───────────────────────────────────────────────────────────
   const handleOpenEdit = async (product) => {
     let p = product;
@@ -396,7 +533,11 @@ export default function AdminProductsView({ currentUser }) {
         });
       }
     }
-    setEditingProduct({ ...p, images: imgs });
+    setEditingProduct({
+      ...p,
+      images: imgs,
+      variants: Array.isArray(p.variants) ? p.variants : [],
+    });
     setMediaUrlInput('');
     setModalError('');
     setSeoOpen(false);
@@ -424,9 +565,24 @@ export default function AdminProductsView({ currentUser }) {
           is_primary: m.is_primary ? 1 : 0,
         };
       });
+      const vars = Array.isArray(editingProduct.variants) ? editingProduct.variants : [];
+      let finalPrice = editingProduct.price;
+      let finalMrp = editingProduct.mrp;
+      if (vars.length > 0) {
+        const activeVars = vars.filter((v) => Number(v.is_active) !== 0 && v.price);
+        if (activeVars.length > 0 && (!finalPrice || finalPrice === '')) {
+          finalPrice = Math.min(...activeVars.map((v) => Number(v.price)));
+          const matchingVar = activeVars.find((v) => Number(v.price) === finalPrice);
+          if (matchingVar && matchingVar.mrp) finalMrp = matchingVar.mrp;
+        }
+      }
+
       const payload = {
         ...editingProduct,
+        price: finalPrice,
+        mrp: finalMrp,
         images: normImages,
+        variants: vars,
         video_url: firstReel ? normalizeMediaUrl(typeof firstReel === 'string' ? firstReel : (firstReel.image_url || firstReel.url)) : (editingProduct.video_url || null),
       };
 
@@ -644,6 +800,7 @@ export default function AdminProductsView({ currentUser }) {
                 material: '18K Gold Plated Stainless Steel',
                 is_bestseller: 0, short_description: '', description: '',
                 slug: '', meta_title: '', meta_description: '', images: [],
+                variants: [],
               })
             }
             className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-wider uppercase font-bold transition-all shadow-md"
@@ -846,6 +1003,12 @@ export default function AdminProductsView({ currentUser }) {
                       <td className="py-3 px-4">
                         <div className="font-semibold text-brand-tertiary">₹{Number(p.price).toLocaleString('en-IN')}</div>
                         <div className="text-[10px] text-brand-muted line-through">₹{Number(p.mrp).toLocaleString('en-IN')}</div>
+                        {Boolean(p.variant_count && Number(p.variant_count) > 0) && (
+                          <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-purple-50 text-brand-primary border border-purple-200 mt-1">
+                            <Layers className="w-2.5 h-2.5" />
+                            <span>{p.variant_count} Sizes</span>
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3 px-4">
@@ -1194,6 +1357,260 @@ export default function AdminProductsView({ currentUser }) {
                   />
                 </div>
               </div>
+
+              {/* Product Sizes & Pricing (Variants) Section - Specially Tailored for Mystery Jar & Multi-Size Products */}
+              {(() => {
+                const currentCat = categories.find((c) => c.id === editingProduct.category_id);
+                const isMysteryJar =
+                  currentCat?.slug === 'mystery-jar' ||
+                  (currentCat?.name || '').toLowerCase().includes('mystery') ||
+                  (editingProduct.name || '').toLowerCase().includes('mystery jar') ||
+                  (editingProduct.sku || '').toUpperCase().includes('MJAR');
+
+                const variantsList = Array.isArray(editingProduct.variants) ? editingProduct.variants : [];
+
+                return (
+                  <div className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-4 ${
+                    isMysteryJar
+                      ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-[#FDF4FF] border-brand-primary/40 shadow-xs'
+                      : 'bg-[#FAF8FC] border-brand-border'
+                  }`}>
+                    {/* Header Strip */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                            isMysteryJar ? 'bg-brand-primary text-white' : 'bg-purple-100 text-brand-primary'
+                          }`}>
+                            <Layers className="w-4 h-4" />
+                          </div>
+                          <span className="font-editorial text-sm font-bold text-brand-tertiary">
+                            {isMysteryJar ? '✨ Mystery Jar Sizes & Pricing (Variants)' : 'Product Sizes & Pricing (Variants)'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-brand-primary border border-brand-primary/30 shadow-2xs">
+                            {variantsList.length} {variantsList.length === 1 ? 'Size' : 'Sizes'} Configured
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-brand-muted font-light leading-relaxed">
+                          {isMysteryJar
+                            ? 'Configure multiple sizes/versions (e.g. Small / Medium / Large) with individual selling prices, MRPs, and inventory. Customers will be able to select their desired size on the storefront!'
+                            : 'Optionally offer multiple sizes, finishes, or editions for this piece, each with its own selling price and strike-through MRP.'}
+                        </p>
+                      </div>
+
+                      {/* Quick Preset Buttons */}
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {isMysteryJar && (
+                          <button
+                            type="button"
+                            onClick={handleApplyMysteryJarPreset}
+                            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-semibold shadow-xs hover:bg-brand-primary-hover active:scale-95 transition-all"
+                            title="Pre-populate 3-tier Mystery Jar sizes (Mini, Classic, Grand)"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Apply Mystery Jar Trio Preset</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleApplyStandardSizesPreset}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-tertiary text-xs font-semibold shadow-2xs hover:bg-brand-surface transition-all"
+                          title="Apply Small, Medium, Large preset"
+                        >
+                          <Package className="w-3.5 h-3.5 text-brand-muted" />
+                          <span>Small/Med/Large Preset</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddVariant()}
+                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 text-xs font-semibold transition-all active:scale-95"
+                          title="Add a new custom size/variant row"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Add Size</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Variants List */}
+                    {variantsList.length === 0 ? (
+                      <div className="py-6 px-4 rounded-xl border border-dashed border-brand-border bg-white text-center space-y-2">
+                        <p className="text-xs text-brand-muted font-light">
+                          {isMysteryJar
+                            ? 'No jar sizes added yet. Mystery Jars require multiple sizes with different pricing. Click below to add the standard Mystery Jar sizes in 1 click!'
+                            : 'Currently selling as a single size at the base price above.'}
+                        </p>
+                        <div className="flex justify-center gap-2 pt-1">
+                          {isMysteryJar ? (
+                            <button
+                              type="button"
+                              onClick={handleApplyMysteryJarPreset}
+                              className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold shadow-sm hover:bg-brand-primary-hover transition-all"
+                            >
+                              ✨ Add Standard Mystery Jar Sizes (Mini ₹499 / Classic ₹899 / Grand ₹1499)
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddVariant()}
+                              className="px-3.5 py-1.5 rounded-xl bg-white border border-brand-border hover:border-brand-primary text-brand-primary text-xs font-semibold shadow-2xs"
+                            >
+                              + Add First Size / Variant
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {variantsList.map((variant, vIdx) => {
+                          const vPrice = Number(variant.price || 0);
+                          const vMrp = Number(variant.mrp || 0);
+                          const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                          const vActive = Number(variant.is_active) !== 0;
+
+                          return (
+                            <div
+                              key={variant.id || `var-${vIdx}`}
+                              className={`p-3.5 rounded-xl border transition-all ${
+                                vActive
+                                  ? 'bg-white border-brand-border hover:border-brand-primary/40 shadow-2xs'
+                                  : 'bg-gray-50/80 border-gray-200 opacity-75'
+                              }`}
+                            >
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                                {/* Size / Edition Title */}
+                                <div className="sm:col-span-4 space-y-1">
+                                  <label className="text-[11px] font-semibold text-brand-tertiary flex items-center justify-between">
+                                    <span>Size / Edition Title *</span>
+                                    <span className="text-[10px] text-brand-muted font-light">Shown to customer</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={variant.title || ''}
+                                    onChange={(e) => handleUpdateVariant(vIdx, 'title', e.target.value)}
+                                    placeholder="e.g. Mini Mystery Jar (5 Pairs)"
+                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-brand-tertiary font-medium focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+
+                                {/* Selling Price (₹) */}
+                                <div className="sm:col-span-2 space-y-1">
+                                  <label className="text-[11px] font-semibold text-brand-tertiary">
+                                    Selling Price (₹) *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    required
+                                    value={variant.price ?? ''}
+                                    onChange={(e) => handleUpdateVariant(vIdx, 'price', e.target.value)}
+                                    placeholder="499"
+                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+
+                                {/* Strike MRP (₹) */}
+                                <div className="sm:col-span-2 space-y-1">
+                                  <label className="text-[11px] font-semibold text-brand-tertiary">
+                                    MRP (₹)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={variant.mrp ?? ''}
+                                    onChange={(e) => handleUpdateVariant(vIdx, 'mrp', e.target.value)}
+                                    placeholder="999"
+                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-muted focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+
+                                {/* Stock Quantity */}
+                                <div className="sm:col-span-1 space-y-1">
+                                  <label className="text-[11px] font-semibold text-brand-tertiary">
+                                    Stock
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={variant.stock_quantity ?? 25}
+                                    onChange={(e) => handleUpdateVariant(vIdx, 'stock_quantity', parseInt(e.target.value, 10) || 0)}
+                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2 py-1.5 text-xs font-mono text-center text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+
+                                {/* Variant SKU */}
+                                <div className="sm:col-span-2 space-y-1">
+                                  <label className="text-[11px] font-semibold text-brand-tertiary">
+                                    Variant SKU
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={variant.sku || ''}
+                                    onChange={(e) => handleUpdateVariant(vIdx, 'sku', e.target.value)}
+                                    placeholder="VJ-MJAR-MINI"
+                                    className="w-full bg-[#FAF8FC] border border-brand-border rounded-lg px-2.5 py-1.5 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+
+                                {/* Actions & Toggle */}
+                                <div className="sm:col-span-1 flex items-center justify-end space-x-1.5 pb-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateVariant(vIdx, 'is_active', vActive ? 0 : 1)}
+                                    className={`p-1.5 rounded-lg border transition-all ${
+                                      vActive
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                        : 'bg-gray-100 text-gray-400 border-gray-300'
+                                    }`}
+                                    title={vActive ? 'Size is active on storefront (click to hide)' : 'Size is hidden (click to enable)'}
+                                  >
+                                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveVariant(vIdx)}
+                                    className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                                    title="Remove this size"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Size Badge & Live Discount Preview */}
+                              <div className="flex items-center justify-between pt-2 mt-2 border-t border-brand-border/60 text-[11px] text-brand-muted">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-semibold text-brand-tertiary">
+                                    {variant.title || `Size #${vIdx + 1}`}
+                                  </span>
+                                  {vPrice > 0 && (
+                                    <span className="font-bold text-brand-primary">
+                                      ₹{Math.round(vPrice).toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                  {vDiscount > 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      {vDiscount}% OFF (Save ₹{Math.round(vMrp - vPrice)})
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <span className={vActive ? 'text-emerald-700 font-semibold' : 'text-gray-400 font-medium'}>
+                                    {vActive ? '● Live on Store' : '○ Disabled'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Row 4: Descriptions */}
               <div className="space-y-1">
