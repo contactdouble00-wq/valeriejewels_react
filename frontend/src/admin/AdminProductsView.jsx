@@ -1114,15 +1114,15 @@ export default function AdminProductsView({ currentUser }) {
       <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
+            <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[9.5px] uppercase whitespace-nowrap">
               <tr>
-                <th className="py-3.5 px-4">Item & SKU</th>
-                <th className="py-3.5 px-4">Category</th>
-                <th className="py-3.5 px-4">Selling Price</th>
-                <th className="py-3.5 px-4">Stock (Quick Edit)</th>
-                <th className="py-3.5 px-4">Live on Store</th>
-                <th className="py-3.5 px-4">Status / Ad Hero</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-3">Item & SKU</th>
+                <th className="py-2.5 px-2.5">Category</th>
+                <th className="py-2.5 px-2.5">Selling Price</th>
+                <th className="py-2.5 px-2.5">Stock</th>
+                <th className="py-2.5 px-2.5">Live on Store</th>
+                <th className="py-2.5 px-2.5">Status / Spotlight</th>
+                <th className="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border/60">
@@ -1146,8 +1146,8 @@ export default function AdminProductsView({ currentUser }) {
 
                   return (
                     <tr key={p.id} className="hover:bg-[#FAF8FC] transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-3">
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center space-x-2.5">
                           {(() => {
                             const rawThumb = p.primary_image || (p.images && p.images.find((img) => !isVideoMedia(img))?.image_url);
                             const thumbUrl = normalizeMediaUrl(rawThumb);
@@ -1157,13 +1157,13 @@ export default function AdminProductsView({ currentUser }) {
                               <button
                                 type="button"
                                 onClick={() => handleOpenAssurance(p)}
-                                className="relative group cursor-pointer rounded-xl overflow-hidden shrink-0 border border-brand-border focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                className="relative group cursor-pointer rounded-lg overflow-hidden shrink-0 border border-brand-border focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 title="Click to view product image (Visual Assurance)"
                               >
                                 {isThumbVideo ? (
-                                  <div className="w-12 h-12 rounded-xl bg-[#181420] text-brand-primary flex flex-col items-center justify-center relative overflow-hidden">
-                                    <Play className="w-4 h-4 fill-white text-white" />
-                                    <span className="text-[7px] font-bold text-white uppercase tracking-tighter mt-0.5">REEL</span>
+                                  <div className="w-10 h-10 rounded-lg bg-[#181420] text-brand-primary flex flex-col items-center justify-center relative overflow-hidden">
+                                    <Play className="w-3.5 h-3.5 fill-white text-white" />
+                                    <span className="text-[6.5px] font-bold text-white uppercase tracking-tighter mt-0.5">REEL</span>
                                   </div>
                                 ) : (
                                   <img
@@ -1176,32 +1176,32 @@ export default function AdminProductsView({ currentUser }) {
                                         e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80';
                                       }
                                     }}
-                                    className="w-12 h-12 rounded-xl object-cover group-hover:scale-105 transition-transform duration-200"
+                                    className="w-10 h-10 rounded-lg object-cover group-hover:scale-105 transition-transform duration-200"
                                   />
                                 )}
                                 <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                  <Eye className="w-4 h-4 drop-shadow-sm" />
+                                  <Eye className="w-3.5 h-3.5 drop-shadow-sm" />
                                 </div>
                               </button>
                             );
                           })()}
-                          <div className="min-w-0 max-w-xs">
-                            <div className="font-semibold text-brand-tertiary truncate" title={p.name}>{p.name}</div>
-                            <div className="flex items-center space-x-2 mt-0.5">
-                              <span className="text-[10px] text-brand-muted font-mono">{p.sku}</span>
+                          <div className="min-w-0 max-w-[170px] sm:max-w-[210px] xl:max-w-[260px]">
+                            <div className="font-semibold text-brand-tertiary text-xs truncate" title={p.name}>{p.name}</div>
+                            <div className="flex items-center space-x-1.5 mt-0.5">
+                              <span className="text-[9.5px] text-brand-muted font-mono">{p.sku}</span>
                               <span className="text-gray-300">•</span>
                               <button
                                 type="button"
                                 onClick={() => handleOpenAssurance(p)}
-                                className="inline-flex items-center space-x-1 text-[11px] font-semibold text-brand-primary hover:text-brand-primary-hover hover:underline cursor-pointer"
+                                className="inline-flex items-center space-x-0.5 text-[10px] font-semibold text-brand-primary hover:text-brand-primary-hover hover:underline cursor-pointer"
                                 title="View product image (Assurance Preview)"
                               >
-                                <Eye className="w-3 h-3" />
-                                <span>View Image</span>
+                                <Eye className="w-2.5 h-2.5" />
+                                <span>View</span>
                               </button>
                             </div>
                             {p.video_url && (
-                              <span className="inline-flex items-center space-x-1 text-[9px] text-brand-primary mt-0.5">
+                              <span className="inline-flex items-center space-x-1 text-[8.5px] text-brand-primary mt-0.5 whitespace-nowrap">
                                 <Video className="w-2.5 h-2.5" />
                                 <span>Try-on video linked</span>
                               </span>
@@ -1210,38 +1210,40 @@ export default function AdminProductsView({ currentUser }) {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
                           {p.category_name || 'Jewelry'}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-brand-tertiary">₹{Number(p.price).toLocaleString('en-IN')}</div>
-                        <div className="text-[10px] text-brand-muted line-through">₹{Number(p.mrp).toLocaleString('en-IN')}</div>
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
+                        <div className="font-semibold text-brand-tertiary text-xs">₹{Number(p.price).toLocaleString('en-IN')}</div>
+                        <div className="text-[9.5px] text-brand-muted line-through">₹{Number(p.mrp).toLocaleString('en-IN')}</div>
                         {Boolean(p.variant_count && Number(p.variant_count) > 0) && (
-                          <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-purple-50 text-brand-primary border border-purple-200 mt-1">
-                            <Layers className="w-2.5 h-2.5" />
-                            <span>{p.variant_count} Sizes</span>
-                          </span>
+                          <div className="mt-0.5">
+                            <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-purple-50 text-brand-primary border border-purple-200 whitespace-nowrap">
+                              <Layers className="w-2.5 h-2.5 shrink-0" />
+                              <span>{p.variant_count} Sizes</span>
+                            </span>
+                          </div>
                         )}
                       </td>
 
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
                         {inlineEditingStockId === p.id ? (
-                          <div className="flex items-center space-x-1.5">
+                          <div className="flex items-center space-x-1">
                             <input
                               type="number" min="0"
                               value={inlineStockVal}
                               onChange={(e) => setInlineStockVal(e.target.value)}
-                              className="w-16 px-2 py-1 bg-white border border-brand-primary rounded text-xs font-mono"
+                              className="w-14 px-1.5 py-0.5 bg-white border border-brand-primary rounded text-xs font-mono"
                               autoFocus
                             />
-                            <button onClick={() => handleSaveStock(p.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
-                              <Check className="w-3.5 h-3.5" />
+                            <button onClick={() => handleSaveStock(p.id)} className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded">
+                              <Check className="w-3 h-3" />
                             </button>
-                            <button onClick={() => setInlineEditingStockId(null)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
-                              <X className="w-3.5 h-3.5" />
+                            <button onClick={() => setInlineEditingStockId(null)} className="p-0.5 text-rose-600 hover:bg-rose-50 rounded">
+                              <X className="w-3 h-3" />
                             </button>
                           </div>
                         ) : (
@@ -1250,17 +1252,17 @@ export default function AdminProductsView({ currentUser }) {
                             className="inline-flex items-center space-x-1 cursor-pointer group p-1 rounded hover:bg-gray-100 transition-colors"
                             title="Click to edit stock"
                           >
-                            <span className={`font-mono font-bold ${isLow ? 'text-rose-600' : 'text-brand-tertiary'}`}>
+                            <span className={`font-mono font-bold text-xs ${isLow ? 'text-rose-600' : 'text-brand-tertiary'}`}>
                               {p.stock_quantity}
                             </span>
-                            {isLow && <span className="text-[9px] text-rose-500">LOW</span>}
-                            <span className="text-[10px] text-brand-muted opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+                            {isLow && <span className="text-[8.5px] text-rose-500 font-semibold">LOW</span>}
+                            <span className="text-[9.5px] text-brand-muted opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
                           </div>
                         )}
                       </td>
 
                       {/* Live / Storefront Toggle Column */}
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
                         <div className="flex flex-col space-y-1">
                           <button
                             type="button"
@@ -1268,115 +1270,117 @@ export default function AdminProductsView({ currentUser }) {
                             aria-checked={isLive}
                             onClick={() => handleToggleLive(p)}
                             disabled={togglingLiveId === p.id}
-                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-brand-primary ${
                               isLive ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-gray-300 hover:bg-gray-400'
                             } ${togglingLiveId === p.id ? 'opacity-60 cursor-wait' : ''}`}
                             title={isLive ? 'Click to disable (hide from storefront)' : 'Click to make live on storefront'}
                           >
                             <span
-                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
-                                isLive ? 'translate-x-5' : 'translate-x-0'
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                                isLive ? 'translate-x-4' : 'translate-x-0'
                               }`}
                             >
                               {togglingLiveId === p.id ? (
-                                <RefreshCw className="w-2.5 h-2.5 text-gray-500 animate-spin" />
+                                <RefreshCw className="w-2 h-2 text-gray-500 animate-spin" />
                               ) : isLive ? (
-                                <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                                <Check className="w-2 h-2 text-emerald-600 stroke-[3]" />
                               ) : (
-                                <X className="w-2.5 h-2.5 text-gray-400 stroke-[3]" />
+                                <X className="w-2 h-2 text-gray-400 stroke-[3]" />
                               )}
                             </span>
                           </button>
                           <div className="flex items-center space-x-1">
                             <span className={`inline-block w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-                            <span className={`text-[10px] font-bold whitespace-nowrap ${isLive ? 'text-emerald-700' : 'text-gray-500'}`}>
+                            <span className={`text-[9px] font-bold whitespace-nowrap ${isLive ? 'text-emerald-700' : 'text-gray-500'}`}>
                               {isLive ? 'Live on Store' : 'Hidden / Draft'}
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 space-y-1">
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
                         {isJhumkaBox && (
-                          <div className="space-y-0.5">
-                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                              <Flame className="w-2.5 h-2.5 text-amber-600" />
-                              <span>Ad Hero Box</span>
+                          <div className="flex items-center space-x-1 mb-1 whitespace-nowrap">
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              <Flame className="w-2 h-2 text-amber-600 shrink-0" />
+                              <span>Ad Hero</span>
                             </span>
-                            <div className="text-[10px] font-bold text-brand-primary">
-                              {p.pairs_count || (p.name.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs Inside
-                            </div>
+                            <span className="text-[9px] font-bold text-brand-primary">
+                              {p.pairs_count || (p.name.match(/(\d+)\s*Pair/i)?.[1] || 6)} Pairs
+                            </span>
                           </div>
                         )}
                         <div>
                           <button
                             type="button"
                             onClick={() => handleToggleBestseller(p)}
-                            className={`inline-flex items-center space-x-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                            className={`inline-flex items-center space-x-1 text-[9.5px] font-semibold px-2 py-0.5 rounded-full transition-all cursor-pointer whitespace-nowrap leading-tight ${
                               Number(p.is_bestseller) === 1
                                 ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 shadow-2xs'
                                 : 'bg-gray-100 hover:bg-brand-primary-light text-gray-500 hover:text-brand-primary border border-transparent'
                             }`}
                             title="Click to toggle Bestseller Section spotlight"
                           >
-                            <Star className={`w-3 h-3 ${Number(p.is_bestseller) === 1 ? 'fill-amber-400 text-amber-500' : 'text-gray-400'}`} />
-                            <span>{Number(p.is_bestseller) === 1 ? '★ Bestseller Section' : 'Add to Bestsellers'}</span>
+                            <Star className={`w-2.5 h-2.5 shrink-0 ${Number(p.is_bestseller) === 1 ? 'fill-amber-400 text-amber-500' : 'text-gray-400'}`} />
+                            <span>{Number(p.is_bestseller) === 1 ? 'Bestseller Section' : 'Add to Bestsellers'}</span>
                           </button>
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        {/* Storefront PDP Preview Action */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPreview(p)}
-                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all shadow-2xs cursor-pointer mr-1 ${
-                            !isLive
-                              ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-                              : 'bg-sky-50 hover:bg-sky-600 hover:text-white text-sky-700 border-sky-200'
-                          }`}
-                          title={!isLive ? "Admin Preview (Preview draft on storefront PDP)" : "Preview Piece on Storefront"}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Preview</span>
-                          {!isLive && (
-                            <span className="text-[8px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold uppercase">
-                              Draft
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenAssurance(p)}
-                          className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer mr-1"
-                          title="Inspect High-Res Photos (Visual Quality Assurance)"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Photos</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(p)}
-                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Product"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(p.id)}
-                          className="p-1.5 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-lg transition-colors"
-                          title="Duplicate"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        {!isStaff && (
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center space-x-1">
+                          {/* Storefront PDP Preview Action */}
                           <button
-                            onClick={() => setDeletingProduct({ id: p.id, name: p.name })}
-                            className="p-1.5 text-brand-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Delete (Admin Only)"
+                            type="button"
+                            onClick={() => handleOpenPreview(p)}
+                            className={`inline-flex items-center space-x-1 px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all shadow-2xs cursor-pointer ${
+                              !isLive
+                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-sky-50 hover:bg-sky-600 hover:text-white text-sky-700 border-sky-200'
+                            }`}
+                            title={!isLive ? "Admin Preview (Preview draft on storefront PDP)" : "Preview Piece on Storefront"}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Eye className="w-3 h-3" />
+                            <span>Preview</span>
+                            {!isLive && (
+                              <span className="text-[7.5px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold uppercase">
+                                Draft
+                              </span>
+                            )}
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAssurance(p)}
+                            className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-[11px] font-semibold transition-all shadow-2xs cursor-pointer"
+                            title="Inspect High-Res Photos (Visual Quality Assurance)"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Photos</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-md transition-colors cursor-pointer"
+                            title="Edit Product"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDuplicate(p.id)}
+                            className="p-1 text-brand-muted hover:text-brand-primary hover:bg-brand-primary-light/50 rounded-md transition-colors cursor-pointer"
+                            title="Duplicate"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          {!isStaff && (
+                            <button
+                              onClick={() => setDeletingProduct({ id: p.id, name: p.name })}
+                              className="p-1 text-brand-muted hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                              title="Delete (Admin Only)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
