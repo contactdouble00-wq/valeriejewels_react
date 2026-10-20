@@ -588,8 +588,8 @@ export default function AdminProductsView({ currentUser }) {
 
       if (isMystery) {
         newPairsCount = null; // No earring box pairs for mystery jars
-        if (!newMaterial || newMaterial === '18K Gold Plated Stainless Steel' || newMaterial === 'Lightweight Stainless Steel') {
-          newMaterial = 'Curated Anti-Tarnish Jewels in Glass Jar';
+        if (!newMaterial || newMaterial === '18K Gold Plated Stainless Steel' || newMaterial === 'Lightweight Stainless Steel' || newMaterial.includes('Anti-Tarnish')) {
+          newMaterial = 'Assorted Beads, Chains & Accessories in Glass Jar';
         }
         if (currentVars.length === 0) {
           newVariants = [
@@ -966,10 +966,10 @@ export default function AdminProductsView({ currentUser }) {
                 cost_price: '',
                 category_id: defaultCat?.id || 1,
                 stock_quantity: isMystery ? 130 : 50,
-                is_anti_tarnish: isMystery ? 1 : 0,
+                is_anti_tarnish: 0,
                 pairs_count: isMystery ? null : 6,
                 material: isMystery
-                  ? 'Curated Anti-Tarnish Jewels in Glass Jar'
+                  ? 'Assorted Beads, Chains & Accessories in Glass Jar'
                   : 'Lightweight Stainless Steel',
                 is_bestseller: 0,
                 short_description: isMystery

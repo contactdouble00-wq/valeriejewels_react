@@ -490,6 +490,16 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     };
   }, []);
 
+  // Check if current product is a mystery box / mystery jar item
+  const isMysteryProduct = Boolean(
+    product?.category_slug === 'mystery-jar' ||
+    product?.category_slug === 'mystery-box' ||
+    (product?.category_name || '').toLowerCase().includes('mystery') ||
+    (product?.name || '').toLowerCase().includes('mystery') ||
+    (product?.sku || '').toLowerCase().includes('mjar') ||
+    (product?.slug || '').toLowerCase().includes('mystery')
+  );
+
   return (
     <>
       {/* ========================================================================= */}
@@ -670,7 +680,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     />
 
                     {/* Badges Overlay */}
-                    {Boolean(product.is_anti_tarnish) && (
+                    {Boolean(product.is_anti_tarnish) && !isMysteryProduct && (
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
                         <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
                           <ShieldCheck className="w-3 h-3 text-brand-primary" />
@@ -836,10 +846,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
               {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
               {product.variants && product.variants.length > 0 && (() => {
-                const isMysteryJar =
-                  product.category_slug === 'mystery-jar' ||
-                  (product.category_name || '').toLowerCase().includes('mystery') ||
-                  (product.name || '').toLowerCase().includes('mystery jar');
+                const isMysteryJar = isMysteryProduct;
 
                 return (
                   <div className="space-y-2.5 pt-1">
@@ -910,11 +917,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       })}
                     </div>
 
-                    {isMysteryJar && (
+                    {isMysteryProduct && (
                       <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2 text-[11px] text-purple-900">
                         <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
                         <span>
-                          <strong>Surprise Guarantee:</strong> Each jar is hand-curated with anti-tarnish jewelry pieces worth higher than the price!
+                          <strong>Surprise Guarantee:</strong> Each jar is hand-curated with delightful jewelry surprises worth higher than the price!
                         </span>
                       </div>
                     )}
@@ -929,21 +936,34 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
                     <span>Material Specification</span>
                   </span>
-                  {Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
+                  {isMysteryProduct ? (
+                    <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
+                      Surprise Curation
+                    </span>
+                  ) : Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
                     <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
                       {siteContent.heroBanner.trustPoint1.trim()}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-brand-tertiary font-medium">
-                  {product.material &&
-                  !product.material.toLowerCase().includes('18k gold plated') &&
-                  !product.material.toLowerCase().includes('18 gold plated')
-                    ? product.material
-                    : 'Lightweight Stainless Steel'}
+                  {isMysteryProduct
+                    ? (product.material &&
+                       !product.material.toLowerCase().includes('18k gold plated') &&
+                       !product.material.toLowerCase().includes('18 gold plated') &&
+                       !product.material.toLowerCase().includes('anti-tarnish')
+                        ? product.material
+                        : 'Assorted Beads, Chains & Accessories')
+                    : (product.material &&
+                       !product.material.toLowerCase().includes('18k gold plated') &&
+                       !product.material.toLowerCase().includes('18 gold plated')
+                        ? product.material
+                        : 'Lightweight Stainless Steel')}
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
-                  Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
+                  {isMysteryProduct
+                    ? 'Playful mix of colors, textures, and designs curated for a delightful unboxing surprise.'
+                    : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                 </p>
               </div>
 
@@ -969,7 +989,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </div>
                 </div>
 
-                <AmazonTrustBadge variant="pdp" />
+                {!isMysteryProduct && <AmazonTrustBadge variant="pdp" />}
               </div>
 
               {/* Description Content (Placed under Delivery & Returns) */}
@@ -1248,7 +1268,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       />
 
                       {/* Badges */}
-                      {Boolean(product.is_anti_tarnish) && (
+                      {Boolean(product.is_anti_tarnish) && !isMysteryProduct && (
                         <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
                           <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
                             <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
@@ -1372,15 +1392,27 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white border border-brand-border/70 flex items-center space-x-3 shadow-2xs">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-4 h-4" />
+                {isMysteryProduct ? (
+                  <div className="p-3.5 rounded-2xl bg-white border border-brand-border/70 flex items-center space-x-3 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-brand-primary flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-brand-tertiary block text-xs">Surprise Selection</span>
+                      <span className="text-[10.5px] text-brand-muted font-light">Hand-curated assorted mix</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-bold text-brand-tertiary block text-xs">Anti-Tarnish Finish</span>
-                    <span className="text-[10.5px] text-brand-muted font-light">Waterproof &amp; sweat-resistant</span>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-white border border-brand-border/70 flex items-center space-x-3 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-brand-tertiary block text-xs">Anti-Tarnish Finish</span>
+                      <span className="text-[10.5px] text-brand-muted font-light">Waterproof &amp; sweat-resistant</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
             </div>
@@ -1457,10 +1489,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
                 {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
                 {product.variants && product.variants.length > 0 && (() => {
-                  const isMysteryJar =
-                    product.category_slug === 'mystery-jar' ||
-                    (product.category_name || '').toLowerCase().includes('mystery') ||
-                    (product.name || '').toLowerCase().includes('mystery jar');
+                  const isMysteryJar = isMysteryProduct;
 
                   return (
                     <div className="space-y-3 pt-1">
@@ -1531,11 +1560,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         })}
                       </div>
 
-                      {isMysteryJar && (
+                      {isMysteryProduct && (
                         <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2.5 text-xs text-purple-900 shadow-2xs">
                           <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
                           <span>
-                            <strong>Mystery Value Guarantee:</strong> Handcrafted surprises crafted with water-safe anti-tarnish stainless steel.
+                            <strong>Mystery Value Guarantee:</strong> Handcrafted surprises and playful accessories curated with love.
                           </span>
                         </div>
                       )}
@@ -1616,18 +1645,38 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 {/* Material Specification & Reassurance Cards */}
                 <div className="space-y-3 pt-2">
                   <div className="p-4 rounded-2xl bg-brand-surface/70 border border-brand-border space-y-1.5">
-                    <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-tertiary font-bold block">
-                      Material Specification
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-tertiary font-bold block">
+                        Material Specification
+                      </span>
+                      {isMysteryProduct ? (
+                        <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
+                          Surprise Curation
+                        </span>
+                      ) : Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
+                        <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
+                          {siteContent.heroBanner.trustPoint1.trim()}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-brand-tertiary font-medium">
-                      {product.material &&
-                      !product.material.toLowerCase().includes('18k gold plated') &&
-                      !product.material.toLowerCase().includes('18 gold plated')
-                        ? product.material
-                        : 'Lightweight Stainless Steel'}
+                      {isMysteryProduct
+                        ? (product.material &&
+                           !product.material.toLowerCase().includes('18k gold plated') &&
+                           !product.material.toLowerCase().includes('18 gold plated') &&
+                           !product.material.toLowerCase().includes('anti-tarnish')
+                            ? product.material
+                            : 'Assorted Beads, Chains & Accessories')
+                        : (product.material &&
+                           !product.material.toLowerCase().includes('18k gold plated') &&
+                           !product.material.toLowerCase().includes('18 gold plated')
+                             ? product.material
+                             : 'Lightweight Stainless Steel')}
                     </p>
                     <p className="text-[11px] text-brand-muted font-light leading-relaxed">
-                      Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.
+                      {isMysteryProduct
+                        ? 'Playful mix of colors, textures, and designs curated for a delightful unboxing surprise.'
+                        : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                     </p>
                   </div>
 
@@ -1653,7 +1702,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       </div>
                     </div>
 
-                    <AmazonTrustBadge variant="pdp" />
+                    {!isMysteryProduct && <AmazonTrustBadge variant="pdp" />}
                   </div>
 
                   {/* About This Piece (Placed under Delivery & Returns) */}

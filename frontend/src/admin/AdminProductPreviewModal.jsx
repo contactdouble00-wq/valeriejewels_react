@@ -66,6 +66,14 @@ export default function AdminProductPreviewModal({
   if (!isOpen || !product) return null;
 
   const isLive = Number(product.is_active) !== 0;
+  const isMysteryProduct = Boolean(
+    product.category_slug === 'mystery-jar' ||
+    product.category_slug === 'mystery-box' ||
+    (product.category_name || '').toLowerCase().includes('mystery') ||
+    (product.name || '').toLowerCase().includes('mystery') ||
+    (product.sku || '').toLowerCase().includes('mjar') ||
+    (product.slug || '').toLowerCase().includes('mystery')
+  );
 
   // Build media gallery list
   let mediaList = [];
@@ -362,13 +370,23 @@ export default function AdminProductPreviewModal({
 
               {/* Assurance Trust Badges (Exact as storefront PDP) */}
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-100 flex items-center space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0" />
-                  <div className="text-[11px] leading-tight text-brand-tertiary">
-                    <span className="font-bold block">Anti-Tarnish Lifetime</span>
-                    <span className="text-[10px] text-brand-muted">18K Pure Gold Plating</span>
+                {isMysteryProduct ? (
+                  <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-100 flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
+                    <div className="text-[11px] leading-tight text-brand-tertiary">
+                      <span className="font-bold block">Surprise Selection</span>
+                      <span className="text-[10px] text-brand-muted">Hand-curated assorted mix</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-100 flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0" />
+                    <div className="text-[11px] leading-tight text-brand-tertiary">
+                      <span className="font-bold block">Anti-Tarnish Lifetime</span>
+                      <span className="text-[10px] text-brand-muted">Lightweight Stainless Steel</span>
+                    </div>
+                  </div>
+                )}
                 <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100 flex items-center space-x-2">
                   <Truck className="w-4 h-4 text-emerald-700 shrink-0" />
                   <div className="text-[11px] leading-tight text-brand-tertiary">
@@ -480,10 +498,7 @@ export default function AdminProductPreviewModal({
 
               {/* Product Variants / Multi-Size Selector */}
               {product.variants && product.variants.length > 0 && (() => {
-                const isMysteryJar =
-                  product.category_slug === 'mystery-jar' ||
-                  (product.category_name || '').toLowerCase().includes('mystery') ||
-                  (product.name || '').toLowerCase().includes('mystery jar');
+                const isMysteryJar = isMysteryProduct;
 
                 return (
                   <div className="space-y-2.5 pt-1">
