@@ -81,9 +81,9 @@ export default function AdminCouponsView({ currentUser }) {
     setEditingId(coupon.id);
     setFormCode(coupon.code);
     setFormDiscountType(coupon.discount_type || 'percentage');
-    setFormDiscountValue(coupon.discount_value !== undefined ? String(coupon.discount_value) : '');
-    setFormMinOrder(coupon.min_order_amount !== undefined ? String(coupon.min_order_amount) : '0');
-    setFormMaxDiscount(coupon.max_discount_amount ? String(coupon.max_discount_amount) : '');
+    setFormDiscountValue(coupon.discount_value !== undefined && coupon.discount_value !== null ? String(Number(coupon.discount_value)) : '');
+    setFormMinOrder(coupon.min_order_amount !== undefined && coupon.min_order_amount !== null ? String(Number(coupon.min_order_amount)) : '0');
+    setFormMaxDiscount(coupon.max_discount_amount ? String(Number(coupon.max_discount_amount)) : '');
     setFormUsageLimit(coupon.usage_limit ? String(coupon.usage_limit) : '');
     setFormIsActive(coupon.is_active === 1 || coupon.is_active === true || coupon.is_active === '1');
     setError('');
@@ -452,7 +452,7 @@ export default function AdminCouponsView({ currentUser }) {
                   <div className="relative">
                     <input
                       type="number"
-                      step={formDiscountType === 'percentage' ? '0.1' : '1'}
+                      step="any"
                       min="0.01"
                       max={formDiscountType === 'percentage' ? '100' : undefined}
                       required
@@ -477,7 +477,7 @@ export default function AdminCouponsView({ currentUser }) {
                   <input
                     type="number"
                     min="0"
-                    step="1"
+                    step="any"
                     placeholder="0"
                     value={formMinOrder}
                     onChange={(e) => setFormMinOrder(e.target.value)}
@@ -493,8 +493,8 @@ export default function AdminCouponsView({ currentUser }) {
                   </label>
                   <input
                     type="number"
-                    min="1"
-                    step="1"
+                    min="0"
+                    step="any"
                     placeholder="Optional (No limit)"
                     value={formMaxDiscount}
                     onChange={(e) => setFormMaxDiscount(e.target.value)}
