@@ -36,6 +36,7 @@ import {
 import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useSiteContent } from '../context/SiteContentContext';
 import { trackGABeginCheckout, trackGAPurchase } from '../utils/analytics';
 
 // Pincode directory lookup helper for instant city/state auto-fill
@@ -69,6 +70,8 @@ export default function CheckoutModal({
 }) {
   const { cartItems, clearCart } = useCart();
   const { user, token } = useAuth();
+  const { content: siteContent } = useSiteContent();
+  const activePromoCode = siteContent?.jhumkaBoxHero?.guaranteeStrip?.couponCode || 'VALERIE10';
 
   // Fastrr Checkout Step Sequence:
   // 'details_payment' (direct) | 'phone' -> 'otp' (held for now)
@@ -129,9 +132,17 @@ export default function CheckoutModal({
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
-  const [couponCode, setCouponCode] = useState('VALERIE10');
+  const [couponCode, setCouponCode] = useState(activePromoCode || 'VALERIE10');
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
+  // Keep couponCode in sync if activePromoCode loads dynamically and user hasn't typed anything
+  useEffect(() => {
+    if (!couponApplied && !couponInput.trim() && activePromoCode) {
+      setCouponCode(activePromoCode);
+    }
+  }, [activePromoCode, couponApplied, couponInput]);
 
   // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
   const [paymentType, setPaymentType] = useState(initialPaymentType || 'full_prepaid');
@@ -320,12 +331,22 @@ export default function CheckoutModal({
 
         if (isMounted) {
           setCalcData(result);
+          if (couponApplied) {
+            if (result?.coupon_error) {
+              setCouponError(result.coupon_error);
+              setCouponApplied(false);
+            } else if (result?.applied_coupon) {
+              setCouponError('');
+            }
+          }
         }
       } catch (err) {
         if (isMounted) {
           // Client-side fallback calculation if offline
           const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-          const disc = couponApplied ? (couponCode === 'VALERIE10' ? 50 : Math.min(subtotal * 0.1, 200)) : 0;
+          const disc = (couponApplied && calcData?.applied_coupon?.amount_saved)
+            ? Number(calcData.applied_coupon.amount_saved)
+            : 0;
           const finalTot = Math.max(0, subtotal - disc);
           const maxPrepDisc = Number(paymentSettings.prepaid_discount ?? 50);
           const prepDisc = finalTot > 1 ? Math.min(maxPrepDisc, finalTot - 1) : 0;
@@ -1849,8 +1870,11 @@ export default function CheckoutModal({
                   <input
                     type="text"
                     value={couponInput}
-                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    placeholder={couponApplied ? couponCode : "Enter coupon code (e.g. VALERIE10)"}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      if (couponError) setCouponError('');
+                    }}
+                    placeholder={couponApplied ? couponCode : `Enter coupon code (e.g. ${activePromoCode || 'VALERIE10'})`}
                     className="w-full pl-9 pr-3 py-2 bg-transparent text-xs font-bold tracking-wider text-gray-900 focus:outline-none uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-400 font-mono"
                   />
                 </div>
@@ -1860,10 +1884,12 @@ export default function CheckoutModal({
                     if (couponApplied) {
                       setCouponApplied(false);
                       setCouponInput('');
+                      setCouponError('');
                     } else {
-                      const codeToApply = (couponInput.trim() || 'VALERIE10').toUpperCase();
+                      const codeToApply = (couponInput.trim() || couponCode || activePromoCode || 'VALERIE10').toUpperCase();
                       setCouponCode(codeToApply);
                       setCouponApplied(true);
+                      setCouponError('');
                     }
                   }}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1875,14 +1901,29 @@ export default function CheckoutModal({
                   {couponApplied ? 'Remove' : 'Apply'}
                 </button>
               </div>
-              {couponApplied && (
+              {couponApplied && calcData?.applied_coupon && (
                 <div className="pt-2 pl-1 space-y-1 animate-fade-in">
                   <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 shrink-0" />
-                    <span>Coupon {couponCode} applied: Flat ₹{calcData?.discount_amount || 50} discount added!</span>
+                    <span>
+                      Coupon {calcData.applied_coupon.code} applied:{' '}
+                      {calcData.applied_coupon.discount_type === 'percentage'
+                        ? `${calcData.applied_coupon.discount_value}% OFF (-₹${calcData.applied_coupon.amount_saved})`
+                        : `Flat ₹${calcData.applied_coupon.amount_saved} discount added!`}
+                    </span>
                   </p>
-                  <p className="text-[10px] text-emerald-600/90 font-medium pl-5">
-                    💡 Extra ₹{prepaidDiscount} off will be applied if you pay online (Prepaid)!
+                  {prepaidDiscount > 0 && (
+                    <p className="text-[10px] text-emerald-600/90 font-medium pl-5">
+                      💡 Extra ₹{prepaidDiscount} off will be applied if you pay online (Prepaid)!
+                    </p>
+                  )}
+                </div>
+              )}
+              {couponError && (
+                <div className="pt-2 pl-1 animate-fade-in">
+                  <p className="text-[11px] text-rose-600 font-semibold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{couponError}</span>
                   </p>
                 </div>
               )}
@@ -2129,10 +2170,15 @@ export default function CheckoutModal({
                       <span>Store Price</span>
                       <span className="font-semibold text-gray-800">₹{subtotal.toLocaleString('en-IN')}.00</span>
                     </div>
-                    {couponApplied && (
+                    {couponApplied && calcData?.applied_coupon && (
                       <div className="flex justify-between text-emerald-700 font-semibold">
-                        <span>Coupon Discount ({couponCode})</span>
-                        <span>- ₹{(calcData?.discount_amount !== undefined ? calcData.discount_amount : 50).toLocaleString('en-IN')}.00</span>
+                        <span>
+                          Coupon ({calcData.applied_coupon.code}
+                          {calcData.applied_coupon.discount_type === 'percentage'
+                            ? ` • ${calcData.applied_coupon.discount_value}% OFF`
+                            : ''})
+                        </span>
+                        <span>- ₹{Number(calcData.applied_coupon.amount_saved).toLocaleString('en-IN')}.00</span>
                       </div>
                     )}
                     {paymentType === 'full_prepaid' && prepaidDiscount > 0 && (
@@ -2297,7 +2343,7 @@ export default function CheckoutModal({
                 )}
                 {paymentType === 'full_prepaid' && (
                   <span className="text-[10.5px] text-emerald-600 font-bold block">
-                    ₹{prepaidDiscount} off for prepaid order{couponApplied ? ` + ₹${calcData?.discount_amount || 50} coupon` : ''}
+                    ₹{prepaidDiscount} off for prepaid order{couponApplied && calcData?.applied_coupon ? ` + ₹${Math.round(calcData.applied_coupon.amount_saved)} coupon` : ''}
                   </span>
                 )}
               </div>

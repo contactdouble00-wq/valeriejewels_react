@@ -93,27 +93,116 @@ try {
             $newCode = $orig['code'];
         }
 
+        $type = isset($input['discount_type']) ? trim($input['discount_type']) : ($orig['discount_type'] ?? 'percentage');
+        if (!in_array($type, ['percentage', 'fixed'], true)) {
+            $type = 'percentage';
+        }
+
+        $val = isset($input['discount_value']) ? (float)$input['discount_value'] : (float)$orig['discount_value'];
+        if ($val <= 0) {
+            ApiResponse::error('A positive discount value is required', 422);
+        }
+        if ($type === 'percentage' && $val > 100) {
+            ApiResponse::error('Percentage discount cannot exceed 100%', 422);
+        }
+
+        $min = isset($input['min_order_amount']) ? max(0.0, (float)$input['min_order_amount']) : (float)$orig['min_order_amount'];
+        
+        $max = null;
+        if (array_key_exists('max_discount_amount', $input)) {
+            if ($input['max_discount_amount'] !== '' && $input['max_discount_amount'] !== null && (float)$input['max_discount_amount'] > 0) {
+                $max = (float)$input['max_discount_amount'];
+            }
+        } else {
+            $max = $orig['max_discount_amount'] !== null ? (float)$orig['max_discount_amount'] : null;
+        }
+
+        $limit = isset($input['usage_limit']) && $input['usage_limit'] !== '' && (int)$input['usage_limit'] > 0 
+            ? (int)$input['usage_limit'] 
+            : (isset($input['usage_limit']) && $input['usage_limit'] === '' ? null : $orig['usage_limit']);
+
+        $active = isset($input['is_active']) ? ((int)$input['is_active'] ? 1 : 0) : (int)$orig['is_active'];
+
         $stmt = $pdo->prepare("
             UPDATE coupons SET 
                 code = :code,
-                is_active = :active,
-                usage_limit = :limit,
+                discount_type = :type,
+                discount_value = :val,
                 min_order_amount = :min,
-                discount_value = :val
+                max_discount_amount = :max,
+                usage_limit = :limit,
+                is_active = :active
             WHERE id = :id
         ");
         $stmt->execute([
             ':code'   => $newCode,
-            ':active' => isset($input['is_active']) ? (int)$input['is_active'] : (int)$orig['is_active'],
-            ':limit'  => isset($input['usage_limit']) ? (int)$input['usage_limit'] : (int)$orig['usage_limit'],
-            ':min'    => isset($input['min_order_amount']) ? (float)$input['min_order_amount'] : (float)$orig['min_order_amount'],
-            ':val'    => isset($input['discount_value']) ? (float)$input['discount_value'] : (float)$orig['discount_value'],
+            ':type'   => $type,
+            ':val'    => $val,
+            ':min'    => $min,
+            ':max'    => $max,
+            ':limit'  => $limit,
+            ':active' => $active,
             ':id'     => $id,
         ]);
 
-        AdminAuth::logActivity($adminUser['id'], 'update_coupon', 'coupon', $id, ['code' => $newCode]);
+        // Synchronize changes to site_settings.homepage_content if this coupon is referenced in banners/guarantee strips
+        try {
+            $settingStmt = $pdo->query("SELECT `value` FROM site_settings WHERE `key` = 'homepage_content' LIMIT 1");
+            $rawContent = $settingStmt->fetchColumn();
+            if ($rawContent) {
+                $content = json_decode($rawContent, true);
+                if (is_array($content)) {
+                    $synced = false;
+                    $origCodeUpper = strtoupper($orig['code']);
+                    
+                    // 1. Guarantee strip in jhumkaBoxHero
+                    if (isset($content['jhumkaBoxHero']['guaranteeStrip']['couponCode'])) {
+                        if (strtoupper(trim($content['jhumkaBoxHero']['guaranteeStrip']['couponCode'])) === $origCodeUpper) {
+                            $content['jhumkaBoxHero']['guaranteeStrip']['couponCode'] = $newCode;
+                            $synced = true;
+                        }
+                    }
 
-        ApiResponse::success(['id' => $id, 'code' => $newCode], 'Coupon updated successfully');
+                    // 2. Festival Offer banner
+                    if (isset($content['festivalOffer']['couponCode'])) {
+                        if (strtoupper(trim($content['festivalOffer']['couponCode'])) === $origCodeUpper) {
+                            $content['festivalOffer']['couponCode'] = $newCode;
+                            if ($type === 'percentage') {
+                                $content['festivalOffer']['couponDiscount'] = 'FLAT ' . round($val) . '% OFF';
+                            } else {
+                                $content['festivalOffer']['couponDiscount'] = '₹' . round($val) . ' FLAT OFF';
+                            }
+                            $synced = true;
+                        }
+                    }
+
+                    if ($synced) {
+                        $updStmt = $pdo->prepare("UPDATE site_settings SET `value` = :val WHERE `key` = 'homepage_content'");
+                        $updStmt->execute([':val' => json_encode($content, JSON_UNESCAPED_UNICODE)]);
+                    }
+                }
+            }
+        } catch (Throwable $syncErr) {
+            error_log('Coupon banner sync error: ' . $syncErr->getMessage());
+        }
+
+        AdminAuth::logActivity($adminUser['id'], 'update_coupon', 'coupon', $id, [
+            'code' => $newCode,
+            'type' => $type,
+            'val'  => $val,
+            'active' => $active
+        ]);
+
+        ApiResponse::success([
+            'id' => $id,
+            'code' => $newCode,
+            'discount_type' => $type,
+            'discount_value' => $val,
+            'min_order_amount' => $min,
+            'max_discount_amount' => $max,
+            'usage_limit' => $limit,
+            'is_active' => $active
+        ], 'Coupon updated successfully');
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

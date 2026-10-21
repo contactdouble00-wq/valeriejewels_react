@@ -118,36 +118,53 @@ try {
     // Coupon discount logic
     $discountAmount = 0.0;
     $appliedCoupon  = null;
+    $couponError    = null;
 
     if (!empty($couponCode)) {
         $coupStmt = $pdo->prepare("
             SELECT * FROM coupons 
-            WHERE code = :code AND is_active = 1
+            WHERE UPPER(code) = UPPER(:code)
             LIMIT 1
         ");
         $coupStmt->execute([':code' => $couponCode]);
-        $coupon = $coupStmt->fetch();
+        $coupon = $coupStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($coupon) {
+        if (!$coupon) {
+            $couponError = "Coupon '{$couponCode}' is invalid.";
+        } elseif (!(int)$coupon['is_active']) {
+            $couponError = "Coupon '{$coupon['code']}' is no longer active.";
+        } elseif ($coupon['usage_limit'] !== null && (int)$coupon['usage_limit'] > 0 && (int)$coupon['used_count'] >= (int)$coupon['usage_limit']) {
+            $couponError = "Coupon '{$coupon['code']}' usage limit has been reached.";
+        } elseif ($subtotal < (float)$coupon['min_order_amount']) {
             $minOrder = (float)$coupon['min_order_amount'];
-            if ($subtotal >= $minOrder) {
-                if ($coupon['discount_type'] === 'percentage') {
-                    $discountAmount = ($subtotal * (float)$coupon['discount_value']) / 100.0;
-                    if ($coupon['max_discount_amount'] !== null) {
-                        $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
-                    }
-                } else {
-                    // Fixed discount
-                    $discountAmount = (float)$coupon['discount_value'];
+            $shortfall = ceil($minOrder - $subtotal);
+            $couponError = "Add ₹{$shortfall} more to use '{$coupon['code']}' (Min order ₹" . number_format($minOrder, 0) . ").";
+        } else {
+            $discVal = (float)$coupon['discount_value'];
+            if ($coupon['discount_type'] === 'percentage') {
+                $discountAmount = ($subtotal * $discVal) / 100.0;
+                if ($coupon['max_discount_amount'] !== null && (float)$coupon['max_discount_amount'] > 0) {
+                    $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
                 }
-                $discountAmount = min($discountAmount, $subtotal);
-                $appliedCoupon = [
-                    'code'           => $coupon['code'],
-                    'discount_type'  => $coupon['discount_type'],
-                    'discount_value' => (float)$coupon['discount_value'],
-                    'amount_saved'   => round($discountAmount, 2),
-                ];
+            } else {
+                // Fixed discount
+                $discountAmount = $discVal;
+                if ($coupon['max_discount_amount'] !== null && (float)$coupon['max_discount_amount'] > 0) {
+                    $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
+                }
             }
+            $discountAmount = min($discountAmount, $subtotal);
+            $discountAmount = round($discountAmount, 2);
+
+            $appliedCoupon = [
+                'id'                  => (int)$coupon['id'],
+                'code'                => $coupon['code'],
+                'discount_type'       => $coupon['discount_type'],
+                'discount_value'      => $discVal,
+                'min_order_amount'    => (float)$coupon['min_order_amount'],
+                'max_discount_amount' => $coupon['max_discount_amount'] !== null ? (float)$coupon['max_discount_amount'] : null,
+                'amount_saved'        => $discountAmount,
+            ];
         }
     }
 
@@ -219,6 +236,7 @@ try {
         'is_free_shipping'        => true,
         'final_total'             => $netSubtotal,
         'applied_coupon'          => $appliedCoupon,
+        'coupon_error'            => $couponError,
         'payment_splits' => [
             'full_prepaid' => [
                 'enabled'               => (bool)($payConfig['online_payment_enabled'] ?? true),

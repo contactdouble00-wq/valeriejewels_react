@@ -146,19 +146,32 @@ try {
     // Coupon calculation
     $discountAmount = 0.0;
     if (!empty($couponCode)) {
-        $coupStmt = $pdo->prepare("SELECT * FROM coupons WHERE code = :code AND is_active = 1 LIMIT 1");
+        $coupStmt = $pdo->prepare("SELECT * FROM coupons WHERE UPPER(code) = UPPER(:code) AND is_active = 1 LIMIT 1");
         $coupStmt->execute([':code' => $couponCode]);
-        $coupon = $coupStmt->fetch();
-        if ($coupon && $subtotal >= (float)$coupon['min_order_amount']) {
-            if ($coupon['discount_type'] === 'percentage') {
-                $discountAmount = ($subtotal * (float)$coupon['discount_value']) / 100.0;
-                if ($coupon['max_discount_amount'] !== null) {
-                    $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
+        $coupon = $coupStmt->fetch(PDO::FETCH_ASSOC);
+        if ($coupon) {
+            $usageLimitOk = ($coupon['usage_limit'] === null || (int)$coupon['usage_limit'] <= 0 || (int)$coupon['used_count'] < (int)$coupon['usage_limit']);
+            $minOrderOk = ($subtotal >= (float)$coupon['min_order_amount']);
+            if ($usageLimitOk && $minOrderOk) {
+                $discVal = (float)$coupon['discount_value'];
+                if ($coupon['discount_type'] === 'percentage') {
+                    $discountAmount = ($subtotal * $discVal) / 100.0;
+                    if ($coupon['max_discount_amount'] !== null && (float)$coupon['max_discount_amount'] > 0) {
+                        $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
+                    }
+                } else {
+                    $discountAmount = $discVal;
+                    if ($coupon['max_discount_amount'] !== null && (float)$coupon['max_discount_amount'] > 0) {
+                        $discountAmount = min($discountAmount, (float)$coupon['max_discount_amount']);
+                    }
                 }
-            } else {
-                $discountAmount = (float)$coupon['discount_value'];
+                $discountAmount = min($discountAmount, $subtotal);
+                $discountAmount = round($discountAmount, 2);
+
+                try {
+                    $pdo->prepare("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?")->execute([$coupon['id']]);
+                } catch (Throwable $ce) {}
             }
-            $discountAmount = min($discountAmount, $subtotal);
         }
     }
 
