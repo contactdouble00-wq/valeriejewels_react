@@ -18,6 +18,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { apiService } from './services/api';
+import { SEED_CATEGORIES } from './data/seedCatalog';
 import { CartProvider, useCart } from './context/CartContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider, useSiteContent } from './context/SiteContentContext';
@@ -58,7 +59,18 @@ function StorefrontContent({
   onNavigateOrderFailed
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(() => {
+    try {
+      const cached = localStorage.getItem('valerie_categories_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return SEED_CATEGORIES;
+  });
   const [products, setProducts] = useState([]);
   const [jhumkaBoxes, setJhumkaBoxes] = useState([]);
   const [bundles, setBundles] = useState([]);
@@ -266,9 +278,14 @@ function StorefrontContent({
         apiService.getBundles().catch(() => []),
         apiService.getHealth().catch(() => null),
         apiService.getProducts({ bestseller: 1 }).then(res => res.products || []).catch(() => []),
-        apiService.getProducts({ category: 'jhumkha-box' }).then(res => res.products || []).catch(() => []),
+        apiService.getProducts({ category: 'jhumka-boxes' }).then(res => res.products || []).catch(() => []),
       ]);
-      setCategories(cats || []);
+      if (Array.isArray(cats) && cats.length > 0) {
+        setCategories(cats);
+        try {
+          localStorage.setItem('valerie_categories_cache', JSON.stringify(cats));
+        } catch (e) {}
+      }
       setBundles(bnds || []);
       setApiHealth(health);
       const activeBestsellers = (bestsellersRes && bestsellersRes.length > 0) ? bestsellersRes : (jBoxesRes || []);
@@ -610,7 +627,7 @@ function StorefrontContent({
         {/* Tier 2: Desktop Centered Category Navigation Strip */}
         <nav className="hidden lg:block border-t border-brand-border/60 bg-[#FAF7FC]/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-center space-x-6 xl:space-x-8 h-10 text-[11px] font-caps tracking-[0.14em] uppercase text-brand-tertiary/80 whitespace-nowrap">
+            <div className="flex items-center justify-center gap-x-4 lg:gap-x-5 xl:gap-x-7 h-10 text-[11px] font-caps tracking-[0.14em] uppercase text-brand-tertiary/80 whitespace-nowrap overflow-x-auto scrollbar-none">
               {/* Highlighted Featured Pill matching Everlasting (uses dynamic category name) */}
               {(() => {
                 const featuredCat = categories.find((cat) => cat.slug.includes('jhumk') || cat.id === 1) || categories[0];

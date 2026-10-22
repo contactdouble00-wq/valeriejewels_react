@@ -143,12 +143,22 @@ export const apiService = {
       if (response.ok) {
         const result = await response.json();
         if (Array.isArray(result.data) && result.data.length > 0) {
+          try {
+            localStorage.setItem('valerie_categories_cache', JSON.stringify(result.data));
+          } catch (e) {}
           return result.data;
         }
       }
     } catch (err) {
-      console.warn('API getCategories error, falling back to seed categories:', err);
+      console.warn('API getCategories error, falling back to cached or seed categories:', err);
     }
+    try {
+      const cached = localStorage.getItem('valerie_categories_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
     return SEED_CATEGORIES;
   },
 

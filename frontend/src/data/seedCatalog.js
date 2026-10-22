@@ -7,11 +7,11 @@
 export const SEED_CATEGORIES = [
   {
     id: 1,
-    name: 'Jhumkha box',
-    slug: 'jhumkha-box',
-    description: 'Our viral signature curated jhumka boxes designed for weddings, festivities, and daily wear.',
+    name: 'Jhumka Boxes',
+    slug: 'jhumka-boxes',
+    description: 'Our viral 4 signature curated jhumka boxes designed for weddings, festivities, and daily wear.',
     image_url: null,
-    display_order: 0,
+    display_order: 1,
     products_count: 4,
   },
   {
@@ -24,6 +24,24 @@ export const SEED_CATEGORIES = [
     products_count: 7,
   },
   {
+    id: 3,
+    name: 'Rings',
+    slug: 'rings',
+    description: 'Stackable rings, solitaire bands, and statement signets.',
+    image_url: null,
+    display_order: 3,
+    products_count: 8,
+  },
+  {
+    id: 4,
+    name: 'Earrings',
+    slug: 'earrings',
+    description: 'Waterproof huggies, hoops, drops, and delicate studs.',
+    image_url: null,
+    display_order: 4,
+    products_count: 12,
+  },
+  {
     id: 5,
     name: 'Bracelets',
     slug: 'bracelets',
@@ -31,6 +49,24 @@ export const SEED_CATEGORIES = [
     image_url: null,
     display_order: 5,
     products_count: 6,
+  },
+  {
+    id: 6,
+    name: 'Combos & Sets',
+    slug: 'combos',
+    description: 'Curated jewelry bundles with exclusive savings up to 45%.',
+    image_url: null,
+    display_order: 6,
+    products_count: 4,
+  },
+  {
+    id: 7,
+    name: 'Mystery Jar',
+    slug: 'mystery-jar',
+    description: 'Curated surprise mystery jars with handcrafted jewelry pieces in multiple sizes.',
+    image_url: null,
+    display_order: 7,
+    products_count: 2,
   },
 ];
 
