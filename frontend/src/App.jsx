@@ -1335,7 +1335,6 @@ function StorefrontContent({
                 {/* Copyright */}
                 <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4 pt-4 border-t border-brand-border">
                   <div>© {new Date().getFullYear()} VALERIÉ. All rights reserved. Open hours: {hours}.</div>
-                  <div className="text-[11px] tracking-wider uppercase">Hostinger Premium • React + PHP REST • Fastrr Checkout Ready</div>
                 </div>
               </>
             );
