@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X, Star, ShieldCheck, Truck, RefreshCw, ShoppingBag, Heart,
   Sparkles, Check, ChevronRight, ChevronLeft, Share2, HelpCircle, AlertCircle,
-  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Zap
+  Play, Pause, Volume2, VolumeX, ArrowLeft, Maximize2, Zap, Gift
 } from 'lucide-react';
 import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 import { apiService } from '../services/api';
@@ -500,6 +500,67 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     (product?.slug || '').toLowerCase().includes('mystery')
   );
 
+  // Helper to format product title into clean Title Case (e.g. "mystery jar" -> "Mystery Jar")
+  const formatProductTitle = (str) => {
+    if (!str) return '';
+    return str.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+  };
+
+  // Helper to parse variant attributes cleanly (especially for Mystery Jar tiers & surprise pieces)
+  const parseVariantData = (v, isMysteryJar) => {
+    const rawTitle = v?.title || v?.option1_value || '';
+    if (!isMysteryJar) {
+      return {
+        tierName: rawTitle,
+        pieceBadge: '',
+        isMystery: false,
+      };
+    }
+
+    // Extract piece count from parentheses e.g. (5/6 Surprise Pieces) or (18 Pieces)
+    const parenMatch = rawTitle.match(/\(([^)]+)\)/);
+    let pieceBadge = parenMatch ? parenMatch[1].trim() : '';
+
+    if (!pieceBadge) {
+      const pieceMatch = rawTitle.match(/(\d+[\s\-\/]+\d*|\d+)\s*(surprise\s*)?(pieces|piece|pcs|items)/i);
+      if (pieceMatch) pieceBadge = pieceMatch[0].trim();
+    }
+
+    // Remove parenthetical piece count for tier title
+    let cleanName = rawTitle.replace(/\(([^)]+)\)/, '').trim();
+    // Strip redundant 'mystery jar' or 'mystery box'
+    cleanName = cleanName.replace(/\s*(mystery\s*(jar|box))\s*/i, ' ').trim();
+
+    // If tier name is short like 'Mini', 'Classic', 'Custom', append 'Edition'
+    let tierName = cleanName;
+    if (tierName && !/edition|size|tier|pack|jar/i.test(tierName)) {
+      tierName = `${tierName} Edition`;
+    }
+    if (!tierName) tierName = rawTitle;
+
+    // Title case
+    tierName = tierName.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+
+    // Beautify pieceBadge
+    if (pieceBadge) {
+      pieceBadge = pieceBadge.replace(/(\d+)\s*\/\s*(\d+)/, '$1–$2');
+      pieceBadge = pieceBadge.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+    }
+
+    return {
+      tierName,
+      pieceBadge,
+      isMystery: true,
+    };
+  };
+
+  const activeDiscount = activeMrp > activePrice && activeMrp > 0
+    ? Math.round(((activeMrp - activePrice) / activeMrp) * 100)
+    : 0;
+  const activeSavings = activeMrp > activePrice
+    ? Math.round(activeMrp - activePrice)
+    : 0;
+
   return (
     <>
       {/* ========================================================================= */}
@@ -680,14 +741,21 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     />
 
                     {/* Badges Overlay */}
-                    {Boolean(product.is_anti_tarnish) && !isMysteryProduct && (
+                    {Boolean(product.is_anti_tarnish) && !isMysteryProduct ? (
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-                        <span className="px-2 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary shadow-sm flex items-center gap-1 w-fit">
                           <ShieldCheck className="w-3 h-3 text-brand-primary" />
                           Anti-Tarnish Polish
                         </span>
                       </div>
-                    )}
+                    ) : isMysteryProduct ? (
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                        <span className="px-2.5 py-0.5 rounded-full text-[8.5px] font-caps uppercase tracking-wider font-semibold bg-purple-900/90 text-white backdrop-blur-xs shadow-sm flex items-center gap-1 w-fit">
+                          <Sparkles className="w-3 h-3 text-amber-300" />
+                          Curated Mystery Jar
+                        </span>
+                      </div>
+                    ) : null}
 
                     {/* Tap to Zoom indicator */}
                     <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[9px] flex items-center gap-1 font-medium pointer-events-none">
@@ -825,28 +893,40 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               </div>
 
               {/* Title */}
-              <h1 className="font-sans text-xl font-bold text-brand-tertiary leading-snug">
-                {product.name}
+              <h1 className="font-sans text-xl font-bold text-brand-tertiary leading-snug capitalize">
+                {formatProductTitle(product.name)}
               </h1>
 
               {/* Price Row */}
-              <div className="flex items-baseline space-x-2.5 pb-4 border-b border-brand-border/80">
-                <span className="text-2xl font-bold text-brand-tertiary">
-                  ₹{Math.round(activePrice).toLocaleString('en-IN')}
-                </span>
-                {activeMrp > activePrice && (
-                  <span className="text-sm text-brand-muted line-through font-light">
-                    ₹{Math.round(activeMrp).toLocaleString('en-IN')}
+              <div className="space-y-1 pb-3.5 border-b border-brand-border/80">
+                <div className="flex items-center flex-wrap gap-2">
+                  <span className="text-2xl font-bold text-brand-tertiary">
+                    ₹{Math.round(activePrice).toLocaleString('en-IN')}
                   </span>
-                )}
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Free Express Shipping
-                </span>
+                  {activeMrp > activePrice && (
+                    <span className="text-sm text-brand-muted line-through font-light">
+                      ₹{Math.round(activeMrp).toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  {activeDiscount > 0 && (
+                    <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 shadow-2xs">
+                      Save {activeDiscount}% (₹{activeSavings.toLocaleString('en-IN')} OFF)
+                    </span>
+                  )}
+                  <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <Truck className="w-3 h-3 text-emerald-600" />
+                    Free Delivery
+                  </span>
+                </div>
+                <p className="text-[10px] text-brand-muted font-light">
+                  Inclusive of all taxes • Zero hidden shipping fees
+                </p>
               </div>
 
               {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
               {product.variants && product.variants.length > 0 && (() => {
                 const isMysteryJar = isMysteryProduct;
+                const activeParsed = parseVariantData(selectedVariant, isMysteryJar);
 
                 return (
                   <div className="space-y-2.5 pt-1">
@@ -855,90 +935,134 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
                         <span>{isMysteryJar ? 'Select Mystery Jar Size / Edition:' : `Select ${product.variants[0]?.option1_name || 'Size / Option'}:`}</span>
                       </span>
-                      <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                        {selectedVariant?.title || selectedVariant?.option1_value}
+                      <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs">
+                        {activeParsed.tierName} {activeParsed.pieceBadge ? `• ${activeParsed.pieceBadge}` : ''}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {product.variants.map((v) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {product.variants.map((v, idx) => {
                         const isSelected = selectedVariant?.id === v.id;
                         const vPrice = Number(v.price || product.price || 0);
                         const vMrp = Number(v.mrp || product.mrp || 0);
                         const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
                         const isLowStock = v.stock_quantity !== undefined && Number(v.stock_quantity) > 0 && Number(v.stock_quantity) <= 10;
+                        const parsed = parseVariantData(v, isMysteryJar);
+                        const isPopular = isMysteryJar && product.variants.length === 3 && idx === 1;
 
                         return (
                           <div
                             key={v.id}
                             onClick={() => setSelectedVariant(v)}
-                            className={`p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer select-none text-left relative ${
+                            className={`p-3 rounded-2xl border transition-all cursor-pointer select-none text-left relative flex flex-col justify-between ${
                               isSelected
-                                ? 'bg-gradient-to-br from-[#FAF5FF] to-white border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                                ? 'bg-gradient-to-b from-[#FAF5FF] to-white border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
                                 : 'bg-white border-brand-border/80 hover:border-brand-primary/40 hover:bg-[#FAF8FC]'
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-1 mb-1">
-                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
-                                {v.title || v.option1_value}
-                              </span>
-                              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-                                isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
-                              }`}>
-                                {isSelected && <Check className="w-2 h-2 stroke-[3]" />}
+                            {isPopular && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-primary to-purple-700 text-white text-[8.5px] font-caps uppercase tracking-wider font-bold px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
+                                ★ Most Popular
                               </div>
-                            </div>
+                            )}
 
-                            <div className="flex items-baseline space-x-1.5">
-                              <span className="text-sm font-bold text-brand-tertiary">
-                                ₹{Math.round(vPrice).toLocaleString('en-IN')}
-                              </span>
-                              {vMrp > vPrice && (
-                                <span className="text-[10.5px] text-brand-muted line-through font-light">
-                                  ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1">
+                                <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
+                                  {parsed.tierName}
                                 </span>
+                                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                                  isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
+                                }`}>
+                                  {isSelected && <Check className="w-2 h-2 stroke-[3]" />}
+                                </div>
+                              </div>
+
+                              {parsed.pieceBadge && (
+                                <div className="mb-1.5">
+                                  <span className={`inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded border ${
+                                    isSelected
+                                      ? 'bg-purple-100 text-purple-900 border-purple-200'
+                                      : 'bg-gray-100 text-gray-700 border-gray-200'
+                                  }`}>
+                                    🎁 {parsed.pieceBadge}
+                                  </span>
+                                </div>
                               )}
                             </div>
 
-                            {vDiscount > 0 && (
-                              <div className="mt-1 flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                  Save {vDiscount}%
+                            <div className="pt-0.5">
+                              <div className="flex items-baseline space-x-1.5">
+                                <span className="text-sm font-bold text-brand-tertiary">
+                                  ₹{Math.round(vPrice).toLocaleString('en-IN')}
                                 </span>
+                                {vMrp > vPrice && (
+                                  <span className="text-[10.5px] text-brand-muted line-through font-light">
+                                    ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="mt-1 flex items-center justify-between">
+                                {vDiscount > 0 && (
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                    Save {vDiscount}%
+                                  </span>
+                                )}
                                 {isLowStock && (
                                   <span className="text-[9px] font-semibold text-amber-700">
                                     Only {v.stock_quantity} left!
                                   </span>
                                 )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
 
                     {isMysteryProduct && (
-                      <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2 text-[11px] text-purple-900">
-                        <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                        <span>
-                          <strong>Surprise Guarantee:</strong> Each jar is hand-curated with delightful jewelry surprises worth higher than the price!
-                        </span>
+                      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#FAF5FF] via-purple-50/50 to-[#FFF5F8] border border-brand-primary/20 shadow-2xs space-y-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-brand-primary">
+                          <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                          <span className="font-caps tracking-wider uppercase">Mystery Value Guarantee</span>
+                        </div>
+                        <p className="text-[11px] text-brand-tertiary leading-relaxed font-normal">
+                          Handpicked surprises guaranteed to be worth at least <strong>2× what you pay</strong>. Zero duplicate pieces, 100% unboxing happiness!
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5 pt-0.5 text-[9.5px]">
+                          <div className="p-1.5 rounded-lg bg-white border border-purple-100 flex flex-col items-center text-center">
+                            <span className="text-xs">🎁</span>
+                            <span className="font-bold text-brand-tertiary mt-0.5">2× Value</span>
+                            <span className="text-[8.5px] text-brand-muted">Guaranteed</span>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-white border border-purple-100 flex flex-col items-center text-center">
+                            <span className="text-xs">✨</span>
+                            <span className="font-bold text-brand-tertiary mt-0.5">No Duplicates</span>
+                            <span className="text-[8.5px] text-brand-muted">Curated mix</span>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-white border border-purple-100 flex flex-col items-center text-center">
+                            <span className="text-xs">💖</span>
+                            <span className="font-bold text-brand-tertiary mt-0.5">Keepsake Jar</span>
+                            <span className="text-[8.5px] text-brand-muted">Included</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })()}
 
-              {/* Material Specification Card */}
+              {/* Material Specification / Curation Details Card */}
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-surface to-[#F9F5FD] border border-brand-border/90 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-caps uppercase tracking-wider text-brand-tertiary font-bold flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
-                    <span>Material Specification</span>
+                    {isMysteryProduct ? <Gift className="w-3.5 h-3.5 text-brand-primary" /> : <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />}
+                    <span>{isMysteryProduct ? 'Mystery Curation Details' : 'Material Specification'}</span>
                   </span>
                   {isMysteryProduct ? (
                     <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
-                      Surprise Curation
+                      Surprise Edition
                     </span>
                   ) : Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
                     <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
@@ -953,7 +1077,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                        !product.material.toLowerCase().includes('18 gold plated') &&
                        !product.material.toLowerCase().includes('anti-tarnish')
                         ? product.material
-                        : 'Assorted Beads, Chains & Accessories')
+                        : 'Assorted Beads, Chains & Playful Accessories')
                     : (product.material &&
                        !product.material.toLowerCase().includes('18k gold plated') &&
                        !product.material.toLowerCase().includes('18 gold plated')
@@ -962,9 +1086,19 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                   {isMysteryProduct
-                    ? 'Playful mix of colors, textures, and designs curated for a delightful unboxing surprise.'
+                    ? 'Handcrafted with lightweight stainless steel, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
                     : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                 </p>
+                {isMysteryProduct && (
+                  <div className="pt-0.5 flex flex-wrap gap-1.5 text-[9.5px]">
+                    <span className="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-purple-200/60 text-purple-900 font-medium">
+                      ✦ Hypoallergenic & Skin-Friendly
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-purple-200/60 text-purple-900 font-medium">
+                      ✦ Signature Glass Keepsake Jar
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Free All-India Delivery & 6-7 Days Easy Returns (Placed directly under Material Specification) */}
@@ -1095,7 +1229,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 <span>/</span>
                 <span className="capitalize">{product.category_name || 'Jewelry'}</span>
                 <span>/</span>
-                <span className="text-brand-tertiary font-medium truncate max-w-[200px]">{product.name}</span>
+                <span className="text-brand-tertiary font-medium truncate max-w-[200px] capitalize">{formatProductTitle(product.name)}</span>
               </div>
             )}
           </div>
@@ -1268,14 +1402,21 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       />
 
                       {/* Badges */}
-                      {Boolean(product.is_anti_tarnish) && !isMysteryProduct && (
+                      {Boolean(product.is_anti_tarnish) && !isMysteryProduct ? (
                         <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
                           <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-white/95 text-brand-tertiary backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
                             <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />
                             Anti-Tarnish Polish
                           </span>
                         </div>
-                      )}
+                      ) : isMysteryProduct ? (
+                        <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10 pointer-events-none">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-semibold bg-purple-900/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1.5 w-fit">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            Curated Mystery Jar
+                          </span>
+                        </div>
+                      ) : null}
 
                       {/* Click to zoom badge */}
                       <div className="absolute bottom-4 left-4 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-xs text-white text-[10px] flex items-center gap-1.5 font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -1450,26 +1591,30 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 </div>
 
                 {/* Title */}
-                <h1 className="font-editorial text-3xl font-bold text-brand-tertiary leading-tight">
-                  {product.name}
+                <h1 className="font-editorial text-3xl font-bold text-brand-tertiary leading-tight capitalize">
+                  {formatProductTitle(product.name)}
                 </h1>
 
                 {/* Price Row */}
-                <div className="space-y-1 pb-4 border-b border-brand-border">
-                  <div className="flex items-baseline space-x-3">
-                    <span className="text-3xl font-bold text-brand-tertiary">
+                <div className="space-y-1.5 pb-4 border-b border-brand-border">
+                  <div className="flex items-center flex-wrap gap-3">
+                    <span className="text-3xl lg:text-4xl font-extrabold text-brand-tertiary">
                       ₹{Math.round(activePrice).toLocaleString('en-IN')}
                     </span>
                     {activeMrp > activePrice && (
-                      <span className="text-base text-brand-muted line-through font-light">
+                      <span className="text-base lg:text-lg text-brand-muted line-through font-light">
                         ₹{Math.round(activeMrp).toLocaleString('en-IN')}
                       </span>
                     )}
-                    {Boolean(siteContent?.heroBanner?.trustPoint2 && siteContent.heroBanner.trustPoint2.trim()) && (
-                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        {siteContent.heroBanner.trustPoint2.trim()}
+                    {activeDiscount > 0 && (
+                      <span className="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200/90 shadow-2xs">
+                        Save {activeDiscount}% (₹{activeSavings.toLocaleString('en-IN')} OFF)
                       </span>
                     )}
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                      Free Express Delivery
+                    </span>
                   </div>
                   <p className="text-[11px] text-brand-muted font-light">
                     Inclusive of all taxes • Zero hidden shipping fees across India
@@ -1490,6 +1635,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 {/* Variant / Size Selector (Specially Tailored for Mystery Jar & Multi-Size Pieces) */}
                 {product.variants && product.variants.length > 0 && (() => {
                   const isMysteryJar = isMysteryProduct;
+                  const activeParsed = parseVariantData(selectedVariant, isMysteryJar);
 
                   return (
                     <div className="space-y-3 pt-1">
@@ -1498,74 +1644,118 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                           <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
                           <span>{isMysteryJar ? 'Select Mystery Jar Size / Edition:' : `Select ${product.variants[0]?.option1_name || 'Size / Option'}:`}</span>
                         </span>
-                        <span className="text-brand-primary font-bold text-xs bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs">
-                          {selectedVariant?.title || selectedVariant?.option1_value}
+                        <span className="text-brand-primary font-bold text-xs bg-purple-50 px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
+                          {activeParsed.tierName} {activeParsed.pieceBadge ? `• ${activeParsed.pieceBadge}` : ''}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {product.variants.map((v) => {
+                        {product.variants.map((v, idx) => {
                           const isSelected = selectedVariant?.id === v.id;
                           const vPrice = Number(v.price || product.price || 0);
                           const vMrp = Number(v.mrp || product.mrp || 0);
                           const vDiscount = vMrp > vPrice && vMrp > 0 ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
                           const isLowStock = v.stock_quantity !== undefined && Number(v.stock_quantity) > 0 && Number(v.stock_quantity) <= 10;
+                          const parsed = parseVariantData(v, isMysteryJar);
+                          const isPopular = isMysteryJar && product.variants.length === 3 && idx === 1;
 
                           return (
                             <div
                               key={v.id}
                               onClick={() => setSelectedVariant(v)}
-                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none text-left relative ${
+                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none text-left relative flex flex-col justify-between ${
                                 isSelected
-                                  ? 'bg-gradient-to-br from-[#FAF5FF] via-white to-purple-50/40 border-brand-primary ring-2 ring-brand-primary/25 shadow-sm'
+                                  ? 'bg-gradient-to-b from-[#FAF5FF] via-white to-purple-50/50 border-brand-primary ring-2 ring-brand-primary/25 shadow-md -translate-y-0.5'
                                   : 'bg-white border-brand-border/80 hover:border-brand-primary/40 hover:bg-[#FAF8FC]'
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-1 mb-1.5">
-                                <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
-                                  {v.title || v.option1_value}
-                                </span>
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-                                  isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
-                                }`}>
-                                  {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                              {isPopular && (
+                                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-primary to-purple-700 text-white text-[9px] font-caps uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full shadow-xs whitespace-nowrap">
+                                  ★ Most Popular
                                 </div>
-                              </div>
+                              )}
 
-                              <div className="flex items-baseline space-x-2">
-                                <span className="text-base font-bold text-brand-tertiary">
-                                  ₹{Math.round(vPrice).toLocaleString('en-IN')}
-                                </span>
-                                {vMrp > vPrice && (
-                                  <span className="text-xs text-brand-muted line-through font-light">
-                                    ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                              <div>
+                                <div className="flex items-start justify-between gap-1 mb-1.5">
+                                  <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-brand-primary' : 'text-brand-tertiary'}`}>
+                                    {parsed.tierName}
                                   </span>
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                                    isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
+                                  }`}>
+                                    {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                  </div>
+                                </div>
+
+                                {parsed.pieceBadge && (
+                                  <div className="mb-2">
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                      isSelected
+                                        ? 'bg-purple-100/90 text-purple-900 border-purple-200'
+                                        : 'bg-gray-100 text-gray-700 border-gray-200'
+                                    }`}>
+                                      🎁 {parsed.pieceBadge}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
 
-                              {vDiscount > 0 && (
-                                <div className="mt-1.5 flex items-center justify-between">
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                    Save {vDiscount}%
+                              <div className="pt-1">
+                                <div className="flex items-baseline space-x-1.5">
+                                  <span className="text-base font-extrabold text-brand-tertiary">
+                                    ₹{Math.round(vPrice).toLocaleString('en-IN')}
                                   </span>
+                                  {vMrp > vPrice && (
+                                    <span className="text-xs text-brand-muted line-through font-light">
+                                      ₹{Math.round(vMrp).toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="mt-1.5 flex items-center justify-between gap-1">
+                                  {vDiscount > 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      Save {vDiscount}%
+                                    </span>
+                                  )}
                                   {isLowStock && (
                                     <span className="text-[10px] font-semibold text-amber-700">
                                       Only {v.stock_quantity} left
                                     </span>
                                   )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           );
                         })}
                       </div>
 
                       {isMysteryProduct && (
-                        <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200/80 flex items-center space-x-2.5 text-xs text-purple-900 shadow-2xs">
-                          <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
-                          <span>
-                            <strong>Mystery Value Guarantee:</strong> Handcrafted surprises and playful accessories curated with love.
-                          </span>
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF5FF] via-purple-50/50 to-[#FFF5F8] border border-brand-primary/20 shadow-2xs space-y-2.5">
+                          <div className="flex items-center space-x-2 text-xs font-bold text-brand-primary">
+                            <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
+                            <span className="font-caps tracking-wider uppercase">Mystery Value Guarantee</span>
+                          </div>
+                          <p className="text-xs text-brand-tertiary leading-relaxed font-normal">
+                            Every jar is handpicked with love & guaranteed to contain authentic surprises worth at least <strong>2× what you pay</strong>. Zero duplicate pieces, 100% unboxing happiness!
+                          </p>
+                          <div className="grid grid-cols-3 gap-2 pt-1 text-[10.5px]">
+                            <div className="p-2 rounded-xl bg-white border border-purple-100 flex flex-col items-center text-center shadow-2xs">
+                              <span className="text-sm">🎁</span>
+                              <span className="font-bold text-brand-tertiary mt-0.5">2× Retail Value</span>
+                              <span className="text-[9.5px] text-brand-muted">Guaranteed</span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-white border border-purple-100 flex flex-col items-center text-center shadow-2xs">
+                              <span className="text-sm">✨</span>
+                              <span className="font-bold text-brand-tertiary mt-0.5">Zero Duplicates</span>
+                              <span className="text-[9.5px] text-brand-muted">Unique pieces</span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-white border border-purple-100 flex flex-col items-center text-center shadow-2xs">
+                              <span className="text-sm">💖</span>
+                              <span className="font-bold text-brand-tertiary mt-0.5">Keepsake Jar</span>
+                              <span className="text-[9.5px] text-brand-muted">Glass jar included</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1644,14 +1834,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
                 {/* Material Specification & Reassurance Cards */}
                 <div className="space-y-3 pt-2">
-                  <div className="p-4 rounded-2xl bg-brand-surface/70 border border-brand-border space-y-1.5">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-brand-surface to-[#F9F5FD] border border-brand-border space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-tertiary font-bold block">
-                        Material Specification
+                      <span className="text-[10.5px] font-caps uppercase tracking-wider text-brand-tertiary font-bold flex items-center gap-1.5">
+                        {isMysteryProduct ? <Gift className="w-3.5 h-3.5 text-brand-primary" /> : <ShieldCheck className="w-3.5 h-3.5 text-brand-primary" />}
+                        <span>{isMysteryProduct ? 'Mystery Curation Details' : 'Material Specification'}</span>
                       </span>
                       {isMysteryProduct ? (
-                        <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
-                          Surprise Curation
+                        <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2.5 py-0.5 rounded">
+                          Surprise Edition
                         </span>
                       ) : Boolean(siteContent?.heroBanner?.trustPoint1 && siteContent.heroBanner.trustPoint1.trim()) && (
                         <span className="text-[10px] font-semibold text-brand-primary bg-brand-primary-light px-2 py-0.5 rounded">
@@ -1659,25 +1850,35 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-brand-tertiary font-medium">
+                    <p className="text-xs text-brand-tertiary font-semibold">
                       {isMysteryProduct
                         ? (product.material &&
                            !product.material.toLowerCase().includes('18k gold plated') &&
                            !product.material.toLowerCase().includes('18 gold plated') &&
                            !product.material.toLowerCase().includes('anti-tarnish')
                             ? product.material
-                            : 'Assorted Beads, Chains & Accessories')
+                            : 'Assorted Beads, Chains & Playful Accessories')
                         : (product.material &&
                            !product.material.toLowerCase().includes('18k gold plated') &&
                            !product.material.toLowerCase().includes('18 gold plated')
-                             ? product.material
-                             : 'Lightweight Stainless Steel')}
+                            ? product.material
+                            : 'Lightweight Stainless Steel')}
                     </p>
-                    <p className="text-[11px] text-brand-muted font-light leading-relaxed">
+                    <p className="text-[11.5px] text-brand-muted font-light leading-relaxed">
                       {isMysteryProduct
-                        ? 'Playful mix of colors, textures, and designs curated for a delightful unboxing surprise.'
+                        ? 'Handcrafted with lightweight stainless steel, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
                         : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                     </p>
+                    {isMysteryProduct && (
+                      <div className="pt-1 flex flex-wrap gap-2 text-[10.5px]">
+                        <span className="inline-flex items-center gap-1 bg-white px-2.5 py-0.5 rounded-md border border-purple-200/60 text-purple-900 font-medium">
+                          ✦ Hypoallergenic & Skin-Friendly
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-white px-2.5 py-0.5 rounded-md border border-purple-200/60 text-purple-900 font-medium">
+                          ✦ Signature Glass Keepsake Jar Included
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Free All-India Delivery & 6-7 Days Easy Returns (Placed directly under Material Specification) */}

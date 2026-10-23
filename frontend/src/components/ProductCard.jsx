@@ -26,6 +26,14 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
   const displayPrice = hasMultiVariants && min_variant_price ? min_variant_price : price;
   const displayMrp = hasMultiVariants && variants[0]?.mrp ? variants[0].mrp : mrp;
 
+  const isMystery = Boolean(
+    product?.category_slug === 'mystery-jar' ||
+    product?.category_slug === 'mystery-box' ||
+    (product?.category_name || '').toLowerCase().includes('mystery') ||
+    (name || '').toLowerCase().includes('mystery') ||
+    (product?.slug || '').toLowerCase().includes('mystery')
+  );
+
   const cardVideoUrl = React.useMemo(() => {
     if (video_url) return normalizeMediaUrl(video_url);
     if (Array.isArray(product?.images)) {
@@ -119,14 +127,14 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
               e.stopPropagation();
               onQuickView(product);
             }}
-            className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug"
+            className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug capitalize"
           >
-            {name}
+            {name ? name.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : ''}
           </h3>
 
           {/* Material & Description */}
           <p className="text-[10px] sm:text-xs text-brand-muted line-clamp-1 font-light">
-            {material || short_description}
+            {material || short_description || (isMystery ? 'Assorted Surprise Jewelry Mix' : 'Lightweight Stainless Steel')}
           </p>
 
           {/* Pricing Row */}
@@ -144,7 +152,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             )}
             {hasMultiVariants ? (
               <span className="text-[9px] sm:text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
-                {variants.length} Sizes
+                {variants.length} {isMystery ? 'Editions' : 'Sizes'}
               </span>
             ) : (
               <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600">
@@ -162,7 +170,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           className="mt-2.5 sm:mt-4 w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg sm:rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-brand-primary/40 text-brand-primary text-[10px] sm:text-xs font-caps tracking-wider sm:tracking-widest uppercase transition-all shadow-2xs active:scale-[0.98] flex items-center justify-center space-x-1 sm:space-x-1.5 font-bold cursor-pointer"
         >
           <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          <span>Select Size</span>
+          <span>{isMystery ? 'Select Edition' : 'Select Size'}</span>
         </button>
       ) : (
         <button

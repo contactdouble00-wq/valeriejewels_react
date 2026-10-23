@@ -104,6 +104,65 @@ export const SEED_PRODUCTS = [
     review_count: 128,
   },
   {
+    id: 99,
+    category_id: 7,
+    category_name: 'Mystery Jar',
+    category_slug: 'mystery-jar',
+    name: 'Mystery Jar',
+    slug: 'mystery-jar',
+    short_description: 'Handcrafted surprise jewelry mix packed in our signature glass keepsake jar.',
+    description: 'Unbox the unexpected! Every Valerie Mystery Jar is handpicked with a delightful selection of rings, earrings, charms, bracelets, and necklaces in gold tones and colorful crystal beads. Guaranteed retail value at least 2× what you pay. Packed with love in our signature keepsake glass jar.',
+    mrp: '1999.00',
+    price: '999.00',
+    discount_percentage: '50',
+    sku: 'VJ-MJAR-01',
+    stock_quantity: 150,
+    is_anti_tarnish: 0,
+    material: 'Assorted Beads, Chains & Accessories in Glass Jar',
+    is_bestseller: 1,
+    primary_image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
+    images: [
+      { id: 201, image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80', is_primary: 1, media_type: 'image' }
+    ],
+    variants: [
+      {
+        id: 101,
+        product_id: 99,
+        title: 'Mini Mystery Jar (5/6 Surprise Pieces)',
+        option1_name: 'Edition',
+        option1_value: 'Mini (5/6 Pieces)',
+        price: '999.00',
+        mrp: '1999.00',
+        stock_quantity: 50,
+        is_active: 1
+      },
+      {
+        id: 102,
+        product_id: 99,
+        title: 'Classic Mystery Jar (10/12 Surprise Pieces)',
+        option1_name: 'Edition',
+        option1_value: 'Classic (10/12 Pieces)',
+        price: '1999.00',
+        mrp: '3999.00',
+        stock_quantity: 60,
+        is_active: 1
+      },
+      {
+        id: 103,
+        product_id: 99,
+        title: 'Custom Mystery Jar (20/24 Surprise Pieces)',
+        option1_name: 'Edition',
+        option1_value: 'Custom (20/24 Pieces)',
+        price: '4999.00',
+        mrp: '9999.00',
+        stock_quantity: 40,
+        is_active: 1
+      }
+    ],
+    rating_avg: 4.9,
+    review_count: 86,
+  },
+  {
     id: 7,
     category_id: 1,
     category_name: 'Jhumkha box',
