@@ -857,8 +857,27 @@ export const adminApi = {
     return res.data;
   },
 
-  async getFinanceBackupData() {
-    const res = await request('/admin/finance.php?action=export_backup');
+  async duplicateFinanceEntry(id) {
+    const res = await request('/admin/finance.php?action=duplicate_entry', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    });
+    return res.data;
+  },
+
+  async bulkFinanceActions(actionType, ids, payload = {}) {
+    const res = await request('/admin/finance.php?action=bulk_actions', {
+      method: 'POST',
+      body: JSON.stringify({ action_type: actionType, ids, ...payload }),
+    });
+    return res.data;
+  },
+
+  async updateFinancePartner(partnerData) {
+    const res = await request('/admin/finance.php?action=update_partner', {
+      method: 'POST',
+      body: JSON.stringify(partnerData),
+    });
     return res.data;
   },
 

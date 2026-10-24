@@ -689,22 +689,87 @@ class Database {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ");
 
-                // Yash expenses
-                $insEntry->execute([$yashId, '2026-10-10', 'Shiprocket Wallet Recharge - Oct 2026', 5000.00, 'EXPENSE', 'PAID', 'Shiprocket', 'Air courier dispatches']);
-                $insEntry->execute([$yashId, '2026-10-12', 'Honeycomb Packaging Paper & Pouch Boxes', 7800.00, 'EXPENSE', 'PAID', 'Packaging', 'Biodegradable packaging']);
-                $insEntry->execute([$yashId, '2026-10-18', 'Hostinger Cloud Enterprise Server Renewal', 2499.00, 'EXPENSE', 'PAID', 'Hosting', 'Annual hosting subscription']);
-                $insEntry->execute([$yashId, '2026-10-20', 'Trademark & Brand IP Registration Filing', 9400.00, 'EXPENSE', 'PAID', 'Legal/Trademark', 'Govt IP registration']);
+                $exactRows = [
+                    // Yash (Sum: 24,700)
+                    [$yashId, '', 'Hostinger', 2790.0, 'EXPENSE', 'Paid', 'Hosting', ''],
+                    [$yashId, '', 'Shiprocket (Initial)', 200.0, 'EXPENSE', 'Paid', 'Shiprocket', ''],
+                    [$yashId, '', 'Shiprocket Business Plan', 200.0, 'EXPENSE', 'Paid', 'Shiprocket', ''],
+                    [$yashId, '', 'To Dhruvik for Marketing', 1810.0, 'TRANSFER_OUT', 'paid', 'Marketing', ''],
+                    [$yashId, '', 'To Dhruvik for Marketing', 2000.0, 'TRANSFER_OUT', 'Paid', 'Marketing', ''],
+                    [$yashId, '2026-10-08', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 8-10-2026'],
+                    [$yashId, '2026-08-18', 'Shiprocket Recharge', 1000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 18-8-2026'],
+                    [$yashId, '2026-08-21', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 21-8-2026'],
+                    [$yashId, '2026-08-21', 'marketing', 4000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 21-8-2026'],
+                    [$yashId, '2026-08-22', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 22-8-2026'],
+                    [$yashId, '2026-08-28', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 28-8-2026'],
+                    [$yashId, '2026-08-29', 'To Harshbhai for marketing', 1800.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 29-8-2026'],
+                    [$yashId, '2026-08-31', 'From Dhruvik for Meta ads', -5000.0, 'REIMBURSEMENT', 'received', 'Marketing', 'Original: 31-8-2026'],
+                    [$yashId, '2026-08-07', 'Shiprocket Recharge', 1000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 7-8-2026'],
+                    [$yashId, '2026-09-07', 'To Harshbhai for Prepaid orders marketing', 1100.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 7-9-2026'],
+                    [$yashId, '2026-09-09', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 9-9-2026'],
+                    [$yashId, '2026-09-12', 'To Richi (Influencer)', 1800.0, 'EXPENSE', 'paid', 'Influencer', 'Original: 12-9-2026'],
+                    [$yashId, '2026-09-29', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 29-9-2026'],
+                    [$yashId, '2026-08-01', 'Shiprocket Recharge', 1000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 1-8-2026'],
+                    [$yashId, '2026-10-03', 'Shiprocket Recharge', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 3-10-2026'],
+                    [$yashId, '2026-10-09', 'Shiprocket Recharge', 1000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 9-10-2026'],
+                    [$yashId, '2026-10-18', 'To krupal for meta manager', 3500.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 18-10-2026'],
+                    [$yashId, '2026-10-20', 'Meta Fund added', 1000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 20-10-2026'],
+                    [$yashId, '2026-10-23', 'Meta Fund added', 2000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 23-10-2026'],
 
-                // Dhruvik expenses
-                $insEntry->execute([$dhruvikId, '2026-10-08', 'Meta Ad Spend - Festive Jhumka Carousel', 12000.00, 'EXPENSE', 'PAID', 'Marketing', 'High converting carousel ads']);
-                $insEntry->execute([$dhruvikId, '2026-10-14', 'Instagram Fashion Influencer Reel Promotion', 4500.00, 'EXPENSE', 'PAID', 'Influencer', '3 creator reels']);
-                $insEntry->execute([$dhruvikId, '2026-10-19', 'Shiprocket Courier Dispatches Top-up', 3000.00, 'EXPENSE', 'PAID', 'Shiprocket', 'Pre-festival courier credit']);
-                $insEntry->execute([$dhruvikId, '2026-10-22', 'Meta Ad Spend - Mystery Box Campaign', 8000.00, 'EXPENSE', 'PENDING', 'Marketing', 'Active testing budget']);
+                    // Dhruvik (Sum: 39,520)
+                    [$dhruvikId, '', 'Capital Contribution', 5000.0, 'CONTRIBUTION', 'Paid', 'Other', ''],
+                    [$dhruvikId, '2026-08-08', 'Shiprocket charges', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 8-8-2026'],
+                    [$dhruvikId, '2026-08-02', 'Shiprocket charges', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 2-8-2026'],
+                    [$dhruvikId, '', 'Shiprocket charges', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'date unclear - keep raw text: -'],
+                    [$dhruvikId, '2026-08-11', 'Shiprocket charges', 1000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 11-8-2026'],
+                    [$dhruvikId, '2026-08-20', 'Reel 2 location rent', 1100.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 20-8-2026'],
+                    [$dhruvikId, '', 'marketing', 4000.0, 'EXPENSE', 'paid', 'Marketing', ''],
+                    [$dhruvikId, '', 'marketing', 1000.0, 'EXPENSE', 'paid', 'Marketing', ''],
+                    [$dhruvikId, '', 'From Jeel', -1750.0, 'REIMBURSEMENT', 'paid', 'Other', ''],
+                    [$dhruvikId, '', 'From Yash', -1810.0, 'REIMBURSEMENT', 'paid', 'Other', ''],
+                    [$dhruvikId, '2026-08-21', 'marketing', 4000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 21-8-2026'],
+                    [$dhruvikId, '2026-08-27', 'Shiprocket charges', 500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 27-8-2026'],
+                    [$dhruvikId, '2026-08-31', 'To Yash for Meta ads', 5000.0, 'TRANSFER_OUT', 'paid', 'Marketing', 'Original: 31-8-2026'],
+                    [$dhruvikId, '', 'krupal---------', 0.0, 'EXPENSE', '', 'Other', 'Note row in sheet'],
+                    [$dhruvikId, '2026-09-29', 'Shiprocket charges', 1500.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 29-9-2026'],
+                    [$dhruvikId, '2026-09-30', 'Honey comb packaging', 800.0, 'EXPENSE', 'paid', 'Packaging', 'Original: 30-9-2026'],
+                    [$dhruvikId, '2026-10-02', 'amazon order 3x', 2640.0, 'EXPENSE', 'paid', 'Order Cost', 'Original: 2-10-2026'],
+                    [$dhruvikId, '2026-10-14', 'ashlesha ( influencer)', 350.0, 'EXPENSE', 'paid', 'Influencer', 'Original: 14/10/2026'],
+                    [$dhruvikId, '2026-10-14', 'Meta ads', 5000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 14/10/2026'],
+                    [$dhruvikId, '2026-10-18', 'parthbhai', 4000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 18-10-2026'],
+                    [$dhruvikId, '2026-10-21', 'meta fund', 2000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 21-10-2026'],
+                    [$dhruvikId, '2026-10-23', 'harsh bhai meta', 3690.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 23-10-2026'],
 
-                // Jeel entries
-                $insEntry->execute([$jeelId, '2026-10-05', 'Capital Contribution - Initial Inventory', 25000.00, 'CONTRIBUTION', 'RECEIVED', 'Other', 'Initial seed capital for stock']);
-                $insEntry->execute([$jeelId, '2026-10-15', 'Product Order Fulfillment Batch #1042', 6360.00, 'EXPENSE', 'PAID', 'Order Cost', 'Wholesale supplier invoice']);
-                $insEntry->execute([$jeelId, '2026-10-21', 'Product Order Packaging Accessories #1049', 1844.00, 'EXPENSE', 'PAID', 'Order Cost', 'Luxury ribbons & tags']);
+                    // Jeel (Sum: 56,970)
+                    [$jeelId, '', 'Contribution', 2000.0, 'CONTRIBUTION', 'Paid', 'Other', ''],
+                    [$jeelId, '', 'Additional Contribution', 1250.0, 'CONTRIBUTION', 'Paid', 'Other', ''],
+                    [$jeelId, '', 'To Dhruvik', 1750.0, 'TRANSFER_OUT', 'paid', 'Other', ''],
+                    [$jeelId, '2026-08-07', 'To Khushi', 1500.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 7-8-2026'],
+                    [$jeelId, '2026-08-08', 'To Richi (first time)', 1500.0, 'EXPENSE', 'paid', 'Influencer', 'Original: 8-8-2026'],
+                    [$jeelId, '2026-08-07', 'ORDER', 260.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 7-8-2026'],
+                    [$jeelId, '2026-08-08', 'ORDER', 370.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 8-8-2026'],
+                    [$jeelId, '2026-08-10', 'ORDER', 1844.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 10-8-2026'],
+                    [$jeelId, '2026-08-11', 'ORDER', 1150.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 11-8-2026'],
+                    [$jeelId, '2026-08-17', 'ORDER', 1110.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 17-8-2026'],
+                    [$jeelId, '2026-08-18', 'ORDER', 630.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 18-8-2026'],
+                    [$jeelId, '2026-08-19', 'ORDER', 1127.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 19-8-2026'],
+                    [$jeelId, '2026-08-20', 'ORDER', 1867.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 20-8-2026'],
+                    [$jeelId, '2026-08-21', 'marketing', 4000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 21-8-2026'],
+                    [$jeelId, '2024-09-13', 'Trademark', 12000.0, 'EXPENSE', 'paid', 'Legal/Trademark', 'year is 2024 in sheet - keep exactly, ask owner to verify'],
+                    [$jeelId, '2026-09-29', 'marketing', 7000.0, 'EXPENSE', 'paid', 'Marketing', 'Original: 29-09-2026'],
+                    [$jeelId, '', 'razerpay', -9189.0, 'REIMBURSEMENT', 'Pending', 'Other', ''],
+                    [$jeelId, '', 'odertill15-10-26', 7041.0, 'EXPENSE', 'Pending', 'Order Cost', ''],
+                    [$jeelId, '', 'mysterybox', 5600.0, 'EXPENSE', 'Pending', 'Order Cost', ''],
+                    [$jeelId, '2026-10-19', 'Shiprocket Recharge', 2000.0, 'EXPENSE', 'paid', 'Shiprocket', 'Original: 19-10-2026'],
+                    [$jeelId, '2026-10-20', 'mysterybox', 3800.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 20-10-26'],
+                    [$jeelId, '2026-10-21', 'order', 6360.0, 'EXPENSE', 'Pending', 'Order Cost', 'Original: 21-10-26'],
+                    [$jeelId, '', 'ORDER', 1000.0, 'EXPENSE', 'Pending', 'Order Cost', 'date unclear - keep raw text: 22-1026'],
+                    [$jeelId, '2026-10-19', 'META', 1000.0, 'EXPENSE', 'Pending', 'Marketing', 'Original: 19-10-26'],
+                ];
+
+                foreach ($exactRows as $r) {
+                    $insEntry->execute($r);
+                }
 
                 // Seed marketing campaigns
                 $insCamp = $pdo->prepare("

@@ -48,10 +48,11 @@ try {
             }
 
             // Calculations per partner
+            // Exact Excel Match: Total Expense is the plain sum of all amounts, including negatives, whatever the status.
             $stmt = $pdo->prepare("
                 SELECT 
-                    COALESCE(SUM(CASE WHEN type = 'EXPENSE' AND status = 'PAID' THEN amount ELSE 0 END), 0) AS total_expense,
-                    COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) AS pending_expense,
+                    COALESCE(SUM(amount), 0) AS total_expense,
+                    COALESCE(SUM(CASE WHEN LOWER(status) = 'pending' THEN amount ELSE 0 END), 0) AS pending_expense,
                     COALESCE(SUM(CASE WHEN type = 'CONTRIBUTION' THEN amount ELSE 0 END), 0) AS total_contributions,
                     COALESCE(SUM(CASE WHEN type = 'REIMBURSEMENT' THEN amount ELSE 0 END), 0) AS total_reimbursements,
                     COALESCE(SUM(CASE WHEN type = 'TRANSFER_IN' THEN amount ELSE 0 END), 0) AS total_transfers_in,
@@ -206,6 +207,18 @@ try {
 
         $whereSql = implode(' AND ', $where);
 
+        $sort = $_GET['sort_by'] ?? 'id';
+        $order = strtolower($_GET['sort_order'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+        $validSorts = [
+            'id' => 'fe.id',
+            'date' => 'fe.date',
+            'amount' => 'fe.amount',
+            'description' => 'fe.description',
+            'status' => 'fe.status',
+            'category' => 'fe.category',
+        ];
+        $sortCol = $validSorts[$sort] ?? 'fe.id';
+
         $stmt = $pdo->prepare("
             SELECT 
                 fe.*,
@@ -216,7 +229,7 @@ try {
             JOIN finance_partners p ON fe.partner_id = p.id
             LEFT JOIN finance_partners cp ON fe.counterparty_partner_id = cp.id
             WHERE {$whereSql}
-            ORDER BY fe.date DESC, fe.id DESC
+            ORDER BY {$sortCol} {$order}
         ");
         $stmt->execute($params);
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -250,8 +263,8 @@ try {
         if ($description === '') {
             ApiResponse::error('Description is required', 422);
         }
-        if ($amount <= 0) {
-            ApiResponse::error('Amount must be greater than zero', 422);
+        if (!isset($input['amount']) || !is_numeric($input['amount'])) {
+            ApiResponse::error('Valid amount is required', 422);
         }
 
         // Validate type & status enums
@@ -353,8 +366,8 @@ try {
             $params[] = $desc;
         }
         if (isset($input['amount'])) {
+            if (!is_numeric($input['amount'])) ApiResponse::error('Valid amount is required', 422);
             $amt = (float)$input['amount'];
-            if ($amt <= 0) ApiResponse::error('Amount must be greater than zero', 422);
             $fields[] = "amount = ?";
             $params[] = $amt;
         }
@@ -463,6 +476,106 @@ try {
         } catch (Throwable $ae) {}
 
         ApiResponse::success(['id' => $entryId], 'Entry restored successfully');
+    }
+
+    // -------------------------------------------------------------------------
+    // 6.1 DUPLICATE ENTRY
+    // -------------------------------------------------------------------------
+    if ($action === 'duplicate_entry' && $method === 'POST') {
+        $id = (int)($input['id'] ?? 0);
+        $stmt = $pdo->prepare("SELECT * FROM finance_entries WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) ApiResponse::error('Entry not found', 404);
+
+        $ins = $pdo->prepare("
+            INSERT INTO finance_entries (partner_id, date, description, amount, type, status, category, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $ins->execute([
+            $row['partner_id'],
+            $row['date'],
+            $row['description'] . ' (Copy)',
+            $row['amount'],
+            $row['type'],
+            $row['status'],
+            $row['category'],
+            $row['notes'],
+            $adminUser['id']
+        ]);
+        $newId = (int)$pdo->lastInsertId();
+        $getStmt = $pdo->prepare("
+            SELECT fe.*, p.name AS partner_name, p.color AS partner_color, cp.name AS counterparty_name
+            FROM finance_entries fe
+            JOIN finance_partners p ON fe.partner_id = p.id
+            LEFT JOIN finance_partners cp ON fe.counterparty_partner_id = cp.id
+            WHERE fe.id = ?
+        ");
+        $getStmt->execute([$newId]);
+        ApiResponse::success($getStmt->fetch(PDO::FETCH_ASSOC), 'Entry duplicated successfully');
+    }
+
+    // -------------------------------------------------------------------------
+    // 6.2 BULK ACTIONS (DELETE, STATUS, CATEGORY)
+    // -------------------------------------------------------------------------
+    if ($action === 'bulk_actions' && $method === 'POST') {
+        $bulkAction = $input['action_type'] ?? '';
+        $ids = $input['ids'] ?? [];
+        if (!is_array($ids) || empty($ids)) {
+            ApiResponse::error('No entry IDs selected', 422);
+        }
+        $inPlaceholders = implode(',', array_fill(0, count($ids), '?'));
+
+        if ($bulkAction === 'delete') {
+            $stmt = $pdo->prepare("UPDATE finance_entries SET deleted_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
+            $stmt->execute($ids);
+            ApiResponse::success(['count' => count($ids)], count($ids) . ' entries deleted');
+        } elseif ($bulkAction === 'update_status') {
+            $newStatus = trim($input['status'] ?? 'PAID');
+            $stmt = $pdo->prepare("UPDATE finance_entries SET status = ?, updated_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
+            $stmt->execute(array_merge([$newStatus], $ids));
+            ApiResponse::success(['count' => count($ids)], count($ids) . " entries marked as {$newStatus}");
+        } elseif ($bulkAction === 'update_category') {
+            $newCat = trim($input['category'] ?? 'Other');
+            $stmt = $pdo->prepare("UPDATE finance_entries SET category = ?, updated_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
+            $stmt->execute(array_merge([$newCat], $ids));
+            ApiResponse::success(['count' => count($ids)], count($ids) . " entries updated to {$newCat}");
+        }
+        ApiResponse::error('Invalid bulk action', 400);
+    }
+
+    // -------------------------------------------------------------------------
+    // 6.3 UPDATE PARTNER (RENAME / RECOLOR / EQUITY SHARE)
+    // -------------------------------------------------------------------------
+    if ($action === 'update_partner' && $method === 'POST') {
+        $pId = (int)($input['id'] ?? 0);
+        $name = trim($input['name'] ?? '');
+        $color = trim($input['color'] ?? '');
+        $share = isset($input['share_percent']) ? (float)$input['share_percent'] : null;
+
+        if ($pId <= 0 || $name === '') {
+            ApiResponse::error('Valid partner ID and Name are required', 422);
+        }
+
+        $fields = ["name = ?"];
+        $params = [$name];
+
+        if ($color !== '') {
+            $fields[] = "color = ?";
+            $params[] = $color;
+        }
+        if ($share !== null) {
+            $fields[] = "share_percent = ?";
+            $params[] = $share;
+        }
+        $params[] = $pId;
+
+        $stmt = $pdo->prepare("UPDATE finance_partners SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt->execute($params);
+
+        $getStmt = $pdo->prepare("SELECT * FROM finance_partners WHERE id = ?");
+        $getStmt->execute([$pId]);
+        ApiResponse::success($getStmt->fetch(PDO::FETCH_ASSOC), 'Partner updated successfully');
     }
 
     // -------------------------------------------------------------------------
