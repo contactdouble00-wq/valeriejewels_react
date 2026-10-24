@@ -667,8 +667,11 @@ class Database {
             if ($partnerCheck === 0) {
                 $pStmt = $pdo->prepare("INSERT INTO finance_partners (name, color, share_percent, is_active) VALUES (?, ?, ?, 1)");
                 $pStmt->execute(['Yash', '#6B21A8', 33.34]);
-                $pStmt->execute(['Dhruvik', '#0284C7', 33.33]);
+                $pStmt->execute(['Krupal', '#0284C7', 33.33]);
                 $pStmt->execute(['Jeel', '#059669', 33.33]);
+            } else {
+                // Ensure Partner 2 is named Krupal if it was Dhruvik
+                $pdo->exec("UPDATE finance_partners SET name = 'Krupal' WHERE id = 2 AND name = 'Dhruvik'");
             }
 
             // Seed realistic demo entries if table is completely empty
