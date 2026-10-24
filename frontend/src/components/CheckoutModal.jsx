@@ -878,8 +878,27 @@ export default function CheckoutModal({
             }
           },
           modal: {
-            ondismiss: () => {
+            ondismiss: async () => {
               setIsSubmitting(false);
+              // Check if payment was completed in UPI app before declaring failure
+              try {
+                const checkRes = await apiService.verifyPayment({
+                  order_number: finalOrderNumber,
+                  order_id: initResult.order_id,
+                });
+                if (checkRes?.order?.payment_status === 'paid' || checkRes?.order?.payment_status === 'partial_paid') {
+                  clearCart();
+                  if (onClose) onClose();
+                  if (onOrderConfirmed) {
+                    onOrderConfirmed(finalOrderNumber);
+                  } else {
+                    window.history.replaceState(null, '', `/order-confirmation/${finalOrderNumber}`);
+                    window.dispatchEvent(new Event('popstate'));
+                  }
+                  return;
+                }
+              } catch (_) {}
+
               try {
                 apiService.reportPaymentFailed({
                   order_number: finalOrderNumber,

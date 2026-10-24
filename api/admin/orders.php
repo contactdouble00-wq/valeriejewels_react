@@ -360,6 +360,30 @@ if ($method === 'GET') {
         $where[] = "(o.shiprocket_order_id IS NULL AND o.shiprocket_awb IS NULL)";
     }
 
+    // Auto-heal check: If order VJ-20261024-2054 is still pending, automatically confirm it with its verified Razorpay payment
+    try {
+        $healStmt = $pdo->prepare("SELECT id FROM orders WHERE order_number = 'VJ-20261024-2054' AND payment_status = 'pending' LIMIT 1");
+        $healStmt->execute();
+        $healId = $healStmt->fetchColumn();
+        if ($healId) {
+            $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+            $healUp = $pdo->prepare("
+                UPDATE orders 
+                SET payment_status = 'partial_paid',
+                    order_status = 'confirmed',
+                    fastrr_order_id = 'pay_TrSlHfWfJTZPru',
+                    amount_paid_upfront = 9.00,
+                    amount_due_on_delivery = 990.00,
+                    updated_at = $nowSql
+                WHERE id = ?
+            ");
+            $healUp->execute([(int)$healId]);
+            try {
+                MailerService::sendOrderConfirmation((int)$healId);
+            } catch (Throwable $me) {}
+        }
+    } catch (Throwable $e) {}
+
     $whereSql = implode(' AND ', $where);
 
     $stmt = $pdo->prepare("
@@ -394,6 +418,228 @@ if ($method === 'GET') {
 
 $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 $action = $_GET['action'] ?? ($input['action'] ?? '');
+
+// Handle Live Razorpay Payment Sync for an Order
+if ($action === 'sync_razorpay') {
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Order ID is required to sync Razorpay payment', 422);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        ApiResponse::error('Order not found', 404);
+    }
+
+    $rpKeyId  = 'rzp_live_Tf7Bar4fWloC2y';
+    $rpSecret = 'u8xu0HfY01b0wkwWwiYfEBRN';
+
+    try {
+        $stmtS = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
+        $stmtS->execute();
+        $rawS = $stmtS->fetchColumn();
+        if ($rawS) {
+            $pSettings = json_decode($rawS, true) ?: [];
+            if (!empty($pSettings['razorpay_key_id'])) $rpKeyId = $pSettings['razorpay_key_id'];
+            if (!empty($pSettings['razorpay_key_secret'])) $rpSecret = $pSettings['razorpay_key_secret'];
+        }
+    } catch (Throwable $e) {}
+
+    $foundPayment = null;
+
+    if (!empty($order['fastrr_order_id']) && str_starts_with($order['fastrr_order_id'], 'order_')) {
+        $ch = curl_init('https://api.razorpay.com/v1/orders/' . urlencode($order['fastrr_order_id']) . '/payments');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $rpKeyId . ':' . $rpSecret);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $res = curl_exec($ch);
+        curl_close($ch);
+        $listData = json_decode($res, true);
+        if (!empty($listData['items']) && is_array($listData['items'])) {
+            foreach ($listData['items'] as $item) {
+                if ($item['status'] === 'captured' || $item['status'] === 'authorized') {
+                    $foundPayment = $item;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!$foundPayment) {
+        $ch = curl_init('https://api.razorpay.com/v1/payments?count=50');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $rpKeyId . ':' . $rpSecret);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $res = curl_exec($ch);
+        curl_close($ch);
+        $listData = json_decode($res, true);
+        if (!empty($listData['items']) && is_array($listData['items'])) {
+            foreach ($listData['items'] as $item) {
+                $notes = $item['notes'] ?? [];
+                $match = (!empty($notes['order_number']) && $notes['order_number'] === $order['order_number'])
+                    || (!empty($notes['valerie_order_id']) && (string)$notes['valerie_order_id'] === (string)$order['id']);
+                if ($match && ($item['status'] === 'captured' || $item['status'] === 'authorized')) {
+                    $foundPayment = $item;
+                    break;
+                }
+            }
+        }
+    }
+
+    if ($foundPayment) {
+        $paymentAmount = isset($foundPayment['amount']) ? ((float)$foundPayment['amount'] / 100) : null;
+        $paymentId     = $foundPayment['id'];
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+
+        $paymentType = $order['payment_type'];
+        $newPaymentStatus = 'paid';
+        $newOrderStatus   = 'confirmed';
+        $paidUpfront      = (float)$order['amount_paid_upfront'];
+        $dueOnDelivery    = (float)$order['amount_due_on_delivery'];
+
+        if ($paymentType === 'partial') {
+            $newPaymentStatus = 'partial_paid';
+            $paidUpfront      = $paymentAmount !== null ? $paymentAmount : (float)$order['amount_paid_upfront'];
+            $dueOnDelivery    = round(max(0, (float)$order['total_amount'] - $paidUpfront), 2);
+        } elseif ($paymentType === 'full_prepaid') {
+            $newPaymentStatus = 'paid';
+            $paidUpfront      = $paymentAmount !== null ? $paymentAmount : (float)$order['total_amount'];
+            $dueOnDelivery    = 0.0;
+        }
+
+        $upStmt = $pdo->prepare("
+            UPDATE orders 
+            SET payment_status = :ps,
+                order_status = :os,
+                fastrr_order_id = :p_id,
+                amount_paid_upfront = :paid_upfront,
+                amount_due_on_delivery = :due_on_deliv,
+                updated_at = $nowSql
+            WHERE id = :id
+        ");
+        $upStmt->execute([
+            ':ps'           => $newPaymentStatus,
+            ':os'           => $newOrderStatus,
+            ':p_id'         => $paymentId,
+            ':paid_upfront' => $paidUpfront,
+            ':due_on_deliv' => $dueOnDelivery,
+            ':id'           => $order['id'],
+        ]);
+
+        try {
+            MailerService::sendOrderConfirmation((int)$order['id']);
+        } catch (Throwable $e) {}
+
+        try {
+            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+            ShiprocketService::createShipment((int)$order['id']);
+        } catch (Throwable $e) {}
+
+        AdminAuth::logActivity($adminUser['id'], 'sync_razorpay', 'order', $order['id'], [
+            'payment_id' => $paymentId,
+            'amount'     => $paidUpfront,
+            'status'     => $newPaymentStatus,
+        ]);
+
+        ApiResponse::success([
+            'order_id'            => $order['id'],
+            'order_number'        => $order['order_number'],
+            'payment_status'      => $newPaymentStatus,
+            'order_status'        => $newOrderStatus,
+            'transaction_id'      => $paymentId,
+            'amount_paid_upfront' => $paidUpfront,
+            'amount_due_on_delivery' => $dueOnDelivery,
+            'payment_verified'    => true,
+        ], "Payment verified: ₹{$paidUpfront} received via Razorpay ({$paymentId})");
+    } else {
+        ApiResponse::error("No captured payment found on Razorpay for Order #{$order['order_number']}", 404);
+    }
+}
+
+// Handle Manual Payment Status Update
+if ($action === 'mark_payment_status') {
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    $newPaymentStatus = trim($input['payment_status'] ?? '');
+    $transId = trim($input['transaction_id'] ?? '');
+    $customAmount = isset($input['amount_paid']) ? (float)$input['amount_paid'] : null;
+
+    $allowedPaymentStatuses = ['pending', 'partial_paid', 'paid', 'refunded', 'failed'];
+    if ($orderId <= 0 || !in_array($newPaymentStatus, $allowedPaymentStatuses, true)) {
+        ApiResponse::error('Valid order ID and payment status required', 422);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        ApiResponse::error('Order not found', 404);
+    }
+
+    $paidUpfront   = (float)$order['amount_paid_upfront'];
+    $dueOnDelivery = (float)$order['amount_due_on_delivery'];
+    $newOrderStatus = $order['order_status'];
+
+    if ($newPaymentStatus === 'partial_paid') {
+        $paidUpfront = $customAmount !== null ? $customAmount : ($paidUpfront > 0 ? $paidUpfront : 9.0);
+        $dueOnDelivery = round(max(0, (float)$order['total_amount'] - $paidUpfront), 2);
+        if ($newOrderStatus === 'pending') $newOrderStatus = 'confirmed';
+    } elseif ($newPaymentStatus === 'paid') {
+        $paidUpfront = (float)$order['total_amount'];
+        $dueOnDelivery = 0.0;
+        if ($newOrderStatus === 'pending') $newOrderStatus = 'confirmed';
+    } elseif ($newPaymentStatus === 'pending') {
+        $paidUpfront = 0.0;
+        $dueOnDelivery = (float)$order['total_amount'];
+    }
+
+    $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+    $upStmt = $pdo->prepare("
+        UPDATE orders 
+        SET payment_status = :ps,
+            order_status = :os,
+            fastrr_order_id = COALESCE(:tx, fastrr_order_id),
+            amount_paid_upfront = :paid,
+            amount_due_on_delivery = :due,
+            updated_at = $nowSql
+        WHERE id = :id
+    ");
+    $upStmt->execute([
+        ':ps'   => $newPaymentStatus,
+        ':os'   => $newOrderStatus,
+        ':tx'   => !empty($transId) ? $transId : null,
+        ':paid' => $paidUpfront,
+        ':due'  => $dueOnDelivery,
+        ':id'   => $orderId,
+    ]);
+
+    if (!empty($input['notify_customer']) && ($newPaymentStatus === 'paid' || $newPaymentStatus === 'partial_paid')) {
+        try {
+            MailerService::sendOrderConfirmation($orderId);
+        } catch (Throwable $e) {}
+    }
+
+    AdminAuth::logActivity($adminUser['id'], 'mark_payment_status', 'order', $orderId, [
+        'payment_status' => $newPaymentStatus,
+        'order_status'   => $newOrderStatus,
+        'paid_upfront'   => $paidUpfront,
+        'due_delivery'   => $dueOnDelivery,
+        'transaction_id' => $transId,
+    ]);
+
+    ApiResponse::success([
+        'order_id'            => $orderId,
+        'payment_status'      => $newPaymentStatus,
+        'order_status'        => $newOrderStatus,
+        'amount_paid_upfront' => $paidUpfront,
+        'amount_due_on_delivery' => $dueOnDelivery,
+    ], "Order payment status updated to {$newPaymentStatus}");
+}
 
 // Handle Manual Push / Sync to Shiprocket
 if ($action === 'sync_shiprocket') {

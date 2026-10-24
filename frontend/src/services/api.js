@@ -385,13 +385,25 @@ export const apiService = {
   /**
    * Phase 5: Verify payment status & get order receipt
    */
-  async verifyPayment(orderNumber, simulateSuccess = false) {
-    const query = new URLSearchParams({
-      order_number: orderNumber,
-    });
-    if (simulateSuccess) query.append('simulate_success', '1');
+  async verifyPayment(verificationData, simulateSuccess = false) {
+    let payload;
+    if (typeof verificationData === 'string') {
+      payload = {
+        order_number: verificationData,
+        ...(simulateSuccess ? { simulate_success: true } : {}),
+      };
+    } else if (verificationData && typeof verificationData === 'object') {
+      payload = { ...verificationData };
+      if (simulateSuccess) payload.simulate_success = true;
+    } else {
+      throw new Error('Order number or payment verification data is required');
+    }
 
-    const response = await fetch(`${API_BASE_URL}/payments/verify.php?${query.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/payments/verify.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
     return handleResponse(response);
   },
 
@@ -720,25 +732,6 @@ export const apiService = {
     return result.data;
   },
 
-  /**
-   * Phase 5: Verify Payment & Confirm Order
-   */
-  async verifyPayment(verificationData) {
-    const payload = typeof verificationData === 'string'
-      ? { order_number: verificationData, simulate_success: true }
-      : verificationData;
-
-    const response = await fetch(`${API_BASE_URL}/payments/verify.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Payment verification failed');
-    }
-    return result.data;
-  },
 
   /**
    * Fetch approved customer reviews and customer photo gallery

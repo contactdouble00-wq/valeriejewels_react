@@ -425,6 +425,28 @@ export const adminApi = {
     return res.data;
   },
 
+  async syncRazorpayPayment(orderId) {
+    const res = await request('/admin/orders.php?action=sync_razorpay', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId, id: orderId }),
+    });
+    return res.data || res;
+  },
+
+  async markOrderPaymentStatus(orderId, paymentStatus, options = {}) {
+    const res = await request('/admin/orders.php?action=mark_payment_status', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id: orderId,
+        payment_status: paymentStatus,
+        transaction_id: options.transactionId || '',
+        amount_paid: options.amountPaid,
+        notify_customer: options.notifyCustomer !== false,
+      }),
+    });
+    return res.data || res;
+  },
+
   // Customers & RTO
   async getCustomers(params = {}) {
     const qs = new URLSearchParams(params).toString();

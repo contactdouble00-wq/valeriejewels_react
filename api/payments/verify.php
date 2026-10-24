@@ -2,13 +2,13 @@
 /**
  * VALERIE JEWELS — Payment & Order Verification Endpoint
  * Returns verified order details, payment splits, and itemized receipt.
+ * Automatically syncs with Razorpay REST API if order is pending.
  */
 
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/utils/mailer.php';
 require_once dirname(__DIR__) . '/config/database.php';
-
 
 handleCors();
 
@@ -48,75 +48,184 @@ try {
     $razorpayOrderId   = trim($input['razorpay_order_id'] ?? '');
     $razorpaySignature = trim($input['razorpay_signature'] ?? '');
 
-    // 1. Verify Real Razorpay Signature if provided
-    if (!empty($razorpayPaymentId) && !empty($razorpayOrderId) && !empty($razorpaySignature)) {
-        // Fetch secret key from payment_settings
+    // Fetch Razorpay credentials from site_settings
+    $rpKeyId = 'rzp_live_Tf7Bar4fWloC2y';
+    $rpSecret = 'u8xu0HfY01b0wkwWwiYfEBRN';
+
+    try {
         $secretStmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
         $secretStmt->execute();
         $rawS = $secretStmt->fetchColumn();
-        $pSettings = $rawS ? json_decode($rawS, true) : [];
-        $rpSecret = $pSettings['razorpay_key_secret'] ?? '';
-        if (empty($rpSecret)) {
-            $rpSecret = 'u8xu0HfY01b0wkwWwiYfEBRN';
+        if ($rawS) {
+            $pSettings = json_decode($rawS, true) ?: [];
+            if (!empty($pSettings['razorpay_key_id'])) {
+                $rpKeyId = $pSettings['razorpay_key_id'];
+            }
+            if (!empty($pSettings['razorpay_key_secret'])) {
+                $rpSecret = $pSettings['razorpay_key_secret'];
+            }
         }
+    } catch (Throwable $e) {}
 
-        $verified = false;
-        if (!empty($rpSecret)) {
-            $expectedSignature = hash_hmac('sha256', $razorpayOrderId . '|' . $razorpayPaymentId, $rpSecret);
-            $verified = hash_equals($expectedSignature, $razorpaySignature);
-        } else {
-            // In development or test mode without secret key set
-            $verified = true;
-        }
+    $isVerified = false;
+    $capturedPaymentId = null;
+    $capturedAmount = null;
 
-        if ($verified) {
-            $newPaymentStatus = 'paid';
-            if ($order['payment_type'] === 'partial') {
-                $newPaymentStatus = 'partial_paid';
-            } elseif ($order['payment_type'] === 'cod') {
-                $newPaymentStatus = 'pending';
-            }
-
-            $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
-            $upStmt = $pdo->prepare("
-                UPDATE orders 
-                SET payment_status = :ps,
-                    order_status = 'confirmed',
-                    fastrr_order_id = :p_id,
-                    updated_at = $nowSql
-                WHERE id = :id
-            ");
-            $upStmt->execute([
-                ':ps'   => $newPaymentStatus,
-                ':p_id' => $razorpayPaymentId,
-                ':id'   => $order['id'],
-            ]);
-
-            // Refresh order
-            $stmt->execute(!empty($orderNumber) ? [$orderNumber] : [$orderId]);
-            $order = $stmt->fetch();
-
-            try {
-                MailerService::sendOrderConfirmation((int)$order['id']);
-            } catch (Throwable $e) {}
-
-            // Auto-create order in Shiprocket panel (handles Prepaid and Partial COD)
-            try {
-                require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-                ShiprocketService::createShipment((int)$order['id']);
-            } catch (Throwable $e) {
-                error_log('[Shiprocket] Auto-sync error on verify: ' . $e->getMessage());
-            }
-        } else {
-            try {
-                MailerService::sendOrderFailed((int)$order['id'], 'Payment authorization or signature verification failed');
-            } catch (Throwable $e) {
-                error_log('[Verify] Error dispatching order_failed email: ' . $e->getMessage());
-            }
-            ApiResponse::error('Payment signature verification failed', 400);
+    // 1. Signature Verification if client sent signature
+    if (!empty($razorpayPaymentId) && !empty($razorpayOrderId) && !empty($razorpaySignature)) {
+        $expectedSignature = hash_hmac('sha256', $razorpayOrderId . '|' . $razorpayPaymentId, $rpSecret);
+        if (hash_equals($expectedSignature, $razorpaySignature)) {
+            $isVerified = true;
+            $capturedPaymentId = $razorpayPaymentId;
         }
     }
-    // 2. Sandbox simulation for test/mock mode
+
+    // 2. Direct Razorpay API Verification if payment_id provided without signature or signature didn't match
+    if (!$isVerified && !empty($razorpayPaymentId) && !empty($rpKeyId) && !empty($rpSecret)) {
+        $ch = curl_init('https://api.razorpay.com/v1/payments/' . urlencode($razorpayPaymentId));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $rpKeyId . ':' . $rpSecret);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $rpResp = curl_exec($ch);
+        $rpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($rpCode === 200 && $rpResp) {
+            $rpPay = json_decode($rpResp, true);
+            if (!empty($rpPay['id']) && $rpPay['id'] === $razorpayPaymentId && ($rpPay['status'] === 'captured' || $rpPay['status'] === 'authorized')) {
+                $isVerified = true;
+                $capturedPaymentId = $rpPay['id'];
+                if (isset($rpPay['amount'])) {
+                    $capturedAmount = (float)$rpPay['amount'] / 100;
+                }
+            }
+        }
+    }
+
+    // 3. Fallback: If order is still pending, actively check Razorpay API for captured payments
+    $isOrderPending = ($order['payment_status'] === 'pending' || $order['payment_status'] === 'unpaid' || $order['order_status'] === 'pending');
+    if (!$isVerified && $isOrderPending && !empty($rpKeyId) && !empty($rpSecret) && $order['payment_type'] !== 'cod') {
+        $lookupOrderId = $order['fastrr_order_id'];
+
+        // Option A: If fastrr_order_id is a Razorpay order ID (starts with order_)
+        if (!empty($lookupOrderId) && str_starts_with($lookupOrderId, 'order_')) {
+            $ch = curl_init('https://api.razorpay.com/v1/orders/' . urlencode($lookupOrderId) . '/payments');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $rpKeyId . ':' . $rpSecret);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $ordResp = curl_exec($ch);
+            $ordCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($ordCode === 200 && $ordResp) {
+                $payList = json_decode($ordResp, true);
+                if (!empty($payList['items']) && is_array($payList['items'])) {
+                    foreach ($payList['items'] as $item) {
+                        if (($item['status'] === 'captured' || $item['status'] === 'authorized')) {
+                            $isVerified = true;
+                            $capturedPaymentId = $item['id'];
+                            if (isset($item['amount'])) {
+                                $capturedAmount = (float)$item['amount'] / 100;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Option B: Search recent payments by order_number in notes or receipt
+        if (!$isVerified && !empty($order['order_number'])) {
+            $ch = curl_init('https://api.razorpay.com/v1/payments?count=25');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $rpKeyId . ':' . $rpSecret);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $recentResp = curl_exec($ch);
+            $recentCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($recentCode === 200 && $recentResp) {
+                $recentList = json_decode($recentResp, true);
+                if (!empty($recentList['items']) && is_array($recentList['items'])) {
+                    foreach ($recentList['items'] as $item) {
+                        $notes = $item['notes'] ?? [];
+                        $noteOrderNum = $notes['order_number'] ?? '';
+                        $noteValerieId= $notes['valerie_order_id'] ?? '';
+                        $match = ($noteOrderNum === $order['order_number']) || ((string)$noteValerieId === (string)$order['id']);
+                        if ($match && ($item['status'] === 'captured' || $item['status'] === 'authorized')) {
+                            $isVerified = true;
+                            $capturedPaymentId = $item['id'];
+                            if (isset($item['amount'])) {
+                                $capturedAmount = (float)$item['amount'] / 100;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Apply verification update if payment verified
+    if ($isVerified) {
+        $newPaymentStatus = 'paid';
+        $paidUpfront = (float)$order['amount_paid_upfront'];
+        $dueOnDelivery = (float)$order['amount_due_on_delivery'];
+
+        if ($order['payment_type'] === 'partial') {
+            $newPaymentStatus = 'partial_paid';
+            if ($capturedAmount !== null && $capturedAmount > 0) {
+                $paidUpfront = $capturedAmount;
+            }
+            $dueOnDelivery = round(max(0, (float)$order['total_amount'] - $paidUpfront), 2);
+        } elseif ($order['payment_type'] === 'full_prepaid') {
+            $newPaymentStatus = 'paid';
+            if ($capturedAmount !== null && $capturedAmount > 0) {
+                $paidUpfront = $capturedAmount;
+            } else {
+                $paidUpfront = (float)$order['total_amount'];
+            }
+            $dueOnDelivery = 0.0;
+        }
+
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+        $upStmt = $pdo->prepare("
+            UPDATE orders 
+            SET payment_status = :ps,
+                order_status = 'confirmed',
+                fastrr_order_id = COALESCE(:p_id, fastrr_order_id),
+                amount_paid_upfront = :paid_upfront,
+                amount_due_on_delivery = :due_on_deliv,
+                updated_at = $nowSql
+            WHERE id = :id
+        ");
+        $upStmt->execute([
+            ':ps'            => $newPaymentStatus,
+            ':p_id'          => $capturedPaymentId ?: $order['fastrr_order_id'],
+            ':paid_upfront'  => $paidUpfront,
+            ':due_on_deliv'  => $dueOnDelivery,
+            ':id'            => $order['id'],
+        ]);
+
+        // Refresh order
+        $stmt->execute(!empty($orderNumber) ? [$orderNumber] : [$orderId]);
+        $order = $stmt->fetch();
+
+        try {
+            MailerService::sendOrderConfirmation((int)$order['id']);
+        } catch (Throwable $e) {}
+
+        try {
+            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+            ShiprocketService::createShipment((int)$order['id']);
+        } catch (Throwable $e) {
+            error_log('[Shiprocket] Auto-sync error on verify: ' . $e->getMessage());
+        }
+    }
+    // Sandbox simulation for test/mock mode
     elseif ($simulate && $order['order_status'] === 'pending') {
         $newPaymentStatus = 'paid';
         if ($order['payment_type'] === 'partial') {
@@ -140,7 +249,6 @@ try {
             ':id'  => $order['id'],
         ]);
 
-        // Refresh record
         $stmt->execute(!empty($orderNumber) ? [$orderNumber] : [$orderId]);
         $order = $stmt->fetch();
 
@@ -148,7 +256,6 @@ try {
             MailerService::sendOrderConfirmation((int)$order['id']);
         } catch (Throwable $e) {}
 
-        // Auto-create order in Shiprocket panel (handles Prepaid and Partial COD)
         try {
             require_once dirname(__DIR__) . '/shipping/shiprocket.php';
             ShiprocketService::createShipment((int)$order['id']);
@@ -156,7 +263,6 @@ try {
             error_log('[Shiprocket] Auto-sync error on simulate verify: ' . $e->getMessage());
         }
     }
-
 
     // Fetch order items
     $itemStmt = $pdo->prepare("

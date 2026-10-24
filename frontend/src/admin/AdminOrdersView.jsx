@@ -79,6 +79,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   // Shiprocket sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
 
+  // Razorpay live sync state
+  const [syncingRzpId, setSyncingRzpId] = useState(null);
+  const [updatingPaymentId, setUpdatingPaymentId] = useState(null);
+
   // Status transition state
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [shipAwb, setShipAwb] = useState('');
@@ -684,6 +688,38 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Failed to sync with Shiprocket');
     } finally {
       setSyncingSrId(null);
+    }
+  };
+
+  const handleSyncRazorpay = async (orderId) => {
+    try {
+      setSyncingRzpId(orderId);
+      const res = await adminApi.syncRazorpayPayment(orderId);
+      showToast(res?.message || '✓ Payment verified successfully with Razorpay!');
+      await loadOrders();
+      if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
+        await inspectOrder(orderId);
+      }
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'No captured payment found on Razorpay'}`);
+    } finally {
+      setSyncingRzpId(null);
+    }
+  };
+
+  const handleMarkPaymentStatus = async (orderId, paymentStatus, customAmt = null) => {
+    try {
+      setUpdatingPaymentId(orderId);
+      const res = await adminApi.markOrderPaymentStatus(orderId, paymentStatus, { amountPaid: customAmt });
+      showToast(res?.message || `✓ Payment status updated to ${paymentStatus}!`);
+      await loadOrders();
+      if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
+        await inspectOrder(orderId);
+      }
+    } catch (err) {
+      showToast(`❌ ${err.message || 'Failed to update payment status'}`);
+    } finally {
+      setUpdatingPaymentId(null);
     }
   };
 
@@ -1669,6 +1705,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   : 'Push SR')}
                           </span>
                         </button>
+                        {((ord.payment_status === 'pending' || ord.payment_status === 'failed' || ord.payment_status === 'unpaid') && ord.payment_type !== 'cod') && (
+                          <button
+                            type="button"
+                            onClick={() => handleSyncRazorpay(ord.id)}
+                            disabled={syncingRzpId === ord.id}
+                            title="Check live Razorpay API to verify if payment was received"
+                            className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-purple-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${syncingRzpId === ord.id ? 'animate-spin' : ''}`} />
+                            <span className="hidden xl:inline">{syncingRzpId === ord.id ? 'Syncing...' : 'Sync Razorpay'}</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => openEmailModal(ord)}
@@ -2702,13 +2750,38 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <span className="bg-rose-100 px-2 py-0.5 rounded font-semibold">Payment Status: UNPAID / PENDING</span>
                   <span>Gateway Transaction Ref: None</span>
                 </div>
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-rose-200/80 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSyncRazorpay(selectedOrder.id)}
+                    disabled={syncingRzpId === selectedOrder.id}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs flex items-center space-x-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${syncingRzpId === selectedOrder.id ? 'animate-spin' : ''}`} />
+                    <span>{syncingRzpId === selectedOrder.id ? 'Verifying with Razorpay...' : '⚡ Check & Sync Razorpay'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleMarkPaymentStatus(selectedOrder.id, selectedOrder.payment_type === 'partial' ? 'partial_paid' : 'paid')}
+                    disabled={updatingPaymentId === selectedOrder.id}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center space-x-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>
+                      {selectedOrder.payment_type === 'partial'
+                        ? `✓ Mark Advance Paid (₹${selectedOrder.amount_paid_upfront || 9})`
+                        : `✓ Mark Full Paid (₹${selectedOrder.total_amount})`}
+                    </span>
+                  </button>
+                </div>
               </div>
             ) : (selectedOrder.payment_status === 'paid' || selectedOrder.payment_status === 'partial_paid') ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs space-y-1 text-emerald-900">
                 <div className="flex items-center space-x-2 font-bold text-emerald-800 text-sm">
                   <CheckCircle className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
                   <span>
-                    {selectedOrder.payment_status === 'partial_paid' ? 'Partial COD Advance Paid' : 'Payment Received & Verified'}
+                    {selectedOrder.payment_status === 'partial_paid' ? `Partial COD Advance Paid (₹${selectedOrder.amount_paid_upfront || 9})` : 'Payment Received & Verified'}
                   </span>
                 </div>
                 <div className="text-[11px] text-emerald-700 flex items-center space-x-2">
@@ -2717,6 +2790,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     {selectedOrder.fastrr_order_id || 'Captured via Gateway'}
                   </span>
                 </div>
+                {selectedOrder.payment_type === 'partial' && (
+                  <div className="text-[11px] text-emerald-800 pt-0.5 font-medium">
+                    Collect remaining <strong>₹{Number(selectedOrder.amount_due_on_delivery).toLocaleString('en-IN')}</strong> in cash upon doorstep delivery.
+                  </div>
+                )}
               </div>
             ) : selectedOrder.payment_type === 'cod' ? (
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs space-y-1 text-blue-900">
