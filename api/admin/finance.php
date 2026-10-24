@@ -270,11 +270,11 @@ try {
     // -------------------------------------------------------------------------
     if (($action === 'create_entry' || ($action === '' && $method === 'POST')) && $method === 'POST') {
         $partnerId = (int)($input['partner_id'] ?? 0);
-        $date = trim($input['date'] ?? date('Y-m-d'));
+        $date = isset($input['date']) ? trim($input['date']) : '';
         $description = trim($input['description'] ?? '');
         $amount = (float)($input['amount'] ?? 0);
         $type = strtoupper(trim($input['type'] ?? 'EXPENSE'));
-        $status = strtoupper(trim($input['status'] ?? 'PAID'));
+        $status = isset($input['status']) ? trim($input['status']) : '';
         $category = trim($input['category'] ?? '');
         $counterpartyId = !empty($input['counterparty_partner_id']) ? (int)$input['counterparty_partner_id'] : null;
         $notes = trim($input['notes'] ?? '');
@@ -289,14 +289,17 @@ try {
             ApiResponse::error('Valid amount is required', 422);
         }
 
-        // Validate type & status enums
+        // Validate type
         $validTypes = ['EXPENSE', 'CONTRIBUTION', 'REIMBURSEMENT', 'TRANSFER_OUT', 'TRANSFER_IN'];
         if (!in_array($type, $validTypes, true)) {
             $type = 'EXPENSE';
         }
-        $validStatuses = ['PAID', 'PENDING', 'RECEIVED'];
-        if (!in_array($status, $validStatuses, true)) {
-            $status = 'PAID';
+        // Normalize status if provided, allow empty if empty
+        if ($status !== '') {
+            $statusLower = strtolower($status);
+            if ($statusLower === 'paid') $status = 'paid';
+            elseif ($statusLower === 'received') $status = 'received';
+            elseif ($statusLower === 'pending') $status = 'pending';
         }
 
         // Auto-category suggestion if left default or blank
@@ -377,9 +380,9 @@ try {
         $fields = [];
         $params = [];
 
-        if (isset($input['date'])) {
+        if (array_key_exists('date', $input)) {
             $fields[] = "date = ?";
-            $params[] = trim($input['date']);
+            $params[] = trim($input['date'] ?? '');
         }
         if (isset($input['description'])) {
             $desc = trim($input['description']);
@@ -393,13 +396,20 @@ try {
             $fields[] = "amount = ?";
             $params[] = $amt;
         }
-        if (isset($input['type'])) {
+        if (array_key_exists('type', $input)) {
             $fields[] = "type = ?";
-            $params[] = strtoupper(trim($input['type']));
+            $params[] = strtoupper(trim($input['type'] ?? 'EXPENSE'));
         }
-        if (isset($input['status'])) {
+        if (array_key_exists('status', $input)) {
             $fields[] = "status = ?";
-            $params[] = strtoupper(trim($input['status']));
+            $statusVal = trim($input['status'] ?? '');
+            if ($statusVal !== '') {
+                $statusLower = strtolower($statusVal);
+                if ($statusLower === 'paid') $statusVal = 'paid';
+                elseif ($statusLower === 'received') $statusVal = 'received';
+                elseif ($statusLower === 'pending') $statusVal = 'pending';
+            }
+            $params[] = $statusVal;
         }
         if (isset($input['category'])) {
             $fields[] = "category = ?";
@@ -854,16 +864,19 @@ try {
 
         // Fetch all non-deleted entries grouped by partner
         $ledgersByPartner = [];
+        $ledgersById = [];
         foreach ($partners as $partner) {
             $pId = (int)$partner['id'];
             $stmt = $pdo->prepare("
                 SELECT id, date, description, amount, type, status, category, notes
                 FROM finance_entries
                 WHERE partner_id = ? AND deleted_at IS NULL
-                ORDER BY date ASC, id ASC
+                ORDER BY id ASC
             ");
             $stmt->execute([$pId]);
-            $ledgersByPartner[$partner['name']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $partnerRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $ledgersByPartner[$partner['name']] = $partnerRows;
+            $ledgersById[$pId] = $partnerRows;
         }
 
         // Fetch all active marketing campaigns
@@ -871,7 +884,7 @@ try {
             SELECT id, date, campaign_name, budget_amount, charge_percent, charge_amount, total_cost, charge_status, status, notes
             FROM finance_marketing_campaigns
             WHERE deleted_at IS NULL
-            ORDER BY date ASC, id ASC
+            ORDER BY id ASC
         ");
         $marketing = $mktStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -882,6 +895,7 @@ try {
             'generated_at'     => date('Y-m-d H:i:s'),
             'partners'         => $partners,
             'ledgers'          => $ledgersByPartner,
+            'ledgers_by_id'    => $ledgersById,
             'marketing'        => $marketing,
         ], 'Finance backup data generated successfully');
     }

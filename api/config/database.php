@@ -613,11 +613,11 @@ class Database {
                     CREATE TABLE IF NOT EXISTS `finance_entries` (
                         `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                         `partner_id` INT UNSIGNED NOT NULL,
-                        `date` DATE NOT NULL,
+                        `date` VARCHAR(50) NOT NULL DEFAULT '',
                         `description` VARCHAR(255) NOT NULL,
                         `amount` DECIMAL(12,2) NOT NULL,
-                        `type` ENUM('EXPENSE', 'CONTRIBUTION', 'REIMBURSEMENT', 'TRANSFER_OUT', 'TRANSFER_IN') NOT NULL DEFAULT 'EXPENSE',
-                        `status` ENUM('PAID', 'PENDING', 'RECEIVED') NOT NULL DEFAULT 'PAID',
+                        `type` VARCHAR(50) NOT NULL DEFAULT 'EXPENSE',
+                        `status` VARCHAR(50) NOT NULL DEFAULT 'PAID',
                         `category` VARCHAR(50) NOT NULL DEFAULT 'Other',
                         `counterparty_partner_id` INT UNSIGNED DEFAULT NULL,
                         `notes` TEXT DEFAULT NULL,
@@ -625,21 +625,21 @@ class Database {
                         `deleted_at` DATETIME DEFAULT NULL,
                         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        INDEX `idx_fin_partner_date` (`partner_id`, `date`),
+                        INDEX `idx_fin_partner_date` (`partner_id`),
                         INDEX `idx_fin_status` (`status`),
                         INDEX `idx_fin_deleted` (`deleted_at`)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
                     CREATE TABLE IF NOT EXISTS `finance_marketing_campaigns` (
                         `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                        `date` DATE NOT NULL,
+                        `date` VARCHAR(50) NOT NULL DEFAULT '',
                         `campaign_name` VARCHAR(255) NOT NULL,
                         `budget_amount` DECIMAL(12,2) NOT NULL,
                         `charge_percent` DECIMAL(5,2) NOT NULL DEFAULT 20.00,
                         `charge_amount` DECIMAL(12,2) NOT NULL,
                         `total_cost` DECIMAL(12,2) NOT NULL,
-                        `charge_status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
-                        `status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
+                        `charge_status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                        `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',
                         `ledger_entry_id` BIGINT UNSIGNED DEFAULT NULL,
                         `notes` TEXT DEFAULT NULL,
                         `created_by` BIGINT UNSIGNED DEFAULT NULL,
@@ -662,46 +662,126 @@ class Database {
                 ");
             }
 
-            // Seed 3 Partners: Yash, Dhruvik, Jeel
+            // Ensure 3 Partners: Yash (1), Dhruvik (2), Jeel (3) exist
             $partnerCheck = (int)$pdo->query("SELECT COUNT(*) FROM finance_partners")->fetchColumn();
             if ($partnerCheck === 0) {
-                $pStmt = $pdo->prepare("INSERT INTO finance_partners (name, color, share_percent, is_active) VALUES (?, ?, ?, 1)");
-                $pStmt->execute(['Yash', '#6B21A8', 33.34]);
-                $pStmt->execute(['Krupal', '#0284C7', 33.33]);
-                $pStmt->execute(['Jeel', '#059669', 33.33]);
-            } else {
-                // Ensure Partner 2 is named Krupal. If a duplicate Krupal partner exists with id != 2, merge and delete it
-                try {
-                    $otherKrupal = $pdo->query("SELECT id FROM finance_partners WHERE LOWER(name) = 'krupal' AND id != 2 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-                    if ($otherKrupal && !empty($otherKrupal['id'])) {
-                        $otherId = (int)$otherKrupal['id'];
-                        $pdo->exec("UPDATE finance_entries SET partner_id = 2 WHERE partner_id = {$otherId}");
-                        $pdo->exec("DELETE FROM finance_partners WHERE id = {$otherId}");
-                    }
-                    $pdo->exec("UPDATE finance_partners SET name = 'Krupal' WHERE id = 2");
-                } catch (Throwable $e) {
-                    error_log('Partner 2 Krupal migration note: ' . $e->getMessage());
-                }
+                $pStmt = $pdo->prepare("INSERT INTO finance_partners (id, name, color, share_percent, is_active) VALUES (?, ?, ?, ?, 1)");
+                $pStmt->execute([1, 'Yash', '#6B21A8', 33.34]);
+                $pStmt->execute([2, 'Dhruvik', '#0284C7', 33.33]);
+                $pStmt->execute([3, 'Jeel', '#059669', 33.33]);
             }
 
-            // Complete financial data wipe per owner directive
-            // Wipes out all historical demo entries, marketing campaigns, and audit logs
+            // Seed Exact Photo Records (vj_finance_exact_photos_v2)
             try {
-                $wipeDone = (int)$pdo->query("SELECT COUNT(*) FROM site_settings WHERE `key` = 'vj_finance_wiped_clean_v1'")->fetchColumn();
-                if ($wipeDone === 0) {
+                $seedDone = (int)$pdo->query("SELECT COUNT(*) FROM site_settings WHERE `key` = 'vj_finance_exact_photos_v2'")->fetchColumn();
+                if ($seedDone === 0) {
                     $pdo->exec("DELETE FROM finance_entries");
-                    $pdo->exec("DELETE FROM finance_marketing_campaigns");
-                    $pdo->exec("DELETE FROM finance_audit_log");
                     if ($driver === 'sqlite') {
                         try {
-                            $pdo->exec("DELETE FROM sqlite_sequence WHERE name IN ('finance_entries', 'finance_marketing_campaigns', 'finance_audit_log')");
+                            $pdo->exec("DELETE FROM sqlite_sequence WHERE name IN ('finance_entries', 'finance_marketing_campaigns')");
                         } catch (Throwable $e) {}
                     }
-                    $insWipe = $pdo->prepare("INSERT INTO site_settings (`key`, `value`) VALUES ('vj_finance_wiped_clean_v1', '1')");
-                    $insWipe->execute();
+
+                    $insStmt = $pdo->prepare("
+                        INSERT INTO finance_entries (partner_id, date, description, amount, type, status, category, notes, created_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    ");
+
+                    // 1. Yash (24 entries, Sum: 24700)
+                    $yashEntries = [
+                        ['Hostinger', 2790, 'Paid', '', 'Hosting', 'EXPENSE'],
+                        ['Shiprocket (Initial)', 200, 'Paid', '', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Business Pla', 200, 'Paid', '', 'Shiprocket', 'EXPENSE'],
+                        ['To Dhruvik for Marketin', 1810, 'paid', '', 'Marketing', 'TRANSFER_OUT'],
+                        ['To Dhruvik for Marketir', 2000, 'Paid', '', 'Marketing', 'TRANSFER_OUT'],
+                        ['Shiprocket Recharge', 500, 'paid', '8-10-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 1000, 'paid', '18-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '21-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['marketing', 4000, 'paid', '21-8-2026', 'Marketing', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '22-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '28-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['To Harshbhai for marke', 1800, 'paid', '29-8-2026', 'Marketing', 'EXPENSE'],
+                        ['From Dhruvik for Meta', -5000, 'received', '31-8-2026', 'Marketing', 'REIMBURSEMENT'],
+                        ['Shiprocket Recharge', 1000, 'paid', '7-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['To Harshbhai for Prepai', 1100, 'paid', '7-9-2026', 'Marketing', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '9-9-2026', 'Shiprocket', 'EXPENSE'],
+                        ['To Richi (Influencer)', 1800, 'paid', '12-9-2026', 'Influencer', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '29-9-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 1000, 'paid', '1-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 500, 'paid', '3-10-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket Recharge', 1000, 'paid', '9-10-2026', 'Shiprocket', 'EXPENSE'],
+                        ['To krupal for meta man', 3500, 'paid', '18-10-2026', 'Marketing', 'EXPENSE'],
+                        ['Meta Fund added', 1000, 'paid', '20-10-2026', 'Marketing', 'EXPENSE'],
+                        ['Meta Fund added', 2000, 'paid', '23-10-2026', 'Marketing', 'EXPENSE'],
+                    ];
+                    foreach ($yashEntries as $row) {
+                        $insStmt->execute([1, $row[3], $row[0], $row[1], $row[5], $row[2], $row[4], '']);
+                    }
+
+                    // 2. Dhruvik (21 entries, Sum: 39520)
+                    $dhruvikEntries = [
+                        ['Capital Contribution', 5000, 'Paid', '', 'Other', 'CONTRIBUTION'],
+                        ['Shiprocket charges', 500, 'paid', '8-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket charges', 500, 'paid', '2-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket charges', 500, 'paid', '-', 'Shiprocket', 'EXPENSE'],
+                        ['Shiprocket charges', 1000, 'paid', '11-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Reel 2 location rent', 1100, 'paid', '20-8-2026', 'Marketing', 'EXPENSE'],
+                        ['marketing', 4000, 'paid', '', 'Marketing', 'EXPENSE'],
+                        ['marketing', 1000, 'paid', '', 'Marketing', 'EXPENSE'],
+                        ['From Jeel', -1750, 'paid', '', 'Other', 'REIMBURSEMENT'],
+                        ['From Yash', -1810, 'paid', '', 'Other', 'REIMBURSEMENT'],
+                        ['marketing', 4000, 'paid', '21-8-2026', 'Marketing', 'EXPENSE'],
+                        ['Shiprocket charges', 500, 'paid', '27-8-2026', 'Shiprocket', 'EXPENSE'],
+                        ['To Yash for Meta ads', 5000, 'paid', '31-8-2026', 'Marketing', 'TRANSFER_OUT'],
+                        ['Shiprocket charges', 1500, 'paid', '29-9-2026', 'Shiprocket', 'EXPENSE'],
+                        ['Honey comb packaging', 800, 'paid', '30-9-2026', 'Packaging', 'EXPENSE'],
+                        ['amazon order 3x', 2640, 'paid', '2-10-2026', 'Order Cost', 'EXPENSE'],
+                        ['ashlesha ( influencer)', 350, 'paid', '14/10/2026', 'Influencer', 'EXPENSE'],
+                        ['Meta ads', 5000, 'paid', '14/10/2026', 'Marketing', 'EXPENSE'],
+                        ['parthbhai', 4000, 'paid', '18-10-2026', 'Marketing', 'EXPENSE'],
+                        ['meta fund', 2000, 'paid', '21-10-2026', 'Marketing', 'EXPENSE'],
+                        ['harsh bhai meta', 3690, 'paid', '23-10-2026', 'Marketing', 'EXPENSE'],
+                    ];
+                    foreach ($dhruvikEntries as $row) {
+                        $insStmt->execute([2, $row[3], $row[0], $row[1], $row[5], $row[2], $row[4], '']);
+                    }
+
+                    // 3. Jeel (24 entries, Sum: 56970)
+                    $jeelEntries = [
+                        ['Contribution', 2000, 'Paid', '', 'Other', 'CONTRIBUTION'],
+                        ['Additional Contribution', 1250, 'Paid', '', 'Other', 'CONTRIBUTION'],
+                        ['To Dhruvik', 1750, 'paid', '', 'Other', 'TRANSFER_OUT'],
+                        ['To Khushi', 1500, 'paid', '7-8-2026', 'Marketing', 'EXPENSE'],
+                        ['To Richi (first time)', 1500, 'paid', '8-8-2026', 'Influencer', 'EXPENSE'],
+                        ['ORDER', 260, '', '7-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 370, '', '8-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1844, '', '10-8-26', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1150, '', '11-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1110, '', '17-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 630, '', '18-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1127, '', '19-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1867, '', '20-8-2026', 'Order Cost', 'EXPENSE'],
+                        ['marketing', 4000, 'paid', '21-8-2026', 'Marketing', 'EXPENSE'],
+                        ['Trademark', 12000, 'paid', '13-09-2024', 'Legal/Trademark', 'EXPENSE'],
+                        ['marketing', 7000, 'paid', '29-09-2026', 'Marketing', 'EXPENSE'],
+                        ['razerpay', -9189, '', '', 'Other', 'REIMBURSEMENT'],
+                        ['odertill15-10-26', 7041, '', '', 'Order Cost', 'EXPENSE'],
+                        ['mysterybox', 5600, '', '', 'Order Cost', 'EXPENSE'],
+                        ['Shiprocket Recharge', 2000, 'paid', '19-10-2026', 'Shiprocket', 'EXPENSE'],
+                        ['mysterybox', 3800, '', '20-10-26', 'Order Cost', 'EXPENSE'],
+                        ['order', 6360, '', '21-10-26', 'Order Cost', 'EXPENSE'],
+                        ['ORDER', 1000, '', '22-1026', 'Order Cost', 'EXPENSE'],
+                        ['META', 1000, '', '19-10-26', 'Marketing', 'EXPENSE'],
+                    ];
+                    foreach ($jeelEntries as $row) {
+                        $insStmt->execute([3, $row[3], $row[0], $row[1], $row[5], $row[2], $row[4], '']);
+                    }
+
+                    $insFlag = $pdo->prepare("INSERT INTO site_settings (`key`, `value`) VALUES ('vj_finance_exact_photos_v2', '1')");
+                    $insFlag->execute();
                 }
-            } catch (Throwable $we) {
-                error_log('Finance wipe migration note: ' . $we->getMessage());
+            } catch (Throwable $se) {
+                error_log('Finance exact photo seed note: ' . $se->getMessage());
             }
         } catch (Throwable $e) {
             error_log('seedDefaultFinanceData error: ' . $e->getMessage());
