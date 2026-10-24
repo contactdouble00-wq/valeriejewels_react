@@ -961,6 +961,24 @@ try {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // 12. COMPLETE DATA WIPE (PURGE ALL ENTRIES & CAMPAIGNS)
+    // -------------------------------------------------------------------------
+    if ($action === 'wipe_all' && $method === 'POST') {
+        $pdo->exec("DELETE FROM finance_entries");
+        $pdo->exec("DELETE FROM finance_marketing_campaigns");
+        $pdo->exec("DELETE FROM finance_audit_log");
+        if ($driver === 'sqlite') {
+            try {
+                $pdo->exec("DELETE FROM sqlite_sequence WHERE name IN ('finance_entries', 'finance_marketing_campaigns', 'finance_audit_log')");
+            } catch (Throwable $se) {}
+        }
+        ApiResponse::success([
+            'wiped'     => true,
+            'timestamp' => date('c'),
+        ], 'All financial entries and marketing campaigns have been wiped clean.');
+    }
+
     ApiResponse::error('Invalid action or method', 400);
 
 } catch (Throwable $e) {

@@ -483,6 +483,27 @@ export default function AdminFinanceView({ currentUser }) {
   };
 
   // ---------------------------------------------------------------------------
+  // COMPLETE FINANCIAL DATA WIPE
+  // ---------------------------------------------------------------------------
+  const handleWipeAllData = async () => {
+    const confirmed = window.confirm(
+      '⚠️ PERMANENT ACTION:\n\nAre you sure you want to wipe out the entire financial dataset?\n\nThis will permanently delete all partner ledger entries, marketing campaigns, and audit logs so you can import a fresh dataset.'
+    );
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await adminApi.wipeAllFinanceData();
+      showToast('success', 'Entire financial dataset has been wiped clean.');
+      await loadFinanceData();
+    } catch (err) {
+      showToast('error', err.message || 'Failed to wipe financial data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // DOWNLOAD CURRENT EXCEL BACKUP (.xlsx with formulas)
   // ---------------------------------------------------------------------------
   const handleDownloadExcelBackup = async () => {
@@ -821,6 +842,16 @@ export default function AdminFinanceView({ currentUser }) {
           </button>
 
           <button
+            onClick={handleWipeAllData}
+            disabled={loading}
+            className="px-4 py-3 rounded-2xl bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shadow-xs hover:shadow-sm transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer"
+            title="Wipe all entries and marketing campaigns to start fresh"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600" />
+            <span>Wipe Entire Data</span>
+          </button>
+
+          <button
             id="btn-download-excel-backup"
             onClick={handleDownloadExcelBackup}
             disabled={isExporting}
@@ -837,7 +868,7 @@ export default function AdminFinanceView({ currentUser }) {
       {/* RECONCILIATION BOX: COMPARES IMPORTED TOTALS WITH EXPECTED ONES */}
       {/* ========================================================================= */}
       <div className="bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-purple-50/80 rounded-3xl p-5 border-2 border-emerald-500/40 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-5 h-5 text-emerald-700" />
             <h2 className="text-xs font-caps uppercase tracking-wider font-bold text-emerald-900">
@@ -846,7 +877,7 @@ export default function AdminFinanceView({ currentUser }) {
           </div>
           <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white flex items-center space-x-1">
             <Check className="w-3 h-3" />
-            <span>100% RECONCILED WITH EXCEL</span>
+            <span>{entries.length === 0 ? 'CLEAN SLATE • READY FOR NEW DATA' : '100% RECONCILED WITH EXCEL'}</span>
           </span>
         </div>
 
@@ -854,7 +885,7 @@ export default function AdminFinanceView({ currentUser }) {
           {partners.map((p, idx) => {
             const pTotal = calculatePartnerTotal(p.id);
             const expectedMap = { 1: 24700, 2: 39520, 3: 56970 };
-            const expAmount = expectedMap[p.id] ?? (idx === 0 ? 24700 : idx === 1 ? 39520 : 56970);
+            const expAmount = entries.length === 0 ? 0 : (expectedMap[p.id] ?? (idx === 0 ? 24700 : idx === 1 ? 39520 : 56970));
             const isMatch = pTotal === expAmount;
 
             return (
@@ -869,7 +900,7 @@ export default function AdminFinanceView({ currentUser }) {
                 <div className="text-[10px] flex items-center justify-between">
                   <span className="text-brand-muted">Diff: ₹{pTotal - expAmount}</span>
                   <span className={isMatch ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>
-                    {isMatch ? '✅ EXACT MATCH' : 'MISMATCH'}
+                    {isMatch ? '✅ MATCH' : 'MISMATCH'}
                   </span>
                 </div>
               </div>
@@ -880,15 +911,17 @@ export default function AdminFinanceView({ currentUser }) {
           <div className="bg-white/90 p-3.5 rounded-2xl border-2 border-brand-primary/40 space-y-1">
             <div className="flex items-center justify-between text-brand-primary font-bold text-[10px] uppercase">
               <span>Combined Total</span>
-              <span>Expected: ₹1,21,190</span>
+              <span>Expected: {entries.length === 0 ? '₹0' : '₹1,21,190'}</span>
             </div>
             <div className="text-lg font-editorial font-bold text-brand-primary">
               {formatINR(actualCombinedTotal)}
             </div>
             <div className="text-[10px] flex items-center justify-between">
-              <span className="text-brand-muted">Diff: ₹{actualCombinedTotal - EXPECTED_TOTALS.Combined}</span>
-              <span className={actualCombinedTotal === EXPECTED_TOTALS.Combined ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>
-                {actualCombinedTotal === EXPECTED_TOTALS.Combined ? '✅ 100% RECONCILED' : 'MISMATCH'}
+              <span className="text-brand-muted">
+                Diff: ₹{entries.length === 0 ? actualCombinedTotal : actualCombinedTotal - EXPECTED_TOTALS.Combined}
+              </span>
+              <span className={(entries.length === 0 ? actualCombinedTotal === 0 : actualCombinedTotal === EXPECTED_TOTALS.Combined) ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>
+                {(entries.length === 0 ? actualCombinedTotal === 0 : actualCombinedTotal === EXPECTED_TOTALS.Combined) ? '✅ 100% RECONCILED' : 'MISMATCH'}
               </span>
             </div>
           </div>
@@ -1249,7 +1282,23 @@ export default function AdminFinanceView({ currentUser }) {
             </thead>
 
             <tbody className="divide-y divide-brand-border/40">
-              {currentVisibleEntries.length === 0 ? (
+              {entries.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-20 text-center">
+                    <div className="max-w-md mx-auto space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-50 text-brand-primary mx-auto flex items-center justify-center font-serif text-xl font-bold border border-purple-200 shadow-xs">
+                        ✨
+                      </div>
+                      <div className="font-serif font-bold text-base text-brand-tertiary">
+                        Financial Ledgers Wiped Clean
+                      </div>
+                      <p className="text-xs text-brand-muted leading-relaxed">
+                        All previous records have been cleared. Partners Yash, Krupal, and Jeel are ready. You can now provide your financial dataset.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentVisibleEntries.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-xs text-brand-muted">
                     No entries found matching filters.
@@ -1462,24 +1511,18 @@ export default function AdminFinanceView({ currentUser }) {
               {activeTab === 'All 3' ? 'Total Combined Expense:' : `${activeTab}'s Total Expense:`}
             </div>
             <div className="text-xl sm:text-2xl font-editorial font-bold text-brand-primary">
-              {formatINR(activeTab === 'All 3' ? actualCombinedTotal : actualTotals[activeTab] || 0)}
+              {formatINR(activeTab === 'All 3' ? actualCombinedTotal : calculatePartnerTotal(activeTab))}
             </div>
           </div>
 
           {/* Quick Partner Summary Strip */}
           <div className="hidden md:flex items-center space-x-4 pl-4 border-l border-brand-border">
-            <div>
-              <span className="text-[10px] text-brand-muted uppercase font-bold">Yash:</span>
-              <span className="ml-1 text-xs font-bold text-brand-tertiary">{formatINR(actualTotals.Yash)}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-brand-muted uppercase font-bold">Dhruvik:</span>
-              <span className="ml-1 text-xs font-bold text-brand-tertiary">{formatINR(actualTotals.Dhruvik)}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-brand-muted uppercase font-bold">Jeel:</span>
-              <span className="ml-1 text-xs font-bold text-brand-tertiary">{formatINR(actualTotals.Jeel)}</span>
-            </div>
+            {(partners || []).map((p) => (
+              <div key={p.id}>
+                <span className="text-[10px] text-brand-muted uppercase font-bold">{p.name}:</span>
+                <span className="ml-1 text-xs font-bold text-brand-tertiary">{formatINR(calculatePartnerTotal(p.id))}</span>
+              </div>
+            ))}
           </div>
         </div>
 
