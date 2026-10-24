@@ -213,6 +213,7 @@ class Database {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
             self::seedDefaultSiteSettings($pdo);
+            self::seedDefaultFinanceData($pdo);
 
             // Auto-populate full catalog if products table is empty
             $prodCount = (int)$pdo->query("SELECT COUNT(*) FROM `products`")->fetchColumn();
@@ -529,10 +530,192 @@ class Database {
             self::seedDefaultImagesSqlite($pdo);
             self::seedDefaultCouponsSqlite($pdo);
             self::seedDefaultBundlesSqlite($pdo);
+            self::seedDefaultFinanceData($pdo);
 
             self::$sqliteTablesChecked = true;
         } catch (Throwable $e) {
             error_log('ensureSqliteTablesExist error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Seed or ensure default finance tables and partner ledgers exist
+     */
+    public static function seedDefaultFinanceData(PDO $pdo): void {
+        $driver = self::$driver;
+        try {
+            if ($driver === 'sqlite') {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS finance_partners (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL UNIQUE,
+                        color TEXT NOT NULL DEFAULT '#6B21A8',
+                        share_percent REAL NOT NULL DEFAULT 33.33,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS finance_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        partner_id INTEGER NOT NULL,
+                        date TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        type TEXT NOT NULL DEFAULT 'EXPENSE',
+                        status TEXT NOT NULL DEFAULT 'PAID',
+                        category TEXT NOT NULL DEFAULT 'Other',
+                        counterparty_partner_id INTEGER DEFAULT NULL,
+                        notes TEXT DEFAULT NULL,
+                        created_by INTEGER DEFAULT NULL,
+                        deleted_at DATETIME DEFAULT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS finance_marketing_campaigns (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        date TEXT NOT NULL,
+                        campaign_name TEXT NOT NULL,
+                        budget_amount REAL NOT NULL,
+                        charge_percent REAL NOT NULL DEFAULT 20.0,
+                        charge_amount REAL NOT NULL,
+                        total_cost REAL NOT NULL,
+                        charge_status TEXT NOT NULL DEFAULT 'PENDING',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        ledger_entry_id INTEGER DEFAULT NULL,
+                        notes TEXT DEFAULT NULL,
+                        created_by INTEGER DEFAULT NULL,
+                        deleted_at DATETIME DEFAULT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS finance_audit_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER DEFAULT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id INTEGER DEFAULT NULL,
+                        action TEXT NOT NULL,
+                        old_values TEXT DEFAULT NULL,
+                        new_values TEXT DEFAULT NULL,
+                        ip_address TEXT DEFAULT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                ");
+            } else {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `finance_partners` (
+                        `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        `name` VARCHAR(50) NOT NULL UNIQUE,
+                        `color` VARCHAR(30) NOT NULL DEFAULT '#6B21A8',
+                        `share_percent` DECIMAL(5,2) NOT NULL DEFAULT 33.33,
+                        `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    CREATE TABLE IF NOT EXISTS `finance_entries` (
+                        `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        `partner_id` INT UNSIGNED NOT NULL,
+                        `date` DATE NOT NULL,
+                        `description` VARCHAR(255) NOT NULL,
+                        `amount` DECIMAL(12,2) NOT NULL,
+                        `type` ENUM('EXPENSE', 'CONTRIBUTION', 'REIMBURSEMENT', 'TRANSFER_OUT', 'TRANSFER_IN') NOT NULL DEFAULT 'EXPENSE',
+                        `status` ENUM('PAID', 'PENDING', 'RECEIVED') NOT NULL DEFAULT 'PAID',
+                        `category` VARCHAR(50) NOT NULL DEFAULT 'Other',
+                        `counterparty_partner_id` INT UNSIGNED DEFAULT NULL,
+                        `notes` TEXT DEFAULT NULL,
+                        `created_by` BIGINT UNSIGNED DEFAULT NULL,
+                        `deleted_at` DATETIME DEFAULT NULL,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX `idx_fin_partner_date` (`partner_id`, `date`),
+                        INDEX `idx_fin_status` (`status`),
+                        INDEX `idx_fin_deleted` (`deleted_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    CREATE TABLE IF NOT EXISTS `finance_marketing_campaigns` (
+                        `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        `date` DATE NOT NULL,
+                        `campaign_name` VARCHAR(255) NOT NULL,
+                        `budget_amount` DECIMAL(12,2) NOT NULL,
+                        `charge_percent` DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+                        `charge_amount` DECIMAL(12,2) NOT NULL,
+                        `total_cost` DECIMAL(12,2) NOT NULL,
+                        `charge_status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
+                        `status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
+                        `ledger_entry_id` BIGINT UNSIGNED DEFAULT NULL,
+                        `notes` TEXT DEFAULT NULL,
+                        `created_by` BIGINT UNSIGNED DEFAULT NULL,
+                        `deleted_at` DATETIME DEFAULT NULL,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                    CREATE TABLE IF NOT EXISTS `finance_audit_log` (
+                        `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        `user_id` BIGINT UNSIGNED DEFAULT NULL,
+                        `entity_type` VARCHAR(50) NOT NULL,
+                        `entity_id` BIGINT UNSIGNED DEFAULT NULL,
+                        `action` VARCHAR(50) NOT NULL,
+                        `old_values` LONGTEXT DEFAULT NULL,
+                        `new_values` LONGTEXT DEFAULT NULL,
+                        `ip_address` VARCHAR(45) DEFAULT NULL,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            }
+
+            // Seed 3 Partners: Yash, Dhruvik, Jeel
+            $partnerCheck = (int)$pdo->query("SELECT COUNT(*) FROM finance_partners")->fetchColumn();
+            if ($partnerCheck === 0) {
+                $pStmt = $pdo->prepare("INSERT INTO finance_partners (name, color, share_percent, is_active) VALUES (?, ?, ?, 1)");
+                $pStmt->execute(['Yash', '#6B21A8', 33.34]);
+                $pStmt->execute(['Dhruvik', '#0284C7', 33.33]);
+                $pStmt->execute(['Jeel', '#059669', 33.33]);
+            }
+
+            // Seed realistic demo entries if table is completely empty
+            $entryCheck = (int)$pdo->query("SELECT COUNT(*) FROM finance_entries")->fetchColumn();
+            if ($entryCheck === 0) {
+                $partnerRows = $pdo->query("SELECT id, name FROM finance_partners ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                $partnerMap = [];
+                foreach ($partnerRows as $row) {
+                    $partnerMap[$row['name']] = (int)$row['id'];
+                }
+
+                $yashId = $partnerMap['Yash'] ?? 1;
+                $dhruvikId = $partnerMap['Dhruvik'] ?? 2;
+                $jeelId = $partnerMap['Jeel'] ?? 3;
+
+                $insEntry = $pdo->prepare("
+                    INSERT INTO finance_entries (partner_id, date, description, amount, type, status, category, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+
+                // Yash expenses
+                $insEntry->execute([$yashId, '2026-10-10', 'Shiprocket Wallet Recharge - Oct 2026', 5000.00, 'EXPENSE', 'PAID', 'Shiprocket', 'Air courier dispatches']);
+                $insEntry->execute([$yashId, '2026-10-12', 'Honeycomb Packaging Paper & Pouch Boxes', 7800.00, 'EXPENSE', 'PAID', 'Packaging', 'Biodegradable packaging']);
+                $insEntry->execute([$yashId, '2026-10-18', 'Hostinger Cloud Enterprise Server Renewal', 2499.00, 'EXPENSE', 'PAID', 'Hosting', 'Annual hosting subscription']);
+                $insEntry->execute([$yashId, '2026-10-20', 'Trademark & Brand IP Registration Filing', 9400.00, 'EXPENSE', 'PAID', 'Legal/Trademark', 'Govt IP registration']);
+
+                // Dhruvik expenses
+                $insEntry->execute([$dhruvikId, '2026-10-08', 'Meta Ad Spend - Festive Jhumka Carousel', 12000.00, 'EXPENSE', 'PAID', 'Marketing', 'High converting carousel ads']);
+                $insEntry->execute([$dhruvikId, '2026-10-14', 'Instagram Fashion Influencer Reel Promotion', 4500.00, 'EXPENSE', 'PAID', 'Influencer', '3 creator reels']);
+                $insEntry->execute([$dhruvikId, '2026-10-19', 'Shiprocket Courier Dispatches Top-up', 3000.00, 'EXPENSE', 'PAID', 'Shiprocket', 'Pre-festival courier credit']);
+                $insEntry->execute([$dhruvikId, '2026-10-22', 'Meta Ad Spend - Mystery Box Campaign', 8000.00, 'EXPENSE', 'PENDING', 'Marketing', 'Active testing budget']);
+
+                // Jeel entries
+                $insEntry->execute([$jeelId, '2026-10-05', 'Capital Contribution - Initial Inventory', 25000.00, 'CONTRIBUTION', 'RECEIVED', 'Other', 'Initial seed capital for stock']);
+                $insEntry->execute([$jeelId, '2026-10-15', 'Product Order Fulfillment Batch #1042', 6360.00, 'EXPENSE', 'PAID', 'Order Cost', 'Wholesale supplier invoice']);
+                $insEntry->execute([$jeelId, '2026-10-21', 'Product Order Packaging Accessories #1049', 1844.00, 'EXPENSE', 'PAID', 'Order Cost', 'Luxury ribbons & tags']);
+
+                // Seed marketing campaigns
+                $insCamp = $pdo->prepare("
+                    INSERT INTO finance_marketing_campaigns (date, campaign_name, budget_amount, charge_percent, charge_amount, total_cost, charge_status, status, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $insCamp->execute(['2026-10-08', 'Diwali 4-Jhumka Box Festive Campaign', 12000.00, 20.00, 2400.00, 14400.00, 'PAID', 'PAID', 'Main festive ad campaign']);
+                $insCamp->execute(['2026-10-16', 'Signature Emerald Clover & Mystery Jar Ads', 8000.00, 20.00, 1600.00, 9600.00, 'PENDING', 'PENDING', 'High ROAS scaling campaign']);
+            }
+        } catch (Throwable $e) {
+            error_log('seedDefaultFinanceData error: ' . $e->getMessage());
         }
     }
 

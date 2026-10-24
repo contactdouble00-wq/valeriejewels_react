@@ -19,6 +19,7 @@ import {
   MessageCircle,
   Star,
   BarChart3,
+  Wallet,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -36,6 +37,7 @@ import AdminCategoriesView from './AdminCategoriesView';
 import AdminPoliciesView from './AdminPoliciesView';
 import AdminFaqsView from './AdminFaqsView';
 import AdminPaymentSettingsView from './AdminPaymentSettingsView';
+import AdminFinanceView from './AdminFinanceView';
 
 
 export default function AdminPortal({ onReturnToStore }) {
@@ -65,6 +67,7 @@ export default function AdminPortal({ onReturnToStore }) {
 
   const navItems = [
     { id: 'dashboard', label: 'Executive Telemetry', icon: LayoutDashboard, badge: 'Ad Spotlight' },
+    { id: 'finance', label: 'Finance & Partner Ledgers', icon: Wallet, badge: 'Excel Backup' },
     { id: 'analytics', label: 'Google Analytics & Traffic', icon: BarChart3, badge: 'GA4 Live' },
     { id: 'homepage', label: 'Homepage & Banners', icon: Sliders, badge: 'Live UI' },
     { id: 'customercare', label: 'Customer Care & WhatsApp', icon: MessageCircle, badge: 'Support' },
@@ -234,6 +237,8 @@ export default function AdminPortal({ onReturnToStore }) {
               }}
             />
           )}
+
+          {activeTab === 'finance' && <AdminFinanceView currentUser={currentUser} />}
 
           {activeTab === 'analytics' && <AdminAnalyticsView currentUser={currentUser} />}
 

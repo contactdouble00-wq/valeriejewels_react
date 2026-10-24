@@ -309,6 +309,74 @@ CREATE TABLE `email_logs` (
     CONSTRAINT `fk_email_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ----------------------------------------------------------
+-- 13. FINANCE MANAGER & PARTNER LEDGERS (Yash, Dhruvik, Jeel)
+-- ----------------------------------------------------------
+CREATE TABLE `finance_partners` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(50) NOT NULL UNIQUE,
+    `color` VARCHAR(30) NOT NULL DEFAULT '#6B21A8',
+    `share_percent` DECIMAL(5,2) NOT NULL DEFAULT 33.33,
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `finance_entries` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `partner_id` INT UNSIGNED NOT NULL,
+    `date` DATE NOT NULL,
+    `description` VARCHAR(255) NOT NULL,
+    `amount` DECIMAL(12,2) NOT NULL,
+    `type` ENUM('EXPENSE', 'CONTRIBUTION', 'REIMBURSEMENT', 'TRANSFER_OUT', 'TRANSFER_IN') NOT NULL DEFAULT 'EXPENSE',
+    `status` ENUM('PAID', 'PENDING', 'RECEIVED') NOT NULL DEFAULT 'PAID',
+    `category` VARCHAR(50) NOT NULL DEFAULT 'Other',
+    `counterparty_partner_id` INT UNSIGNED DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `created_by` BIGINT UNSIGNED DEFAULT NULL,
+    `deleted_at` DATETIME DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_fin_partner_date` (`partner_id`, `date`),
+    INDEX `idx_fin_status` (`status`),
+    INDEX `idx_fin_deleted` (`deleted_at`),
+    CONSTRAINT `fk_fin_partner` FOREIGN KEY (`partner_id`) REFERENCES `finance_partners` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_fin_counterparty` FOREIGN KEY (`counterparty_partner_id`) REFERENCES `finance_partners` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_fin_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `finance_marketing_campaigns` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `date` DATE NOT NULL,
+    `campaign_name` VARCHAR(255) NOT NULL,
+    `budget_amount` DECIMAL(12,2) NOT NULL,
+    `charge_percent` DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    `charge_amount` DECIMAL(12,2) NOT NULL,
+    `total_cost` DECIMAL(12,2) NOT NULL,
+    `charge_status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
+    `status` ENUM('PENDING', 'PAID') NOT NULL DEFAULT 'PENDING',
+    `ledger_entry_id` BIGINT UNSIGNED DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `created_by` BIGINT UNSIGNED DEFAULT NULL,
+    `deleted_at` DATETIME DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_fin_camp_ledger` FOREIGN KEY (`ledger_entry_id`) REFERENCES `finance_entries` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `finance_audit_log` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT UNSIGNED DEFAULT NULL,
+    `entity_type` VARCHAR(50) NOT NULL,
+    `entity_id` BIGINT UNSIGNED DEFAULT NULL,
+    `action` VARCHAR(50) NOT NULL,
+    `old_values` LONGTEXT DEFAULT NULL,
+    `new_values` LONGTEXT DEFAULT NULL,
+    `ip_address` VARCHAR(45) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_fin_audit_entity` (`entity_type`, `entity_id`),
+    CONSTRAINT `fk_fin_audit_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;
 

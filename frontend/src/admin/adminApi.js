@@ -776,5 +776,98 @@ export const adminApi = {
     });
     return res.data;
   },
+
+  // =========================================================================
+  // FINANCE & PARTNER LEDGERS (Yash, Dhruvik, Jeel)
+  // =========================================================================
+  async getFinanceOverview(month = 'all') {
+    const res = await request(`/admin/finance.php?action=overview&month=${encodeURIComponent(month)}`);
+    return res.data;
+  },
+
+  async getFinanceEntries(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await request(`/admin/finance.php?action=entries${query ? `&${query}` : ''}`);
+    return res.data;
+  },
+
+  async createFinanceEntry(entryData) {
+    const res = await request('/admin/finance.php?action=create_entry', {
+      method: 'POST',
+      body: JSON.stringify(entryData),
+    });
+    return res.data;
+  },
+
+  async updateFinanceEntry(entryData) {
+    const res = await request('/admin/finance.php?action=update_entry', {
+      method: 'POST',
+      body: JSON.stringify(entryData),
+    });
+    return res.data;
+  },
+
+  async deleteFinanceEntry(id) {
+    const res = await request('/admin/finance.php?action=delete_entry', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    });
+    return res.data;
+  },
+
+  async restoreFinanceEntry(id) {
+    const res = await request('/admin/finance.php?action=restore_entry', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    });
+    return res.data;
+  },
+
+  async getMarketingCampaigns() {
+    const res = await request('/admin/finance.php?action=marketing');
+    return res.data;
+  },
+
+  async saveMarketingCampaign(campaignData) {
+    const res = await request('/admin/finance.php?action=marketing', {
+      method: 'POST',
+      body: JSON.stringify(campaignData),
+    });
+    return res.data;
+  },
+
+  async deleteMarketingCampaign(id) {
+    const res = await request('/admin/finance.php?action=marketing', {
+      method: 'DELETE',
+      body: JSON.stringify({ id }),
+    });
+    return res.data;
+  },
+
+  async getFinanceSettlements() {
+    const res = await request('/admin/finance.php?action=settlements');
+    return res.data;
+  },
+
+  async recordFinanceSettlement(settlementData) {
+    const res = await request('/admin/finance.php?action=settlements', {
+      method: 'POST',
+      body: JSON.stringify(settlementData),
+    });
+    return res.data;
+  },
+
+  async getFinanceBackupData() {
+    const res = await request('/admin/finance.php?action=export_backup');
+    return res.data;
+  },
+
+  async importFinanceExcel(entries) {
+    const res = await request('/admin/finance.php?action=import_excel', {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    });
+    return res.data;
+  },
 };
 
