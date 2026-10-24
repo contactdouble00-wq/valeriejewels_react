@@ -901,6 +901,11 @@ export const adminApi = {
     return res.data;
   },
 
+  async getFinanceBackupData() {
+    const res = await request('/admin/finance.php?action=export_backup');
+    return res.data;
+  },
+
   async wipeAllFinanceData() {
     const res = await request('/admin/finance.php?action=wipe_all', {
       method: 'POST',
