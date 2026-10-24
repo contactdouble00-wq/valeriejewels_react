@@ -41,8 +41,16 @@ if ($method === 'GET') {
             u.role,
             u.is_blocked_rto,
             u.created_at,
-            COUNT(o.id) AS total_orders,
-            COALESCE(SUM(CASE WHEN o.order_status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spent,
+            COUNT(CASE WHEN o.order_status IN ('confirmed', 'shipped', 'delivered') AND (
+                (o.payment_type = 'full_prepaid' AND o.payment_status = 'paid')
+                OR (o.payment_type = 'partial' AND o.payment_status IN ('partial_paid', 'paid'))
+                OR (o.payment_type = 'cod' AND o.payment_status != 'failed')
+            ) THEN o.id ELSE NULL END) AS total_orders,
+            COALESCE(SUM(CASE WHEN o.order_status IN ('confirmed', 'shipped', 'delivered') AND (
+                (o.payment_type = 'full_prepaid' AND o.payment_status = 'paid')
+                OR (o.payment_type = 'partial' AND o.payment_status IN ('partial_paid', 'paid'))
+                OR (o.payment_type = 'cod' AND o.payment_status != 'failed')
+            ) THEN o.total_amount ELSE 0 END), 0) AS total_spent,
             COUNT(CASE WHEN o.order_status = 'cancelled' OR o.order_status = 'rto' THEN 1 END) AS rto_cancellations,
             (SELECT COUNT(*) FROM email_logs WHERE recipient_email = u.email OR (order_id IN (SELECT id FROM orders WHERE user_id = u.id OR customer_email = u.email))) AS emails_sent_count,
             (SELECT email_type FROM email_logs WHERE recipient_email = u.email OR (order_id IN (SELECT id FROM orders WHERE user_id = u.id OR customer_email = u.email)) ORDER BY sent_at DESC, id DESC LIMIT 1) AS latest_email_type,

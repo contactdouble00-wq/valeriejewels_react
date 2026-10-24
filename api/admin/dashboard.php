@@ -2,6 +2,8 @@
 /**
  * VALERIE JEWELS — Admin Dashboard & Reporting Endpoint
  * Includes executive KPIs and hero spotlight for the 4 Signature Jhumka Boxes.
+ * Strictly counts confirmed orders with successful payment (full prepaid paid,
+ * partial COD advance paid, or confirmed COD).
  */
 
 require_once dirname(__DIR__) . '/utils/admin_auth.php';
@@ -10,26 +12,57 @@ $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
 
 try {
-    // 1. Overall Revenue & Orders
+    // 1. Strict definition of Processed & Confirmed Orders:
+    // - Order must be confirmed, shipped, or delivered (never pending, failed, or cancelled)
+    // - Payment must be successful:
+    //   * Prepaid: payment_status = 'paid'
+    //   * Partial COD: payment_status IN ('partial_paid', 'paid') (advance deposit secured)
+    //   * Full COD: confirmed by operations, payment_status != 'failed'
+    $confirmedCondition = "
+        (order_status IN ('confirmed', 'shipped', 'delivered')
+        AND (
+            (payment_type = 'full_prepaid' AND payment_status = 'paid')
+            OR (payment_type = 'partial' AND payment_status IN ('partial_paid', 'paid'))
+            OR (payment_type = 'cod' AND payment_status != 'failed')
+        ))
+    ";
+
+    // Overall Revenue & Confirmed Orders
     $overallStmt = $pdo->query("
         SELECT 
-            COUNT(id) AS total_orders,
-            COALESCE(SUM(CASE WHEN order_status != 'cancelled' THEN total_amount ELSE 0 END), 0) AS total_revenue,
-            COALESCE(AVG(CASE WHEN order_status != 'cancelled' THEN total_amount ELSE NULL END), 0) AS average_order_value,
-            COUNT(CASE WHEN order_status = 'cancelled' THEN 1 END) AS cancelled_orders,
-            COUNT(CASE WHEN order_status = 'delivered' THEN 1 END) AS delivered_orders,
-            COUNT(CASE WHEN payment_type = 'full_prepaid' THEN 1 END) AS prepaid_orders,
-            COUNT(CASE WHEN payment_type = 'partial' THEN 1 END) AS partial_cod_orders,
-            COUNT(CASE WHEN payment_type = 'cod' THEN 1 END) AS cod_orders
+            -- Orders Processed & Confirmed Revenue
+            COUNT(CASE WHEN $confirmedCondition THEN id ELSE NULL END) AS total_orders,
+            COALESCE(SUM(CASE WHEN $confirmedCondition THEN total_amount ELSE 0 END), 0) AS total_revenue,
+            COALESCE(AVG(CASE WHEN $confirmedCondition THEN total_amount ELSE NULL END), 0) AS average_order_value,
+
+            -- Payment Breakdown strictly among confirmed orders
+            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'full_prepaid' THEN 1 ELSE NULL END) AS prepaid_orders,
+            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'partial' THEN 1 ELSE NULL END) AS partial_cod_orders,
+            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'cod' THEN 1 ELSE NULL END) AS cod_orders,
+
+            -- Fulfillment & Cancellations
+            COUNT(CASE WHEN order_status = 'delivered' THEN 1 ELSE NULL END) AS delivered_orders,
+            COUNT(CASE WHEN order_status = 'cancelled' OR order_status = 'rto' THEN 1 ELSE NULL END) AS cancelled_orders,
+
+            -- Unpaid / Abandoned checkouts (not included in orders processed)
+            COUNT(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN 1 ELSE NULL END) AS abandoned_orders_count,
+            COALESCE(SUM(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN total_amount ELSE 0 END), 0) AS abandoned_orders_value
         FROM orders
     ");
     $stats = $overallStmt->fetch(PDO::FETCH_ASSOC);
 
     $totalOrders = (int)$stats['total_orders'];
-    $rtoRate = $totalOrders > 0 ? round(($stats['cancelled_orders'] / $totalOrders) * 100, 1) : 0;
-    $prepaidShare = $totalOrders > 0 ? round(($stats['prepaid_orders'] / $totalOrders) * 100, 1) : 0;
+    $cancelledOrders = (int)$stats['cancelled_orders'];
+    $totalCompletedAndCancelled = $totalOrders + $cancelledOrders;
 
-    // 2. HERO AD SPOTLIGHT: 4 Signature Jhumka Boxes Performance & Stock Health
+    $rtoRate = $totalCompletedAndCancelled > 0 ? round(($cancelledOrders / $totalCompletedAndCancelled) * 100, 1) : 0;
+
+    // Upfront Payment / Token Secured Rate:
+    // Both 100% Prepaid and Partial COD advance deposits secure funds upfront to minimize RTO loss
+    $upfrontPaidOrders = (int)$stats['prepaid_orders'] + (int)$stats['partial_cod_orders'];
+    $prepaidShare = $totalOrders > 0 ? round(($upfrontPaidOrders / $totalOrders) * 100, 1) : 0;
+
+    // 2. HERO AD SPOTLIGHT: 4 Signature Jhumka Boxes Performance (strictly from confirmed orders)
     $jhumkaStmt = $pdo->query("
         SELECT 
             p.id,
@@ -40,11 +73,19 @@ try {
             p.mrp,
             p.stock_quantity,
             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image,
-            COALESCE(SUM(oi.quantity), 0) AS units_sold,
-            COALESCE(SUM(oi.total_price), 0) AS revenue_generated,
+            COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS units_sold,
+            COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.total_price ELSE 0 END), 0) AS revenue_generated,
             CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
         FROM products p
         LEFT JOIN order_items oi ON oi.product_id = p.id
+        LEFT JOIN orders o ON oi.order_id = o.id AND (
+            o.order_status IN ('confirmed', 'shipped', 'delivered')
+            AND (
+                (o.payment_type = 'full_prepaid' AND o.payment_status = 'paid')
+                OR (o.payment_type = 'partial' AND o.payment_status IN ('partial_paid', 'paid'))
+                OR (o.payment_type = 'cod' AND o.payment_status != 'failed')
+            )
+        )
         WHERE p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
            OR p.sku LIKE 'VJ-JHM%'
         GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
@@ -62,7 +103,7 @@ try {
     ");
     $lowStockAlerts = $lowStockStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 4. Recent Orders Feed
+    // 4. Recent Orders Feed (Shows verified & confirmed orders)
     $recentStmt = $pdo->query("
         SELECT 
             o.id,
@@ -84,6 +125,8 @@ try {
                 WHERE oi.order_id = o.id AND (p.sku LIKE 'VJ-JHM%' OR p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1))
             ) AS has_jhumka_box
         FROM orders o
+        WHERE o.order_status IN ('confirmed', 'shipped', 'delivered')
+           OR o.payment_status IN ('paid', 'partial_paid')
         ORDER BY o.id DESC
         LIMIT 10
     ");
@@ -95,18 +138,20 @@ try {
 
     ApiResponse::success([
         'kpis' => [
-            'total_revenue'         => (float)$stats['total_revenue'],
-            'total_orders'          => $totalOrders,
-            'average_order_value'   => round((float)$stats['average_order_value'], 2),
-            'rto_cancellation_rate' => $rtoRate,
-            'prepaid_share_percent' => $prepaidShare,
-            'total_products'        => $prodCount,
-            'total_customers'       => $custCount,
+            'total_revenue'             => (float)$stats['total_revenue'],
+            'total_orders'              => $totalOrders,
+            'average_order_value'       => round((float)$stats['average_order_value'], 2),
+            'rto_cancellation_rate'     => $rtoRate,
+            'prepaid_share_percent'     => $prepaidShare,
+            'total_products'            => $prodCount,
+            'total_customers'           => $custCount,
             'payment_split' => [
                 'prepaid'     => (int)$stats['prepaid_orders'],
                 'partial_cod' => (int)$stats['partial_cod_orders'],
                 'cod'         => (int)$stats['cod_orders'],
             ],
+            'abandoned_checkouts_count' => (int)$stats['abandoned_orders_count'],
+            'abandoned_checkouts_value' => (float)$stats['abandoned_orders_value'],
         ],
         'hero_jhumka_boxes' => $heroJhumkaBoxes,
         'low_stock_alerts'  => $lowStockAlerts,
