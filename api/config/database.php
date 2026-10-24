@@ -670,8 +670,18 @@ class Database {
                 $pStmt->execute(['Krupal', '#0284C7', 33.33]);
                 $pStmt->execute(['Jeel', '#059669', 33.33]);
             } else {
-                // Ensure Partner 2 is named Krupal if it was Dhruvik
-                $pdo->exec("UPDATE finance_partners SET name = 'Krupal' WHERE id = 2 AND name = 'Dhruvik'");
+                // Ensure Partner 2 is named Krupal. If a duplicate Krupal partner exists with id != 2, merge and delete it
+                try {
+                    $otherKrupal = $pdo->query("SELECT id FROM finance_partners WHERE LOWER(name) = 'krupal' AND id != 2 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                    if ($otherKrupal && !empty($otherKrupal['id'])) {
+                        $otherId = (int)$otherKrupal['id'];
+                        $pdo->exec("UPDATE finance_entries SET partner_id = 2 WHERE partner_id = {$otherId}");
+                        $pdo->exec("DELETE FROM finance_partners WHERE id = {$otherId}");
+                    }
+                    $pdo->exec("UPDATE finance_partners SET name = 'Krupal' WHERE id = 2");
+                } catch (Throwable $e) {
+                    error_log('Partner 2 Krupal migration note: ' . $e->getMessage());
+                }
             }
 
             // Seed realistic demo entries if table is completely empty

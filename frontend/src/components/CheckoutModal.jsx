@@ -987,54 +987,74 @@ export default function CheckoutModal({
 
   if (!isOpen) return null;
 
-  const totalItemsCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const totalItemsCount = (cartItems || []).reduce((acc, i) => acc + (Number(i?.quantity) || 1), 0);
 
   // Exact Order Calculations & Payment Splits
-  const totalMrp = calcData?.total_mrp || cartItems.reduce((acc, item) => acc + (item.mrp || Math.round(item.price * 1.5)) * item.quantity, 0);
-  const subtotal = calcData?.subtotal || cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const finalTotal = calcData?.final_total !== undefined ? calcData.final_total : subtotal;
+  const totalMrp = Number(
+    calcData?.total_mrp ||
+    (cartItems || []).reduce((acc, item) => acc + (Number(item?.mrp) || Math.round((Number(item?.price) || 0) * 1.5)) * (Number(item?.quantity) || 1), 0)
+  ) || 0;
+  const subtotal = Number(
+    calcData?.subtotal ||
+    (cartItems || []).reduce((acc, item) => acc + (Number(item?.price) || 0) * (Number(item?.quantity) || 1), 0)
+  ) || 0;
+  const finalTotal = Number(calcData?.final_total !== undefined ? calcData.final_total : subtotal) || 0;
 
   const prepaidSplit = calcData?.payment_splits?.full_prepaid;
   const partialSplit = calcData?.payment_splits?.partial;
   const codSplit     = calcData?.payment_splits?.cod;
 
-  const maxPrepaidDiscount = Number(paymentSettings.prepaid_discount ?? 50);
-  const prepaidDiscount = prepaidSplit?.incentive_discount !== undefined 
-    ? prepaidSplit.incentive_discount 
-    : (finalTotal > 1 ? Math.min(maxPrepaidDiscount, finalTotal - 1) : 0);
+  const maxPrepaidDiscount = Number(paymentSettings?.prepaid_discount ?? 50) || 50;
+  const prepaidDiscount = Number(
+    prepaidSplit?.incentive_discount !== undefined 
+      ? prepaidSplit.incentive_discount 
+      : (finalTotal > 1 ? Math.min(maxPrepaidDiscount, finalTotal - 1) : 0)
+  ) || 0;
 
-  const prepaidAmountDue = prepaidSplit?.amount_due_now !== undefined
-    ? prepaidSplit.amount_due_now
-    : (finalTotal > 0 ? Math.max(1, finalTotal - prepaidDiscount) : 0);
+  const prepaidAmountDue = Number(
+    prepaidSplit?.amount_due_now !== undefined
+      ? prepaidSplit.amount_due_now
+      : (finalTotal > 0 ? Math.max(1, finalTotal - prepaidDiscount) : 0)
+  ) || 0;
 
-  const totalItemCount = cartItems.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
-  const advancePerItem = Number(paymentSettings.partial_advance ?? 100);
+  const totalItemCount = totalItemsCount;
+  const advancePerItem = Number(paymentSettings?.partial_advance ?? 100) || 100;
   const configuredPartialAdvance = advancePerItem * Math.max(1, totalItemCount);
-  const partialDeposit = partialSplit?.amount_due_now !== undefined
-    ? partialSplit.amount_due_now
-    : (finalTotal > 0 ? Math.min(configuredPartialAdvance, finalTotal) : 0);
-  const partialBalance = partialSplit?.amount_due_on_delivery !== undefined
-    ? partialSplit.amount_due_on_delivery
-    : Math.max(0, finalTotal - partialDeposit);
+  const partialDeposit = Number(
+    partialSplit?.amount_due_now !== undefined
+      ? partialSplit.amount_due_now
+      : (finalTotal > 0 ? Math.min(configuredPartialAdvance, finalTotal) : 0)
+  ) || 0;
+  const partialBalance = Number(
+    partialSplit?.amount_due_on_delivery !== undefined
+      ? partialSplit.amount_due_on_delivery
+      : Math.max(0, finalTotal - partialDeposit)
+  ) || 0;
 
-  const codTotal = codSplit?.amount_due_on_delivery !== undefined
-    ? codSplit.amount_due_on_delivery
-    : (finalTotal + (finalTotal >= 999 ? 0 : 99) + Number(paymentSettings.cod_fee ?? 0));
+  const codTotal = Number(
+    codSplit?.amount_due_on_delivery !== undefined
+      ? codSplit.amount_due_on_delivery
+      : (finalTotal + (finalTotal >= 999 ? 0 : 99) + Number(paymentSettings?.cod_fee ?? 0))
+  ) || 0;
 
-  const dueNow = paymentType === 'partial'
-    ? partialDeposit
-    : paymentType === 'cod'
-    ? 0
-    : prepaidAmountDue;
+  const dueNow = Number(
+    paymentType === 'partial'
+      ? partialDeposit
+      : paymentType === 'cod'
+      ? 0
+      : prepaidAmountDue
+  ) || 0;
 
-  const dueOnDelivery = paymentType === 'partial'
-    ? partialBalance
-    : paymentType === 'cod'
-    ? codTotal
-    : 0;
+  const dueOnDelivery = Number(
+    paymentType === 'partial'
+      ? partialBalance
+      : paymentType === 'cod'
+      ? codTotal
+      : 0
+  ) || 0;
 
   // Dynamic calculation for green savings banner (e.g. ₹900.00 saved so far)
-  const totalSavings = Math.max(0, totalMrp - dueNow + (calcData?.discount_amount || 0));
+  const totalSavings = Math.max(0, (totalMrp - dueNow) + (Number(calcData?.discount_amount) || 0));
 
   // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop)
   const UPI_APPS = [

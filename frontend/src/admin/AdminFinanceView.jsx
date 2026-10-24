@@ -232,21 +232,23 @@ export default function AdminFinanceView({ currentUser }) {
   // EXACT EXCEL CALCULATIONS (Plain sum of all amounts, whatever status)
   // ---------------------------------------------------------------------------
   const calculatePartnerTotal = (partnerIdOrName) => {
+    if (!partnerIdOrName) return 0;
     let p = null;
     if (typeof partnerIdOrName === 'number') {
-      p = partners.find((x) => x.id === partnerIdOrName);
+      p = (partners || []).find((x) => x?.id === partnerIdOrName);
     } else {
-      p = partners.find((x) => x.name.toLowerCase() === String(partnerIdOrName).toLowerCase());
+      const target = String(partnerIdOrName).toLowerCase().trim();
+      p = (partners || []).find((x) => (x?.name || '').toLowerCase().trim() === target);
     }
     if (!p) return 0;
-    return entries
-      .filter((e) => e.partner_id === p.id && !e.deleted_at)
-      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    return (entries || [])
+      .filter((e) => e && e.partner_id === p.id && !e.deleted_at)
+      .reduce((sum, item) => sum + (parseFloat(item?.amount) || 0), 0);
   };
 
-  const actualCombinedTotal = entries
-    .filter((e) => !e.deleted_at)
-    .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const actualCombinedTotal = (entries || [])
+    .filter((e) => e && !e.deleted_at)
+    .reduce((sum, item) => sum + (parseFloat(item?.amount) || 0), 0);
 
   // ---------------------------------------------------------------------------
   // SORT TOGGLE
@@ -600,19 +602,23 @@ export default function AdminFinanceView({ currentUser }) {
   // FILTER ENTRIES FOR VIEW
   // ---------------------------------------------------------------------------
   const getFilteredEntriesForPartner = (partnerName) => {
-    return entries.filter((e) => {
-      if (partnerName !== 'All 3') {
-        const p = partners.find((x) => x.name.toLowerCase() === partnerName.toLowerCase());
+    return (entries || []).filter((e) => {
+      if (!e) return false;
+      if (partnerName && partnerName !== 'All 3') {
+        const target = String(partnerName).toLowerCase().trim();
+        const p = (partners || []).find((x) => (x?.name || '').toLowerCase().trim() === target);
         if (!p || e.partner_id !== p.id) return false;
       }
       if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (!e.description?.toLowerCase().includes(q) && !e.notes?.toLowerCase().includes(q)) {
+        const q = searchQuery.toLowerCase().trim();
+        const d = (e.description || '').toLowerCase();
+        const n = (e.notes || '').toLowerCase();
+        if (!d.includes(q) && !n.includes(q)) {
           return false;
         }
       }
       if (filterCategory !== 'all' && e.category !== filterCategory) return false;
-      if (filterStatus !== 'all' && e.status?.toLowerCase() !== filterStatus.toLowerCase()) return false;
+      if (filterStatus !== 'all' && (e.status || '').toLowerCase() !== String(filterStatus || '').toLowerCase()) return false;
       return true;
     });
   };
@@ -894,8 +900,8 @@ export default function AdminFinanceView({ currentUser }) {
       {/* ========================================================================= */}
       <div className="flex items-center justify-between flex-wrap gap-3 border-b border-brand-border/60 pb-2">
         <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-          {['All 3', ...partners.map((p) => p.name)].map((tabName) => {
-            const isActive = activeTab.toLowerCase() === tabName.toLowerCase();
+          {['All 3', ...(partners || []).map((p) => p?.name || '').filter(Boolean)].map((tabName) => {
+            const isActive = (activeTab || '').toLowerCase().trim() === (tabName || '').toLowerCase().trim();
             const pTotal =
               tabName === 'All 3'
                 ? actualCombinedTotal
@@ -907,7 +913,8 @@ export default function AdminFinanceView({ currentUser }) {
                 onClick={() => {
                   setActiveTab(tabName);
                   if (tabName !== 'All 3') {
-                    const p = partners.find((x) => x.name.toLowerCase() === tabName.toLowerCase());
+                    const target = String(tabName).toLowerCase().trim();
+                    const p = (partners || []).find((x) => (x?.name || '').toLowerCase().trim() === target);
                     if (p) setQuickAdd((cur) => ({ ...cur, partner_id: p.id }));
                   }
                 }}
@@ -934,8 +941,9 @@ export default function AdminFinanceView({ currentUser }) {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => {
+              const activeTarget = (activeTab || '').toLowerCase().trim();
               const curPartner =
-                partners.find((p) => p.name.toLowerCase() === activeTab.toLowerCase()) || partners[0];
+                (partners || []).find((p) => (p?.name || '').toLowerCase().trim() === activeTarget) || (partners && partners[0]) || null;
               if (curPartner) {
                 setPartnerModal({ open: true, partner: { ...curPartner } });
               }
@@ -1512,10 +1520,10 @@ export default function AdminFinanceView({ currentUser }) {
                   Select Partner to Rename:
                 </label>
                 <select
-                  value={partnerModal.partner.id}
+                  value={partnerModal.partner?.id || ''}
                   onChange={(e) => {
                     const selId = Number(e.target.value);
-                    const selectedP = partners.find((p) => p.id === selId);
+                    const selectedP = (partners || []).find((p) => p?.id === selId);
                     if (selectedP) {
                       setPartnerModal((cur) => ({
                         ...cur,
@@ -1525,7 +1533,7 @@ export default function AdminFinanceView({ currentUser }) {
                   }}
                   className="w-full px-3 py-2 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs font-bold text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer"
                 >
-                  {partners.map((p) => (
+                  {(partners || []).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} (Current Total: {formatINR(calculatePartnerTotal(p.id))})
                     </option>

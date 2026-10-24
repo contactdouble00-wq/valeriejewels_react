@@ -103,6 +103,15 @@ class ApiResponse {
     }
 }
 
+/**
+ * Universal Response alias for legacy or shorthand controllers
+ */
+class Response extends ApiResponse {
+    public static function json(mixed $data = null, string $message = 'Success', int $statusCode = 200, array $meta = []): void {
+        self::success($data, $message, $statusCode, $meta);
+    }
+}
+
 // Global safety net for any uncaught Throwables in the API runtime
 set_exception_handler(function (Throwable $e): void {
     error_log('Uncaught API Exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
@@ -125,4 +134,5 @@ register_shutdown_function(function (): void {
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 });
+
 

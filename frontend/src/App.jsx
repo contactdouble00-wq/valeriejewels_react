@@ -1147,7 +1147,12 @@ function StorefrontContent({
       <WishlistToast />
 
       {/* Fastrr 1-Click Checkout Modal */}
-      <ErrorBoundary onReset={() => setIsCheckoutOpen(false)}>
+      <ErrorBoundary
+        isCheckout
+        title="Checkout Notice"
+        message="There was an issue opening the checkout. Please try again."
+        onReset={() => setIsCheckoutOpen(false)}
+      >
         <CheckoutModal
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
@@ -1463,7 +1468,17 @@ export default function App() {
   const renderRouteContent = () => {
     if (currentRoute === 'admin') {
       return (
-        <ErrorBoundary>
+        <ErrorBoundary
+          title="Management Atelier Notice"
+          message="An error occurred while loading the management portal. Click Try Again or return to Storefront."
+          onReturnToStore={() => {
+            window.location.hash = '';
+            if (window.location.pathname.startsWith('/vj-manage-x1126')) {
+              window.history.pushState(null, '', '/');
+            }
+            setCurrentRoute('store');
+          }}
+        >
           <React.Suspense
             fallback={
               <div className="min-h-screen flex items-center justify-center bg-[#0F0D15] text-white">
