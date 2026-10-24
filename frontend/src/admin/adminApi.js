@@ -34,6 +34,10 @@ async function request(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
     headers['X-Admin-Token'] = token;
   }
+  const financePin = typeof window !== 'undefined' ? (sessionStorage.getItem('vj_finance_pin_unlocked') || '') : '';
+  if (financePin) {
+    headers['X-Finance-Pin'] = financePin;
+  }
   // If body is not FormData, add Content-Type: application/json
   if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -780,6 +784,14 @@ export const adminApi = {
   // =========================================================================
   // FINANCE & PARTNER LEDGERS (Yash, Dhruvik, Jeel)
   // =========================================================================
+  async verifyFinancePin(pin) {
+    const res = await request('/admin/finance.php?action=verify_pin', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+    });
+    return res;
+  },
+
   async getFinanceOverview(month = 'all') {
     const res = await request(`/admin/finance.php?action=overview&month=${encodeURIComponent(month)}`);
     return res.data;

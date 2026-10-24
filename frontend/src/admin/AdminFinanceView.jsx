@@ -30,6 +30,10 @@ import {
   CheckSquare,
   Square,
   Settings,
+  Lock,
+  KeyRound,
+  Delete,
+  ShieldAlert,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { adminApi } from './adminApi';
@@ -118,6 +122,58 @@ export default function AdminFinanceView({ currentUser }) {
   // Input ref for focus
   const descInputRef = useRef(null);
 
+  // =========================================================================
+  // PIN 1785 SECURITY PROTECTION
+  // =========================================================================
+  const FINANCE_PIN = '1785';
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    return typeof window !== 'undefined' && sessionStorage.getItem('vj_finance_pin_unlocked') === FINANCE_PIN;
+  });
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinShaking, setPinShaking] = useState(false);
+  const pinInputRef = useRef(null);
+
+  const handlePinDigitChange = (newVal) => {
+    setPinError('');
+    setPinInput(newVal);
+    if (newVal.length === 4) {
+      if (newVal === FINANCE_PIN) {
+        sessionStorage.setItem('vj_finance_pin_unlocked', FINANCE_PIN);
+        setIsUnlocked(true);
+      } else {
+        setPinShaking(true);
+        setPinError('Incorrect Security PIN. Access denied.');
+        setTimeout(() => {
+          setPinShaking(false);
+          setPinInput('');
+          pinInputRef.current?.focus();
+        }, 800);
+      }
+    }
+  };
+
+  const handleNumpadPress = (digit) => {
+    if (pinInput.length < 4) {
+      handlePinDigitChange(pinInput + digit);
+    }
+  };
+
+  const handleBackspace = () => {
+    if (pinInput.length > 0) {
+      setPinError('');
+      setPinInput(pinInput.slice(0, -1));
+    }
+    pinInputRef.current?.focus();
+  };
+
+  const handleLockVault = () => {
+    sessionStorage.removeItem('vj_finance_pin_unlocked');
+    setIsUnlocked(false);
+    setPinInput('');
+    setPinError('');
+  };
+
   const showToast = (type, message) => {
     setToast({ type, message });
     setTimeout(() => {
@@ -161,8 +217,16 @@ export default function AdminFinanceView({ currentUser }) {
   };
 
   useEffect(() => {
-    loadFinanceData();
-  }, [sortField, sortOrder]);
+    if (isUnlocked) {
+      loadFinanceData();
+    }
+  }, [isUnlocked, sortField, sortOrder]);
+
+  useEffect(() => {
+    if (!isUnlocked) {
+      pinInputRef.current?.focus();
+    }
+  }, [isUnlocked]);
 
   // ---------------------------------------------------------------------------
   // EXACT EXCEL CALCULATIONS (Plain sum of all amounts, whatever status)
@@ -537,6 +601,136 @@ export default function AdminFinanceView({ currentUser }) {
 
   const currentVisibleEntries = getFilteredEntriesForPartner(activeTab);
 
+  // =========================================================================
+  // PIN 1785 VAULT PROTECTION SCREEN
+  // =========================================================================
+  if (!isUnlocked) {
+    return (
+      <div className="p-4 sm:p-8 min-h-[80vh] flex items-center justify-center">
+        <div className={`w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-brand-border/80 overflow-hidden relative transition-all duration-200 ${pinShaking ? 'animate-shake' : ''}`}>
+          {/* Top Decorative Gradient Accent */}
+          <div className="h-2 w-full bg-gradient-to-r from-brand-primary via-purple-600 to-amber-500" />
+          
+          <div className="p-6 sm:p-8 text-center space-y-6">
+            {/* Vault Icon with Gold / Violet Ring */}
+            <div className="relative inline-flex items-center justify-center">
+              <div className="w-16 h-16 rounded-3xl bg-purple-50 border border-purple-200/80 flex items-center justify-center shadow-inner">
+                <Lock className="w-8 h-8 text-brand-primary" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 p-1 bg-amber-500 text-white rounded-full shadow-md">
+                <KeyRound className="w-3.5 h-3.5" />
+              </div>
+            </div>
+
+            {/* Typography */}
+            <div className="space-y-1.5">
+              <span className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-purple-100 text-brand-primary">
+                PIN Protected Section
+              </span>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-brand-tertiary">
+                Partner Ledgers Vault
+              </h2>
+              <p className="text-xs text-brand-muted max-w-xs mx-auto leading-relaxed">
+                Confidential financial data is locked. Enter the 4-digit authorization PIN to unlock.
+              </p>
+            </div>
+
+            {/* Hidden Input for Keyboard Accessibility */}
+            <input
+              ref={pinInputRef}
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              pattern="\d*"
+              autoComplete="off"
+              value={pinInput}
+              onChange={(e) => handlePinDigitChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="sr-only"
+              autoFocus
+            />
+
+            {/* 4-Digit Boxed Display */}
+            <div 
+              onClick={() => pinInputRef.current?.focus()} 
+              className="flex items-center justify-center space-x-3 cursor-pointer py-1"
+            >
+              {[0, 1, 2, 3].map((idx) => {
+                const isFilled = pinInput.length > idx;
+                const isCurrent = pinInput.length === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`w-12 h-14 rounded-2xl flex items-center justify-center text-xl font-bold transition-all ${
+                      isFilled
+                        ? 'bg-purple-50 border-2 border-brand-primary text-brand-primary shadow-sm scale-105'
+                        : isCurrent
+                        ? 'bg-white border-2 border-brand-primary/60 shadow-md ring-4 ring-purple-100'
+                        : 'bg-[#FAF8FC] border border-brand-border text-brand-muted/40'
+                    }`}
+                  >
+                    {isFilled ? '●' : isCurrent ? <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" /> : ''}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Error Message */}
+            {pinError && (
+              <div className="flex items-center justify-center space-x-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 py-2 px-3 rounded-xl animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{pinError}</span>
+              </div>
+            )}
+
+            {/* Interactive On-Screen Numpad */}
+            <div className="grid grid-cols-3 gap-2 pt-1 max-w-[260px] mx-auto">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+                <button
+                  key={digit}
+                  type="button"
+                  onClick={() => handleNumpadPress(digit.toString())}
+                  className="h-12 rounded-2xl bg-[#FAF8FC] hover:bg-purple-50 active:bg-purple-100 border border-brand-border/70 text-base font-bold text-brand-tertiary hover:text-brand-primary hover:border-purple-300 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                >
+                  {digit}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setPinInput('');
+                  setPinError('');
+                  pinInputRef.current?.focus();
+                }}
+                className="h-12 rounded-2xl bg-[#FAF8FC] hover:bg-rose-50 active:bg-rose-100 border border-brand-border/70 text-[11px] font-bold uppercase tracking-wider text-brand-muted hover:text-rose-600 hover:border-rose-200 transition-all active:scale-95 cursor-pointer"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => handleNumpadPress('0')}
+                className="h-12 rounded-2xl bg-[#FAF8FC] hover:bg-purple-50 active:bg-purple-100 border border-brand-border/70 text-base font-bold text-brand-tertiary hover:text-brand-primary hover:border-purple-300 transition-all active:scale-95 shadow-2xs cursor-pointer"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={handleBackspace}
+                className="h-12 rounded-2xl bg-[#FAF8FC] hover:bg-purple-50 active:bg-purple-100 border border-brand-border/70 flex items-center justify-center text-brand-muted hover:text-brand-primary hover:border-purple-300 transition-all active:scale-95 cursor-pointer"
+              >
+                <Delete className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="pt-2 text-[11px] text-brand-muted flex items-center justify-center space-x-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Valerie 256-Bit Financial Encryption</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto min-h-screen flex flex-col">
       {/* ========================================================================= */}
@@ -591,17 +785,28 @@ export default function AdminFinanceView({ currentUser }) {
           </div>
         </div>
 
-        {/* Download Current Excel Backup Button */}
-        <button
-          id="btn-download-excel-backup"
-          onClick={handleDownloadExcelBackup}
-          disabled={isExporting}
-          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center space-x-2 shrink-0 disabled:opacity-50"
-        >
-          <FileSpreadsheet className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-          <span>{isExporting ? 'Generating Excel...' : 'Download Current Excel Backup'}</span>
-          <Download className="w-4 h-4 ml-1 opacity-80" />
-        </button>
+        {/* Actions: Lock Section + Download Current Excel Backup */}
+        <div className="flex items-center space-x-2.5 shrink-0">
+          <button
+            onClick={handleLockVault}
+            className="px-3.5 py-3 rounded-2xl bg-white hover:bg-rose-50 border border-brand-border hover:border-rose-300 text-brand-muted hover:text-rose-700 text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+            title="Lock Finance section with PIN 1785"
+          >
+            <Lock className="w-4 h-4 text-brand-muted hover:text-rose-600" />
+            <span className="hidden sm:inline">Lock Section</span>
+          </button>
+
+          <button
+            id="btn-download-excel-backup"
+            onClick={handleDownloadExcelBackup}
+            disabled={isExporting}
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center space-x-2 shrink-0 disabled:opacity-50 cursor-pointer"
+          >
+            <FileSpreadsheet className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
+            <span>{isExporting ? 'Generating Excel...' : 'Download Current Excel Backup'}</span>
+            <Download className="w-4 h-4 ml-1 opacity-80" />
+          </button>
+        </div>
       </div>
 
       {/* ========================================================================= */}

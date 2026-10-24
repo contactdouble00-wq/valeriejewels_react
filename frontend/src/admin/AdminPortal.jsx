@@ -20,6 +20,7 @@ import {
   Star,
   BarChart3,
   Wallet,
+  Lock,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -67,7 +68,7 @@ export default function AdminPortal({ onReturnToStore }) {
 
   const navItems = [
     { id: 'dashboard', label: 'Executive Telemetry', icon: LayoutDashboard, badge: 'Ad Spotlight' },
-    { id: 'finance', label: 'Finance & Partner Ledgers', icon: Wallet, badge: 'Excel Backup' },
+    { id: 'finance', label: 'Finance & Partner Ledgers', icon: Wallet, badge: 'PIN Locked' },
     { id: 'analytics', label: 'Google Analytics & Traffic', icon: BarChart3, badge: 'GA4 Live' },
     { id: 'homepage', label: 'Homepage & Banners', icon: Sliders, badge: 'Live UI' },
     { id: 'customercare', label: 'Customer Care & WhatsApp', icon: MessageCircle, badge: 'Support' },
@@ -134,8 +135,9 @@ export default function AdminPortal({ onReturnToStore }) {
                   <span>{item.label}</span>
                 </div>
                 {item.badge && !isActive && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                    {item.badge}
+                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center space-x-1">
+                    {item.id === 'finance' && <Lock className="w-2.5 h-2.5 text-amber-700" />}
+                    <span>{item.badge}</span>
                   </span>
                 )}
               </button>

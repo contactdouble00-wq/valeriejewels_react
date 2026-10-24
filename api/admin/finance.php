@@ -16,9 +16,31 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Helper to format now timestamp
 $nowSql = $driver === 'sqlite' ? "datetime('now', 'localtime')" : "NOW()";
 
+define('FINANCE_SECURITY_PIN', '1785');
+
 try {
     $action = $_GET['action'] ?? '';
     $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+
+    // -------------------------------------------------------------------------
+    // PIN VERIFICATION ENDPOINT
+    // -------------------------------------------------------------------------
+    if ($action === 'verify_pin') {
+        $pinToCheck = $input['pin'] ?? ($_POST['pin'] ?? ($_GET['pin'] ?? ''));
+        if ((string)$pinToCheck === FINANCE_SECURITY_PIN) {
+            Response::json([
+                'success' => true,
+                'message' => 'PIN verified successfully.'
+            ]);
+        }
+        Response::error('Incorrect PIN. Access denied to financial ledgers.', 403);
+    }
+
+    // Enforce 1785 PIN protection for all Finance API requests
+    $providedPin = $_SERVER['HTTP_X_FINANCE_PIN'] ?? ($_GET['pin'] ?? ($_POST['pin'] ?? ($input['pin'] ?? '')));
+    if ((string)$providedPin !== FINANCE_SECURITY_PIN) {
+        Response::error('Security PIN 1785 required to access Finance & Partner Ledgers.', 403);
+    }
 
     // -------------------------------------------------------------------------
     // 1. OVERVIEW & KPIS
