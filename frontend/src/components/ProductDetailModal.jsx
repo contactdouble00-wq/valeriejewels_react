@@ -118,7 +118,15 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
       }
       setLoading(false);
     } else {
-      const found = SEED_PRODUCTS.find((p) => p.slug === productSlug);
+      const isMysterySlug =
+        productSlug === 'mystery-jewellery-jar' ||
+        productSlug === 'mystery-jar' ||
+        productSlug === 'valerie-signature-mystery-jar' ||
+        (typeof productSlug === 'string' && productSlug.toLowerCase().includes('mystery'));
+
+      const found = SEED_PRODUCTS.find((p) => p.slug === productSlug) ||
+        (isMysterySlug ? SEED_PRODUCTS.find((p) => p.slug === 'mystery-jewellery-jar' || p.category_slug?.includes('mystery')) : null);
+
       if (found) {
         setProduct(found);
         if (found.variants && found.variants.length > 0) {
@@ -133,9 +141,6 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   useEffect(() => {
     let isMounted = true;
     async function loadDetail() {
-      if (!fallbackProduct) {
-        setLoading(true);
-      }
       try {
         const data = await apiService.getProductDetail(productSlug);
         if (isMounted) {
@@ -150,16 +155,29 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 return data.variants[0];
               });
             }
+            setError(null);
           } else {
-            // Data is null: product is inactive on storefront or not found
-            setProduct(null);
-            setError('This jewelry piece is currently inactive or not available on the storefront.');
+            // Only set error if no product is currently loaded (e.g. from seed or initialProduct)
+            setProduct((prev) => {
+              if (prev) {
+                setError(null);
+                return prev;
+              }
+              setError('This jewelry piece is currently inactive or not available on the storefront.');
+              return null;
+            });
           }
         }
       } catch (err) {
         if (isMounted) {
-          setProduct(null);
-          setError(err.message || 'Unable to load product details');
+          setProduct((prev) => {
+            if (prev) {
+              setError(null);
+              return prev;
+            }
+            setError(err.message || 'Unable to load product details');
+            return null;
+          });
         }
       } finally {
         if (isMounted) setLoading(false);

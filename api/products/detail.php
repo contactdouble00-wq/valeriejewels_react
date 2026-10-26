@@ -28,28 +28,17 @@ try {
 
     // 1. Fetch Product
     if (!empty($slug)) {
-        // SEO Slug Normalization / Alias mapping for Mystery Jar
-        if ($slug === 'mystery-jar' || $slug === 'valerie-signature-mystery-jar' || $slug === 'mystery-jewellery-jar') {
-            $slug = 'mystery-jewellery-jar';
-        }
-        $stmt = $pdo->prepare("
-            SELECT 
-                p.*,
-                c.name AS category_name,
-                c.slug AS category_slug,
-                ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
-            FROM products p
-            LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.slug = :slug AND {$activeCondition}
-            LIMIT 1
-        ");
-        $stmt->execute([':slug' => $slug]);
-        $product = $stmt->fetch();
+        $isMysterySlug = in_array(strtolower($slug), [
+            'mystery-jewellery-jar',
+            'mystery-jar',
+            'valerie-signature-mystery-jar',
+            'mystery-jewelry-jar',
+            'mystery-box'
+        ], true) || (stripos($slug, 'mystery') !== false);
 
-        // Fallback: If not found by exact slug, try partial match or keyword search
-        if (!$product) {
-            $prefix = substr($slug, 0, 25) . '%';
-            $kw = '%' . str_replace('-', '%', substr($slug, 0, 30)) . '%';
+        if ($isMysterySlug) {
+            // Robust Mystery Jar resolution:
+            // Matches canonical slug, category slug, or name containing mystery jar / mystery
             $stmt = $pdo->prepare("
                 SELECT 
                     p.*,
@@ -58,11 +47,71 @@ try {
                     ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                WHERE (p.slug LIKE :prefix OR p.slug LIKE :kw OR p.name LIKE :prefix) AND {$activeCondition}
+                WHERE (p.slug = 'mystery-jewellery-jar' 
+                       OR p.slug = 'mystery-jar' 
+                       OR p.slug = 't'
+                       OR c.slug = 'mystery-jar' 
+                       OR c.slug = 'mystery-jewellery-jar'
+                       OR p.name LIKE '%mystery jar%' 
+                       OR p.name LIKE '%mystery%') 
+                  AND {$activeCondition}
+                ORDER BY (p.slug = 'mystery-jewellery-jar') DESC, 
+                         (c.slug = 'mystery-jar') DESC, 
+                         p.id DESC
                 LIMIT 1
             ");
-            $stmt->execute([':prefix' => $prefix, ':kw' => $kw]);
+            $stmt->execute();
             $product = $stmt->fetch();
+
+            // Auto-heal production database: If product exists with legacy slug 't' or 'mystery-jar',
+            // permanently update it to the canonical 'mystery-jewellery-jar' slug!
+            if ($product && $product['slug'] !== 'mystery-jewellery-jar') {
+                try {
+                    $fixStmt = $pdo->prepare("
+                        UPDATE products 
+                        SET slug = 'mystery-jewellery-jar',
+                            name = CASE WHEN TRIM(name) = 't' THEN 'Valerie Signature Mystery Jewellery Jar' ELSE name END,
+                            meta_title = 'Mystery Jewellery Jar | Surprise Handcrafted Fine Jewelry | Valerie Jewels',
+                            meta_description = 'Unbox curated elegance with the Valerie Signature Mystery Jewellery Jar. Handcrafted fine jewelry starting at ₹999 with guaranteed high value.'
+                        WHERE id = ?
+                    ");
+                    $fixStmt->execute([$product['id']]);
+                    $product['slug'] = 'mystery-jewellery-jar';
+                } catch (Throwable $e) {}
+            }
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    p.*,
+                    c.name AS category_name,
+                    c.slug AS category_slug,
+                    ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE p.slug = :slug AND {$activeCondition}
+                LIMIT 1
+            ");
+            $stmt->execute([':slug' => $slug]);
+            $product = $stmt->fetch();
+
+            // Fallback: If not found by exact slug, try partial match or keyword search
+            if (!$product) {
+                $prefix = substr($slug, 0, 25) . '%';
+                $kw = '%' . str_replace('-', '%', substr($slug, 0, 30)) . '%';
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        p.*,
+                        c.name AS category_name,
+                        c.slug AS category_slug,
+                        ROUND(((p.mrp - p.price) / p.mrp) * 100) AS discount_percentage
+                    FROM products p
+                    LEFT JOIN categories c ON p.category_id = c.id
+                    WHERE (p.slug LIKE :prefix OR p.slug LIKE :kw OR p.name LIKE :prefix) AND {$activeCondition}
+                    LIMIT 1
+                ");
+                $stmt->execute([':prefix' => $prefix, ':kw' => $kw]);
+                $product = $stmt->fetch();
+            }
         }
     } else {
         $stmt = $pdo->prepare("

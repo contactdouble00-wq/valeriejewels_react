@@ -234,12 +234,16 @@ export const apiService = {
         const result = await response.json();
         if (result.data) return normalizeProductMedia(result.data);
       }
-      if (response.status === 404) {
-        return null;
-      }
+      // If 404, proceed to secondary catalog & seed fallback rather than aborting immediately
     } catch (err) {
       console.warn('API getProductDetail error, checking catalog fallback:', err);
     }
+
+    const isMystery =
+      slugOrId === 'mystery-jewellery-jar' ||
+      slugOrId === 'mystery-jar' ||
+      slugOrId === 'valerie-signature-mystery-jar' ||
+      (typeof slugOrId === 'string' && slugOrId.toLowerCase().includes('mystery'));
 
     // Secondary Fallback: If not found by exact slug, search catalog for partial/fuzzy match
     if (!isId && typeof slugOrId === 'string') {
@@ -255,12 +259,19 @@ export const apiService = {
         for (const item of catalog) {
           const itemSlug = (item.slug || '').toLowerCase();
           const itemName = (item.name || '').toLowerCase();
+          const itemCat = (item.category_slug || '').toLowerCase();
+
+          // High priority: Mystery Jar resolution
+          if (isMystery && (itemCat.includes('mystery') || itemName.includes('mystery') || itemSlug === 't' || itemSlug.includes('mystery'))) {
+            bestMatch = item;
+            break;
+          }
 
           if (itemSlug === slugOrId.toLowerCase()) {
             bestMatch = item;
             break;
           }
-          if (itemSlug.includes(slugOrId.toLowerCase()) || slugOrId.toLowerCase().includes(itemSlug)) {
+          if (itemSlug && itemSlug.length > 2 && (itemSlug.includes(slugOrId.toLowerCase()) || slugOrId.toLowerCase().includes(itemSlug))) {
             bestMatch = item;
             break;
           }
@@ -292,7 +303,8 @@ export const apiService = {
       }
     }
 
-    const found = SEED_PRODUCTS.find((p) => (isId ? String(p.id) === String(slugOrId) : p.slug === slugOrId));
+    const found = SEED_PRODUCTS.find((p) => (isId ? String(p.id) === String(slugOrId) : p.slug === slugOrId)) ||
+      (isMystery ? SEED_PRODUCTS.find((p) => p.slug === 'mystery-jewellery-jar' || p.category_slug?.includes('mystery')) : null);
     return found ? normalizeProductMedia(found) : null;
   },
 

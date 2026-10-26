@@ -13,6 +13,16 @@ handleCors();
 try {
     $pdo = Database::getConnection();
 
+    // Auto-heal: Ensure Mystery Jar product has canonical slug 'mystery-jewellery-jar'
+    try {
+        $pdo->exec("
+            UPDATE products 
+            SET slug = 'mystery-jewellery-jar' 
+            WHERE slug IN ('t', 'mystery-jar') 
+              AND (name LIKE '%mystery%' OR category_id IN (SELECT id FROM categories WHERE slug = 'mystery-jar'))
+        ");
+    } catch (Throwable $te) {}
+
     // Query parameters
     $category   = trim($_GET['category'] ?? '');
     $minPrice   = isset($_GET['min_price']) && is_numeric($_GET['min_price']) ? (float)$_GET['min_price'] : null;
