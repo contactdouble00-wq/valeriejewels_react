@@ -4,11 +4,8 @@ import { useWishlist } from '../context/WishlistContext';
 
 export default function WishlistToast() {
   const { toast, dismissToast, openWishlist } = useWishlist();
-
   if (!toast.show) return null;
-
-  const isAdd = toast.type === 'add';
-
+  const isAdd = toast.type === 'add'
   return (
     <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 animate-slide-up max-w-[90vw] sm:max-w-sm">
       <div className="bg-brand-tertiary text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md flex items-center justify-between gap-3">
@@ -35,7 +32,6 @@ export default function WishlistToast() {
             )}
           </div>
         </div>
-
         <button
           onClick={dismissToast}
           className="p-1 text-white/50 hover:text-white transition-colors shrink-0"
