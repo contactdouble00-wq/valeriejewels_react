@@ -3,46 +3,37 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://valeriejewels.in/</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/mystery-jewellery-jar</loc>
-    <lastmod>2026-10-26</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&amp;fit=crop&amp;w=800&amp;q=80</image:loc>
-    </image:image>
   </url>
   <url>
     <loc>https://valeriejewels.in/faqs</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/shipping-policy</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/refund-policy</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/privacy-policy</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/terms-and-conditions</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -81,21 +72,6 @@
     <lastmod>2026-09-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?category=mystery-jar</loc>
-    <lastmod>2026-10-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?product=16-pairs-oxidized-silver-earrings-set-for-women-traditional-indian-ethnic-jhumka-dangle-earrings</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://valeriejewels.in/api/uploads/img_24a8464b38f849eb7ab6a286e7d9782a.png</image:loc>
-    </image:image>
   </url>
   <url>
     <loc>https://valeriejewels.in/?product=aurelia-solitaire-necklace</loc>
