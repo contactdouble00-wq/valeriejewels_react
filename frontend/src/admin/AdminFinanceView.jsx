@@ -296,17 +296,22 @@ export default function AdminFinanceView({ currentUser }) {
       return;
     }
 
+    const isReceived = (quickAdd.status || '').toLowerCase() === 'received';
+    // Received status represents reimbursement/incoming funds and must decrease partner total (negative amount)
+    const finalAmt = isReceived ? -Math.abs(amt) : amt;
+    const finalType = isReceived ? 'REIMBURSEMENT' : (finalAmt < 0 ? 'REIMBURSEMENT' : 'EXPENSE');
+
     const detectedCat = quickAdd.category === 'Other' ? detectCategory(desc) : quickAdd.category;
     const partnerObj = partners.find((p) => p.id === pId);
 
     const payload = {
       partner_id: pId,
       description: desc,
-      amount: amt,
+      amount: finalAmt,
       status: quickAdd.status !== undefined ? quickAdd.status : '',
       date: quickAdd.date !== undefined ? quickAdd.date : '',
       category: detectedCat,
-      type: amt < 0 ? 'REIMBURSEMENT' : 'EXPENSE',
+      type: finalType,
       notes: quickAdd.notes || '',
     };
 
@@ -338,7 +343,12 @@ export default function AdminFinanceView({ currentUser }) {
     try {
       const saved = await adminApi.createFinanceEntry(payload);
       setEntries((prev) => prev.map((e) => (e.id === tempId ? saved : e)));
-      showToast('success', `Added entry: ${formatINR(amt)} for ${partnerObj?.name || 'partner'}`);
+      showToast(
+        'success',
+        isReceived
+          ? `Added received entry: ${formatINR(finalAmt)} (decreased ${partnerObj?.name || 'partner'}'s total)`
+          : `Added entry: ${formatINR(finalAmt)} for ${partnerObj?.name || 'partner'}`
+      );
     } catch (err) {
       setEntries((prev) => prev.filter((e) => e.id !== tempId));
       showToast('error', err.message || 'Failed to save entry');
@@ -353,12 +363,46 @@ export default function AdminFinanceView({ currentUser }) {
     const original = entries.find((e) => e.id === id);
     if (!original || original[field] == value) return;
 
+    let updatePayload = { id, [field]: value };
+    let optimisticUpdates = { [field]: value };
+
+    if (field === 'status') {
+      const isReceived = (value || '').toLowerCase() === 'received';
+      const wasReceived = (original.status || '').toLowerCase() === 'received';
+
+      if (isReceived) {
+        // Auto-negate amount to decrease partner total expense
+        const newAmt = -Math.abs(Number(original.amount));
+        updatePayload.amount = newAmt;
+        updatePayload.type = 'REIMBURSEMENT';
+        optimisticUpdates.amount = newAmt;
+        optimisticUpdates.type = 'REIMBURSEMENT';
+      } else if (wasReceived && Number(original.amount) < 0) {
+        // Revert to positive expense
+        const newAmt = Math.abs(Number(original.amount));
+        updatePayload.amount = newAmt;
+        updatePayload.type = 'EXPENSE';
+        optimisticUpdates.amount = newAmt;
+        optimisticUpdates.type = 'EXPENSE';
+      }
+    } else if (field === 'amount') {
+      const isReceived = (original.status || '').toLowerCase() === 'received';
+      if (isReceived) {
+        const numVal = -Math.abs(Number(value));
+        updatePayload.amount = numVal;
+        optimisticUpdates.amount = numVal;
+      }
+    }
+
     // Optimistic update
-    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...optimisticUpdates } : e)));
 
     try {
-      await adminApi.updateFinanceEntry({ id, [field]: value });
-      showToast('success', 'Cell updated');
+      const updated = await adminApi.updateFinanceEntry(updatePayload);
+      if (updated) {
+        setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...updated } : e)));
+      }
+      showToast('success', 'Cell updated successfully');
     } catch (err) {
       setEntries((prev) => prev.map((e) => (e.id === id ? original : e)));
       showToast('error', err.message || 'Update failed');
@@ -441,9 +485,28 @@ export default function AdminFinanceView({ currentUser }) {
   const handleBulkStatusChange = async (newStatus) => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
+    const isReceived = (newStatus || '').toLowerCase() === 'received';
 
     setEntries((prev) =>
-      prev.map((e) => (selectedIds.includes(e.id) ? { ...e, status: newStatus } : e))
+      prev.map((e) => {
+        if (!selectedIds.includes(e.id)) return e;
+        if (isReceived) {
+          return {
+            ...e,
+            status: newStatus,
+            amount: -Math.abs(Number(e.amount)),
+            type: 'REIMBURSEMENT',
+          };
+        } else if ((e.status || '').toLowerCase() === 'received' && Number(e.amount) < 0) {
+          return {
+            ...e,
+            status: newStatus,
+            amount: Math.abs(Number(e.amount)),
+            type: 'EXPENSE',
+          };
+        }
+        return { ...e, status: newStatus };
+      })
     );
 
     try {
@@ -1210,19 +1273,30 @@ export default function AdminFinanceView({ currentUser }) {
 
             {/* Amount */}
             <div className="sm:col-span-2">
-              <input
-                type="number"
-                placeholder="Amount (e.g. 500 or -5000)"
-                value={quickAdd.amount}
-                onChange={(e) => setQuickAdd((cur) => ({ ...cur, amount: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleQuickAdd();
-                  }
-                }}
-                className="w-full px-3 py-2 bg-white border border-brand-border rounded-xl text-xs font-bold text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder={(quickAdd.status || '').toLowerCase() === 'received' ? "Amount (- deducts)" : "Amount (e.g. 500)"}
+                  value={quickAdd.amount}
+                  onChange={(e) => setQuickAdd((cur) => ({ ...cur, amount: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleQuickAdd();
+                    }
+                  }}
+                  className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-bold focus:outline-none focus:ring-1 transition-all ${
+                    (quickAdd.status || '').toLowerCase() === 'received'
+                      ? 'border-blue-400 text-blue-700 bg-blue-50/20 focus:ring-blue-500'
+                      : 'border-brand-border text-brand-tertiary focus:ring-brand-primary'
+                  }`}
+                />
+                {(quickAdd.status || '').toLowerCase() === 'received' && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded pointer-events-none">
+                    -₹ Deducts
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Status */}
@@ -1230,11 +1304,15 @@ export default function AdminFinanceView({ currentUser }) {
               <select
                 value={quickAdd.status}
                 onChange={(e) => setQuickAdd((cur) => ({ ...cur, status: e.target.value }))}
-                className="w-full px-2 py-2 bg-white border border-brand-border rounded-xl text-xs font-semibold text-brand-tertiary"
+                className={`w-full px-2 py-2 bg-white border rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                  (quickAdd.status || '').toLowerCase() === 'received'
+                    ? 'border-blue-400 text-blue-700 font-bold bg-blue-50/30'
+                    : 'border-brand-border text-brand-tertiary'
+                }`}
               >
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="received">Received</option>
+                <option value="paid">paid</option>
+                <option value="pending">pending</option>
+                <option value="received">received (- deducts)</option>
                 <option value="">(Empty)</option>
               </select>
             </div>
@@ -1482,13 +1560,12 @@ export default function AdminFinanceView({ currentUser }) {
                             defaultValue={entry.status || ''}
                             onBlur={(e) => handleSaveInlineEdit(entry.id, 'status', e.target.value)}
                             onChange={(e) => handleSaveInlineEdit(entry.id, 'status', e.target.value)}
-                            className="text-xs bg-white border border-brand-primary rounded px-1.5 py-0.5"
+                            className="text-xs bg-white border border-brand-primary rounded px-1.5 py-0.5 font-bold"
                           >
                             <option value="">(Empty)</option>
                             <option value="paid">paid</option>
-                            <option value="Paid">Paid</option>
-                            <option value="received">received</option>
-                            <option value="pending">Pending</option>
+                            <option value="pending">pending</option>
+                            <option value="received">received (- deducts)</option>
                           </select>
                         ) : (
                           <span

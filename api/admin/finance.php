@@ -302,6 +302,12 @@ try {
             elseif ($statusLower === 'pending') $status = 'pending';
         }
 
+        // When status is 'received', it represents reimbursement/incoming funds and decreases partner total expense
+        if (strtolower($status) === 'received') {
+            $amount = -abs($amount);
+            $type = 'REIMBURSEMENT';
+        }
+
         // Auto-category suggestion if left default or blank
         if (empty($category) || $category === 'Other') {
             $descLower = strtolower($description);
@@ -422,6 +428,54 @@ try {
         if (isset($input['notes'])) {
             $fields[] = "notes = ?";
             $params[] = trim($input['notes']);
+        }
+
+        // Received status handling: incoming funds / deductions MUST decrease partner total
+        $effectiveStatus = array_key_exists('status', $input) ? trim($input['status'] ?? '') : ($oldEntry['status'] ?? '');
+        $isReceived = strtolower($effectiveStatus) === 'received';
+        $wasReceived = strtolower($oldEntry['status'] ?? '') === 'received';
+
+        if ($isReceived) {
+            // Force negative amount and REIMBURSEMENT type
+            if (isset($input['amount']) && is_numeric($input['amount'])) {
+                $negAmt = -abs((float)$input['amount']);
+                $amtFound = false;
+                foreach ($fields as $idx => $f) {
+                    if (strpos($f, 'amount =') === 0) {
+                        $params[$idx] = $negAmt;
+                        $amtFound = true;
+                        break;
+                    }
+                }
+                if (!$amtFound) {
+                    $fields[] = "amount = ?";
+                    $params[] = $negAmt;
+                }
+            } else {
+                $fields[] = "amount = -ABS(amount)";
+            }
+
+            $typeFound = false;
+            foreach ($fields as $idx => $f) {
+                if (strpos($f, 'type =') === 0) {
+                    $params[$idx] = 'REIMBURSEMENT';
+                    $typeFound = true;
+                    break;
+                }
+            }
+            if (!$typeFound) {
+                $fields[] = "type = ?";
+                $params[] = 'REIMBURSEMENT';
+            }
+        } elseif ($wasReceived && !$isReceived) {
+            // Status changed from received to paid/pending: restore positive amount
+            if (!isset($input['amount']) && (float)$oldEntry['amount'] < 0) {
+                $fields[] = "amount = ABS(amount)";
+            }
+            if (!array_key_exists('type', $input)) {
+                $fields[] = "type = ?";
+                $params[] = 'EXPENSE';
+            }
         }
 
         if (empty($fields)) {
@@ -564,8 +618,14 @@ try {
             ApiResponse::success(['count' => count($ids)], count($ids) . ' entries deleted');
         } elseif ($bulkAction === 'update_status') {
             $newStatus = trim($input['status'] ?? 'PAID');
-            $stmt = $pdo->prepare("UPDATE finance_entries SET status = ?, updated_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
-            $stmt->execute(array_merge([$newStatus], $ids));
+            $newStatusLower = strtolower($newStatus);
+            if ($newStatusLower === 'received') {
+                $stmt = $pdo->prepare("UPDATE finance_entries SET status = ?, amount = -ABS(amount), type = 'REIMBURSEMENT', updated_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
+                $stmt->execute(array_merge([$newStatus], $ids));
+            } else {
+                $stmt = $pdo->prepare("UPDATE finance_entries SET status = ?, amount = ABS(amount), type = 'EXPENSE', updated_at = {$nowSql} WHERE id IN ({$inPlaceholders})");
+                $stmt->execute(array_merge([$newStatus], $ids));
+            }
             ApiResponse::success(['count' => count($ids)], count($ids) . " entries marked as {$newStatus}");
         } elseif ($bulkAction === 'update_category') {
             $newCat = trim($input['category'] ?? 'Other');
