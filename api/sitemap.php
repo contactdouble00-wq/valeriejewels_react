@@ -19,6 +19,12 @@ $staticPages = [
         'priority' => '1.0'
     ],
     [
+        'loc' => $baseUrl . '/mystery-jewellery-jar',
+        'changefreq' => 'daily',
+        'priority' => '1.0',
+        'image' => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'
+    ],
+    [
         'loc' => $baseUrl . '/faqs',
         'changefreq' => 'weekly',
         'priority' => '0.8'
@@ -82,6 +88,9 @@ try {
         ");
         $products = $prodStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($products as $prod) {
+            if ($prod['slug'] === 'mystery-jewellery-jar' || $prod['slug'] === 'valerie-signature-mystery-jar' || $prod['slug'] === 'mystery-jar') {
+                continue; // Covered by high-priority clean route /mystery-jewellery-jar
+            }
             $lastmod = !empty($prod['created_at']) ? date('Y-m-d', strtotime($prod['created_at'])) : date('Y-m-d');
             $item = [
                 'loc' => $baseUrl . '/?product=' . rawurlencode($prod['slug']),

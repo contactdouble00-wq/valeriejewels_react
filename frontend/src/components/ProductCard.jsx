@@ -45,7 +45,13 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
   const hasVideo = Boolean(cardVideoUrl);
 
-  const handleStageClick = () => {
+  const productHref = isMystery
+    ? '/mystery-jewellery-jar'
+    : `#product-${product?.slug || product?.id}`;
+
+  const handleStageClick = (e) => {
+    if (e && (e.metaKey || e.ctrlKey || e.button === 1)) return;
+    if (e) e.preventDefault();
     if (onQuickView) {
       onQuickView(product);
     }
@@ -55,14 +61,16 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
       <div>
         {/* Product Image Stage: Crisp 1:1 Square Ratio - clicking views product */}
-        <div 
+        <a 
+          href={productHref}
           onClick={handleStageClick}
-          className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer group/stage select-none"
+          className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer group/stage select-none block"
+          title={`View ${name}`}
         >
           {/* Main Photo */}
           <img
             src={normalizeMediaUrl(primary_image) || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'}
-            alt={name}
+            alt={isMystery ? 'Valerie Mystery Jewellery Jar - Curated Surprise Fine Jewelry' : name}
             onError={(e) => {
               if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                 e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
@@ -74,11 +82,10 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             loading="lazy"
           />
 
-
-
           {/* Floating Wishlist Heart Button */}
           <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               toggleWishlist(product);
             }}
@@ -92,11 +99,11 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           >
             <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
           </button>
-        </div>
+        </a>
 
         {/* Product Meta */}
         <div 
-          onClick={() => onQuickView(product)}
+          onClick={handleStageClick}
           className="mt-2.5 sm:mt-4 space-y-1 sm:space-y-1.5 cursor-pointer"
         >
           {/* Rating */}
@@ -122,14 +129,14 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
           })()}
 
           {/* Product Name */}
-          <h3
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickView(product);
-            }}
-            className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug capitalize"
-          >
-            {name ? name.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : ''}
+          <h3 className="font-sans text-xs sm:text-sm font-semibold text-brand-tertiary group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1 leading-snug capitalize">
+            <a
+              href={productHref}
+              onClick={handleStageClick}
+              className="hover:underline"
+            >
+              {name ? name.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : ''}
+            </a>
           </h3>
 
           {/* Material & Description */}

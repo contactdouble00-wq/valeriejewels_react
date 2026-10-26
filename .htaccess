@@ -34,7 +34,11 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
-  # 1. Direct legacy or root /uploads/ requests directly to /api/uploads/
+  # 1. 301 Permanent Redirects for SEO consolidation to /mystery-jewellery-jar
+  RewriteRule ^(pages/)?mystery-jar/?$ /mystery-jewellery-jar [R=301,L,NC]
+  RewriteRule ^(pages/)?valerie-signature-mystery-jar/?$ /mystery-jewellery-jar [R=301,L,NC]
+
+  # 1a. Direct legacy or root /uploads/ requests directly to /api/uploads/
   RewriteRule ^uploads/(.*)$ api/uploads/$1 [L,NC]
 
   # 1b. XML Sitemap rewrite for Google Search Console (Static first, fallback to PHP generator)

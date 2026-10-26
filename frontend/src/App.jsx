@@ -128,19 +128,50 @@ function StorefrontContent({
     setIsTrackingOpen(true);
   };
 
-  // Sync PDP opening with URL Hash and history for native mobile back navigation
+  // Helper to detect if a slug or product corresponds to Mystery Jar
+  const isMysteryProductSlug = (slug, productObj = null) => {
+    return Boolean(
+      slug === 'mystery-jewellery-jar' ||
+      slug === 'mystery-jar' ||
+      slug === 'valerie-signature-mystery-jar' ||
+      productObj?.category_slug === 'mystery-jar' ||
+      (productObj?.slug || '').toLowerCase().includes('mystery') ||
+      (productObj?.name || '').toLowerCase().includes('mystery')
+    );
+  };
+
+  // Sync PDP opening with clean SEO URL path for Mystery Jar and Hash for other products
   const openPdp = (slug, productObj = null) => {
-    setActivePdpSlug(slug);
+    const isMystery = isMysteryProductSlug(slug, productObj);
+    const targetSlug = isMystery ? 'mystery-jewellery-jar' : slug;
+    setActivePdpSlug(targetSlug);
     setActivePdpProduct(productObj);
-    if (window.location.hash !== `#product-${slug}`) {
-      window.history.pushState({ pdp: slug }, '', `#product-${slug}`);
+
+    if (isMystery) {
+      if (window.location.pathname !== '/mystery-jewellery-jar') {
+        window.history.pushState({ pdp: 'mystery-jewellery-jar' }, '', '/mystery-jewellery-jar');
+      }
+    } else {
+      if (window.location.hash !== `#product-${slug}`) {
+        window.history.pushState({ pdp: slug }, '', `#product-${slug}`);
+      }
     }
   };
 
   const closePdp = () => {
     setActivePdpSlug(null);
     setActivePdpProduct(null);
-    if (window.history.state?.pdp) {
+    if (
+      window.location.pathname === '/mystery-jewellery-jar' ||
+      window.location.pathname === '/mystery-jar' ||
+      window.location.pathname === '/valerie-signature-mystery-jar'
+    ) {
+      if (window.history.state?.pdp) {
+        window.history.back();
+      } else {
+        window.history.replaceState(null, '', '/');
+      }
+    } else if (window.history.state?.pdp) {
       window.history.back();
     } else if (window.location.hash.startsWith('#product-')) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -149,8 +180,24 @@ function StorefrontContent({
 
   useEffect(() => {
     const handlePopState = () => {
-      const hash = window.location.hash;
-      if (hash && hash.startsWith('#product-')) {
+      const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+      const hash = window.location.hash || '';
+
+      // Direct clean route check for Mystery Jewellery Jar
+      if (
+        pathname === '/mystery-jewellery-jar' ||
+        pathname === '/mystery-jar' ||
+        pathname === '/valerie-signature-mystery-jar' ||
+        hash === '#mystery-jewellery-jar' ||
+        hash === '#mystery-jar' ||
+        hash === '#product-mystery-jewellery-jar' ||
+        hash === '#product-mystery-jar'
+      ) {
+        if (pathname !== '/mystery-jewellery-jar') {
+          window.history.replaceState({ pdp: 'mystery-jewellery-jar' }, '', '/mystery-jewellery-jar');
+        }
+        setActivePdpSlug('mystery-jewellery-jar');
+      } else if (hash && hash.startsWith('#product-')) {
         const slug = hash.replace('#product-', '');
         setActivePdpSlug(slug);
       } else {
@@ -163,17 +210,8 @@ function StorefrontContent({
       }
     };
 
-    // On mount check if URL already has a product hash
-    if (window.location.hash && window.location.hash.startsWith('#product-')) {
-      const slug = window.location.hash.replace('#product-', '');
-      setActivePdpSlug(slug);
-    }
-
-    // Auto-detect direct tracking link from email (e.g. ?track=VJ-XXXX or #track-order?order=VJ-XXXX)
-    const initialTracking = parseTrackingOrderFromUrl();
-    if (initialTracking) {
-      openTracking(initialTracking === '__prompt__' ? '' : initialTracking);
-    }
+    // On mount check if URL is /mystery-jewellery-jar or has a product hash
+    handlePopState();
 
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('hashchange', handlePopState);
@@ -1410,6 +1448,17 @@ export default function App() {
       return 'order-failed';
     }
 
+    // 3e. Mystery Jewellery Jar Clean SEO Route
+    if (
+      rawPath === '/mystery-jewellery-jar' ||
+      rawPath === '/pages/mystery-jewellery-jar' ||
+      rawPath === '/mystery-jar' ||
+      rawPath === '/pages/mystery-jar' ||
+      rawPath === '/valerie-signature-mystery-jar'
+    ) {
+      return 'store';
+    }
+
     // 4. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
@@ -1418,6 +1467,9 @@ export default function App() {
     // 5. Known valid routes in this Single Page Application
     const validPaths = [
       '/', '', '/shop', '/index.html',
+      '/mystery-jewellery-jar', '/pages/mystery-jewellery-jar',
+      '/mystery-jar', '/pages/mystery-jar',
+      '/valerie-signature-mystery-jar',
       '/jhumka-box', '/pages/jhumka-box',
       '/jhumkha-box', '/pages/jhumkha-box',
       '/jhumka-boxes', '/pages/jhumka-boxes',

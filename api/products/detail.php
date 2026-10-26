@@ -28,6 +28,10 @@ try {
 
     // 1. Fetch Product
     if (!empty($slug)) {
+        // SEO Slug Normalization / Alias mapping for Mystery Jar
+        if ($slug === 'mystery-jar' || $slug === 'valerie-signature-mystery-jar' || $slug === 'mystery-jewellery-jar') {
+            $slug = 'mystery-jewellery-jar';
+        }
         $stmt = $pdo->prepare("
             SELECT 
                 p.*,

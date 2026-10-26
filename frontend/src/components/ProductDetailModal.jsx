@@ -13,13 +13,17 @@ import { trackGAViewItem } from '../utils/analytics';
 import ProductReviewsSection from './ProductReviewsSection';
 import AmazonTrustBadge from './AmazonTrustBadge';
 import FormattedDescription from './FormattedDescription';
+import { setMysteryJewelleryJarSeo, restorePageSeo } from '../utils/seo';
 
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { content: siteContent } = useSiteContent();
 
   // Find synchronous fallback from seed catalog to prevent empty screen or loading jump
-  const fallbackProduct = initialProduct || SEED_PRODUCTS.find((p) => p.slug === productSlug) || null;
+  const fallbackProduct = initialProduct || SEED_PRODUCTS.find((p) => 
+    p.slug === productSlug || 
+    (productSlug === 'mystery-jewellery-jar' && (p.slug === 'mystery-jar' || p.category_slug === 'mystery-jar' || (p.name || '').toLowerCase().includes('mystery')))
+  ) || null;
 
   const [product, setProduct] = useState(fallbackProduct);
   const [loading, setLoading] = useState(!fallbackProduct);
@@ -492,6 +496,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   // Check if current product is a mystery box / mystery jar item
   const isMysteryProduct = Boolean(
+    productSlug === 'mystery-jewellery-jar' ||
     product?.category_slug === 'mystery-jar' ||
     product?.category_slug === 'mystery-box' ||
     (product?.category_name || '').toLowerCase().includes('mystery') ||
@@ -499,6 +504,16 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     (product?.sku || '').toLowerCase().includes('mjar') ||
     (product?.slug || '').toLowerCase().includes('mystery')
   );
+
+  // Dynamic SEO head tags, canonical link, and JSON-LD schema for Google Rich Results
+  useEffect(() => {
+    if (isMysteryProduct || productSlug === 'mystery-jewellery-jar') {
+      setMysteryJewelleryJarSeo(product);
+    }
+    return () => {
+      restorePageSeo();
+    };
+  }, [isMysteryProduct, productSlug, product]);
 
   // Helper to format product title into clean Title Case (e.g. "mystery jar" -> "Mystery Jar")
   const formatProductTitle = (str) => {
