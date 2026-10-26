@@ -527,6 +527,17 @@ if ($isUpdateAction) {
         WHERE id = :id
     ");
 
+    $finalVideoUrl = !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', trim($input['video_url'])) : null;
+    if (empty($finalVideoUrl) && !empty($input['images']) && is_array($input['images'])) {
+        foreach ($input['images'] as $imgItem) {
+            $u = is_array($imgItem) ? ($imgItem['image_url'] ?? $imgItem['url'] ?? '') : $imgItem;
+            if (preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_')) {
+                $finalVideoUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', trim($u));
+                break;
+            }
+        }
+    }
+
     $stmt->execute([
         ':id'         => $id,
         ':name'       => $input['name'] ?? '',
@@ -542,7 +553,7 @@ if ($isUpdateAction) {
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => $input['material'] ?? '',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
-        ':vid'        => !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $input['video_url']) : null,
+        ':vid'        => $finalVideoUrl,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
         ':meta_t'     => $input['meta_title'] ?? '',
         ':meta_d'     => $input['meta_description'] ?? '',
@@ -557,7 +568,7 @@ if ($isUpdateAction) {
         $firstPhotoIndex = -1;
         foreach ($input['images'] as $idx => $img) {
             $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
-            $isVid = preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $u);
+            $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_');
             if (is_array($img) && !empty($img['is_primary'])) {
                 $explicitPrimaryIndex = $idx;
             }
@@ -723,6 +734,17 @@ if ($method === 'POST') {
         INSERT INTO products (category_id, name, slug, short_description, description, mrp, price, cost_price, sku, stock_quantity, pairs_count, is_anti_tarnish, material, is_bestseller, video_url, is_active, meta_title, meta_description)
         VALUES (:cat, :name, :slug, :short_desc, :desc, :mrp, :price, :cost, :sku, :stock, :pairs, :anti, :mat, :best, :vid, :active, :meta_t, :meta_d)
     ");
+    $finalVideoUrl = !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', trim($input['video_url'])) : null;
+    if (empty($finalVideoUrl) && !empty($input['images']) && is_array($input['images'])) {
+        foreach ($input['images'] as $imgItem) {
+            $u = is_array($imgItem) ? ($imgItem['image_url'] ?? $imgItem['url'] ?? '') : $imgItem;
+            if (preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_')) {
+                $finalVideoUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', trim($u));
+                break;
+            }
+        }
+    }
+
     $stmt->execute([
         ':cat'        => $categoryId,
         ':name'       => $name,
@@ -738,7 +760,7 @@ if ($method === 'POST') {
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
         ':mat'        => !empty($input['material']) ? $input['material'] : 'Lightweight Stainless Steel',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
-        ':vid'        => !empty($input['video_url']) ? preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $input['video_url']) : null,
+        ':vid'        => $finalVideoUrl,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,
         ':meta_t'     => $input['meta_title'] ?? ($name . ' | Valerie Jewels'),
         ':meta_d'     => $input['meta_description'] ?? ($input['short_description'] ?? ''),
@@ -754,7 +776,7 @@ if ($method === 'POST') {
         $firstPhotoIndex = -1;
         foreach ($input['images'] as $idx => $img) {
             $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
-            $isVid = preg_match('/\.(mp4|webm|mov|ogg)(\?.*)?$/i', $u);
+            $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_');
             if (is_array($img) && !empty($img['is_primary'])) {
                 $explicitPrimaryIndex = $idx;
             }

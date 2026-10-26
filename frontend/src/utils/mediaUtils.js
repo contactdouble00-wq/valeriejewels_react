@@ -34,7 +34,7 @@ export function isVideoMedia(item) {
   if (typeof item === 'object' && item.media_type === 'video') return true;
   const url = typeof item === 'string' ? item : (item.image_url || item.url || '');
   if (!url || typeof url !== 'string') return false;
-  return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url) || url.includes('/video_') || url.includes('video_');
+  return /\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i.test(url) || url.includes('/video_') || url.includes('video_');
 }
 
 /**

@@ -17,7 +17,7 @@ try {
     if (empty($_FILES['file'])) {
         $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
         if ($contentLength > 0) {
-            ApiResponse::error('Uploaded file exceeds the server upload limit. Please choose a smaller file (max 30MB).', 413);
+            ApiResponse::error('Uploaded file exceeds the server upload limit. Maximum allowed size is 50MB for video reels and 15MB for studio photos.', 413);
         }
         ApiResponse::error('No file provided under "file" field', 422);
     }
@@ -25,7 +25,7 @@ try {
     $file = $_FILES['file'];
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $errMap = [
-            UPLOAD_ERR_INI_SIZE   => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+            UPLOAD_ERR_INI_SIZE   => 'The uploaded file exceeds the upload_max_filesize directive in php.ini (max 64MB).',
             UPLOAD_ERR_FORM_SIZE  => 'The uploaded file exceeds the MAX_FILE_SIZE specified in the form.',
             UPLOAD_ERR_PARTIAL    => 'The uploaded file was only partially uploaded.',
             UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
@@ -41,14 +41,7 @@ try {
         ApiResponse::error('Uploaded temporary file is missing or unreadable', 400);
     }
 
-    // Allowed MIME types & extensions
-    $allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    $allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
-    $allowedMimes = array_merge($allowedImageTypes, $allowedVideoTypes);
-
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file($file['tmp_name']);
-
+    // Allowed MIME types & extensions mapping
     $mimeToExtMap = [
         'image/jpeg'      => 'jpg',
         'image/png'       => 'png',
@@ -56,13 +49,38 @@ try {
         'video/mp4'       => 'mp4',
         'video/quicktime' => 'mov',
         'video/webm'      => 'webm',
+        'video/x-m4v'     => 'mp4',
+        'video/m4v'       => 'mp4',
+        'video/x-mp4'     => 'mp4',
+        'application/mp4' => 'mp4',
     ];
 
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($file['tmp_name']);
+
+    // Fallback: If finfo returns application/octet-stream or unrecognized MIME, inspect file header magic bytes
     if (!isset($mimeToExtMap[$mime])) {
-        ApiResponse::error("Unsupported file type: {$mime}. Only JPG, PNG, WEBP, and MP4/MOV videos allowed.", 422);
+        $clientExt = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+        $handle = @fopen($file['tmp_name'], 'rb');
+        $header = $handle ? @fread($handle, 32) : '';
+        if ($handle) { @fclose($handle); }
+
+        $isFtyp = (strlen($header) >= 8 && substr($header, 4, 4) === 'ftyp');
+        $isWebm = (strlen($header) >= 4 && substr($header, 0, 4) === "\x1A\x45\xDF\xA3");
+
+        if (($clientExt === 'mp4' || $clientExt === 'm4v') && $isFtyp) {
+            $mime = 'video/mp4';
+        } elseif ($clientExt === 'mov' && $isFtyp) {
+            $mime = 'video/quicktime';
+        } elseif ($clientExt === 'webm' && $isWebm) {
+            $mime = 'video/webm';
+        } else {
+            ApiResponse::error("Unsupported file type: {$mime}. Only JPG, PNG, WEBP images and MP4, MOV, WEBM videos are allowed.", 422);
+        }
     }
 
-    $isVideo = str_starts_with($mime, 'video/');
+    $ext = $mimeToExtMap[$mime] ?? 'mp4';
+    $isVideo = str_starts_with($mime, 'video/') || in_array($ext, ['mp4', 'mov', 'webm'], true);
     $maxSize = $isVideo ? (50 * 1024 * 1024) : (15 * 1024 * 1024); // 50MB video, 15MB high-res studio image
 
     if ($file['size'] > $maxSize) {
@@ -71,7 +89,6 @@ try {
     }
 
     // Generate unique, strictly-typed filename (extension derived from MIME, immune to client spoofing)
-    $ext = $mimeToExtMap[$mime];
     $prefix = $isVideo ? 'video_' : 'img_';
     $filename = $prefix . bin2hex(random_bytes(16)) . '.' . $ext;
 
@@ -84,7 +101,11 @@ try {
     }
 
     $destination = $uploadDir . '/' . $filename;
-    if (!@move_uploaded_file($file['tmp_name'], $destination)) {
+    $moved = @move_uploaded_file($file['tmp_name'], $destination);
+    if (!$moved && is_file($file['tmp_name'])) {
+        $moved = @copy($file['tmp_name'], $destination);
+    }
+    if (!$moved) {
         ApiResponse::error('Failed to move uploaded file to target storage directory. Check server folder permissions.', 500);
     }
 

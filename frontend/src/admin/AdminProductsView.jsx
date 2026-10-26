@@ -4,7 +4,7 @@ import {
   UploadCloud, Check, X, AlertCircle, Video, RefreshCw,
   Flame, Download, Upload, GripVertical, Globe, ChevronDown,
   ChevronUp, Sparkles, Film, Play, Eye, ExternalLink, Zap,
-  Layers, Package, Tag, Gift
+  Layers, Package, Tag, Gift, Image as ImageIcon
 } from 'lucide-react';
 import ProductAssuranceModal from './ProductAssuranceModal';
 import AdminProductPreviewModal from './AdminProductPreviewModal';
@@ -758,10 +758,19 @@ export default function AdminProductsView({ currentUser }) {
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const isVideoFile = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+    const maxAllowedSize = isVideoFile ? 50 * 1024 * 1024 : 15 * 1024 * 1024;
+    if (file.size > maxAllowedSize) {
+      showToast(`Selected ${isVideoFile ? 'video' : 'image'} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max allowed size is ${isVideoFile ? '50MB' : '15MB'}.`);
+      e.target.value = '';
+      return;
+    }
+
     setUploadingMedia(true);
     try {
       const res = await adminApi.uploadMedia(file);
-      const isVideo = res.is_video || file.type.startsWith('video/');
+      const isVideo = res.is_video || isVideoFile;
       const existing = editingProduct.images || [];
       const normUrl = normalizeMediaUrl(res.url);
       const newMedia = {
@@ -777,7 +786,7 @@ export default function AdminProductsView({ currentUser }) {
         video_url: isVideo ? normUrl : (prev.video_url || null),
         images: [...existing, newMedia],
       }));
-      showToast(isVideo ? '🎬 Vertical video reel added' : '📸 Portrait image added');
+      showToast(isVideo ? '🎬 Vertical video reel added to gallery' : '📸 Portrait image added to gallery');
     } catch (err) {
       showToast(err.message || 'Upload failed');
     } finally {
@@ -1976,7 +1985,7 @@ export default function AdminProductsView({ currentUser }) {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div>
                     <span className="font-semibold text-brand-tertiary flex items-center gap-1.5">
                       <span>Gallery Media (Photos & Video Reels)</span>
@@ -1986,14 +1995,33 @@ export default function AdminProductsView({ currentUser }) {
                     </span>
                     <p className="text-[10.5px] text-brand-muted mt-0.5">Drag tiles to reorder · Recommended: <strong className="font-mono text-brand-tertiary">1200 × 1200 px</strong> (Min: 1000 × 1000 px) · First photo = storefront primary</p>
                   </div>
-                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold transition-all shadow-xs shrink-0 active:scale-95">
-                    <UploadCloud className="w-4 h-4" />
-                    <span>{uploadingMedia ? 'Uploading...' : 'Upload Media (1200×1200 px)'}</span>
-                    <input
-                      type="file" accept="image/*,video/mp4,video/quicktime,video/webm"
-                      onChange={handleFileUpload} className="hidden" disabled={uploadingMedia}
-                    />
-                  </label>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Photo Upload Trigger */}
+                    <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white hover:bg-gray-50 text-brand-tertiary border border-brand-border text-xs font-semibold transition-all shadow-2xs active:scale-95">
+                      <ImageIcon className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>{uploadingMedia ? 'Uploading...' : 'Upload Photo'}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={uploadingMedia}
+                      />
+                    </label>
+
+                    {/* Dedicated Video Reel Upload Trigger */}
+                    <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold transition-all shadow-xs shrink-0 active:scale-95">
+                      <Film className="w-4 h-4 text-purple-200" />
+                      <span>{uploadingMedia ? 'Uploading Reel...' : 'Upload Video Reel (.mp4)'}</span>
+                      <input
+                        type="file"
+                        accept="video/mp4,video/quicktime,video/webm,video/*,.mp4,.mov,.webm,.m4v"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={uploadingMedia}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Sortable Media Grid */}
