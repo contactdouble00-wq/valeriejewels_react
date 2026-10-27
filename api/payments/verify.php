@@ -268,7 +268,13 @@ try {
     $itemStmt = $pdo->prepare("
         SELECT 
             oi.id, oi.product_id, oi.variant_id, oi.product_name, oi.variant_title, oi.quantity, oi.unit_price, oi.total_price,
-            (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_url
+            COALESCE(
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.is_primary = 1 AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi2.display_order ASC, pi2.id ASC LIMIT 1),
+                (SELECT pi3.image_url FROM product_images pi3 JOIN products p3 ON pi3.product_id = p3.id WHERE (p3.sku = 'VJ-OXD-016' OR p3.name LIKE '%16 Pairs%') AND (oi.product_name LIKE '%16 Pairs%' OR oi.product_name LIKE '%Oxidized%') AND pi3.image_url NOT LIKE '%.mp4%' AND pi3.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi3.is_primary DESC, pi3.id ASC LIMIT 1)
+            ) AS image_url
         FROM order_items oi
         WHERE oi.order_id = ?
         ORDER BY oi.id ASC

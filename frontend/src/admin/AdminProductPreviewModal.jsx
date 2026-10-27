@@ -108,7 +108,7 @@ export default function AdminProductPreviewModal({
 
   // Fallback single image if none found
   if (mediaList.length === 0) {
-    const rawSingle = product.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80';
+    const rawSingle = product.primary_image || '/v-logo.png';
     const singleUrl = normalizeMediaUrl(rawSingle);
     mediaList.push({
       id: 'fallback-0',

@@ -227,7 +227,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
 
                   <div className="flex items-center space-x-3">
                     <img
-                      src={box.primary_image || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=400&q=80'}
+                      src={box.primary_image || '/v-logo.png'}
                       alt={box.name}
                       className="w-14 h-14 rounded-xl object-cover border border-brand-border shrink-0"
                     />

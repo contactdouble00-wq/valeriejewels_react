@@ -569,20 +569,21 @@ if ($isUpdateAction) {
         foreach ($input['images'] as $idx => $img) {
             $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
             $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_');
-            if (is_array($img) && !empty($img['is_primary'])) {
+            if (is_array($img) && !empty($img['is_primary']) && !$isVid) {
                 $explicitPrimaryIndex = $idx;
             }
             if ($firstPhotoIndex === -1 && !$isVid) {
                 $firstPhotoIndex = $idx;
             }
         }
-        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : 0);
+        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : -1);
 
         foreach ($input['images'] as $idx => $img) {
             $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
             if (!empty($imgUrl)) {
                 $imgUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $imgUrl);
-                $isPri = ($idx === $targetPrimaryIndex) ? 1 : 0;
+                $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $imgUrl) || str_contains($imgUrl, 'video_');
+                $isPri = (!$isVid && $idx === $targetPrimaryIndex) ? 1 : 0;
                 $imgStmt->execute([$id, $imgUrl, $input['name'] ?? 'Product', $idx, $isPri]);
             }
         }
@@ -777,20 +778,21 @@ if ($method === 'POST') {
         foreach ($input['images'] as $idx => $img) {
             $u = is_array($img) ? ($img['image_url'] ?? '') : $img;
             $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $u) || str_contains($u, 'video_');
-            if (is_array($img) && !empty($img['is_primary'])) {
+            if (is_array($img) && !empty($img['is_primary']) && !$isVid) {
                 $explicitPrimaryIndex = $idx;
             }
             if ($firstPhotoIndex === -1 && !$isVid) {
                 $firstPhotoIndex = $idx;
             }
         }
-        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : 0);
+        $targetPrimaryIndex = $explicitPrimaryIndex !== -1 ? $explicitPrimaryIndex : ($firstPhotoIndex !== -1 ? $firstPhotoIndex : -1);
 
         foreach ($input['images'] as $idx => $img) {
             $imgUrl = is_array($img) ? ($img['image_url'] ?? '') : $img;
             if (!empty($imgUrl)) {
                 $imgUrl = preg_replace('#^(https?://[^/]+)?/uploads/#i', '$1/api/uploads/', $imgUrl);
-                $isPri = ($idx === $targetPrimaryIndex) ? 1 : 0;
+                $isVid = preg_match('/\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i', $imgUrl) || str_contains($imgUrl, 'video_');
+                $isPri = (!$isVid && $idx === $targetPrimaryIndex) ? 1 : 0;
                 $imgStmt->execute([$newId, $imgUrl, $name, $idx, $isPri]);
             }
         }

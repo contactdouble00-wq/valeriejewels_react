@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
-import { normalizeMediaUrl } from '../utils/mediaUtils';
+import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
 
 export default function AdminOrdersView({ currentUser, initialSelectedOrderId }) {
   const [orders, setOrders] = useState([]);
@@ -1519,14 +1519,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             title="Click to view product image (Assurance Preview)"
                           >
                             <img
-                              src={normalizeMediaUrl(ord.first_item_image)}
+                              src={
+                                ord.first_item_image && !isVideoMedia(ord.first_item_image)
+                                  ? normalizeMediaUrl(ord.first_item_image)
+                                  : '/v-logo.png'
+                              }
                               alt={ord.first_item_name || 'Ordered item'}
                               className="w-11 h-11 object-cover group-hover:scale-105 transition-transform duration-200"
                               onError={(e) => {
                                 if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                                   e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
                                 } else {
-                                  e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                                  e.target.src = '/v-logo.png';
                                 }
                               }}
                             />
@@ -2004,14 +2008,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                 title="Click to view product image (Assurance Preview)"
                               >
                                 <img
-                                  src={normalizeMediaUrl(ord.first_item_image)}
+                                  src={
+                                    ord.first_item_image && !isVideoMedia(ord.first_item_image)
+                                      ? normalizeMediaUrl(ord.first_item_image)
+                                      : '/v-logo.png'
+                                  }
                                   alt={ord.first_item_name || 'Ordered item'}
                                   className="w-11 h-11 object-cover group-hover:scale-105 transition-transform duration-200"
                                   onError={(e) => {
                                     if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                                       e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
                                     } else {
-                                      e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                                      e.target.src = '/v-logo.png';
                                     }
                                   }}
                                 />
@@ -2870,8 +2878,9 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         >
                           <img
                             src={
-                              item.primary_image ? normalizeMediaUrl(item.primary_image) :
-                              'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80'
+                              item.primary_image && !isVideoMedia(item.primary_image)
+                                ? normalizeMediaUrl(item.primary_image)
+                                : '/v-logo.png'
                             }
                             alt={item.product_name}
                             className="w-12 h-12 rounded-xl object-cover group-hover:scale-105 transition-transform duration-200"
@@ -2879,7 +2888,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                                 e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
                               } else {
-                                e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=150&q=80';
+                                e.target.src = '/v-logo.png';
                               }
                             }}
                           />

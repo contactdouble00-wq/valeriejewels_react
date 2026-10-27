@@ -179,12 +179,12 @@ export const SEED_PRODUCTS = [
     is_anti_tarnish: 1,
     material: 'Brass Alloy with 18K Micro Gold Polish & Handset Seed Pearls',
     is_bestseller: 1,
-    primary_image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85',
+    primary_image: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&h=1600&q=85',
     video_url: '/api/uploads/sample_jewelry_reel_1.mp4',
     images: [
-      { id: 1, image_url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
+      { id: 1, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 1, media_type: 'image' },
       { id: 'reel-1', image_url: '/api/uploads/sample_jewelry_reel_1.mp4', is_primary: 0, media_type: 'video' },
-      { id: 2, image_url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
+      { id: 2, image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1200&h=1600&q=85', is_primary: 0, media_type: 'image' },
     ],
     variants: [
       { id: 1, title: 'Antique Gold Polish', sku: 'VJ-JHM-001-GLD', option1_value: 'Antique Gold', price: '1299.00', mrp: '2499.00', stock_quantity: 100 },
@@ -349,9 +349,9 @@ export const SEED_PRODUCTS = [
     is_anti_tarnish: 1,
     material: '18K Gold Vermeil & Freshwater Pearl',
     is_bestseller: 1,
-    primary_image: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+    primary_image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
     images: [
-      { id: 12, image_url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
+      { id: 12, image_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80', is_primary: 1 },
     ],
     variants: [
       { id: 10, title: 'Yellow Gold', sku: 'VJ-EAR-002-YG', option1_value: 'Yellow Gold', price: '699.00', mrp: '1099.00', stock_quantity: 50 },

@@ -72,7 +72,7 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
   // Fallback if no images found
   if (images.length === 0) {
     images = [{
-      url: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+      url: '/v-logo.png',
       isVideo: false,
       isPrimary: true
     }];
@@ -237,7 +237,7 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
                       if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                         e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
                       } else {
-                        e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80';
+                        e.target.src = '/v-logo.png';
                       }
                     }}
                   />

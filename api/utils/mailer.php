@@ -226,8 +226,9 @@ class MailerService
                         ''
                     ) AS product_slug,
                     COALESCE(
-                        (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id ORDER BY pi.is_primary DESC, pi.display_order ASC LIMIT 1),
-                        (SELECT pi2.image_url FROM product_images pi2 JOIN products p ON pi2.product_id = p.id WHERE p.name = oi.product_name ORDER BY pi2.is_primary DESC LIMIT 1)
+                        (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id AND pi.image_url NOT LIKE '%.mp4%' AND pi.image_url NOT LIKE '%.webm%' AND pi.image_url NOT LIKE '%.mov%' AND pi.image_url NOT LIKE '%video_%' AND pi.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi.is_primary DESC, pi.display_order ASC LIMIT 1),
+                        (SELECT pi2.image_url FROM product_images pi2 JOIN products p ON pi2.product_id = p.id WHERE p.name = oi.product_name AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%.mov%' AND pi2.image_url NOT LIKE '%video_%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi2.is_primary DESC LIMIT 1),
+                        (SELECT pi3.image_url FROM product_images pi3 JOIN products p3 ON pi3.product_id = p3.id WHERE (p3.sku = 'VJ-OXD-016' OR p3.name LIKE '%16 Pairs%') AND (oi.product_name LIKE '%16 Pairs%' OR oi.product_name LIKE '%Oxidized%') AND pi3.image_url NOT LIKE '%.mp4%' AND pi3.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi3.is_primary DESC, pi3.id ASC LIMIT 1)
                     ) AS product_image
                 FROM order_items oi
                 WHERE oi.order_id = ?

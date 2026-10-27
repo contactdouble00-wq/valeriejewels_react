@@ -1176,13 +1176,13 @@ export default function AdminProductsView({ currentUser }) {
                                   </div>
                                 ) : (
                                   <img
-                                    src={thumbUrl || 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80'}
+                                    src={thumbUrl || '/v-logo.png'}
                                     alt={p.name}
                                     onError={(e) => {
                                       if (e.target.src.includes('/uploads/') && !e.target.src.includes('/api/uploads/')) {
                                         e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
                                       } else {
-                                        e.target.src = 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=200&q=80';
+                                        e.target.src = '/v-logo.png';
                                       }
                                     }}
                                     className="w-10 h-10 rounded-lg object-cover group-hover:scale-105 transition-transform duration-200"

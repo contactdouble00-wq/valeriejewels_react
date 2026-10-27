@@ -92,8 +92,11 @@ if ($method === 'GET') {
                 $itemStmt = $pdo->prepare("
                     SELECT oi.*, p.slug, p.sku,
                            COALESCE(
-                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
-                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                               (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                               (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.is_primary = 1 AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                               (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi2.display_order ASC, pi2.id ASC LIMIT 1),
+                               (SELECT pi3.image_url FROM product_images pi3 JOIN products p3 ON pi3.product_id = p3.id WHERE (p3.sku = 'VJ-OXD-016' OR p3.name LIKE '%16 Pairs%') AND (oi.product_name LIKE '%16 Pairs%' OR oi.product_name LIKE '%Oxidized%') AND pi3.image_url NOT LIKE '%.mp4%' AND pi3.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi3.is_primary DESC, pi3.id ASC LIMIT 1)
                            ) AS primary_image
                     FROM order_items oi
                     LEFT JOIN products p ON oi.product_id = p.id
@@ -267,8 +270,11 @@ if ($method === 'GET') {
         $itemStmt = $pdo->prepare("
             SELECT oi.*, p.slug, p.category_id, p.sku,
                    COALESCE(
-                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
-                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                       (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                       (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.is_primary = 1 AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                       (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi2.display_order ASC, pi2.id ASC LIMIT 1),
+                       (SELECT pi3.image_url FROM product_images pi3 JOIN products p3 ON pi3.product_id = p3.id WHERE (p3.sku = 'VJ-OXD-016' OR p3.name LIKE '%16 Pairs%') AND (oi.product_name LIKE '%16 Pairs%' OR oi.product_name LIKE '%Oxidized%') AND pi3.image_url NOT LIKE '%.mp4%' AND pi3.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi3.is_primary DESC, pi3.id ASC LIMIT 1)
                    ) AS primary_image,
                    CASE WHEN p.sku LIKE 'VJ-JHM%' OR p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1) THEN 1 ELSE 0 END AS is_jhumka_box
             FROM order_items oi
@@ -398,8 +404,11 @@ if ($method === 'GET') {
             (SELECT p.sku FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_sku,
             (SELECT p.slug FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_slug,
             (SELECT COALESCE(
-                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 LIMIT 1),
-                (SELECT image_url FROM product_images WHERE product_id = oi.product_id ORDER BY display_order ASC, id ASC LIMIT 1)
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND is_primary = 1 AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                (SELECT image_url FROM product_images WHERE product_id = oi.product_id AND image_url NOT LIKE '%.mp4%' AND image_url NOT LIKE '%.webm%' AND image_url NOT LIKE '%.mov%' AND image_url NOT LIKE '%video_%' AND image_url NOT LIKE '%photo-1630019852942%' ORDER BY display_order ASC, id ASC LIMIT 1),
+                (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.is_primary = 1 AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' LIMIT 1),
+                (SELECT pi2.image_url FROM product_images pi2 JOIN products p2 ON pi2.product_id = p2.id WHERE p2.name = oi.product_name AND pi2.image_url NOT LIKE '%.mp4%' AND pi2.image_url NOT LIKE '%.webm%' AND pi2.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi2.display_order ASC, pi2.id ASC LIMIT 1),
+                (SELECT pi3.image_url FROM product_images pi3 JOIN products p3 ON pi3.product_id = p3.id WHERE (p3.sku = 'VJ-OXD-016' OR p3.name LIKE '%16 Pairs%') AND (oi.product_name LIKE '%16 Pairs%' OR oi.product_name LIKE '%Oxidized%') AND pi3.image_url NOT LIKE '%.mp4%' AND pi3.image_url NOT LIKE '%photo-1630019852942%' ORDER BY pi3.is_primary DESC, pi3.id ASC LIMIT 1)
             ) FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1) AS first_item_image,
             EXISTS (
                 SELECT 1 FROM order_items oi 

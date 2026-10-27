@@ -524,6 +524,50 @@ class Database {
                 $pdo->exec("UPDATE products SET video_url = '/api/uploads/sample_jewelry_reel_1.mp4' WHERE id = 5 OR slug LIKE '%aurelia%' OR sku = 'VJ-NK-001'");
             } catch (Throwable $e) {}
 
+            // Auto-heal primary images: Ensure NO video is ever marked as is_primary = 1 in product_images
+            try {
+                $videoPrimaries = $pdo->query("
+                    SELECT id, product_id 
+                    FROM product_images 
+                    WHERE is_primary = 1 
+                      AND (image_url LIKE '%.mp4%' OR image_url LIKE '%.webm%' OR image_url LIKE '%.mov%' OR image_url LIKE '%.m4v%' OR image_url LIKE '%video_%')
+                ")->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($videoPrimaries)) {
+                    foreach ($videoPrimaries as $vp) {
+                        $pId = (int)$vp['product_id'];
+                        $pdo->exec("
+                            UPDATE product_images 
+                            SET is_primary = 0 
+                            WHERE product_id = {$pId} 
+                              AND (image_url LIKE '%.mp4%' OR image_url LIKE '%.webm%' OR image_url LIKE '%.mov%' OR image_url LIKE '%.m4v%' OR image_url LIKE '%video_%')
+                        ");
+                        $firstPhoto = $pdo->query("
+                            SELECT id 
+                            FROM product_images 
+                            WHERE product_id = {$pId} 
+                              AND image_url NOT LIKE '%.mp4%' 
+                              AND image_url NOT LIKE '%.webm%' 
+                              AND image_url NOT LIKE '%.mov%' 
+                              AND image_url NOT LIKE '%.m4v%' 
+                              AND image_url NOT LIKE '%video_%' 
+                            ORDER BY display_order ASC, id ASC 
+                            LIMIT 1
+                        ")->fetch(PDO::FETCH_ASSOC);
+                        if ($firstPhoto) {
+                            $pdo->exec("UPDATE product_images SET is_primary = 1 WHERE id = {$firstPhoto['id']}");
+                        }
+                    }
+                }
+
+                // Replace legacy placeholder photo-1630019852942-f89202989a59 with proper ethnic jhumka photo
+                $pdo->exec("
+                    UPDATE product_images 
+                    SET image_url = 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80' 
+                    WHERE image_url LIKE '%photo-1630019852942%'
+                ");
+            } catch (Throwable $e) {}
+
             self::seedAdminUser($pdo);
             self::seedDefaultSiteSettings($pdo);
             self::seedDefaultCatalogSqlite($pdo);
@@ -972,8 +1016,8 @@ class Database {
 
             $imgMap = [
                 'VJ-BX-001' => [
-                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
                     'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
                 ],
                 'VJ-BX-002' => [
                     'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
@@ -981,7 +1025,7 @@ class Database {
                 ],
                 'VJ-BX-003' => [
                     'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80',
-                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?auto=format&fit=crop&w=800&q=80',
                 ],
                 'VJ-BX-004' => [
                     'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?auto=format&fit=crop&w=800&q=80',
@@ -999,7 +1043,7 @@ class Database {
             foreach ($prods as $p) {
                 $sku = $p['sku'];
                 $images = $imgMap[$sku] ?? [
-                    'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80',
                 ];
                 foreach ($images as $idx => $url) {
                     $stmt->execute([
