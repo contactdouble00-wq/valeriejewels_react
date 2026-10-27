@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   ShoppingBag,
@@ -416,6 +416,20 @@ function StorefrontContent({
     loadProducts();
     return () => { isMounted = false; };
   }, [selectedCategory, selectedSort, searchQuery]);
+
+  // Prioritize Mystery Jar as the first product in "Discover Everyday Fine Jewelry" when viewing "All Pieces"
+  const displayedProducts = useMemo(() => {
+    if (!Array.isArray(products) || products.length === 0) return [];
+    if (selectedCategory === 'all') {
+      const mysteryIdx = products.findIndex((p) => isMysteryProductSlug(p.slug, p));
+      if (mysteryIdx > 0) {
+        const copy = [...products];
+        const [mystery] = copy.splice(mysteryIdx, 1);
+        return [mystery, ...copy];
+      }
+    }
+    return products;
+  }, [products, selectedCategory]);
 
   // Auto-resolve active PDP product from catalog if opened by URL hash with partial or legacy slug
   useEffect(() => {
@@ -1096,7 +1110,7 @@ function StorefrontContent({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-              {products.map((product) => (
+              {displayedProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}

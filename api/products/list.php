@@ -73,12 +73,15 @@ try {
 
     $whereSql = implode(' AND ', $where);
 
-    // Sorting options
+    // Priority for Mystery Jar when viewing "all" pieces or default sorting
+    $mysteryOrder = "(CASE WHEN (c.slug = 'mystery-jar' OR p.slug = 'mystery-jewellery-jar' OR p.name LIKE '%Mystery%') THEN 0 ELSE 1 END)";
+
+    // Sorting options: in "All pieces" or default popular sort, Mystery Jar ranks first
     $orderBy = match ($sort) {
-        'price_low'  => 'p.price ASC, p.id DESC',
-        'price_high' => 'p.price DESC, p.id DESC',
-        'newest'     => 'p.id DESC',
-        default      => 'p.is_bestseller DESC, p.id DESC', // 'popular'
+        'price_low'  => (empty($category) || $category === 'all') ? "{$mysteryOrder} ASC, p.price ASC, p.id DESC" : 'p.price ASC, p.id DESC',
+        'price_high' => (empty($category) || $category === 'all') ? "{$mysteryOrder} ASC, p.price DESC, p.id DESC" : 'p.price DESC, p.id DESC',
+        'newest'     => (empty($category) || $category === 'all') ? "{$mysteryOrder} ASC, p.id DESC" : 'p.id DESC',
+        default      => "{$mysteryOrder} ASC, p.is_bestseller DESC, p.id DESC", // 'popular'
     };
 
     // 1. Get Total Count

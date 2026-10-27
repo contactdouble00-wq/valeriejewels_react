@@ -62,15 +62,46 @@ function filterSeedProducts(params = {}) {
     );
   }
 
-  // Sort
+  const isMystery = (p) =>
+    p?.category_slug === 'mystery-jar' ||
+    (p?.slug || '').toLowerCase().includes('mystery') ||
+    (p?.name || '').toLowerCase().includes('mystery');
+
+  // Sort: when viewing "All pieces" or default popular sort, Mystery Jar ranks first
   if (params.sort === 'price_low') {
-    list.sort((a, b) => Number(a.price) - Number(b.price));
+    list.sort((a, b) => {
+      if (!params.category || params.category === 'all') {
+        const mA = isMystery(a) ? 1 : 0;
+        const mB = isMystery(b) ? 1 : 0;
+        if (mA !== mB) return mB - mA;
+      }
+      return Number(a.price) - Number(b.price);
+    });
   } else if (params.sort === 'price_high') {
-    list.sort((a, b) => Number(b.price) - Number(a.price));
+    list.sort((a, b) => {
+      if (!params.category || params.category === 'all') {
+        const mA = isMystery(a) ? 1 : 0;
+        const mB = isMystery(b) ? 1 : 0;
+        if (mA !== mB) return mB - mA;
+      }
+      return Number(b.price) - Number(a.price);
+    });
   } else if (params.sort === 'newest') {
-    list.sort((a, b) => b.id - a.id);
+    list.sort((a, b) => {
+      if (!params.category || params.category === 'all') {
+        const mA = isMystery(a) ? 1 : 0;
+        const mB = isMystery(b) ? 1 : 0;
+        if (mA !== mB) return mB - mA;
+      }
+      return b.id - a.id;
+    });
   } else {
-    list.sort((a, b) => (b.is_bestseller || 0) - (a.is_bestseller || 0));
+    list.sort((a, b) => {
+      const mA = isMystery(a) ? 1 : 0;
+      const mB = isMystery(b) ? 1 : 0;
+      if (mA !== mB) return mB - mA;
+      return (b.is_bestseller || 0) - (a.is_bestseller || 0);
+    });
   }
 
   return {

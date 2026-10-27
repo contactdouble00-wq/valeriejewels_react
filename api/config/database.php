@@ -566,6 +566,15 @@ class Database {
                     SET image_url = 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80' 
                     WHERE image_url LIKE '%photo-1630019852942%'
                 ");
+
+                // Auto-heal: Ensure Mystery Jar is active and has canonical slug
+                $pdo->exec("
+                    UPDATE products 
+                    SET is_bestseller = 1, is_active = 1, slug = 'mystery-jewellery-jar' 
+                    WHERE slug IN ('mystery-jewellery-jar', 'mystery-jar', 't')
+                       OR category_id IN (SELECT id FROM categories WHERE slug = 'mystery-jar')
+                       OR name LIKE '%Mystery%'
+                ");
             } catch (Throwable $e) {}
 
             self::seedAdminUser($pdo);
