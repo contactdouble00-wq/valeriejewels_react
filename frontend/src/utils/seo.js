@@ -323,7 +323,7 @@ export function getBrandOrganizationSchema() {
         url: 'https://valeriejewels.in/',
         logo: 'https://valeriejewels.in/v-logo.png',
         image: 'https://valeriejewels.in/v-logo.png',
-        description: 'Valerie Jewels (VALERIÉ) is an Indian everyday luxury jewelry brand crafting anti-tarnish, waterproof 18K gold-plated stainless steel jewellery, signature festive jhumka boxes, and mystery jewellery jars. Follow @valeriejewels.in on Instagram for daily styling inspiration, try-on reels, unboxings, and new releases.',
+        description: 'Valerie Jewels (VALERIÉ) is an Indian everyday luxury jewelry brand offering signature festive jhumka boxes, surprise mystery jewellery jars, and curated everyday jewellery. Follow @valeriejewels.in on Instagram for daily styling inspiration, try-on reels, unboxings, and new releases.',
         email: 'orders@valeriejewels.in',
         telephone: '+919023422392',
         priceRange: '₹499 - ₹2999',
