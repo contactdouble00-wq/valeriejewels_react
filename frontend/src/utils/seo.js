@@ -4,6 +4,9 @@
  * and Schema.org JSON-LD structured data for Google Search rich snippets.
  */
 
+export const OFFICIAL_INSTAGRAM_URL = 'https://www.instagram.com/valeriejewels.in/';
+export const OFFICIAL_AMAZON_STORE_URL = 'https://www.amazon.in/stores/page/4CBE4608-DBC2-4CD2-9FDF-DB829C1C9DF2';
+
 let originalHeadState = null;
 
 export function setPageSeo({
@@ -160,6 +163,8 @@ export function setMysteryJewelleryJarSeo(product = null) {
         seller: {
           '@type': 'Organization',
           name: 'Valerie Jewels',
+          url: 'https://valeriejewels.in/',
+          sameAs: [OFFICIAL_INSTAGRAM_URL, OFFICIAL_AMAZON_STORE_URL],
         },
       }))
     : [
@@ -172,7 +177,7 @@ export function setMysteryJewelleryJarSeo(product = null) {
           availability: 'https://schema.org/InStock',
           url: canonicalUrl,
           itemCondition: 'https://schema.org/NewCondition',
-          seller: { '@type': 'Organization', name: 'Valerie Jewels' },
+          seller: { '@type': 'Organization', name: 'Valerie Jewels', url: 'https://valeriejewels.in/', sameAs: [OFFICIAL_INSTAGRAM_URL, OFFICIAL_AMAZON_STORE_URL] },
         },
         {
           '@type': 'Offer',
@@ -183,7 +188,7 @@ export function setMysteryJewelleryJarSeo(product = null) {
           availability: 'https://schema.org/InStock',
           url: canonicalUrl,
           itemCondition: 'https://schema.org/NewCondition',
-          seller: { '@type': 'Organization', name: 'Valerie Jewels' },
+          seller: { '@type': 'Organization', name: 'Valerie Jewels', url: 'https://valeriejewels.in/', sameAs: [OFFICIAL_INSTAGRAM_URL, OFFICIAL_AMAZON_STORE_URL] },
         },
         {
           '@type': 'Offer',
@@ -194,7 +199,7 @@ export function setMysteryJewelleryJarSeo(product = null) {
           availability: 'https://schema.org/InStock',
           url: canonicalUrl,
           itemCondition: 'https://schema.org/NewCondition',
-          seller: { '@type': 'Organization', name: 'Valerie Jewels' },
+          seller: { '@type': 'Organization', name: 'Valerie Jewels', url: 'https://valeriejewels.in/', sameAs: [OFFICIAL_INSTAGRAM_URL, OFFICIAL_AMAZON_STORE_URL] },
         },
       ];
 
@@ -212,6 +217,11 @@ export function setMysteryJewelleryJarSeo(product = null) {
         brand: {
           '@type': 'Brand',
           name: 'Valerie Jewels',
+          url: 'https://valeriejewels.in/',
+          sameAs: [
+            OFFICIAL_INSTAGRAM_URL,
+            OFFICIAL_AMAZON_STORE_URL
+          ],
         },
         category: 'Jewelry > Mystery Jars & Gift Sets',
         material: 'Stainless Steel, 18K Gold Plated, Crystal Beads',
@@ -294,4 +304,71 @@ export function setMysteryJewelleryJarSeo(product = null) {
     twitterCard: 'summary_large_image',
     jsonLd,
   });
+}
+
+/**
+ * Returns complete Organization & JewelryStore Schema.org graph
+ * Explicitly associates the official Instagram link and Amazon store with Valerie Jewels
+ * for Google Knowledge Graph, Search snippets, and Google AI Overviews.
+ */
+export function getBrandOrganizationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': ['JewelryStore', 'OnlineStore', 'Organization'],
+        '@id': 'https://valeriejewels.in/#organization',
+        name: 'Valerie Jewels',
+        alternateName: ['VALERIÉ', 'Valerie Jewels India', 'Valerie Signature', 'Valerie'],
+        url: 'https://valeriejewels.in/',
+        logo: 'https://valeriejewels.in/v-logo.png',
+        image: 'https://valeriejewels.in/v-logo.png',
+        description: 'Valerie Jewels (VALERIÉ) is an Indian everyday luxury jewelry brand crafting anti-tarnish, waterproof 18K gold-plated stainless steel jewellery, signature festive jhumka boxes, and mystery jewellery jars. Follow @valeriejewels.in on Instagram for daily styling inspiration, try-on reels, unboxings, and new releases.',
+        email: 'orders@valeriejewels.in',
+        telephone: '+919023422392',
+        priceRange: '₹499 - ₹2999',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'Patel Chowk',
+          addressLocality: 'Rajkot',
+          addressRegion: 'Gujarat',
+          postalCode: '360001',
+          addressCountry: 'IN'
+        },
+        sameAs: [
+          OFFICIAL_INSTAGRAM_URL,
+          OFFICIAL_AMAZON_STORE_URL
+        ]
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://valeriejewels.in/#website',
+        url: 'https://valeriejewels.in/',
+        name: 'Valerie Jewels',
+        publisher: {
+          '@id': 'https://valeriejewels.in/#organization'
+        },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: 'https://valeriejewels.in/?search={search_term_string}',
+          'query-input': 'required name=search_term_string'
+        }
+      }
+    ]
+  };
+}
+
+/**
+ * Injects or updates brand-level Organization Schema.org in document head
+ */
+export function initBrandSchema() {
+  if (typeof document === 'undefined') return;
+  let el = document.getElementById('valerie-brand-jsonld');
+  if (!el) {
+    el = document.createElement('script');
+    el.id = 'valerie-brand-jsonld';
+    el.type = 'application/ld+json';
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(getBrandOrganizationSchema());
 }

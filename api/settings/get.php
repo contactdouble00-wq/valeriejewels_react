@@ -24,16 +24,17 @@ try {
                 $data['heroBanner']['rightImageUrl'] = '/hero-jewelry-model.jpg';
             }
             if (!isset($data['customerSupport']) || !is_array($data['customerSupport'])) {
-                $data['customerSupport'] = [
-                    'whatsappNumber'   => '+91 90234 22392',
-                    'drawerButtonText' => 'Customer Care: +91 90234 22392',
-                    'phone'            => '+91 90234 22392',
-                    'email'            => 'orders@valeriejewels.in',
-                    'address'          => 'Patel Chowk, Rajkot, Gujarat',
-                    'hours'            => '7 days a week, 8:00 AM – 4:00 PM',
-                    'whatsappMessage'  => 'Hello Valerie Jewels, I have an inquiry about an item.',
-                ];
+                $data['customerSupport'] = [];
             }
+            $data['customerSupport']['whatsappNumber']   = $data['customerSupport']['whatsappNumber'] ?? '+91 90234 22392';
+            $data['customerSupport']['drawerButtonText'] = $data['customerSupport']['drawerButtonText'] ?? 'Customer Care: +91 90234 22392';
+            $data['customerSupport']['phone']            = $data['customerSupport']['phone'] ?? '+91 90234 22392';
+            $data['customerSupport']['email']            = $data['customerSupport']['email'] ?? 'orders@valeriejewels.in';
+            $data['customerSupport']['address']          = $data['customerSupport']['address'] ?? 'Patel Chowk, Rajkot, Gujarat';
+            $data['customerSupport']['hours']            = $data['customerSupport']['hours'] ?? '7 days a week, 8:00 AM – 4:00 PM';
+            $data['customerSupport']['whatsappMessage']  = $data['customerSupport']['whatsappMessage'] ?? 'Hello Valerie Jewels, I have an inquiry about an item.';
+            $data['customerSupport']['instagramUrl']     = $data['customerSupport']['instagramUrl'] ?? 'https://www.instagram.com/valeriejewels.in/';
+            $data['customerSupport']['instagramHandle']  = $data['customerSupport']['instagramHandle'] ?? '@valeriejewels.in';
             if (!isset($data['mobileSlider']) || !is_array($data['mobileSlider'])) {
                 $data['mobileSlider'] = [
                     'enabled'  => true,
@@ -250,6 +251,8 @@ try {
             'address'          => 'Patel Chowk, Rajkot, Gujarat',
             'hours'            => '7 days a week, 8:00 AM – 4:00 PM',
             'whatsappMessage'  => 'Hello Valerie Jewels, I have an inquiry about an item.',
+            'instagramUrl'     => 'https://www.instagram.com/valeriejewels.in/',
+            'instagramHandle'  => '@valeriejewels.in',
         ],
         'seoTracking' => [
             'googleAnalyticsId'      => '',

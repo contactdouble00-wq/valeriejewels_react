@@ -16,6 +16,7 @@ import {
   RotateCcw,
   HelpCircle
 } from 'lucide-react';
+import InstagramIcon from './InstagramIcon';
 import { useSiteContent } from '../context/SiteContentContext';
 import AmazonTrustBadge from './AmazonTrustBadge';
 
@@ -381,6 +382,21 @@ export default function MobileSidebarDrawer({
                 </a>
               );
             })()}
+
+            {/* Official Instagram Page Link */}
+            <a
+              href="https://www.instagram.com/valeriejewels.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-amber-500/10 hover:from-purple-500/20 hover:via-pink-500/20 hover:to-amber-500/20 border border-pink-300/40 text-brand-tertiary text-xs font-semibold flex items-center justify-center space-x-2 transition-all shadow-2xs cursor-pointer"
+              title="Follow @valeriejewels.in on Instagram"
+              aria-label="Follow @valeriejewels.in on Instagram"
+            >
+              <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shrink-0">
+                <InstagramIcon className="w-2.5 h-2.5" />
+              </span>
+              <span>Follow <strong className="text-[#bc1888]">@valeriejewels.in</strong> on Instagram</span>
+            </a>
 
             {/* Amazon Store Reassurance */}
             <AmazonTrustBadge variant="sidebar" />

@@ -51,6 +51,8 @@ const FACTORY_DEFAULTS = {
     address: 'Patel Chowk, Rajkot, Gujarat',
     hours: '7 days a week, 8:00 AM – 4:00 PM',
     whatsappMessage: 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.',
+    instagramUrl: 'https://www.instagram.com/valeriejewels.in/',
+    instagramHandle: '@valeriejewels.in',
   },
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',

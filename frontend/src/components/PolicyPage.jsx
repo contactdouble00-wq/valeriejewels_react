@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Video
 } from 'lucide-react';
+import InstagramIcon from './InstagramIcon';
 import { apiService } from '../services/api';
 import { DEFAULT_POLICIES } from '../data/defaultPolicies';
 
@@ -509,8 +510,17 @@ export default function PolicyPage({
       {/* 7. Bottom Return to Shopping Strip */}
       <footer className="bg-white border-t border-brand-border py-6 px-4 text-center">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-brand-muted">
-          <div>
-            © {new Date().getFullYear()} {meta.brandName || 'VALERIÉ'}. Registered in India under Valerie Jewels Atelier Private Limited.
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <span>© {new Date().getFullYear()} {meta.brandName || 'VALERIÉ'}. Registered in India under Valerie Jewels Atelier Private Limited.</span>
+            <a
+              href="https://www.instagram.com/valeriejewels.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#bc1888] font-semibold hover:underline flex items-center gap-1"
+            >
+              <InstagramIcon className="w-3.5 h-3.5" />
+              <span>@valeriejewels.in</span>
+            </a>
           </div>
           <button
             onClick={handleGoHome}

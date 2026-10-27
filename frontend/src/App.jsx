@@ -17,6 +17,7 @@ import {
   Truck,
   ExternalLink
 } from 'lucide-react';
+import InstagramIcon from './components/InstagramIcon';
 import { apiService } from './services/api';
 import { SEED_CATEGORIES } from './data/seedCatalog';
 import { CartProvider, useCart } from './context/CartContext';
@@ -1272,12 +1273,35 @@ function StorefrontContent({
               <p className="text-xs text-brand-muted mt-2 max-w-sm text-center md:text-left font-light">
                 Curated everyday luxury jewelry crafted for timeless elegance and effortless beauty.
               </p>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <AmazonTrustBadge variant="footer" />
+                
+                {/* Official Instagram Follow Pill */}
+                <a
+                  href="https://www.instagram.com/valeriejewels.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-amber-500/10 hover:from-purple-500/20 hover:via-pink-500/20 hover:to-amber-500/20 border border-pink-300/40 text-xs font-semibold text-brand-tertiary transition-all duration-300 shadow-2xs hover:shadow-xs active:scale-95"
+                  title="Follow Valerie Jewels on Instagram (@valeriejewels.in)"
+                  aria-label="Follow Valerie Jewels on Instagram"
+                >
+                  <span className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shadow-2xs group-hover:scale-110 transition-transform">
+                    <InstagramIcon className="w-3 h-3" />
+                  </span>
+                  <span className="font-medium text-brand-tertiary group-hover:text-brand-primary transition-colors">
+                    Follow <span className="font-bold text-[#bc1888]">@valeriejewels.in</span>
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-brand-muted group-hover:text-brand-primary transition-colors" />
+                </a>
               </div>
+
+              {/* Instagram & Social Media SEO Contextual Description */}
+              <p className="text-[11px] text-brand-muted max-w-sm text-center md:text-left font-light leading-relaxed mt-2.5">
+                Join our community of 10,000+ jewelry lovers on Instagram <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-tertiary hover:text-brand-primary underline decoration-brand-border underline-offset-2">@valeriejewels.in</a> for daily styling reels, luxury try-ons, unboxings, anti-tarnish jewelry care tips, and exclusive secret drops.
+              </p>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6 text-xs text-brand-muted font-light">
+            <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-3 text-xs text-brand-muted font-light">
               <a
                 href="/shipping-policy"
                 onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('shipping'); }}
@@ -1327,6 +1351,20 @@ function StorefrontContent({
                 Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
               </button>
               <a
+                href="https://www.instagram.com/valeriejewels.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#bc1888] transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1.5"
+                title="Official Valerie Jewels Instagram Profile (@valeriejewels.in)"
+                aria-label="Official Valerie Jewels Instagram Profile"
+              >
+                <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shrink-0">
+                  <InstagramIcon className="w-2.5 h-2.5" />
+                </span>
+                <span>Instagram (@valeriejewels.in)</span>
+                <ExternalLink className="w-3 h-3 text-brand-muted" />
+              </a>
+              <a
                 href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1353,10 +1391,12 @@ function StorefrontContent({
             const address = support.address || 'Patel Chowk, Rajkot, Gujarat';
             const hours = support.hours || '7 days a week, 8:00 AM – 4:00 PM';
             const waMsg = encodeURIComponent(support.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.');
+            const igUrl = support.instagramUrl || 'https://www.instagram.com/valeriejewels.in/';
+            const igHandle = support.instagramHandle || '@valeriejewels.in';
 
             return (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2 text-xs text-brand-muted">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 py-2 text-xs text-brand-muted">
                   <div className="flex items-center space-x-2">
                     <span className="font-semibold text-brand-tertiary">📍</span>
                     <span>{address}</span>
@@ -1373,11 +1413,31 @@ function StorefrontContent({
                     <span className="font-semibold text-brand-tertiary">✉️</span>
                     <a href={`mailto:${email}`} className="hover:text-brand-primary transition-colors">{email}</a>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <InstagramIcon className="w-3.5 h-3.5 text-[#bc1888] shrink-0" />
+                    <a href={igUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#bc1888] transition-colors font-medium">
+                      Instagram: {igHandle}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Rich Semantic Brand Description for Google Search & Google AI (SGE / Gemini) */}
+                <div className="pt-4 border-t border-brand-border text-[11px] text-brand-muted font-light leading-relaxed">
+                  <p>
+                    <strong className="font-medium text-brand-tertiary">Valerie Jewels (VALERIÉ)</strong> is an Indian everyday luxury jewelry atelier offering handcrafted anti-tarnish 18K gold-plated stainless steel jewellery, signature festive jhumka keepsake boxes, and surprise mystery jewellery jars. Headquartered in Rajkot, Gujarat, India, delivering with insured express shipping across 29,000+ Indian pincodes. Follow our official verified Instagram page <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-tertiary hover:text-[#bc1888] underline decoration-brand-border underline-offset-2">@valeriejewels.in</a> for genuine customer try-on reels, unboxings, anti-tarnish jewelry care guidelines, and exclusive limited drops. You can also shop our verified collections on the <a href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-tertiary hover:text-brand-primary underline decoration-brand-border underline-offset-2">Valerie Jewels Amazon Brand Store</a>.
+                  </p>
                 </div>
 
                 {/* Copyright */}
                 <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4 pt-4 border-t border-brand-border">
                   <div>© {new Date().getFullYear()} VALERIÉ. All rights reserved. Open hours: {hours}.</div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span>Official Social Channel:</span>
+                    <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#bc1888] hover:underline flex items-center gap-1">
+                      <InstagramIcon className="w-3 h-3" />
+                      <span>@valeriejewels.in</span>
+                    </a>
+                  </div>
                 </div>
               </>
             );

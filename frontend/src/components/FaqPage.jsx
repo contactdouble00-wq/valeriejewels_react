@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   X
 } from 'lucide-react';
+import InstagramIcon from './InstagramIcon';
 import { apiService } from '../services/api';
 import { DEFAULT_FAQS_DATA } from '../data/defaultFaqs';
 
@@ -446,7 +447,16 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
       <footer className="bg-white border-t border-brand-border py-8 mt-16 text-center text-xs text-brand-muted font-light">
         <div className="max-w-5xl mx-auto px-4 space-y-2">
           <p>© {new Date().getFullYear()} VALERIÉ (Valerie Jewels). All rights reserved.</p>
-          <p className="text-[11px] text-brand-muted/70">Patel Chowk, Rajkot, Gujarat — 360001, India • Concierge: orders@valeriejewels.in</p>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-brand-muted/80">
+            <span>Patel Chowk, Rajkot, Gujarat — 360001, India</span>
+            <span>•</span>
+            <a href="mailto:orders@valeriejewels.in" className="hover:underline">Concierge: orders@valeriejewels.in</a>
+            <span>•</span>
+            <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#bc1888] hover:underline flex items-center gap-1">
+              <InstagramIcon className="w-3 h-3" />
+              <span>@valeriejewels.in</span>
+            </a>
+          </div>
         </div>
       </footer>
     </div>

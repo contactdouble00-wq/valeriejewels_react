@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Headphones,
 } from 'lucide-react';
+import InstagramIcon from '../components/InstagramIcon';
 import { adminApi } from './adminApi';
 
 const DEFAULT_SUPPORT = {
@@ -23,6 +24,8 @@ const DEFAULT_SUPPORT = {
   email: 'orders@valeriejewels.in',
   hours: '7 days a week, 8:00 AM – 4:00 PM',
   address: 'Patel Chowk, Rajkot, Gujarat',
+  instagramUrl: 'https://www.instagram.com/valeriejewels.in/',
+  instagramHandle: '@valeriejewels.in',
 };
 
 export default function AdminCustomerCareView() {
@@ -211,6 +214,7 @@ export default function AdminCustomerCareView() {
             <span>📞 {supportData.phone || '+91 90234 22392'}</span>
             <span className="text-emerald-700 font-semibold">💬 WA: {supportData.whatsappNumber || '+91 90234 22392'}</span>
             <span>✉️ {supportData.email || 'orders@valeriejewels.in'}</span>
+            <span className="text-[#bc1888] font-semibold">📸 IG: @valeriejewels.in</span>
           </div>
         </div>
       </div>
@@ -346,6 +350,35 @@ export default function AdminCustomerCareView() {
             />
             <p className="text-[11px] text-brand-muted font-light">
               Physical dispatch atelier location shown next to the pin icon.
+            </p>
+          </div>
+
+          {/* Field 8: Official Instagram Page */}
+          <div className="space-y-1.5 p-4 rounded-xl bg-gradient-to-r from-purple-50/70 via-pink-50/50 to-amber-50/50 border border-pink-200/60">
+            <label className="text-xs font-bold text-brand-tertiary flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <InstagramIcon className="w-3.5 h-3.5 text-[#bc1888]" />
+                <span>Official Instagram Page URL</span>
+              </span>
+              <a
+                href={supportData.instagramUrl || 'https://www.instagram.com/valeriejewels.in/'}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-[#bc1888] hover:underline font-semibold flex items-center gap-1"
+              >
+                <span>View Instagram</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </label>
+            <input
+              type="url"
+              value={supportData.instagramUrl || ''}
+              onChange={(e) => handleFieldChange('instagramUrl', e.target.value)}
+              placeholder="https://www.instagram.com/valeriejewels.in/"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary font-medium"
+            />
+            <p className="text-[11px] text-brand-muted font-light">
+              Official brand profile URL displayed in the footer, mobile drawer, and Schema.org structured data for Google SEO & Google AI.
             </p>
           </div>
         </div>
