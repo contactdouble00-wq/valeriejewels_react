@@ -1761,29 +1761,27 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             {ord.courier_name || 'JustShyp Partner'}
                           </div>
                         </div>
-                      ) : (
-                        <div className="space-y-1.5 min-w-[125px]">
-                          {ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
-                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              <span>SR #{ord.shiprocket_order_id}</span>
-                            </span>
+                      ) : ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>SR #{ord.shiprocket_order_id}</span>
+                          </span>
+                          {ord.shiprocket_awb ? (
+                            <div className="text-[11px] font-mono text-emerald-700 font-bold truncate max-w-[140px]" title={ord.shiprocket_awb}>
+                              AWB: {ord.shiprocket_awb}
+                            </div>
                           ) : (
-                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                              <span>Ready to Sync</span>
-                            </span>
+                            <div className="text-[9.5px] text-emerald-600 font-medium">Awaiting AWB</div>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => handleSyncJustShyp(ord.id)}
-                            disabled={syncingJsId === ord.id || syncingSrId === ord.id}
-                            className="w-full px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-bold transition-all shadow-xs flex items-center justify-center space-x-1 cursor-pointer disabled:opacity-50 whitespace-nowrap"
-                            title="Sync order directly to JustShyp panel"
-                          >
-                            <Truck className={`w-3.5 h-3.5 ${syncingJsId === ord.id ? 'animate-bounce' : ''}`} />
-                            <span>{syncingJsId === ord.id ? 'Syncing...' : 'Sync to JustShyp'}</span>
-                          </button>
+                          <div className="text-[10px] text-brand-muted truncate max-w-[140px]">
+                            {ord.courier_name || 'Shiprocket Partner'}
+                          </div>
                         </div>
+                      ) : (
+                        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          <span>Ready to Sync</span>
+                        </span>
                       )}
                     </td>
 
