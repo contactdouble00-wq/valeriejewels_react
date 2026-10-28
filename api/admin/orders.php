@@ -684,6 +684,9 @@ if ($action === 'sync_justshyp') {
         if (!empty($input['courier'])) {
             $options['courier'] = $input['courier'];
         }
+        if (!empty($input['courier_keyword'])) {
+            $options['courier_keyword'] = $input['courier_keyword'];
+        }
         $result = $provider->createShipment($orderId, $options);
         if (!empty($result['success'])) {
             ApiResponse::success($result, $result['message'] ?? 'Order pushed to JustShyp panel successfully!');

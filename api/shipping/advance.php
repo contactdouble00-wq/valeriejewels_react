@@ -48,11 +48,34 @@ try {
         ApiResponse::error('Order not found', 404);
     }
 
-    // Ensure AWB created first
-    ShiprocketService::createShipment($id);
+    // Check delivery provider
+    require_once __DIR__ . '/DeliveryProviderFactory.php';
+    $provider = DeliveryProviderFactory::getProviderForOrder($id);
 
-    // Advance status
-    $result = ShiprocketService::advanceOrderStatus($id, $newStatus, $location, $note);
+    if ($provider->getName() === 'justshyp') {
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+        $up = $pdo->prepare("UPDATE orders SET order_status = :st, updated_at = $nowSql WHERE id = :id");
+        $up->execute([':st' => $newStatus, ':id' => $id]);
+
+        $ev = $pdo->prepare("
+            INSERT INTO order_tracking_events (order_id, status, title, description, location, courier_partner, occurred_at)
+            VALUES (:oid, :st, :title, :desc, :loc, 'JustShyp Partner', $nowSql)
+        ");
+        $ev->execute([
+            ':oid'   => $id,
+            ':st'    => $newStatus,
+            ':title' => 'Shipment Status: ' . ucfirst($newStatus),
+            ':desc'  => !empty($note) ? $note : "Shipment status advanced to {$newStatus}",
+            ':loc'   => !empty($location) ? $location : 'Transit Hub',
+        ]);
+        $result = ['order_id' => $id, 'status' => $newStatus];
+    } else {
+        // Ensure AWB created first
+        ShiprocketService::createShipment($id);
+
+        // Advance status
+        $result = ShiprocketService::advanceOrderStatus($id, $newStatus, $location, $note);
+    }
 
     // Phase 7: If advancing to shipped, trigger idempotent shipping email
     if ($newStatus === 'shipped') {

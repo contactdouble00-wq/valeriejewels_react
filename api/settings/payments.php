@@ -37,11 +37,11 @@ $defaultSettings = [
     'shiprocket_pickup_location' => getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Primary',
     'shiprocket_auto_sync'       => true,
     'default_delivery_provider'  => getenv('DEFAULT_DELIVERY_PROVIDER') ?: 'shiprocket',
-    'justshyp_base_url'          => getenv('JUSTSHYP_BASE_URL') ?: 'https://backend.justshyp.com',
-    'justshyp_access_token'      => getenv('JUSTSHYP_ACCESS_TOKEN') ?: '',
-    'justshyp_email'             => getenv('JUSTSHYP_EMAIL') ?: '',
-    'justshyp_password'          => getenv('JUSTSHYP_PASSWORD') ?: '',
-    'justshyp_warehouse_id'      => getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166',
+    'justshyp_base_url'          => getenv('JUSTSHYP_BASE_URL') ?: ($_ENV['JUSTSHYP_BASE_URL'] ?? 'https://backend.justshyp.com'),
+    'justshyp_access_token'      => getenv('JUSTSHYP_ACCESS_TOKEN') ?: ($_ENV['JUSTSHYP_ACCESS_TOKEN'] ?? '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426'),
+    'justshyp_email'             => getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ''),
+    'justshyp_password'          => getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ''),
+    'justshyp_warehouse_id'      => getenv('JUSTSHYP_WAREHOUSE_ID') ?: ($_ENV['JUSTSHYP_WAREHOUSE_ID'] ?? '166'),
     'justshyp_auto_sync'         => true,
     'checkout_banner_text'  => '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     'exit_intent_enabled'   => true,
@@ -160,10 +160,24 @@ try {
         if (empty($settings['justshyp_warehouse_id'])) {
             $settings['justshyp_warehouse_id'] = getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166';
         }
+        if (empty($settings['justshyp_access_token'])) {
+            $settings['justshyp_access_token'] = getenv('JUSTSHYP_ACCESS_TOKEN') ?: '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426';
+        }
 
-        // Check if admin token is present in Authorization header
+        // Check if admin token is present in Authorization header, Apache headers, X-Admin-Token, or query param
         $isAdmin = false;
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (empty($authHeader) && function_exists('apache_request_headers')) {
+            $h = apache_request_headers();
+            $authHeader = $h['Authorization'] ?? ($h['authorization'] ?? '');
+        }
+        if (empty($authHeader) && !empty($_SERVER['HTTP_X_ADMIN_TOKEN'])) {
+            $authHeader = 'Bearer ' . trim($_SERVER['HTTP_X_ADMIN_TOKEN']);
+        }
+        if (empty($authHeader) && !empty($_GET['token'])) {
+            $authHeader = 'Bearer ' . trim($_GET['token']);
+        }
+
         if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
             require_once dirname(__DIR__) . '/utils/jwt.php';
             $configFile = dirname(__DIR__) . '/config/config.php';
@@ -237,7 +251,7 @@ try {
             'shiprocket_auto_sync'       => isset($data['shiprocket_auto_sync']) ? (bool)$data['shiprocket_auto_sync'] : ($current['shiprocket_auto_sync'] ?? true),
             'default_delivery_provider'  => in_array($data['default_delivery_provider'] ?? '', ['shiprocket', 'justshyp']) ? $data['default_delivery_provider'] : ($current['default_delivery_provider'] ?? 'shiprocket'),
             'justshyp_base_url'          => !empty($data['justshyp_base_url']) ? trim($data['justshyp_base_url']) : ($current['justshyp_base_url'] ?? 'https://backend.justshyp.com'),
-            'justshyp_access_token'      => !empty($data['justshyp_access_token']) ? trim($data['justshyp_access_token']) : ($current['justshyp_access_token'] ?? ''),
+            'justshyp_access_token'      => !empty($data['justshyp_access_token']) ? trim($data['justshyp_access_token']) : (!empty($current['justshyp_access_token']) ? $current['justshyp_access_token'] : '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426'),
             'justshyp_email'             => isset($data['justshyp_email']) ? trim($data['justshyp_email']) : ($current['justshyp_email'] ?? ''),
             'justshyp_password'          => !empty($data['justshyp_password']) ? trim($data['justshyp_password']) : ($current['justshyp_password'] ?? ''),
             'justshyp_warehouse_id'      => isset($data['justshyp_warehouse_id']) && trim($data['justshyp_warehouse_id']) !== '' ? trim($data['justshyp_warehouse_id']) : ($current['justshyp_warehouse_id'] ?? '166'),

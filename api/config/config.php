@@ -134,14 +134,14 @@ $config['fastrr']['webhook_secret'] = $fastrrWebhookSecret;
 $config['fastrr']['sandbox'] = false;
 
 // JustShyp Delivery Partner
-$justshypBaseUrl = getenv('JUSTSHYP_BASE_URL') ?: ($_ENV['JUSTSHYP_BASE_URL'] ?? 'https://backend.justshyp.com');
-$justshypAccessToken = getenv('JUSTSHYP_ACCESS_TOKEN') ?: ($_ENV['JUSTSHYP_ACCESS_TOKEN'] ?? '');
+$justshypBaseUrl = getenv('JUSTSHYP_BASE_URL') ?: ($_ENV['JUSTSHYP_BASE_URL'] ?? ($_SERVER['JUSTSHYP_BASE_URL'] ?? 'https://backend.justshyp.com'));
+$justshypAccessToken = getenv('JUSTSHYP_ACCESS_TOKEN') ?: ($_ENV['JUSTSHYP_ACCESS_TOKEN'] ?? ($_SERVER['JUSTSHYP_ACCESS_TOKEN'] ?? '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426'));
 $config['justshyp'] = [
     'base_url'     => rtrim($justshypBaseUrl, '/'),
     'access_token' => $justshypAccessToken,
-    'email'        => getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ''),
-    'password'     => getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ''),
-    'warehouse_id' => getenv('JUSTSHYP_WAREHOUSE_ID') ?: ($_ENV['JUSTSHYP_WAREHOUSE_ID'] ?? '166'),
+    'email'        => getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ($_SERVER['JUSTSHYP_EMAIL'] ?? '')),
+    'password'     => getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ($_SERVER['JUSTSHYP_PASSWORD'] ?? '')),
+    'warehouse_id' => getenv('JUSTSHYP_WAREHOUSE_ID') ?: ($_ENV['JUSTSHYP_WAREHOUSE_ID'] ?? ($_SERVER['JUSTSHYP_WAREHOUSE_ID'] ?? '166')),
 ];
 
 // 4. SMTP Email Credentials (Environment Variables & Database Overrides)

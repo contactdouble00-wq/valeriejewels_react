@@ -4582,7 +4582,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             onClick={() => {
                               setRateComparisonModalOpen(false);
                               if (isJs) {
-                                handleSyncJustShyp(rateComparisonOrder.id, rate.courier_name);
+                                handleSyncJustShyp(rateComparisonOrder.id, rate.courier_keyword || rate.courier_name);
                               } else {
                                 handleSyncShiprocket(rateComparisonOrder.id);
                               }

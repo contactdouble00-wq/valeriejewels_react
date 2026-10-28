@@ -72,7 +72,7 @@ export default function AdminPaymentSettingsView() {
     shiprocket_auto_sync: true,
     default_delivery_provider: 'shiprocket',
     justshyp_base_url: 'https://backend.justshyp.com',
-    justshyp_access_token: '',
+    justshyp_access_token: '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426',
     justshyp_warehouse_id: '166',
     justshyp_auto_sync: true,
     checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',

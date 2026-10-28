@@ -57,7 +57,7 @@ return [
 
     'justshyp' => [
         'base_url'     => 'https://backend.justshyp.com',
-        'access_token' => '',
+        'access_token' => '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426',
         'email'        => '',
         'password'     => '',
         'warehouse_id' => '166',

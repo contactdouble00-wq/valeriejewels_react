@@ -44,13 +44,13 @@ class JustShypProvider implements DeliveryProviderInterface
 
             $jsConfig = $allConfig['justshyp'] ?? [];
 
-            $baseUrl = getenv('JUSTSHYP_BASE_URL') ?: (!empty($dbSettings['justshyp_base_url']) ? $dbSettings['justshyp_base_url'] : ($jsConfig['base_url'] ?? 'https://backend.justshyp.com'));
-            $token   = getenv('JUSTSHYP_ACCESS_TOKEN') ?: (!empty($dbSettings['justshyp_access_token']) ? $dbSettings['justshyp_access_token'] : ($jsConfig['access_token'] ?? ''));
-            $email   = getenv('JUSTSHYP_EMAIL') ?: (!empty($dbSettings['justshyp_email']) ? $dbSettings['justshyp_email'] : ($jsConfig['email'] ?? ''));
-            $pass    = getenv('JUSTSHYP_PASSWORD') ?: (!empty($dbSettings['justshyp_password']) ? $dbSettings['justshyp_password'] : ($jsConfig['password'] ?? ''));
+            $baseUrl = getenv('JUSTSHYP_BASE_URL') ?: ($_ENV['JUSTSHYP_BASE_URL'] ?? ($_SERVER['JUSTSHYP_BASE_URL'] ?? (!empty($dbSettings['justshyp_base_url']) ? $dbSettings['justshyp_base_url'] : ($jsConfig['base_url'] ?? 'https://backend.justshyp.com'))));
+            $token   = getenv('JUSTSHYP_ACCESS_TOKEN') ?: ($_ENV['JUSTSHYP_ACCESS_TOKEN'] ?? ($_SERVER['JUSTSHYP_ACCESS_TOKEN'] ?? (!empty($dbSettings['justshyp_access_token']) ? $dbSettings['justshyp_access_token'] : ($jsConfig['access_token'] ?? '8cf39dd6a9d4df7548fc86764cb4bd82cb4240f489215521af3540bd9a606426'))));
+            $email   = getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ($_SERVER['JUSTSHYP_EMAIL'] ?? (!empty($dbSettings['justshyp_email']) ? $dbSettings['justshyp_email'] : ($jsConfig['email'] ?? ''))));
+            $pass    = getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ($_SERVER['JUSTSHYP_PASSWORD'] ?? (!empty($dbSettings['justshyp_password']) ? $dbSettings['justshyp_password'] : ($jsConfig['password'] ?? ''))));
             $warehouseId = !empty($dbSettings['justshyp_warehouse_id']) 
                 ? (string)$dbSettings['justshyp_warehouse_id'] 
-                : ($jsConfig['warehouse_id'] ?? (getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166'));
+                : ($jsConfig['warehouse_id'] ?? (getenv('JUSTSHYP_WAREHOUSE_ID') ?: ($_ENV['JUSTSHYP_WAREHOUSE_ID'] ?? ($_SERVER['JUSTSHYP_WAREHOUSE_ID'] ?? '166'))));
 
             self::$settings = [
                 'base_url'      => rtrim($baseUrl, '/'),
@@ -121,7 +121,9 @@ class JustShypProvider implements DeliveryProviderInterface
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $res = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80500) {
+            @curl_close($ch);
+        }
 
         $parsed = json_decode($res, true) ?: [];
 
@@ -224,7 +226,9 @@ class JustShypProvider implements DeliveryProviderInterface
             $responseBody = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
-            curl_close($ch);
+            if (PHP_VERSION_ID < 80500) {
+            @curl_close($ch);
+        }
 
             // Retry only on 5xx or network errors when canRetry = true
             if ($canRetry && ($httpCode >= 500 || $responseBody === false) && $attempt < $maxAttempts) {
@@ -523,12 +527,13 @@ class JustShypProvider implements DeliveryProviderInterface
             foreach ($items as $r) {
                 if (!is_array($r)) continue;
                 $ratesList[] = [
-                    'provider'     => 'justshyp',
-                    'courier_name' => $r['courier_name'] ?? ($r['name'] ?? ($r['courier'] ?? 'JustShyp Partner')),
-                    'courier_id'   => $r['courier_id'] ?? ($r['id'] ?? null),
-                    'rate'         => (float)($r['rate'] ?? ($r['total_charge'] ?? ($r['freight_charge'] ?? 0))),
-                    'etd'          => $r['etd'] ?? ($r['delivery_days'] ?? null),
-                    'mode'         => $r['express_type'] ?? 'surface',
+                    'provider'        => 'justshyp',
+                    'courier_name'    => $r['courier_name'] ?? ($r['name'] ?? ($r['courier'] ?? 'JustShyp Partner')),
+                    'courier_id'      => $r['courier_id'] ?? ($r['id'] ?? null),
+                    'courier_keyword' => $r['keyword'] ?? null,
+                    'rate'            => (float)($r['total'] ?? ($r['rate'] ?? ($r['total_charge'] ?? ($r['freight_charge'] ?? ($r['freight'] ?? 0))))),
+                    'etd'             => $r['edd_days'] ?? ($r['etd'] ?? ($r['delivery_days'] ?? ($r['expected_delivery_date'] ?? null))),
+                    'mode'            => $r['service'] ?? ($r['express_type'] ?? 'surface'),
                 ];
             }
         }
@@ -710,14 +715,22 @@ class JustShypProvider implements DeliveryProviderInterface
         }
 
         // Parse JustShyp success payload
-        // Sample fields: shipment_id, waybill_number, awb, courier_name, label_url, invoice_url
+        // Sample fields: shipment_id, waybill_number, awb, courier, courier_name, label_url, invoice_url
         $data = $res['data'] ?? [];
+        $cfg  = self::getSettings();
         $awb  = (string)($data['waybill_number'] ?? ($data['awb'] ?? ($data['awb_number'] ?? '')));
         $shipmentId = (string)($data['shipment_id'] ?? ($data['id'] ?? $awb));
         $courierName = (string)($data['courier_name'] ?? ($data['courier'] ?? 'JustShyp Express'));
         $trackingUrl = !empty($awb) ? "https://backend.justshyp.com/tracking?awb={$awb}" : null;
         $labelUrl    = $data['label_url'] ?? null;
         $invoiceUrl  = $data['invoice_url'] ?? null;
+
+        if (!empty($labelUrl) && str_starts_with($labelUrl, '/')) {
+            $labelUrl = rtrim($cfg['base_url'], '/') . $labelUrl;
+        }
+        if (!empty($invoiceUrl) && str_starts_with($invoiceUrl, '/')) {
+            $invoiceUrl = rtrim($cfg['base_url'], '/') . $invoiceUrl;
+        }
 
         // Fetch label right away if not returned in create payload
         if (empty($labelUrl) && !empty($awb)) {
@@ -736,6 +749,7 @@ class JustShypProvider implements DeliveryProviderInterface
                 provider_order_id    = :p_oid,
                 provider_shipment_id = :p_sid,
                 provider_awb         = :p_awb,
+                order_status         = CASE WHEN order_status IN ('pending', 'confirmed') THEN 'processing' ELSE order_status END,
                 shipping_label_url   = COALESCE(NULLIF(:label_url, ''), shipping_label_url),
                 shipping_invoice_url = COALESCE(NULLIF(:invoice_url, ''), shipping_invoice_url),
                 courier_name         = COALESCE(NULLIF(:courier, ''), courier_name),
@@ -925,14 +939,14 @@ class JustShypProvider implements DeliveryProviderInterface
         $data = $res['data'] ?? [];
         $rawStatus = strtolower($data['current_status'] ?? ($data['status'] ?? 'processing'));
         $normStatus = self::mapStatus($rawStatus);
-        $scans = $data['scans'] ?? ($data['tracking_activities'] ?? []);
+        $scans = $data['events'] ?? ($data['scans'] ?? ($data['tracking_activities'] ?? []));
 
         $events = [];
         foreach ($scans as $s) {
             $events[] = [
-                'activity' => $s['activity'] ?? ($s['status'] ?? ''),
+                'activity' => $s['description'] ?? ($s['activity'] ?? ($s['remarks'] ?? ($s['status'] ?? ''))),
                 'location' => $s['location'] ?? '',
-                'date'     => $s['date'] ?? ($s['time'] ?? ''),
+                'date'     => $s['datetime'] ?? ($s['date'] ?? ($s['time'] ?? '')),
             ];
         }
 
@@ -942,7 +956,7 @@ class JustShypProvider implements DeliveryProviderInterface
             'awb'               => $awb,
             'current_status'    => $rawStatus,
             'normalized_status' => $normStatus,
-            'courier_name'      => $data['courier_name'] ?? 'JustShyp Partner',
+            'courier_name'      => $data['courier_name'] ?? ($data['courier'] ?? 'JustShyp Partner'),
             'events'            => $events,
             'raw'               => $data,
         ];
@@ -967,8 +981,16 @@ class JustShypProvider implements DeliveryProviderInterface
         }
 
         $data = $res['data'] ?? [];
+        $cfg  = self::getSettings();
         $labelUrl   = $data['label_url'] ?? ($data['shipping_label_url'] ?? null);
         $invoiceUrl = $data['invoice_url'] ?? ($data['invoice_pdf'] ?? null);
+
+        if (!empty($labelUrl) && str_starts_with($labelUrl, '/')) {
+            $labelUrl = rtrim($cfg['base_url'], '/') . $labelUrl;
+        }
+        if (!empty($invoiceUrl) && str_starts_with($invoiceUrl, '/')) {
+            $invoiceUrl = rtrim($cfg['base_url'], '/') . $invoiceUrl;
+        }
 
         // Update database if order found
         if (!empty($labelUrl)) {
