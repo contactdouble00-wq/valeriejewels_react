@@ -1549,10 +1549,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       {/* Orders Table */}
       <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[1480px]">
             <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
               <tr>
-                <th className="py-3.5 px-3 w-10 text-center">
+                <th className="py-3.5 px-3 w-12 min-w-[48px] max-w-[48px] text-center align-middle">
                   <input
                     type="checkbox"
                     ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
@@ -1563,12 +1563,12 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-[#8366B0]"
                   />
                 </th>
-                <th className="py-3.5 px-4">Order # & Tags</th>
-                <th className="py-3.5 px-4">Customer</th>
-                <th className="py-3.5 px-4">Payment Breakdown</th>
-                <th className="py-3.5 px-4">Fulfillment Status</th>
-                <th className="py-3.5 px-4">AWB Tracking</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 min-w-[240px] align-middle">Order # & Tags</th>
+                <th className="py-3.5 px-4 min-w-[170px] align-middle">Customer</th>
+                <th className="py-3.5 px-4 min-w-[180px] align-middle">Payment Breakdown</th>
+                <th className="py-3.5 px-4 min-w-[140px] text-center align-middle">Fulfillment Status</th>
+                <th className="py-3.5 px-4 min-w-[170px] align-middle">AWB Tracking</th>
+                <th className="py-3.5 px-4 min-w-[540px] text-right align-middle">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border/60">
@@ -1622,18 +1622,20 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     className={`transition-colors ${selectedOrderIds.includes(ord.id) ? 'bg-purple-50/70' : 'hover:bg-[#FAF8FC]'}`}
                   >
                     {/* Selection Checkbox */}
-                    <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedOrderIds.includes(ord.id)}
-                        onChange={() => handleToggleSelectOrder(ord.id)}
-                        aria-label={`Select order #${ord.order_number}`}
-                        className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-[#8366B0]"
-                      />
+                    <td className="py-3.5 px-3 text-center align-middle w-12 min-w-[48px] max-w-[48px]" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(ord.id)}
+                          onChange={() => handleToggleSelectOrder(ord.id)}
+                          aria-label={`Select order #${ord.order_number}`}
+                          className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer accent-[#8366B0]"
+                        />
+                      </div>
                     </td>
                     {/* Order Number & Item Preview */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-start space-x-3">
+                    <td className="py-3.5 px-4 align-middle min-w-[240px]">
+                      <div className="flex items-center space-x-3">
                         {ord.first_item_image ? (
                           <button
                             type="button"
@@ -1700,17 +1702,19 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </td>
 
                     {/* Customer Info */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-brand-tertiary">{ord.customer_name}</div>
-                      <div className="text-[10px] text-brand-muted">{ord.customer_phone}</div>
-                      <div className="text-[10px] text-brand-muted">{ord.city}, {ord.pincode}</div>
+                    <td className="py-3.5 px-4 align-middle min-w-[170px]">
+                      <div className="space-y-0.5">
+                        <div className="font-semibold text-brand-tertiary">{ord.customer_name}</div>
+                        <div className="text-[10px] text-brand-muted">{ord.customer_phone}</div>
+                        <div className="text-[10px] text-brand-muted">{ord.city}, {ord.pincode}</div>
+                      </div>
                     </td>
 
                     {/* Payment Breakdown & Status */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 align-middle min-w-[180px]">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-brand-tertiary">
+                        <div className="flex items-center gap-2 flex-nowrap">
+                          <span className="font-semibold text-brand-tertiary whitespace-nowrap">
                             ₹{Number(ord.total_amount).toLocaleString('en-IN')}
                           </span>
                           {renderPaymentStatusBadge(ord)}
@@ -1718,26 +1722,28 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         <div className="text-[11px] text-brand-muted">
                           {ord.payment_type === 'partial' ? (
                             (ord.payment_status === 'partial_paid' || ord.payment_status === 'paid') ? (
-                              <span className="text-emerald-700 font-medium">₹{Number(ord.amount_paid_upfront)} advance paid · ₹{Number(ord.amount_due_on_delivery)} due</span>
+                              <span className="text-emerald-700 font-medium whitespace-nowrap">₹{Number(ord.amount_paid_upfront)} advance paid · ₹{Number(ord.amount_due_on_delivery)} due</span>
                             ) : (
-                              <span>Partial COD (₹{Number(ord.amount_paid_upfront)} advance)</span>
+                              <span className="whitespace-nowrap">Partial COD (₹{Number(ord.amount_paid_upfront)} advance)</span>
                             )
                           ) : ord.payment_type === 'cod' ? (
-                            <span>Cash on Delivery</span>
+                            <span className="whitespace-nowrap">Cash on Delivery</span>
                           ) : (
-                            <span>Prepaid</span>
+                            <span className="whitespace-nowrap">Prepaid</span>
                           )}
                         </div>
                       </div>
                     </td>
 
                     {/* Fulfillment Status */}
-                    <td className="py-3.5 px-4">
-                      {renderStatusBadge(ord.order_status)}
+                    <td className="py-3.5 px-4 text-center align-middle min-w-[140px]">
+                      <div className="inline-flex items-center justify-center">
+                        {renderStatusBadge(ord.order_status)}
+                      </div>
                     </td>
 
                     {/* AWB Code & Delivery Partner Status */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 align-middle min-w-[170px]">
                       {ord.delivery_provider === 'justshyp' && (ord.provider_awb || ord.provider_order_id) ? (
                         <div className="space-y-1">
                           <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
@@ -1745,13 +1751,13 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             <span>JustShyp #{ord.provider_order_id || ord.order_number}</span>
                           </span>
                           {ord.provider_awb ? (
-                            <div className="text-[11px] font-mono text-blue-700 font-bold truncate max-w-[130px]" title={ord.provider_awb}>
+                            <div className="text-[11px] font-mono text-blue-700 font-bold truncate max-w-[140px]" title={ord.provider_awb}>
                               AWB: {ord.provider_awb}
                             </div>
                           ) : (
                             <div className="text-[9.5px] text-blue-600 font-medium">Awaiting AWB</div>
                           )}
-                          <div className="text-[10px] text-brand-muted truncate max-w-[130px]">
+                          <div className="text-[10px] text-brand-muted truncate max-w-[140px]">
                             {ord.courier_name || 'JustShyp Partner'}
                           </div>
                         </div>
@@ -1771,7 +1777,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             type="button"
                             onClick={() => handleSyncJustShyp(ord.id)}
                             disabled={syncingJsId === ord.id || syncingSrId === ord.id}
-                            className="w-full px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-bold transition-all shadow-xs flex items-center justify-center space-x-1 cursor-pointer disabled:opacity-50"
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-bold transition-all shadow-xs flex items-center justify-center space-x-1 cursor-pointer disabled:opacity-50 whitespace-nowrap"
                             title="Sync order directly to JustShyp panel"
                           >
                             <Truck className={`w-3.5 h-3.5 ${syncingJsId === ord.id ? 'animate-bounce' : ''}`} />
@@ -1782,8 +1788,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-1.5">
+                    <td className="py-3.5 px-4 text-right align-middle min-w-[540px]">
+                      <div className="flex items-center justify-end space-x-1.5 flex-nowrap">
                         {ord.first_item_image && (
                           <button
                             type="button"
@@ -1798,7 +1804,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               is_jhumka_box: Number(ord.has_jhumka_box) > 0,
                             })}
                             title="View Product Image (Assurance Preview)"
-                            className="p-1.5 rounded-xl bg-gray-100 hover:bg-brand-primary hover:text-white border border-brand-border text-brand-muted hover:text-white transition-all cursor-pointer shadow-2xs"
+                            className="p-1.5 rounded-xl bg-gray-100 hover:bg-brand-primary hover:text-white border border-brand-border text-brand-muted hover:text-white transition-all cursor-pointer shadow-2xs shrink-0"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
@@ -1822,14 +1828,14 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   ? 'Re-sync with Shiprocket live panel'
                                   : 'Push order directly to Shiprocket live panel')
                           }
-                          className={`px-2 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap ${
                             ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
                               ? 'bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200 text-emerald-700'
                               : 'bg-white hover:bg-gray-100 border-brand-border text-brand-tertiary'
                           }`}
                         >
-                          <Truck className={`w-3 h-3 ${syncingSrId === ord.id ? 'animate-bounce' : ''}`} />
-                          <span className="hidden xl:inline">
+                          <Truck className={`w-3.5 h-3.5 ${syncingSrId === ord.id ? 'animate-bounce' : ''}`} />
+                          <span>
                             {syncingSrId === ord.id
                               ? 'Syncing...'
                               : (ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
@@ -1855,7 +1861,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               ? 'Re-sync with JustShyp live panel'
                               : 'Sync order directly to JustShyp live panel'
                           }
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border cursor-pointer disabled:opacity-50 ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap ${
                             ord.delivery_provider === 'justshyp' && ord.provider_awb
                               ? 'bg-blue-50 hover:bg-blue-600 hover:text-white border-blue-300 text-blue-700'
                               : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white border-blue-600 shadow-sm'
@@ -1876,7 +1882,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           type="button"
                           onClick={() => handleOpenRateComparison(ord)}
                           title="Compare courier rates across Shiprocket and JustShyp"
-                          className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                          className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer shrink-0"
                         >
                           <Zap className="w-3.5 h-3.5" />
                         </button>
@@ -1886,17 +1892,17 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             onClick={() => handleSyncRazorpay(ord.id)}
                             disabled={syncingRzpId === ord.id}
                             title="Check live Razorpay API to verify if payment was received"
-                            className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-purple-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                            className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-purple-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap"
                           >
                             <RefreshCw className={`w-3 h-3 ${syncingRzpId === ord.id ? 'animate-spin' : ''}`} />
-                            <span className="hidden xl:inline">{syncingRzpId === ord.id ? 'Syncing...' : 'Sync Razorpay'}</span>
+                            <span>{syncingRzpId === ord.id ? 'Syncing...' : 'Sync Razorpay'}</span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => openEmailModal(ord)}
                           title={`Customer Emails: ${ord.emails_sent_count || 0} sent (Click to view history & sent types)`}
-                          className="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer group"
+                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer group shrink-0 whitespace-nowrap"
                         >
                           <SendHorizontal className="w-3 h-3 group-hover:scale-110 transition-transform" />
                           <span>Email</span>
@@ -1910,7 +1916,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </button>
                         <button
                           onClick={() => inspectOrder(ord.id)}
-                          className="px-3 py-1 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-[#FAF8FC] hover:bg-brand-primary hover:text-white border border-brand-border text-brand-tertiary text-xs font-semibold transition-all shadow-2xs cursor-pointer shrink-0 whitespace-nowrap"
                         >
                           Inspect
                         </button>
@@ -1918,7 +1924,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           type="button"
                           onClick={() => openDeleteModal(ord)}
                           title="Delete Order Permanently"
-                          className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-600 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-600 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer shrink-0 whitespace-nowrap"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Delete</span>
@@ -2104,16 +2110,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           {/* Synced Shipments Table */}
           <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[1380px]">
                 <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
                   <tr>
-                    <th className="py-3.5 px-4">Order # & Tags</th>
-                    <th className="py-3.5 px-4">Customer & Destination</th>
-                    <th className="py-3.5 px-4">Partner & Order ID</th>
-                    <th className="py-3.5 px-4">Courier & AWB Tracking</th>
-                    <th className="py-3.5 px-4">Payment & Amount</th>
-                    <th className="py-3.5 px-4">Delivery Milestone</th>
-                    <th className="py-3.5 px-4 text-right">Logistics Actions</th>
+                    <th className="py-3.5 px-4 min-w-[240px] align-middle">Order # & Tags</th>
+                    <th className="py-3.5 px-4 min-w-[200px] align-middle">Customer & Destination</th>
+                    <th className="py-3.5 px-4 min-w-[160px] align-middle">Partner & Order ID</th>
+                    <th className="py-3.5 px-4 min-w-[180px] align-middle">Courier & AWB Tracking</th>
+                    <th className="py-3.5 px-4 min-w-[160px] align-middle">Payment & Amount</th>
+                    <th className="py-3.5 px-4 min-w-[140px] text-center align-middle">Delivery Milestone</th>
+                    <th className="py-3.5 px-4 min-w-[300px] text-right align-middle">Logistics Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/60">
@@ -2172,8 +2178,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     filteredSyncedOrders.map((ord) => (
                       <tr key={ord.id} className="hover:bg-[#FAF8FC] transition-colors">
                         {/* Order Number & Item Preview */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-start space-x-3">
+                        <td className="py-3.5 px-4 align-middle min-w-[240px]">
+                          <div className="flex items-center space-x-3">
                             {ord.first_item_image ? (
                               <button
                                 type="button"
@@ -2240,21 +2246,23 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </td>
 
                         {/* Customer & Destination */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-brand-tertiary">{ord.customer_name}</div>
-                          <div className="text-[10px] text-brand-muted">{ord.customer_phone}</div>
-                          <div className="text-[10px] text-brand-muted truncate max-w-[190px]" title={`${ord.city || ''}, ${ord.state || ''} ${ord.pincode || ''}`}>
-                            {[ord.city, ord.state, ord.pincode].filter(Boolean).join(', ') || 'N/A'}
-                          </div>
-                          {ord.shipping_address_line1 && (
-                            <div className="text-[9px] text-brand-muted truncate max-w-[190px]" title={ord.shipping_address_line1}>
-                              {ord.shipping_address_line1}
+                        <td className="py-3.5 px-4 align-middle min-w-[200px]">
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-brand-tertiary">{ord.customer_name}</div>
+                            <div className="text-[10px] text-brand-muted">{ord.customer_phone}</div>
+                            <div className="text-[10px] text-brand-muted truncate max-w-[190px]" title={`${ord.city || ''}, ${ord.state || ''} ${ord.pincode || ''}`}>
+                              {[ord.city, ord.state, ord.pincode].filter(Boolean).join(', ') || 'N/A'}
                             </div>
-                          )}
+                            {ord.shipping_address_line1 && (
+                              <div className="text-[9px] text-brand-muted truncate max-w-[190px]" title={ord.shipping_address_line1}>
+                                {ord.shipping_address_line1}
+                              </div>
+                            )}
+                          </div>
                         </td>
 
                         {/* Delivery Partner Order ID */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 align-middle min-w-[160px]">
                           <div className="space-y-1">
                             {ord.delivery_provider === 'justshyp' ? (
                               <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-300 shadow-2xs">
@@ -2275,7 +2283,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </td>
 
                         {/* Courier Partner & AWB Tracking */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 align-middle min-w-[180px]">
                           <div className="space-y-1.5">
                             <div className="font-semibold text-brand-tertiary text-xs flex items-center space-x-1">
                               <Truck className="w-3 h-3 text-brand-primary" />
@@ -2347,7 +2355,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </td>
 
                         {/* Payment Breakdown & Total */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 align-middle min-w-[160px]">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-brand-tertiary">
@@ -2372,13 +2380,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         </td>
 
                         {/* Fulfillment Status */}
-                        <td className="py-3.5 px-4">
-                          {renderStatusBadge(ord.order_status)}
+                        <td className="py-3.5 px-4 text-center align-middle min-w-[140px]">
+                          <div className="inline-flex items-center justify-center">
+                            {renderStatusBadge(ord.order_status)}
+                          </div>
                         </td>
 
                         {/* Logistics Actions */}
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end space-x-1.5 flex-wrap gap-y-1">
+                        <td className="py-3.5 px-4 text-right align-middle min-w-[300px]">
+                          <div className="flex items-center justify-end space-x-1.5 flex-nowrap">
                             {/* WhatsApp Tracking Notification */}
                             {ord.customer_phone && (
                               <a
@@ -2623,15 +2633,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           {/* Sent Emails Customer List Table */}
           <div className="bg-white rounded-3xl border border-brand-border overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[1100px]">
                 <thead className="bg-[#FAF8FC] border-b border-brand-border text-brand-muted font-caps tracking-wider text-[10px] uppercase">
                   <tr>
-                    <th className="py-3.5 px-4">Customer & Contact</th>
-                    <th className="py-3.5 px-4">Delivery Address</th>
-                    <th className="py-3.5 px-4">Order Reference</th>
-                    <th className="py-3.5 px-4">Dispatched Email</th>
-                    <th className="py-3.5 px-4">Status & Timestamp</th>
-                    <th className="py-3.5 px-4 text-right">Concierge Actions</th>
+                    <th className="py-3.5 px-4 min-w-[200px] align-middle">Customer & Contact</th>
+                    <th className="py-3.5 px-4 min-w-[200px] align-middle">Delivery Address</th>
+                    <th className="py-3.5 px-4 min-w-[160px] align-middle">Order Reference</th>
+                    <th className="py-3.5 px-4 min-w-[200px] align-middle">Dispatched Email</th>
+                    <th className="py-3.5 px-4 min-w-[160px] align-middle">Status & Timestamp</th>
+                    <th className="py-3.5 px-4 min-w-[180px] text-right align-middle">Concierge Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/60">
@@ -2687,7 +2697,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                       return (
                         <tr key={log.log_id} className="hover:bg-[#FAF8FC] transition-colors">
                           {/* Customer & Contact Info */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 align-middle min-w-[200px]">
                             <div className="flex items-start space-x-3">
                               <div className="w-8 h-8 rounded-full bg-purple-100 text-brand-primary font-bold flex items-center justify-center shrink-0 text-xs shadow-2xs">
                                 {(custName && typeof custName === 'string' && custName.length > 0) ? custName.charAt(0).toUpperCase() : 'C'}
@@ -2724,7 +2734,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </td>
 
                           {/* Customer Address Details */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 align-middle min-w-[200px]">
                             {hasAddress ? (
                               <div className="space-y-0.5 max-w-[190px]">
                                 <div className="font-medium text-brand-tertiary text-xs">
@@ -2742,7 +2752,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </td>
 
                           {/* Order Reference & Amount */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 align-middle min-w-[160px]">
                             {log.order_id ? (
                               <div className="space-y-1">
                                 <button
@@ -2774,7 +2784,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </td>
 
                           {/* Dispatched Email Subject & Type */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 align-middle min-w-[200px]">
                             <div className="space-y-1 max-w-[240px]">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                                 isPaymentIncomplete
@@ -2794,7 +2804,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </td>
 
                           {/* Status & Sent Timestamp */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 align-middle min-w-[160px]">
                             <div className="space-y-1">
                               <div>
                                 <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -2825,8 +2835,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </td>
 
                           {/* Concierge Actions */}
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end space-x-1.5">
+                          <td className="py-3.5 px-4 text-right align-middle min-w-[180px]">
+                            <div className="flex items-center justify-end space-x-1.5 flex-nowrap">
                               {/* View All Dispatched Emails for this specific customer */}
                               {log.order_id && (
                                 <button
