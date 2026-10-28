@@ -198,30 +198,45 @@ try {
 echo "\n6. Testing Package Dimensions & Weight in KG for JustShyp:\n";
 
 try {
-    $pdo = Database::getConnection();
-    // Insert temporary order with 1 item
+    // 1. Test 16-piece jhumkha box order
     $pdo->prepare("
         INSERT INTO orders (order_number, customer_name, customer_email, customer_phone, shipping_address_line1, city, state, pincode, subtotal, total_amount, payment_type, payment_status, order_status, created_at, updated_at)
-        VALUES ('TEST-DIM-001', 'Dimension Test', 'dim@example.com', '9876543212', 'Plot 5', 'Jaipur', 'Rajasthan', '302001', 999, 999, 'cod', 'pending', 'confirmed', '{$now}', '{$now}')
+        VALUES ('TEST-DIM-16PC', '16pc Test', 'dim16@example.com', '9876543212', 'Plot 5', 'Jaipur', 'Rajasthan', '302001', 1999, 1999, 'cod', 'pending', 'confirmed', '{$now}', '{$now}')
     ")->execute();
-    $dimOrderId = (int)$pdo->lastInsertId();
+    $order16Id = (int)$pdo->lastInsertId();
 
     $pdo->prepare("
         INSERT INTO order_items (order_id, product_name, quantity, unit_price, total_price)
-        VALUES (?, 'Regal Oxidized Jhumka', 1, 999, 999)
-    ")->execute([$dimOrderId]);
+        VALUES (?, '16 Pairs Oxidized Ethnic Jhumka Box Collection', 1, 1999, 1999)
+    ")->execute([$order16Id]);
 
-    $pkg = ShiprocketService::calculatePackageDimensions($dimOrderId);
-    $t->assert(is_array($pkg), 'calculatePackageDimensions returns array');
-    $t->assert(isset($pkg['weight']), 'Package dimensions has weight');
-    $t->assert((float)$pkg['weight'] > 0 && (float)$pkg['weight'] <= 5.0, 'Weight is in KG (less than 5kg, got: ' . $pkg['weight'] . ' kg)');
-    $t->assert((float)$pkg['length'] > 0, 'Package length > 0 (' . $pkg['length'] . ' cm)');
-    $t->assert((float)$pkg['breadth'] > 0, 'Package breadth > 0 (' . $pkg['breadth'] . ' cm)');
-    $t->assert((float)$pkg['height'] > 0, 'Package height > 0 (' . $pkg['height'] . ' cm)');
+    $pkg16 = JustShypProvider::calculatePackageDimensions($order16Id);
+    $t->assert((float)$pkg16['length'] === 27.0, '16 Piece Jhumkhas Length is 27 cm', 'Got ' . $pkg16['length']);
+    $t->assert((float)$pkg16['breadth'] === 10.0, '16 Piece Jhumkhas Breadth is 10 cm', 'Got ' . $pkg16['breadth']);
+    $t->assert((float)$pkg16['height'] === 9.0, '16 Piece Jhumkhas Height is 9 cm', 'Got ' . $pkg16['height']);
+    $t->assert((float)$pkg16['weight'] === 0.5, '16 Piece Jhumkhas Weight is 0.5 kg', 'Got ' . $pkg16['weight']);
+
+    // 2. Test 12-piece jhumkha box order
+    $pdo->prepare("
+        INSERT INTO orders (order_number, customer_name, customer_email, customer_phone, shipping_address_line1, city, state, pincode, subtotal, total_amount, payment_type, payment_status, order_status, created_at, updated_at)
+        VALUES ('TEST-DIM-12PC', '12pc Test', 'dim12@example.com', '9876543213', 'Plot 6', 'Surat', 'Gujarat', '395007', 1499, 1499, 'cod', 'pending', 'confirmed', '{$now}', '{$now}')
+    ")->execute();
+    $order12Id = (int)$pdo->lastInsertId();
+
+    $pdo->prepare("
+        INSERT INTO order_items (order_id, product_name, quantity, unit_price, total_price)
+        VALUES (?, '12 Piece Curated Royal Jhumka Collection', 1, 1499, 1499)
+    ")->execute([$order12Id]);
+
+    $pkg12 = JustShypProvider::calculatePackageDimensions($order12Id);
+    $t->assert((float)$pkg12['length'] === 11.7, '12 Piece Jhumkhas Length is 11.7 cm', 'Got ' . $pkg12['length']);
+    $t->assert((float)$pkg12['breadth'] === 7.0, '12 Piece Jhumkhas Breadth is 7 cm', 'Got ' . $pkg12['breadth']);
+    $t->assert((float)$pkg12['height'] === 18.5, '12 Piece Jhumkhas Height is 18.5 cm', 'Got ' . $pkg12['height']);
+    $t->assert((float)$pkg12['weight'] === 0.4, '12 Piece Jhumkhas Weight is 0.4 kg', 'Got ' . $pkg12['weight']);
 
     // Clean up
-    $pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$dimOrderId]);
-    $pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$dimOrderId]);
+    $pdo->prepare("DELETE FROM order_items WHERE order_id IN (?, ?)")->execute([$order16Id, $order12Id]);
+    $pdo->prepare("DELETE FROM orders WHERE id IN (?, ?)")->execute([$order16Id, $order12Id]);
 
 } catch (Throwable $e) {
     $t->assert(false, 'Dimension calculation test exception', $e->getMessage());

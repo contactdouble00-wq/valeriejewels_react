@@ -496,10 +496,10 @@ class JustShypProvider implements DeliveryProviderInterface
         if ($mode !== 'COD') $mode = 'PPD';
 
         $pkg = $params['package'] ?? [];
-        $weight = max(0.15, (float)($pkg['weight'] ?? 0.5)); // in KG
-        $length = max(10.0, (float)($pkg['length'] ?? 10.0));
-        $breadth= max(8.0,  (float)($pkg['breadth'] ?? 8.0));
-        $height = max(5.0,  (float)($pkg['height'] ?? 5.0));
+        $weight = isset($pkg['weight']) && (float)$pkg['weight'] > 0 ? (float)$pkg['weight'] : 0.5; // in KG
+        $length = isset($pkg['length']) && (float)$pkg['length'] > 0 ? (float)$pkg['length'] : 10.0;
+        $breadth= isset($pkg['breadth']) && (float)$pkg['breadth'] > 0 ? (float)$pkg['breadth'] : 8.0;
+        $height = isset($pkg['height']) && (float)$pkg['height'] > 0 ? (float)$pkg['height'] : 5.0;
 
         $res = self::sendRequest('POST', '/api/v3/rate-calculator', [
             'pickup_pincode' => (string)$pickup,
@@ -550,6 +550,18 @@ class JustShypProvider implements DeliveryProviderInterface
             'cheapest' => $ratesList[0] ?? null,
             'raw'      => $rawRates,
         ];
+    }
+
+    /**
+     * Calculate package dimensions and weight for an order according to Valerie Jewels product packaging rules:
+     * - 16 piece jhumkhas: L: 27 cm, B: 10 cm, H: 9 cm, Weight: 0.5 kg
+     * - 12 piece jhumkhas: L: 11.7 cm, B: 7 cm, H: 18.5 cm, Weight: 0.4 kg
+     * - Mystery Jar: L: 12 cm, B: 12 cm, H: 14 cm, Weight: 0.35 kg
+     * - Standard jewelry: L: 10 cm, B: 8 cm, H: 5 cm, Weight: 0.15 kg
+     */
+    public static function calculatePackageDimensions(int $orderId): array
+    {
+        return ShiprocketService::calculatePackageDimensions($orderId);
     }
 
     /**

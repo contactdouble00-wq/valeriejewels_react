@@ -191,7 +191,7 @@ class ShiprocketService
 
     /**
      * Calculate package dimensions and weight according to Valerie Jewels product packaging rules:
-     * - 16 piece jhumkhas: L: 27 cm, B: 10 cm, H: 9 cm, Weight: 0.55 kg
+     * - 16 piece jhumkhas: L: 27 cm, B: 10 cm, H: 9 cm, Weight: 0.5 kg
      * - 12 piece jhumkhas: L: 11.7 cm, B: 7 cm, H: 18.5 cm, Weight: 0.4 kg
      * - Mixed orders: Combined bounding box and cumulative weights
      * - Mystery Jar: L: 12 cm, B: 12 cm, H: 14 cm, Weight: 0.35 kg
@@ -310,14 +310,14 @@ class ShiprocketService
             $length  = 27.0;
             $breadth = 10.0;
             $height  = round((9.0 * min(3, $count16)) + (18.5 * min(3, $count12)), 1);
-            $weight  = round((0.55 * $count16) + (0.4 * $count12) + (0.15 * $countOther) + (0.35 * $countMystery), 2);
+            $weight  = round((0.5 * $count16) + (0.4 * $count12) + (0.15 * $countOther) + (0.35 * $countMystery), 2);
             $pkgType = 'mixed_16_and_12_piece_jhumkhas';
         } elseif ($count16 > 0) {
-            // 16 piece jhumkhas: L: 27 cm, B: 10 cm, H: 9 cm, Weight: 0.55 kg
+            // 16 piece jhumkhas: L: 27 cm, B: 10 cm, H: 9 cm, Weight: 0.5 kg
             $length  = 27.0;
             $breadth = 10.0;
             $height  = $count16 === 1 ? 9.0 : round(9.0 * min(4, $count16), 1);
-            $weight  = round((0.55 * $count16) + (0.15 * $countOther) + (0.35 * $countMystery), 2);
+            $weight  = round((0.5 * $count16) + (0.15 * $countOther) + (0.35 * $countMystery), 2);
             $pkgType = '16_piece_jhumkhas';
         } elseif ($count12 > 0) {
             // 12 piece jhumkhas: L: 11.7 cm, B: 7 cm, H: 18.5 cm, Weight: 0.4 kg
