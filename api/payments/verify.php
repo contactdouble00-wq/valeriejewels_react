@@ -219,10 +219,11 @@ try {
         } catch (Throwable $e) {}
 
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment((int)$order['id']);
         } catch (Throwable $e) {
-            error_log('[Shiprocket] Auto-sync error on verify: ' . $e->getMessage());
+            error_log('[Fulfillment] Auto-sync error on verify: ' . $e->getMessage());
         }
     }
     // Sandbox simulation for test/mock mode
@@ -257,10 +258,11 @@ try {
         } catch (Throwable $e) {}
 
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment((int)$order['id']);
         } catch (Throwable $e) {
-            error_log('[Shiprocket] Auto-sync error on simulate verify: ' . $e->getMessage());
+            error_log('[Fulfillment] Auto-sync error on simulate verify: ' . $e->getMessage());
         }
     }
 

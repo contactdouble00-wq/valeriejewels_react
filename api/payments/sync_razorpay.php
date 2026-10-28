@@ -202,13 +202,14 @@ try {
             error_log('[Sync Razorpay] Mailer error: ' . $e->getMessage());
         }
 
-        // Push to Shiprocket
+        // Push to default delivery partner
         $srResult = null;
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            $srResult = ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $srResult = $provider->createShipment((int)$order['id']);
         } catch (Throwable $e) {
-            error_log('[Sync Razorpay] Shiprocket sync error: ' . $e->getMessage());
+            error_log('[Sync Razorpay] Fulfillment sync error: ' . $e->getMessage());
         }
 
         ApiResponse::success([

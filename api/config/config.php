@@ -133,6 +133,16 @@ $config['fastrr']['secret_key'] = $fastrrSecretKey;
 $config['fastrr']['webhook_secret'] = $fastrrWebhookSecret;
 $config['fastrr']['sandbox'] = false;
 
+// JustShyp Delivery Partner
+$justshypBaseUrl = getenv('JUSTSHYP_BASE_URL') ?: ($_ENV['JUSTSHYP_BASE_URL'] ?? 'https://backend.justshyp.com');
+$justshypAccessToken = getenv('JUSTSHYP_ACCESS_TOKEN') ?: ($_ENV['JUSTSHYP_ACCESS_TOKEN'] ?? '');
+$config['justshyp'] = [
+    'base_url'     => rtrim($justshypBaseUrl, '/'),
+    'access_token' => $justshypAccessToken,
+    'email'        => getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ''),
+    'password'     => getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ''),
+];
+
 // 4. SMTP Email Credentials (Environment Variables & Database Overrides)
 $smtpHost = getenv('SMTP_HOST') ?: ($_ENV['SMTP_HOST'] ?? null);
 if ($smtpHost) {

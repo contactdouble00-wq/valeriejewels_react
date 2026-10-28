@@ -203,6 +203,12 @@ CREATE TABLE `orders` (
     `shiprocket_order_id` VARCHAR(100) DEFAULT NULL,
     `shiprocket_shipment_id` VARCHAR(100) DEFAULT NULL,
     `shiprocket_awb` VARCHAR(100) DEFAULT NULL,
+    `delivery_provider` VARCHAR(32) NOT NULL DEFAULT 'shiprocket',
+    `provider_order_id` VARCHAR(100) DEFAULT NULL,
+    `provider_shipment_id` VARCHAR(100) DEFAULT NULL,
+    `provider_awb` VARCHAR(100) DEFAULT NULL,
+    `shipping_label_url` TEXT DEFAULT NULL,
+    `shipping_invoice_url` TEXT DEFAULT NULL,
     `courier_name` VARCHAR(80) DEFAULT 'Bluedart Express',
     `tracking_url` VARCHAR(255) DEFAULT NULL,
     `estimated_delivery_date` DATE DEFAULT NULL,
@@ -216,7 +222,26 @@ CREATE TABLE `orders` (
     INDEX `idx_orders_status` (`order_status`),
     INDEX `idx_orders_payment_status` (`payment_status`),
     INDEX `idx_orders_shiprocket_awb` (`shiprocket_awb`),
+    INDEX `idx_orders_provider_awb` (`provider_awb`),
+    INDEX `idx_orders_delivery_provider` (`delivery_provider`),
     CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------
+-- 8a. WAREHOUSE MAPPINGS (Shiprocket Pickup Location <-> JustShyp pick_address_id)
+-- ----------------------------------------------------------
+CREATE TABLE `warehouse_mappings` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `internal_code` VARCHAR(100) NOT NULL UNIQUE,
+    `provider` VARCHAR(50) NOT NULL,
+    `provider_warehouse_id` VARCHAR(100) NOT NULL,
+    `title` VARCHAR(150) DEFAULT NULL,
+    `address` TEXT DEFAULT NULL,
+    `pincode` VARCHAR(20) DEFAULT NULL,
+    `phone` VARCHAR(25) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_warehouse_provider` (`provider`, `provider_warehouse_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------

@@ -431,12 +431,30 @@ class Database {
                     shiprocket_order_id TEXT,
                     shiprocket_shipment_id TEXT,
                     shiprocket_awb TEXT,
+                    delivery_provider TEXT NOT NULL DEFAULT 'shiprocket',
+                    provider_order_id TEXT DEFAULT NULL,
+                    provider_shipment_id TEXT DEFAULT NULL,
+                    provider_awb TEXT DEFAULT NULL,
+                    shipping_label_url TEXT DEFAULT NULL,
+                    shipping_invoice_url TEXT DEFAULT NULL,
                     courier_name TEXT DEFAULT 'Bluedart Express',
                     tracking_url TEXT,
                     estimated_delivery_date TEXT,
                     cancelled_at DATETIME,
                     cancellation_reason TEXT,
                     refund_amount REAL DEFAULT 0.0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS warehouse_mappings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    internal_code TEXT NOT NULL UNIQUE,
+                    provider TEXT NOT NULL,
+                    provider_warehouse_id TEXT NOT NULL,
+                    title TEXT,
+                    address TEXT,
+                    pincode TEXT,
+                    phone TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
@@ -470,6 +488,12 @@ class Database {
                 "ALTER TABLE orders ADD COLUMN fastrr_order_id TEXT DEFAULT NULL",
                 "ALTER TABLE orders ADD COLUMN shiprocket_order_id TEXT DEFAULT NULL",
                 "ALTER TABLE orders ADD COLUMN shiprocket_shipment_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN delivery_provider TEXT NOT NULL DEFAULT 'shiprocket'",
+                "ALTER TABLE orders ADD COLUMN provider_order_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN provider_shipment_id TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN provider_awb TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN shipping_label_url TEXT DEFAULT NULL",
+                "ALTER TABLE orders ADD COLUMN shipping_invoice_url TEXT DEFAULT NULL",
                 "ALTER TABLE orders ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
                 "ALTER TABLE order_items ADD COLUMN variant_id INTEGER DEFAULT NULL",
                 "ALTER TABLE order_tracking_events ADD COLUMN status TEXT DEFAULT 'confirmed'",
@@ -486,6 +510,18 @@ class Database {
                     // Column already exists or table structure already migrated
                 }
             }
+
+            // Safe auto-backfill of delivery_provider and provider fields for existing orders
+            try {
+                $pdo->exec("
+                    UPDATE orders 
+                    SET delivery_provider = 'shiprocket',
+                        provider_order_id = COALESCE(provider_order_id, shiprocket_order_id),
+                        provider_shipment_id = COALESCE(provider_shipment_id, shiprocket_shipment_id),
+                        provider_awb = COALESCE(provider_awb, shiprocket_awb)
+                    WHERE delivery_provider IS NULL OR delivery_provider = ''
+                ");
+            } catch (Throwable $be) {}
 
             // Auto-migrate any legacy /uploads/ paths to /api/uploads/ in SQLite database
             try {

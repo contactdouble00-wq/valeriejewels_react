@@ -55,6 +55,13 @@ return [
         'token'      => '',
     ],
 
+    'justshyp' => [
+        'base_url'     => 'https://backend.justshyp.com',
+        'access_token' => '',
+        'email'        => '',
+        'password'     => '',
+    ],
+
     'smtp' => [
         'host'       => 'smtp.hostinger.com',
         'port'       => 465,

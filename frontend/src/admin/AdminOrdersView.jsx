@@ -60,10 +60,11 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   // In Orders view: sync segment filter ('all' by default so all received orders are visible immediately)
   const [ordersSyncSegment, setOrdersSyncSegment] = useState('all');
 
-  // Dedicated Shiprocket Synced Section States
+  // Dedicated Shiprocket & JustShyp Synced Section States
   const [syncedSearch, setSyncedSearch] = useState('');
   const [syncedStatusFilter, setSyncedStatusFilter] = useState('');
   const [syncedCourierFilter, setSyncedCourierFilter] = useState('');
+  const [syncedPartnerFilter, setSyncedPartnerFilter] = useState('');
   const [copiedAwbId, setCopiedAwbId] = useState(null);
 
   // Sent Emails Customer Log State
@@ -76,8 +77,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [copiedLogId, setCopiedLogId] = useState(null);
   const [resendingLogId, setResendingLogId] = useState(null);
 
-  // Shiprocket sync state
+  // Shiprocket & JustShyp sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
+  const [syncingJsId, setSyncingJsId] = useState(null);
+
+  // Multi-carrier Rate Comparison State
+  const [rateComparisonModalOpen, setRateComparisonModalOpen] = useState(false);
+  const [rateComparisonOrder, setRateComparisonOrder] = useState(null);
+  const [rateComparisonData, setRateComparisonData] = useState(null);
+  const [loadingRates, setLoadingRates] = useState(false);
 
   // Razorpay live sync state
   const [syncingRzpId, setSyncingRzpId] = useState(null);
@@ -261,8 +269,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
-  // Shiprocket Synced Order Identifier (zero mismatch: orders with SR ID or AWB)
-  const isShiprocketSyncedOrder = (o) => Boolean(o && (o.shiprocket_order_id || o.shiprocket_awb));
+  // Delivery Partner Synced Order Identifier (orders synced with Shiprocket or JustShyp)
+  const isShiprocketSyncedOrder = (o) => Boolean(o && (o.shiprocket_order_id || o.shiprocket_awb || o.provider_order_id || o.provider_awb));
 
   const syncedOrders = orders.filter(isShiprocketSyncedOrder);
   const unsyncedOrders = orders.filter((o) => !isShiprocketSyncedOrder(o));
@@ -272,10 +280,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     ? unsyncedOrders
     : (ordersSyncSegment === 'synced' ? syncedOrders : orders);
 
-  // Filtered list for the dedicated Shiprocket Synced Section
+  // Filtered list for the dedicated Synced Shipments Section
   const filteredSyncedOrders = syncedOrders.filter((ord) => {
     if (syncedStatusFilter && ord.order_status !== syncedStatusFilter) {
       return false;
+    }
+    if (syncedPartnerFilter) {
+      const p = String(ord.delivery_provider || 'shiprocket').toLowerCase();
+      if (syncedPartnerFilter === 'justshyp' && p !== 'justshyp') return false;
+      if (syncedPartnerFilter === 'shiprocket' && p === 'justshyp') return false;
     }
     if (syncedCourierFilter) {
       const cName = String(ord.courier_name || '').toLowerCase();
@@ -292,6 +305,9 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         String(ord.customer_email || '').toLowerCase().includes(q) ||
         String(ord.shiprocket_order_id || '').toLowerCase().includes(q) ||
         String(ord.shiprocket_awb || '').toLowerCase().includes(q) ||
+        String(ord.provider_order_id || '').toLowerCase().includes(q) ||
+        String(ord.provider_awb || '').toLowerCase().includes(q) ||
+        String(ord.delivery_provider || '').toLowerCase().includes(q) ||
         String(ord.courier_name || '').toLowerCase().includes(q) ||
         String(ord.city || '').toLowerCase().includes(q) ||
         String(ord.state || '').toLowerCase().includes(q);
@@ -570,10 +586,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     return `https://wa.me/${phoneClean}?text=${message}`;
   };
 
-  // Export Shiprocket Synced Orders to CSV
+  // Export Synced Orders (Shiprocket & JustShyp) to CSV
   const exportSyncedOrdersCsv = () => {
     if (syncedOrders.length === 0) {
-      showToast('No Shiprocket synced orders available to export');
+      showToast('No synced orders available to export');
       return;
     }
     const headers = [
@@ -591,42 +607,50 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       'Payment Type',
       'Payment Status',
       'Fulfillment Status',
-      'Shiprocket Order ID',
-      'Shiprocket AWB',
+      'Delivery Partner',
+      'Partner Order ID',
+      'Waybill / AWB',
       'Courier Partner',
       'Tracking URL'
     ];
-    const rows = filteredSyncedOrders.map((ord) => [
-      ord.id || '',
-      `"${ord.order_number || ''}"`,
-      `"${ord.created_at || ''}"`,
-      `"${(ord.customer_name || '').replace(/"/g, '""')}"`,
-      `"${(ord.customer_phone || '').replace(/"/g, '""')}"`,
-      `"${(ord.customer_email || '').replace(/"/g, '""')}"`,
-      `"${(ord.shipping_address_line1 || '').replace(/"/g, '""')}"`,
-      `"${(ord.city || '').replace(/"/g, '""')}"`,
-      `"${(ord.state || '').replace(/"/g, '""')}"`,
-      `"${(ord.pincode || '').replace(/"/g, '""')}"`,
-      ord.total_amount || 0,
-      `"${ord.payment_type || ''}"`,
-      `"${ord.payment_status || ''}"`,
-      `"${ord.order_status || ''}"`,
-      `"${ord.shiprocket_order_id || ''}"`,
-      `"${ord.shiprocket_awb || ''}"`,
-      `"${(ord.courier_name || '').replace(/"/g, '""')}"`,
-      `"https://shiprocket.co/tracking/${ord.shiprocket_awb || ''}"`
-    ]);
+    const rows = filteredSyncedOrders.map((ord) => {
+      const partner = ord.delivery_provider === 'justshyp' ? 'JustShyp' : 'Shiprocket';
+      const partnerOrderId = ord.delivery_provider === 'justshyp' ? (ord.provider_order_id || ord.order_number) : (ord.shiprocket_order_id || '');
+      const awb = ord.provider_awb || ord.shiprocket_awb || '';
+      const trackUrl = ord.tracking_url || (ord.delivery_provider === 'justshyp' ? `https://backend.justshyp.com/tracking?awb=${awb}` : `https://shiprocket.co/tracking/${awb}`);
+      return [
+        ord.id || '',
+        `"${ord.order_number || ''}"`,
+        `"${ord.created_at || ''}"`,
+        `"${(ord.customer_name || '').replace(/"/g, '""')}"`,
+        `"${(ord.customer_phone || '').replace(/"/g, '""')}"`,
+        `"${(ord.customer_email || '').replace(/"/g, '""')}"`,
+        `"${(ord.shipping_address_line1 || '').replace(/"/g, '""')}"`,
+        `"${(ord.city || '').replace(/"/g, '""')}"`,
+        `"${(ord.state || '').replace(/"/g, '""')}"`,
+        `"${(ord.pincode || '').replace(/"/g, '""')}"`,
+        ord.total_amount || 0,
+        `"${ord.payment_type || ''}"`,
+        `"${ord.payment_status || ''}"`,
+        `"${ord.order_status || ''}"`,
+        `"${partner}"`,
+        `"${partnerOrderId}"`,
+        `"${awb}"`,
+        `"${(ord.courier_name || '').replace(/"/g, '""')}"`,
+        `"${trackUrl}"`
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `valerie_shiprocket_synced_orders_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `valerie_synced_orders_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Exported ${filteredSyncedOrders.length} Shiprocket shipment records to CSV`);
+    showToast(`Exported ${filteredSyncedOrders.length} synced shipment records to CSV`);
   };
 
   useEffect(() => {
@@ -679,7 +703,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     try {
       setSyncingSrId(orderId);
       const res = await adminApi.syncShiprocket(orderId);
-      showToast(res?.message || 'Order pushed to Shiprocket panel successfully! Shifted to Shiprocket Synced section.');
+      showToast(res?.message || 'Order pushed to Shiprocket panel successfully! Shifted to Synced section.');
       await loadOrders();
       if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
         await inspectOrder(orderId);
@@ -688,6 +712,38 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Failed to sync with Shiprocket');
     } finally {
       setSyncingSrId(null);
+    }
+  };
+
+  const handleSyncJustShyp = async (orderId, courier = null) => {
+    try {
+      setSyncingJsId(orderId);
+      const res = await adminApi.syncJustShyp(orderId, courier);
+      showToast(res?.message || 'Order pushed to JustShyp panel successfully! Shifted to Synced section.');
+      await loadOrders();
+      if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
+        await inspectOrder(orderId);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to sync with JustShyp');
+    } finally {
+      setSyncingJsId(null);
+    }
+  };
+
+  const handleOpenRateComparison = async (order) => {
+    setRateComparisonOrder(order);
+    setRateComparisonModalOpen(true);
+    setLoadingRates(true);
+    setRateComparisonData(null);
+    try {
+      const mode = (order.payment_type === 'cod' || order.payment_type === 'partial') ? 'COD' : 'PPD';
+      const res = await adminApi.compareShippingRates(order.id, order.pincode, mode);
+      setRateComparisonData(res);
+    } catch (err) {
+      showToast(err.message || 'Failed to compare rates');
+    } finally {
+      setLoadingRates(false);
     }
   };
 
@@ -1108,7 +1164,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             {activeOrdersViewMode === 'orders' 
               ? 'Orders Management & Fulfillment' 
               : activeOrdersViewMode === 'shiprocket_synced'
-              ? 'Shiprocket Synced Orders & Logistics'
+              ? 'Shiprocket & JustShyp Synced Orders & Logistics'
               : 'Sent Customer Emails & Recovery Audit'}
           </h1>
         </div>
@@ -1134,7 +1190,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             </span>
           </button>
 
-          {/* Tab 2: Shiprocket Synced Orders (Shifted to Separate Section) */}
+          {/* Tab 2: Synced Orders (Shiprocket & JustShyp) */}
           <button
             type="button"
             onClick={() => setActiveOrdersViewMode('shiprocket_synced')}
@@ -1145,7 +1201,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             }`}
           >
             <Truck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Shiprocket Synced</span>
+            <span>Synced Orders (SR / JustShyp)</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               activeOrdersViewMode === 'shiprocket_synced'
                 ? 'bg-emerald-400 text-emerald-950'
@@ -1386,10 +1442,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             </div>
             <div>
               <span className="font-bold text-emerald-900">
-                {syncedOrders.length} {syncedOrders.length === 1 ? 'order has' : 'orders have'} been synced to Shiprocket
+                {syncedOrders.length} {syncedOrders.length === 1 ? 'order has' : 'orders have'} been synced to delivery partners (Shiprocket / JustShyp)
               </span>
               <span className="text-emerald-700 text-[11px] ml-1.5 hidden md:inline">
-                — shifted to the dedicated Shiprocket Synced tab to prevent any fulfillment mismatch.
+                — shifted to the dedicated Synced Orders tab to prevent any fulfillment mismatch.
               </span>
             </div>
           </div>
@@ -1455,10 +1511,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           <CheckCircle className="w-6 h-6" />
                         </div>
                         <div className="font-editorial text-lg font-bold text-brand-tertiary">
-                          All Orders Have Been Synced with Shiprocket!
+                          All Orders Have Been Synced with Delivery Partners!
                         </div>
                         <p className="text-xs text-brand-muted leading-relaxed">
-                          All {syncedOrders.length} active orders have already been pushed to Shiprocket and shifted to the dedicated Synced Orders section to eliminate fulfillment mismatch.
+                          All {syncedOrders.length} active orders have already been pushed to Shiprocket or JustShyp and shifted to the dedicated Synced Orders section to eliminate fulfillment mismatch.
                         </p>
                         <div className="pt-2 flex items-center justify-center space-x-2">
                           <button
@@ -1467,7 +1523,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary/90 transition-colors shadow-xs cursor-pointer flex items-center space-x-1.5"
                           >
                             <Truck className="w-3.5 h-3.5" />
-                            <span>Go to Shiprocket Synced Orders ({syncedOrders.length})</span>
+                            <span>Go to Synced Orders ({syncedOrders.length})</span>
                           </button>
                           <button
                             type="button"
@@ -1604,9 +1660,26 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                       {renderStatusBadge(ord.order_status)}
                     </td>
 
-                    {/* AWB Code & Shiprocket Live Status */}
+                    {/* AWB Code & Delivery Partner Status */}
                     <td className="py-3.5 px-4">
-                      {ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
+                      {ord.delivery_provider === 'justshyp' && (ord.provider_awb || ord.provider_order_id) ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            <span>JustShyp #{ord.provider_order_id || ord.order_number}</span>
+                          </span>
+                          {ord.provider_awb ? (
+                            <div className="text-[10px] font-mono text-blue-700 font-semibold truncate max-w-[130px]" title={ord.provider_awb}>
+                              {ord.provider_awb}
+                            </div>
+                          ) : (
+                            <div className="text-[9px] text-brand-muted">Awaiting AWB</div>
+                          )}
+                          <div className="text-[9px] text-brand-muted truncate max-w-[130px]">
+                            {ord.courier_name || 'JustShyp'}
+                          </div>
+                        </div>
+                      ) : ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
                         <div className="space-y-1">
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -1642,14 +1715,24 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
                             <span>Not Synced</span>
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSyncShiprocket(ord.id)}
-                            disabled={syncingSrId === ord.id}
-                            className="block px-2 py-0.5 rounded-md bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
-                          >
-                            {syncingSrId === ord.id ? 'Pushing...' : 'Push to SR'}
-                          </button>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleSyncShiprocket(ord.id)}
+                              disabled={syncingSrId === ord.id || syncingJsId === ord.id}
+                              className="block px-2 py-0.5 rounded-md bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 text-left"
+                            >
+                              {syncingSrId === ord.id ? 'Pushing...' : 'Push SR'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSyncJustShyp(ord.id)}
+                              disabled={syncingSrId === ord.id || syncingJsId === ord.id}
+                              className="block px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 text-blue-700 text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 text-left"
+                            >
+                              {syncingJsId === ord.id ? 'Pushing...' : 'Push JustShyp'}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </td>
@@ -1676,6 +1759,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        {/* Push SR */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1686,7 +1770,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             }
                             handleSyncShiprocket(ord.id);
                           }}
-                          disabled={syncingSrId === ord.id}
+                          disabled={syncingSrId === ord.id || syncingJsId === ord.id}
                           title={
                             ord.payment_status === 'pending' && ord.payment_type !== 'cod'
                               ? 'Payment pending. Confirm payment before shipping.'
@@ -1694,7 +1778,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   ? 'Re-sync with Shiprocket live panel'
                                   : 'Push order directly to Shiprocket live panel')
                           }
-                          className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
+                          className={`px-2 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
                             ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-')
                               ? 'bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200 text-emerald-700'
                               : 'bg-white hover:bg-gray-100 border-brand-border text-brand-tertiary'
@@ -1708,6 +1792,49 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                   ? 'SR Synced'
                                   : 'Push SR')}
                           </span>
+                        </button>
+
+                        {/* Push JustShyp */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (ord.payment_status === 'pending' && ord.payment_type !== 'cod') {
+                              if (!window.confirm(`Payment for Order #${ord.order_number} has not been received yet (Status: Unpaid). Are you sure you want to push this unpaid order to JustShyp?`)) {
+                                return;
+                              }
+                            }
+                            handleSyncJustShyp(ord.id);
+                          }}
+                          disabled={syncingJsId === ord.id || syncingSrId === ord.id}
+                          title={
+                            ord.delivery_provider === 'justshyp' && ord.provider_awb
+                              ? 'Re-sync with JustShyp live panel'
+                              : 'Push order directly to JustShyp live panel'
+                          }
+                          className={`px-2 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
+                            ord.delivery_provider === 'justshyp' && ord.provider_awb
+                              ? 'bg-blue-50 hover:bg-blue-600 hover:text-white border-blue-200 text-blue-700'
+                              : 'bg-white hover:bg-blue-50 border-brand-border text-brand-tertiary'
+                          }`}
+                        >
+                          <Truck className={`w-3 h-3 ${syncingJsId === ord.id ? 'animate-bounce text-blue-600' : ''}`} />
+                          <span className="hidden xl:inline">
+                            {syncingJsId === ord.id
+                              ? 'Syncing...'
+                              : (ord.delivery_provider === 'justshyp' && ord.provider_awb
+                                  ? 'JS Synced'
+                                  : 'Push JustShyp')}
+                          </span>
+                        </button>
+
+                        {/* Rate Comparison Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRateComparison(ord)}
+                          title="Compare courier rates across Shiprocket and JustShyp"
+                          className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
                         </button>
                         {((ord.payment_status === 'pending' || ord.payment_status === 'failed' || ord.payment_status === 'unpaid') && ord.payment_type !== 'cod') && (
                           <button
@@ -1832,7 +1959,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   type="text"
                   value={syncedSearch}
                   onChange={(e) => setSyncedSearch(e.target.value)}
-                  placeholder="Search order #, customer, phone, AWB, SR ID, courier..."
+                  placeholder="Search order #, customer, phone, AWB, SR / JustShyp ID, courier..."
                   className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
                 />
                 <Search className="w-3.5 h-3.5 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1848,6 +1975,17 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               </div>
 
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                {/* Delivery Partner Filter */}
+                <select
+                  value={syncedPartnerFilter}
+                  onChange={(e) => setSyncedPartnerFilter(e.target.value)}
+                  className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-semibold"
+                >
+                  <option value="">All Delivery Partners</option>
+                  <option value="shiprocket">Shiprocket Synced</option>
+                  <option value="justshyp">JustShyp Synced</option>
+                </select>
+
                 {/* Courier Partner Filter */}
                 <select
                   value={syncedCourierFilter}
@@ -1878,11 +2016,12 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 </select>
 
                 {/* Clear Filters */}
-                {(syncedSearch || syncedCourierFilter || syncedStatusFilter) && (
+                {(syncedSearch || syncedPartnerFilter || syncedCourierFilter || syncedStatusFilter) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSyncedSearch('');
+                      setSyncedPartnerFilter('');
                       setSyncedCourierFilter('');
                       setSyncedStatusFilter('');
                     }}
@@ -1909,7 +2048,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   type="button"
                   onClick={exportSyncedOrdersCsv}
                   className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs"
-                  title="Export all Shiprocket synced order records to CSV"
+                  title="Export all synced order records to CSV"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export Synced CSV</span>
@@ -1926,7 +2065,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <tr>
                     <th className="py-3.5 px-4">Order # & Tags</th>
                     <th className="py-3.5 px-4">Customer & Destination</th>
-                    <th className="py-3.5 px-4">Shiprocket Order ID</th>
+                    <th className="py-3.5 px-4">Partner & Order ID</th>
                     <th className="py-3.5 px-4">Courier & AWB Tracking</th>
                     <th className="py-3.5 px-4">Payment & Amount</th>
                     <th className="py-3.5 px-4">Delivery Milestone</th>
@@ -1937,7 +2076,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   {loading ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-brand-muted">
-                        Loading Shiprocket synced shipments...
+                        Loading synced shipments...
                       </td>
                     </tr>
                   ) : syncedOrders.length === 0 ? (
@@ -1948,10 +2087,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                             <Truck className="w-6 h-6" />
                           </div>
                           <div className="font-editorial text-base font-bold text-brand-tertiary">
-                            No Shiprocket Synced Orders Yet
+                            No Synced Shipments Yet
                           </div>
                           <p className="text-xs text-brand-muted leading-relaxed">
-                            When orders in the Orders & Fulfillment tab are pushed to Shiprocket, they will automatically appear in this dedicated section with full tracking details.
+                            When orders in the Orders & Fulfillment tab are pushed to Shiprocket or JustShyp, they will automatically appear in this dedicated section with full tracking details.
                           </p>
                           <div className="pt-2">
                             <button
@@ -2070,13 +2209,20 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           )}
                         </td>
 
-                        {/* Shiprocket Order ID */}
+                        {/* Delivery Partner Order ID */}
                         <td className="py-3.5 px-4">
                           <div className="space-y-1">
-                            <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                              <span>SR #{ord.shiprocket_order_id || 'ID Pending'}</span>
-                            </span>
+                            {ord.delivery_provider === 'justshyp' ? (
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-300 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                <span>JustShyp #{ord.provider_order_id || ord.order_number}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>SR #{ord.shiprocket_order_id || 'ID Pending'}</span>
+                              </span>
+                            )}
                             <div className="text-[9px] text-emerald-700 font-medium flex items-center space-x-1">
                               <Check className="w-2.5 h-2.5" />
                               <span>Live Synced</span>
@@ -2089,19 +2235,19 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           <div className="space-y-1.5">
                             <div className="font-semibold text-brand-tertiary text-xs flex items-center space-x-1">
                               <Truck className="w-3 h-3 text-brand-primary" />
-                              <span>{ord.courier_name || 'Shiprocket Assigned Partner'}</span>
+                              <span>{ord.courier_name || (ord.delivery_provider === 'justshyp' ? 'JustShyp Partner' : 'Shiprocket Partner')}</span>
                             </div>
 
-                            {ord.shiprocket_awb ? (
+                            {(ord.provider_awb || ord.shiprocket_awb) ? (
                               <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                                 <span className="font-mono text-brand-primary font-bold text-xs bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                                  {ord.shiprocket_awb}
+                                  {ord.provider_awb || ord.shiprocket_awb}
                                 </span>
 
                                 {/* Copy AWB */}
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyAwb(ord.shiprocket_awb, ord.id)}
+                                  onClick={() => handleCopyAwb(ord.provider_awb || ord.shiprocket_awb, ord.id)}
                                   title="Copy AWB code to clipboard"
                                   className={`p-1 rounded-lg border text-[10px] font-semibold transition-all cursor-pointer flex items-center space-x-0.5 ${
                                     copiedAwbId === ord.id
@@ -2124,15 +2270,29 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
                                 {/* Live Track Package */}
                                 <a
-                                  href={`https://shiprocket.co/tracking/${ord.shiprocket_awb}`}
+                                  href={ord.tracking_url || (ord.delivery_provider === 'justshyp' ? `https://backend.justshyp.com/tracking?awb=${ord.provider_awb}` : `https://shiprocket.co/tracking/${ord.shiprocket_awb}`)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  title="Track package live on Shiprocket courier portal"
+                                  title="Track package live on courier portal"
                                   className="p-1 rounded-lg bg-sky-50 hover:bg-sky-600 hover:text-white border border-sky-200 text-sky-700 text-[10px] font-semibold transition-colors flex items-center space-x-0.5 shadow-2xs"
                                 >
                                   <span>Track</span>
                                   <ExternalLink className="w-2.5 h-2.5" />
                                 </a>
+
+                                {/* Print Label if available */}
+                                {ord.shipping_label_url && (
+                                  <a
+                                    href={ord.shipping_label_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Open 4x6 Shipping Label PDF"
+                                    className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 text-emerald-700 text-[10px] font-semibold transition-colors flex items-center space-x-0.5 shadow-2xs"
+                                  >
+                                    <span>Label</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                )}
                               </div>
                             ) : (
                               <span className="text-[10px] text-brand-muted italic">
@@ -2218,15 +2378,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               <span>Inspect</span>
                             </button>
 
-                            {/* Re-sync SR */}
+                            {/* Re-sync with Partner */}
                             <button
                               type="button"
-                              onClick={() => handleSyncShiprocket(ord.id)}
-                              disabled={syncingSrId === ord.id}
-                              title="Re-sync order details with Shiprocket API"
+                              onClick={() => {
+                                if (ord.delivery_provider === 'justshyp') {
+                                  handleSyncJustShyp(ord.id);
+                                } else {
+                                  handleSyncShiprocket(ord.id);
+                                }
+                              }}
+                              disabled={syncingSrId === ord.id || syncingJsId === ord.id}
+                              title={`Re-sync order details with ${ord.delivery_provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'} API`}
                               className="p-1.5 rounded-xl bg-gray-50 hover:bg-gray-200 border border-brand-border text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer disabled:opacity-50"
                             >
-                              <RefreshCw className={`w-3.5 h-3.5 ${syncingSrId === ord.id ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-3.5 h-3.5 ${(syncingSrId === ord.id || syncingJsId === ord.id) ? 'animate-spin' : ''}`} />
                             </button>
                           </div>
                         </td>
@@ -3010,30 +3176,34 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 )}
               </div>
 
-              {/* SR Details Grid */}
+              {/* Partner & Logistics Details Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-white p-3 rounded-xl border border-brand-border text-xs">
                 <div>
-                  <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">SR Order ID</div>
-                  <div className="font-mono font-bold text-brand-tertiary mt-0.5 truncate" title={selectedOrder.shiprocket_order_id || ''}>
-                    {selectedOrder.shiprocket_order_id || '—'}
+                  <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">
+                    {selectedOrder.delivery_provider === 'justshyp' ? 'Partner / Order ID' : 'SR Order ID'}
+                  </div>
+                  <div className="font-mono font-bold text-brand-tertiary mt-0.5 truncate" title={selectedOrder.provider_order_id || selectedOrder.shiprocket_order_id || ''}>
+                    {selectedOrder.delivery_provider === 'justshyp'
+                      ? `JustShyp #${selectedOrder.provider_order_id || selectedOrder.order_number}`
+                      : (selectedOrder.shiprocket_order_id || '—')}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Shipment ID</div>
-                  <div className="font-mono font-medium text-brand-tertiary mt-0.5 truncate" title={selectedOrder.shiprocket_shipment_id || ''}>
-                    {selectedOrder.shiprocket_shipment_id || 'Pending'}
+                  <div className="font-mono font-medium text-brand-tertiary mt-0.5 truncate" title={selectedOrder.provider_shipment_id || selectedOrder.shiprocket_shipment_id || ''}>
+                    {selectedOrder.provider_shipment_id || selectedOrder.shiprocket_shipment_id || 'Pending'}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">AWB Number</div>
-                  <div className="font-mono font-medium text-brand-primary mt-0.5 truncate" title={selectedOrder.shiprocket_awb || ''}>
-                    {selectedOrder.shiprocket_awb || 'Pending Manifest'}
+                  <div className="font-mono font-medium text-brand-primary mt-0.5 truncate" title={selectedOrder.provider_awb || selectedOrder.shiprocket_awb || ''}>
+                    {selectedOrder.provider_awb || selectedOrder.shiprocket_awb || 'Pending Manifest'}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Courier</div>
                   <div className="font-medium text-brand-tertiary mt-0.5 truncate" title={selectedOrder.courier_name || ''}>
-                    {selectedOrder.courier_name || 'Assigned by SR'}
+                    {selectedOrder.courier_name || (selectedOrder.delivery_provider === 'justshyp' ? 'JustShyp Partner' : 'Assigned by SR')}
                   </div>
                 </div>
               </div>
@@ -3043,49 +3213,84 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-900 flex items-start space-x-2">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Payment Not Received:</strong> This customer has not completed online payment. Pushing to Shiprocket will manifest a shipment for an unpaid order. Confirm receipt of funds before shipping.
-                  </span>
-                </div>
-              )}
-
-              {/* Notice for Sandbox Mock or Unsynced */}
-              {String(selectedOrder.shiprocket_order_id || '').startsWith('SR-ORD-') && (
-                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start space-x-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>
-                    This order was saved with a sandbox mock ID because credentials were not yet authenticated when the customer paid. Click <strong>"Push to Live Shiprocket Panel"</strong> below to create it directly in your live Shiprocket dashboard.
+                    <strong>Payment Not Received:</strong> This customer has not completed online payment. Pushing to a delivery partner will manifest a shipment for an unpaid order. Confirm receipt of funds before shipping.
                   </span>
                 </div>
               )}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
+                {/* Push SR */}
                 <button
                   type="button"
                   onClick={() => handleSyncShiprocket(selectedOrder.id)}
-                  disabled={syncingSrId === selectedOrder.id}
-                  className="px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
+                  disabled={syncingSrId === selectedOrder.id || syncingJsId === selectedOrder.id}
+                  className="px-3.5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${syncingSrId === selectedOrder.id ? 'animate-spin' : ''}`} />
                   <span>
                     {syncingSrId === selectedOrder.id
-                      ? 'Pushing to Shiprocket...'
+                      ? 'Pushing to SR...'
                       : (selectedOrder.shiprocket_order_id && !String(selectedOrder.shiprocket_order_id).startsWith('SR-ORD-')
-                          ? 'Re-Push / Refresh from Shiprocket'
-                          : 'Push to Live Shiprocket Panel')}
+                          ? 'Re-Push / Refresh SR'
+                          : 'Push to Shiprocket Panel')}
                   </span>
                 </button>
 
-                <a
-                  href="https://app.shiprocket.in/orders"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-gray-50 border border-brand-border text-brand-tertiary text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                {/* Push JustShyp */}
+                <button
+                  type="button"
+                  onClick={() => handleSyncJustShyp(selectedOrder.id)}
+                  disabled={syncingSrId === selectedOrder.id || syncingJsId === selectedOrder.id}
+                  className="px-3.5 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
-                  <span>Open Shiprocket Panel</span>
-                  <ExternalLink className="w-3 h-3 text-brand-muted" />
-                </a>
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncingJsId === selectedOrder.id ? 'animate-spin' : ''}`} />
+                  <span>
+                    {syncingJsId === selectedOrder.id
+                      ? 'Pushing to JustShyp...'
+                      : (selectedOrder.delivery_provider === 'justshyp' && selectedOrder.provider_awb
+                          ? 'Re-Push / Refresh JustShyp'
+                          : 'Push to JustShyp Panel')}
+                  </span>
+                </button>
 
+                {/* Compare Rates */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenRateComparison(selectedOrder)}
+                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-purple-50 border border-purple-200 text-brand-primary text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>Compare Rates</span>
+                </button>
+
+                {/* Shipping Label PDF */}
+                {selectedOrder.shipping_label_url && (
+                  <a
+                    href={selectedOrder.shipping_label_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                  >
+                    <span>Print 4x6 Label</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+
+                {/* Shipping Invoice PDF */}
+                {selectedOrder.shipping_invoice_url && (
+                  <a
+                    href={selectedOrder.shipping_invoice_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-brand-border text-brand-tertiary text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                  >
+                    <span>Tax Invoice</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+
+                {/* Track Order */}
                 {selectedOrder.tracking_url && (
                   <a
                     href={selectedOrder.tracking_url}
@@ -4286,6 +4491,126 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <button
                 type="button"
                 onClick={() => setSmtpModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Carrier Rate Comparison Modal */}
+      {rateComparisonModalOpen && rateComparisonOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-brand-border shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-brand-border/60 pb-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Zap className="w-5 h-5 text-brand-primary fill-current" />
+                  <h3 className="font-editorial text-lg font-bold text-brand-tertiary">
+                    Multi-Carrier Rate Comparison
+                  </h3>
+                </div>
+                <p className="text-xs text-brand-muted mt-1">
+                  Comparing live shipping rates across Shiprocket & JustShyp for Order #{rateComparisonOrder.order_number} to {rateComparisonOrder.city || 'Destination'} ({rateComparisonOrder.pincode})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRateComparisonModalOpen(false)}
+                className="p-1 rounded-xl hover:bg-gray-100 text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Loading State */}
+            {loadingRates ? (
+              <div className="py-12 text-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-brand-primary animate-spin mx-auto" />
+                <p className="text-xs font-semibold text-brand-tertiary">Querying partner rate engines in parallel...</p>
+                <p className="text-[11px] text-brand-muted">Calculating volumetric weight, zone rules, and courier contracts.</p>
+              </div>
+            ) : rateComparisonData?.rates && rateComparisonData.rates.length > 0 ? (
+              <div className="space-y-4">
+                {/* Summary Banner */}
+                {rateComparisonData.cheapest_overall && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-purple-50 border border-emerald-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Recommended Cheapest Option</span>
+                      <span className="text-sm font-bold text-brand-tertiary">
+                        {rateComparisonData.cheapest_overall.courier_name} ({rateComparisonData.cheapest_overall.provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'})
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-mono font-bold text-emerald-700">₹{rateComparisonData.cheapest_overall.rate}</span>
+                      <span className="text-[10px] text-brand-muted block">{rateComparisonData.cheapest_overall.etd ? `${rateComparisonData.cheapest_overall.etd} delivery` : 'Express'}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rates List */}
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {rateComparisonData.rates.map((rate, idx) => {
+                    const isJs = rate.provider === 'justshyp';
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl border border-brand-border/70 hover:border-brand-primary/50 transition-all flex items-center justify-between bg-[#FAF9FC]/40"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                            isJs ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-purple-50 text-purple-800 border-purple-200'
+                          }`}>
+                            {isJs ? 'JustShyp' : 'Shiprocket'}
+                          </span>
+                          <div>
+                            <div className="font-bold text-xs text-brand-tertiary">{rate.courier_name}</div>
+                            <div className="text-[10px] text-brand-muted">
+                              {rate.mode || 'Surface / Air'} {rate.etd ? `• Est. ${rate.etd}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <span className="font-mono font-bold text-sm text-brand-tertiary">₹{rate.rate}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRateComparisonModalOpen(false);
+                              if (isJs) {
+                                handleSyncJustShyp(rateComparisonOrder.id, rate.courier_name);
+                              } else {
+                                handleSyncShiprocket(rateComparisonOrder.id);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer ${
+                              isJs ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-700 hover:bg-purple-800'
+                            }`}
+                          >
+                            Ship with {isJs ? 'JustShyp' : 'Shiprocket'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center space-y-2">
+                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                <p className="text-xs font-semibold text-brand-tertiary">No rates found for pincode {rateComparisonOrder.pincode}</p>
+                <p className="text-[11px] text-brand-muted">Please ensure warehouse and pincodes are valid in delivery partner settings.</p>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end pt-3 border-t border-brand-border/60">
+              <button
+                type="button"
+                onClick={() => setRateComparisonModalOpen(false)}
                 className="px-5 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Close

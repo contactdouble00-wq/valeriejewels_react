@@ -96,12 +96,13 @@ try {
         ");
         $upStmt->execute([(int)$order['id']]);
 
-        // Auto-create shipment in Shiprocket
+        // Auto-create shipment via default delivery provider
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment((int)$order['id']);
         } catch (Throwable $se) {
-            error_log('[Shiprocket] Switch to COD auto-sync error: ' . $se->getMessage());
+            error_log('[Fulfillment] Switch to COD auto-sync error: ' . $se->getMessage());
         }
 
         // Dispatch confirmation email

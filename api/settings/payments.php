@@ -36,6 +36,13 @@ $defaultSettings = [
     'shiprocket_password'        => getenv('SHIPROCKET_PASSWORD') ?: '',
     'shiprocket_pickup_location' => getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Primary',
     'shiprocket_auto_sync'       => true,
+    'default_delivery_provider'  => getenv('DEFAULT_DELIVERY_PROVIDER') ?: 'shiprocket',
+    'justshyp_base_url'          => getenv('JUSTSHYP_BASE_URL') ?: 'https://backend.justshyp.com',
+    'justshyp_access_token'      => getenv('JUSTSHYP_ACCESS_TOKEN') ?: '',
+    'justshyp_email'             => getenv('JUSTSHYP_EMAIL') ?: '',
+    'justshyp_password'          => getenv('JUSTSHYP_PASSWORD') ?: '',
+    'justshyp_warehouse_id'      => '',
+    'justshyp_auto_sync'         => true,
     'checkout_banner_text'  => '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     'exit_intent_enabled'   => true,
     'exit_intent_title'     => 'Wait! Are you sure you want to exit?',
@@ -98,6 +105,25 @@ try {
             return;
         }
 
+        if (isset($_GET['action']) && $_GET['action'] === 'test_justshyp') {
+            require_once dirname(__DIR__) . '/utils/admin_auth.php';
+            AdminAuth::authenticate(['admin', 'staff']);
+            require_once dirname(__DIR__) . '/shipping/providers/JustShypProvider.php';
+
+            $token = isset($_GET['access_token']) && trim($_GET['access_token']) !== '' ? trim($_GET['access_token']) : null;
+            $email = isset($_GET['email']) && trim($_GET['email']) !== '' ? trim($_GET['email']) : null;
+            $password = isset($_GET['password']) && trim($_GET['password']) !== '' ? trim($_GET['password']) : null;
+
+            $provider = new JustShypProvider();
+            $result = $provider->testConnection([
+                'access_token' => $token,
+                'email'        => $email,
+                'password'     => $password,
+            ]);
+            ApiResponse::success($result);
+            return;
+        }
+
         $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'payment_settings' LIMIT 1");
         $stmt->execute();
         $raw = $stmt->fetchColumn();
@@ -154,6 +180,8 @@ try {
             unset($settings['fastrr_webhook_secret']);
             unset($settings['razorpay_key_secret']);
             unset($settings['shiprocket_password']);
+            unset($settings['justshyp_access_token']);
+            unset($settings['justshyp_password']);
         }
 
         ApiResponse::success($settings);

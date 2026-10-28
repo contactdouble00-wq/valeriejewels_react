@@ -36,6 +36,9 @@ export default function AdminPaymentSettingsView() {
   const [showShiprocketPass, setShowShiprocketPass] = useState(false);
   const [testingShiprocket, setTestingShiprocket] = useState(false);
   const [shiprocketTestResult, setShiprocketTestResult] = useState(null);
+  const [showJustShypToken, setShowJustShypToken] = useState(false);
+  const [testingJustShyp, setTestingJustShyp] = useState(false);
+  const [justshypTestResult, setJustShypTestResult] = useState(null);
   const [webhookCopied, setWebhookCopied] = useState(false);
 
   // 1-Click Operations state
@@ -67,6 +70,11 @@ export default function AdminPaymentSettingsView() {
     shiprocket_password: '',
     shiprocket_pickup_location: 'Primary',
     shiprocket_auto_sync: true,
+    default_delivery_provider: 'shiprocket',
+    justshyp_base_url: 'https://backend.justshyp.com',
+    justshyp_access_token: '',
+    justshyp_warehouse_id: '',
+    justshyp_auto_sync: true,
     checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     exit_intent_enabled: true,
     exit_intent_title: 'Wait! Are you sure you want to exit?',
@@ -95,6 +103,29 @@ export default function AdminPaymentSettingsView() {
       });
     } finally {
       setTestingShiprocket(false);
+    }
+  };
+
+  const handleTestJustShyp = async () => {
+    setTestingJustShyp(true);
+    setJustShypTestResult(null);
+    try {
+      const res = await adminApi.testJustShypConnection({
+        access_token: settings.justshyp_access_token || '',
+        base_url: settings.justshyp_base_url || '',
+      });
+      setJustShypTestResult(res);
+      if (res?.success) {
+        setInstantSuccessMsg('JustShyp connection verified successfully!');
+        setTimeout(() => setInstantSuccessMsg(null), 4000);
+      }
+    } catch (err) {
+      setJustShypTestResult({
+        success: false,
+        message: err.message || 'JustShyp connection test failed',
+      });
+    } finally {
+      setTestingJustShyp(false);
     }
   };
 
@@ -1242,26 +1273,105 @@ export default function AdminPaymentSettingsView() {
           </div>
         </div>
 
-        {/* Section 5: Shiprocket Logistics & Automated Fulfillment (Live Order Sync & Partial COD Invoicing) */}
+        {/* Section 5: Delivery Partners & Automated Logistics (Shiprocket + JustShyp Dual Engine) */}
         <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-brand-border/60 pb-3 gap-2">
             <div className="flex items-center space-x-2 text-sm font-bold text-brand-tertiary font-caps tracking-wider uppercase">
               <Truck className="w-4 h-4 text-brand-primary" />
-              <span>5. Shiprocket Logistics & Automated Fulfillment</span>
+              <span>5. Delivery Partners & Automated Logistics</span>
             </div>
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
-              settings.shiprocket_auto_sync !== false
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-gray-100 text-gray-600 border-gray-200'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${settings.shiprocket_auto_sync !== false ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-              <span>{settings.shiprocket_auto_sync !== false ? 'Auto-Sync Active' : 'Auto-Sync Paused'}</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-brand-muted">Active Partner:</span>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-brand-primary border border-purple-200 uppercase">
+                {settings.default_delivery_provider === 'justshyp' ? 'JustShyp (API v3)' : 'Shiprocket'}
+              </span>
+            </div>
           </div>
 
-          <p className="text-xs text-brand-muted leading-relaxed">
-            When a buyer clicks "Buy Now" and completes payment (Prepaid or Partial COD token deposit), the order is automatically pushed directly to your live <strong>Shiprocket dashboard</strong> with an auto-generated shipment, pickup manifest, and tracking link.
-          </p>
+          {/* Partner Selector */}
+          <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-brand-tertiary block">Default Fulfillment Partner</span>
+                <span className="text-[11px] text-brand-muted">
+                  New orders with auto-sync enabled will automatically book shipments with this selected partner.
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, default_delivery_provider: 'shiprocket' })}
+                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-start justify-between ${
+                  (settings.default_delivery_provider || 'shiprocket') === 'shiprocket'
+                    ? 'bg-white border-brand-primary ring-2 ring-brand-primary/20 shadow-sm'
+                    : 'bg-white/70 border-brand-border hover:border-brand-primary/40'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-brand-tertiary">
+                    <span>🚀 Shiprocket Logistics</span>
+                    {(settings.default_delivery_provider || 'shiprocket') === 'shiprocket' && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand-primary text-white font-bold">DEFAULT</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-brand-muted mt-1">
+                    Multi-carrier adhoc booking, live manifest, and courier tracking.
+                  </p>
+                </div>
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 mt-0.5 ${
+                  (settings.default_delivery_provider || 'shiprocket') === 'shiprocket'
+                    ? 'border-brand-primary bg-brand-primary text-white'
+                    : 'border-brand-muted'
+                }`}>
+                  {(settings.default_delivery_provider || 'shiprocket') === 'shiprocket' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, default_delivery_provider: 'justshyp' })}
+                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-start justify-between ${
+                  settings.default_delivery_provider === 'justshyp'
+                    ? 'bg-white border-brand-primary ring-2 ring-brand-primary/20 shadow-sm'
+                    : 'bg-white/70 border-brand-border hover:border-brand-primary/40'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-brand-tertiary">
+                    <span>📦 JustShyp Logistics (v3)</span>
+                    {settings.default_delivery_provider === 'justshyp' && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand-primary text-white font-bold">DEFAULT</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-brand-muted mt-1">
+                    High-speed REST API v3, automated cheapest courier selection, and 4x6 labels.
+                  </p>
+                </div>
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 mt-0.5 ${
+                  settings.default_delivery_provider === 'justshyp'
+                    ? 'border-brand-primary bg-brand-primary text-white'
+                    : 'border-brand-muted'
+                }`}>
+                  {settings.default_delivery_provider === 'justshyp' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-Card 1: Shiprocket Credentials */}
+          <div className="border border-brand-border/80 rounded-xl p-4 space-y-4 bg-[#FAF9FC]/40">
+            <div className="flex items-center justify-between border-b border-brand-border/40 pb-2">
+              <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
+                <span>🚀 Shiprocket Configuration</span>
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                settings.shiprocket_auto_sync !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {settings.shiprocket_auto_sync !== false ? 'Auto-Sync Active' : 'Auto-Sync Paused'}
+              </span>
+            </div>
 
           {/* Credentials Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1397,6 +1507,157 @@ export default function AdminPaymentSettingsView() {
               )}
             </div>
           )}
+        </div>
+
+          {/* Sub-Card 2: JustShyp Credentials & Logistics (API v3) */}
+          <div className="border border-brand-border/80 rounded-xl p-4 space-y-4 bg-[#FAF9FC]/40">
+            <div className="flex items-center justify-between border-b border-brand-border/40 pb-2">
+              <span className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5">
+                <span>📦 JustShyp Configuration (API v3)</span>
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                settings.justshyp_auto_sync !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {settings.justshyp_auto_sync !== false ? 'Auto-Sync Active' : 'Auto-Sync Paused'}
+              </span>
+            </div>
+
+            <p className="text-xs text-brand-muted leading-relaxed">
+              Authenticate via your JustShyp seller API key or access token. When active, orders automatically book the cheapest serviceable courier via <code>https://backend.justshyp.com/api/v3/</code>.
+            </p>
+
+            {/* JustShyp Fields Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* JustShyp Access Token */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-brand-tertiary">JustShyp Access Token / API Key</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowJustShypToken(!showJustShypToken)}
+                    className="text-[10.5px] text-brand-primary hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    {showJustShypToken ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    <span>{showJustShypToken ? 'Hide' : 'Reveal'}</span>
+                  </button>
+                </div>
+                <input
+                  type={showJustShypToken ? 'text' : 'password'}
+                  value={settings.justshyp_access_token || ''}
+                  onChange={(e) => setSettings({ ...settings, justshyp_access_token: e.target.value })}
+                  placeholder="Paste access-token from JustShyp..."
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10.5px] text-brand-muted">Sent as <code>access-token</code> header. Kept securely encrypted on server.</p>
+              </div>
+
+              {/* JustShyp Base URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-brand-tertiary">API Base URL</label>
+                <input
+                  type="text"
+                  value={settings.justshyp_base_url || 'https://backend.justshyp.com'}
+                  onChange={(e) => setSettings({ ...settings, justshyp_base_url: e.target.value })}
+                  placeholder="https://backend.justshyp.com"
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10.5px] text-brand-muted">Default production endpoint: <code>https://backend.justshyp.com</code></p>
+              </div>
+
+              {/* JustShyp Warehouse ID */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-brand-tertiary">Pickup Warehouse ID (pick_address_id)</label>
+                <input
+                  type="text"
+                  value={settings.justshyp_warehouse_id || ''}
+                  onChange={(e) => setSettings({ ...settings, justshyp_warehouse_id: e.target.value })}
+                  placeholder="e.g. 89976 (Leave blank to auto-detect)"
+                  className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10.5px] text-brand-muted">Assigned pickup warehouse in JustShyp. Run connection test to auto-detect.</p>
+              </div>
+
+              {/* Auto-Sync Toggle & Test Button */}
+              <div className="space-y-2 flex flex-col justify-between">
+                <div className="flex items-center justify-between p-2.5 bg-[#FAF8FC] rounded-xl border border-brand-border/70">
+                  <div>
+                    <span className="text-xs font-bold text-brand-tertiary block">Instant Auto-Sync with JustShyp</span>
+                    <span className="text-[10.5px] text-brand-muted">Book shipment immediately when default is JustShyp</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.justshyp_auto_sync !== false}
+                    onChange={(e) => setSettings({ ...settings, justshyp_auto_sync: e.target.checked })}
+                    className="w-4 h-4 accent-brand-primary cursor-pointer shrink-0 ml-2"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={testingJustShyp}
+                    onClick={handleTestJustShyp}
+                    className="w-full py-2 px-3 rounded-xl bg-purple-100 hover:bg-purple-200 text-brand-primary text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {testingJustShyp ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Testing JustShyp Connection...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>Test JustShyp Connection</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* JustShyp Test Result Display */}
+            {justshypTestResult && (
+              <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fade-in ${
+                justshypTestResult.success
+                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  : 'bg-rose-50/80 border-rose-200 text-rose-900'
+              }`}>
+                <div className="flex items-center gap-2 font-bold">
+                  {justshypTestResult.success ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{justshypTestResult.message}</span>
+                </div>
+
+                {Array.isArray(justshypTestResult.warehouses) && justshypTestResult.warehouses.length > 0 && (
+                  <div className="pt-1 pl-6">
+                    <div className="text-[11px] font-semibold text-emerald-800 mb-1">Detected Warehouses in JustShyp Account (Click to select):</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {justshypTestResult.warehouses.map((w, idx) => {
+                        const wid = String(w.warehouse_id || w.pick_address_id || '');
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSettings({ ...settings, justshyp_warehouse_id: wid })}
+                            className={`px-2 py-1 rounded-md text-[10.5px] border cursor-pointer font-medium transition-all ${
+                              settings.justshyp_warehouse_id === wid
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                          >
+                            📍 {w.title || 'Warehouse'} ({w.ciity || w.city || 'City'}, {w.pincode}) — #{wid}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Zero-Mismatch Partial COD Guarantee Card */}
           <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50/80 to-blue-50/60 border border-purple-200/80 space-y-3">

@@ -377,10 +377,11 @@ try {
             $upStmt = $pdo->prepare("UPDATE orders SET order_status = 'confirmed' WHERE id = ?");
             $upStmt->execute([$orderId]);
 
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment($orderId);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment($orderId);
         } catch (Throwable $se) {
-            error_log('[Shiprocket] COD auto-sync error: ' . $se->getMessage());
+            error_log('[Fulfillment] COD auto-sync error: ' . $se->getMessage());
         }
 
         // Dispatch automated confirmation email to customer and admin

@@ -319,9 +319,9 @@ if ($method === 'GET') {
     $params = [];
 
     if ($search !== '') {
-        $where[] = "(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ? OR o.shiprocket_awb LIKE ? OR o.shiprocket_order_id LIKE ? OR o.courier_name LIKE ?)";
+        $where[] = "(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ? OR o.shiprocket_awb LIKE ? OR o.provider_awb LIKE ? OR o.shiprocket_order_id LIKE ? OR o.provider_order_id LIKE ? OR o.courier_name LIKE ?)";
         $term = "%{$search}%";
-        $params = array_merge($params, [$term, $term, $term, $term, $term, $term, $term]);
+        $params = array_merge($params, [$term, $term, $term, $term, $term, $term, $term, $term, $term]);
     }
 
     // If filtering by unpaid_pending, ensure ALL pending/failed/unpaid orders are captured
@@ -361,9 +361,9 @@ if ($method === 'GET') {
     }
 
     if ($shiprocketSynced === '1' || $shiprocketSynced === 'synced') {
-        $where[] = "(o.shiprocket_order_id IS NOT NULL OR o.shiprocket_awb IS NOT NULL)";
+        $where[] = "(o.shiprocket_order_id IS NOT NULL OR o.shiprocket_awb IS NOT NULL OR o.provider_order_id IS NOT NULL OR o.provider_awb IS NOT NULL)";
     } elseif ($shiprocketSynced === '0' || $shiprocketSynced === 'unsynced') {
-        $where[] = "(o.shiprocket_order_id IS NULL AND o.shiprocket_awb IS NULL)";
+        $where[] = "(o.shiprocket_order_id IS NULL AND o.shiprocket_awb IS NULL AND o.provider_order_id IS NULL AND o.provider_awb IS NULL)";
     }
 
     // Auto-heal check: If order VJ-20261024-2054 is still pending, automatically confirm it with its verified Razorpay payment
@@ -667,6 +667,171 @@ if ($action === 'sync_shiprocket') {
         }
     } catch (Throwable $e) {
         ApiResponse::error('Shiprocket sync error: ' . $e->getMessage(), 500);
+    }
+}
+
+// Handle Manual Push / Sync to JustShyp
+if ($action === 'sync_justshyp') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid order ID is required for JustShyp sync', 422);
+    }
+
+    try {
+        $provider = DeliveryProviderFactory::getProvider('justshyp');
+        $options = [];
+        if (!empty($input['courier'])) {
+            $options['courier'] = $input['courier'];
+        }
+        $result = $provider->createShipment($orderId, $options);
+        if (!empty($result['success'])) {
+            ApiResponse::success($result, $result['message'] ?? 'Order pushed to JustShyp panel successfully!');
+        } else {
+            ApiResponse::error($result['message'] ?? 'Failed to push order to JustShyp', 400, $result);
+        }
+    } catch (Throwable $e) {
+        ApiResponse::error('JustShyp sync error: ' . $e->getMessage(), 500);
+    }
+}
+
+// Handle Dynamic Delivery Partner Sync (Shiprocket | JustShyp)
+if ($action === 'sync_shipment') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid order ID is required for shipment sync', 422);
+    }
+
+    $providerName = strtolower(trim($input['provider'] ?? ($_GET['provider'] ?? '')));
+    $provider = !empty($providerName) 
+        ? DeliveryProviderFactory::getProvider($providerName)
+        : DeliveryProviderFactory::getDefaultProvider();
+
+    try {
+        $result = $provider->createShipment($orderId, $input);
+        if (!empty($result['success'])) {
+            $pTitle = ucfirst($provider->getName());
+            ApiResponse::success($result, $result['message'] ?? "Order pushed to {$pTitle} panel successfully!");
+        } else {
+            ApiResponse::error($result['message'] ?? 'Failed to push order to delivery provider', 400, $result);
+        }
+    } catch (Throwable $e) {
+        ApiResponse::error('Shipment sync error: ' . $e->getMessage(), 500);
+    }
+}
+
+// Handle Shipping Label Fetch
+if ($action === 'shipping_label') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    $awb = trim($_GET['awb'] ?? ($input['awb'] ?? ''));
+
+    if ($orderId <= 0 && empty($awb)) {
+        ApiResponse::error('Order ID or AWB is required to retrieve shipping label', 422);
+    }
+
+    try {
+        if ($orderId > 0) {
+            $provider = DeliveryProviderFactory::getProviderForOrder($orderId);
+            $stmt = $pdo->prepare("SELECT provider_awb, shiprocket_awb, shipping_label_url, shipping_invoice_url FROM orders WHERE id = ? LIMIT 1");
+            $stmt->execute([$orderId]);
+            $ordRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (empty($awb) && $ordRow) {
+                $awb = $ordRow['provider_awb'] ?? ($ordRow['shiprocket_awb'] ?? '');
+            }
+            if (!empty($ordRow['shipping_label_url'])) {
+                ApiResponse::success([
+                    'label_url'   => $ordRow['shipping_label_url'],
+                    'invoice_url' => $ordRow['shipping_invoice_url'] ?? null,
+                    'provider'    => $provider->getName(),
+                    'awb'         => $awb,
+                ]);
+            }
+        } else {
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+        }
+
+        if (empty($awb)) {
+            ApiResponse::error('Order has no assigned AWB yet', 400);
+        }
+
+        $res = $provider->getLabel($awb);
+        ApiResponse::success($res);
+    } catch (Throwable $e) {
+        ApiResponse::error('Failed to get shipping label: ' . $e->getMessage(), 500);
+    }
+}
+
+// Compare Shipping Rates across both Shiprocket and JustShyp
+if ($action === 'compare_shipping_rates') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    $dropPincode = trim($_GET['drop_pincode'] ?? ($input['drop_pincode'] ?? ''));
+    $pickupPincode = trim($_GET['pickup_pincode'] ?? ($input['pickup_pincode'] ?? '400096'));
+    $paymentMode = strtoupper(trim($_GET['payment_mode'] ?? ($input['payment_mode'] ?? 'PPD')));
+
+    $pkg = [
+        'weight'  => 0.5,
+        'length'  => 10.0,
+        'breadth' => 8.0,
+        'height'  => 5.0,
+    ];
+
+    if ($orderId > 0) {
+        $stmt = $pdo->prepare("SELECT pincode, payment_type FROM orders WHERE id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        $ordRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($ordRow) {
+            if (empty($dropPincode)) {
+                $dropPincode = $ordRow['pincode'];
+            }
+            $pType = strtolower($ordRow['payment_type'] ?? 'cod');
+            $paymentMode = ($pType === 'cod' || $pType === 'partial') ? 'COD' : 'PPD';
+            $calcPkg = ShiprocketService::calculatePackageDimensions($orderId);
+            $pkg = [
+                'weight'  => (float)$calcPkg['weight'],
+                'length'  => (float)$calcPkg['length'],
+                'breadth' => (float)$calcPkg['breadth'],
+                'height'  => (float)$calcPkg['height'],
+            ];
+        }
+    }
+
+    if (empty($dropPincode)) {
+        ApiResponse::error('Drop pincode is required for rate comparison', 422);
+    }
+
+    $comparison = DeliveryProviderFactory::compareRates([
+        'pickup_pincode' => $pickupPincode,
+        'drop_pincode'   => $dropPincode,
+        'payment_mode'   => $paymentMode,
+        'package'        => $pkg,
+    ]);
+
+    ApiResponse::success($comparison);
+}
+
+// Cancel Shipment via Order's Provider
+if ($action === 'cancel_shipment') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid order ID is required to cancel shipment', 422);
+    }
+
+    try {
+        $provider = DeliveryProviderFactory::getProviderForOrder($orderId);
+        $res = $provider->cancelShipment($orderId);
+        if (!empty($res['success'])) {
+            ApiResponse::success($res, $res['message'] ?? 'Shipment cancelled successfully');
+        } else {
+            ApiResponse::error($res['message'] ?? 'Failed to cancel shipment', 400, $res);
+        }
+    } catch (Throwable $e) {
+        ApiResponse::error('Cancel shipment error: ' . $e->getMessage(), 500);
     }
 }
 

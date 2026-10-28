@@ -299,6 +299,47 @@ export const adminApi = {
     return res.data;
   },
 
+  async syncJustShyp(orderId, courier = null) {
+    const res = await request('/admin/orders.php?action=sync_justshyp', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId, courier }),
+    });
+    return res.data;
+  },
+
+  async syncShipment(orderId, provider = 'shiprocket', courier = null) {
+    const res = await request('/admin/orders.php?action=sync_shipment', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId, provider, courier }),
+    });
+    return res.data;
+  },
+
+  async getShippingLabel(orderId, awb = '') {
+    const qs = new URLSearchParams({ action: 'shipping_label', order_id: orderId, awb }).toString();
+    const res = await request(`/admin/orders.php?${qs}`);
+    return res.data;
+  },
+
+  async compareShippingRates(orderId, dropPincode = '', paymentMode = 'PPD') {
+    const qs = new URLSearchParams({
+      action: 'compare_shipping_rates',
+      order_id: orderId,
+      drop_pincode: dropPincode,
+      payment_mode: paymentMode,
+    }).toString();
+    const res = await request(`/admin/orders.php?${qs}`);
+    return res.data;
+  },
+
+  async cancelShipment(orderId) {
+    const res = await request('/admin/orders.php?action=cancel_shipment', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    return res.data;
+  },
+
   async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '', customMessage = '', notifyCustomer = true) {
     const res = await request('/admin/orders.php?action=update_status', {
       method: 'POST',
@@ -670,6 +711,12 @@ export const adminApi = {
 
   async testShiprocketConnection(params = {}) {
     const qs = new URLSearchParams({ action: 'test_shiprocket', ...params }).toString();
+    const res = await request(`/settings/payments.php?${qs}`);
+    return res.data;
+  },
+
+  async testJustShypConnection(params = {}) {
+    const qs = new URLSearchParams({ action: 'test_justshyp', ...params }).toString();
     const res = await request(`/settings/payments.php?${qs}`);
     return res.data;
   },

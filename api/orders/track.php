@@ -53,9 +53,12 @@ try {
         }
     }
 
-    // Auto-create Shiprocket tracking if confirmed but not yet provisioned with AWB
-    if (empty($order['shiprocket_awb']) && in_array($order['order_status'], ['confirmed', 'processing', 'shipped'], true)) {
-        ShiprocketService::createShipment((int)$order['id']);
+    // Auto-create tracking via order provider if confirmed but not yet provisioned with AWB
+    $activeAwb = $order['provider_awb'] ?? ($order['shiprocket_awb'] ?? null);
+    if (empty($activeAwb) && in_array($order['order_status'], ['confirmed', 'processing', 'shipped'], true)) {
+        require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+        $provider = DeliveryProviderFactory::getProviderForOrder((int)$order['id']);
+        $provider->createShipment((int)$order['id']);
         $stmt->execute([':order_number' => $orderNumber]);
         $order = $stmt->fetch();
     }
@@ -163,9 +166,12 @@ try {
             'amount_due_on_delivery' => (float)$order['amount_due_on_delivery'],
             'refund_amount'          => (float)$order['refund_amount'],
             'order_status'           => $order['order_status'],
+            'delivery_provider'      => $order['delivery_provider'] ?? 'shiprocket',
             'courier_name'           => $order['courier_name'] ?: 'Bluedart Express',
             'shiprocket_awb'         => $order['shiprocket_awb'],
+            'provider_awb'           => $order['provider_awb'] ?? $order['shiprocket_awb'],
             'tracking_url'           => $order['tracking_url'] ?: ($order['shiprocket_awb'] ? "https://shiprocket.co/tracking/{$order['shiprocket_awb']}" : null),
+            'shipping_label_url'     => $order['shipping_label_url'] ?? null,
             'estimated_delivery_date'=> $order['estimated_delivery_date'] ?: date('Y-m-d', strtotime($order['created_at'] . ' + 4 days')),
             'cancelled_at'           => $order['cancelled_at'],
             'cancellation_reason'    => $order['cancellation_reason'],

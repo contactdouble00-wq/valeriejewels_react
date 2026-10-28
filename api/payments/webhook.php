@@ -229,12 +229,13 @@ if ($isRazorpayWebhook) {
             error_log('[Razorpay Webhook] Mailer error: ' . $e->getMessage());
         }
 
-        // Push confirmed order to Shiprocket panel
+        // Push confirmed order to default delivery partner panel
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment((int)$order['id']);
         } catch (Throwable $e) {
-            error_log('[Razorpay Webhook] Shiprocket auto-sync error: ' . $e->getMessage());
+            error_log('[Razorpay Webhook] Delivery partner auto-sync error: ' . $e->getMessage());
         }
 
         ApiResponse::success([
@@ -372,10 +373,11 @@ try {
         } catch (Throwable $e) {}
 
         try {
-            require_once dirname(__DIR__) . '/shipping/shiprocket.php';
-            ShiprocketService::createShipment((int)$order['id']);
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getDefaultProvider();
+            $provider->createShipment((int)$order['id']);
         } catch (Throwable $e) {
-            error_log('[Shiprocket] Webhook auto-sync error: ' . $e->getMessage());
+            error_log('[Delivery Partner] Webhook auto-sync error: ' . $e->getMessage());
         }
 
         ApiResponse::success([
