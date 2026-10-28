@@ -81,6 +81,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   // Shiprocket & JustShyp sync state
   const [syncingSrId, setSyncingSrId] = useState(null);
   const [syncingJsId, setSyncingJsId] = useState(null);
+  const [batchSyncingJs, setBatchSyncingJs] = useState(false);
 
   // Multi-carrier Rate Comparison State
   const [rateComparisonModalOpen, setRateComparisonModalOpen] = useState(false);
@@ -732,6 +733,49 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
+  const handleBatchSyncJustShyp = async (orderIdsToSync = null) => {
+    const ids = Array.isArray(orderIdsToSync) && orderIdsToSync.length > 0
+      ? orderIdsToSync
+      : selectedOrderIds;
+
+    if (!ids || ids.length === 0) {
+      showToast('Please select at least one order to sync with JustShyp.');
+      return;
+    }
+
+    try {
+      setBatchSyncingJs(true);
+      let successCount = 0;
+      let failCount = 0;
+      const errors = [];
+
+      for (const id of ids) {
+        try {
+          await adminApi.syncJustShyp(id);
+          successCount++;
+        } catch (e) {
+          failCount++;
+          errors.push(e.message || `Order #${id} failed`);
+        }
+      }
+
+      await loadOrders();
+      setSelectedOrderIds([]);
+
+      if (successCount > 0 && failCount === 0) {
+        showToast(`✓ All ${successCount} orders synced with JustShyp panel successfully!`);
+      } else if (successCount > 0 && failCount > 0) {
+        showToast(`Synced ${successCount} orders to JustShyp (${failCount} failed: ${errors[0]})`);
+      } else {
+        showToast(`Failed to sync to JustShyp: ${errors[0] || 'Unknown error'}`);
+      }
+    } catch (err) {
+      showToast(err.message || 'Batch sync to JustShyp failed');
+    } finally {
+      setBatchSyncingJs(false);
+    }
+  };
+
   const handleOpenRateComparison = async (order) => {
     setRateComparisonOrder(order);
     setRateComparisonModalOpen(true);
@@ -1361,6 +1405,25 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <Sparkles className={`w-3.5 h-3.5 ${runningRecovery ? 'animate-spin' : ''}`} />
               <span>{runningRecovery ? 'Sending...' : '⚡ Auto-Mail Unpaid Customers'}</span>
             </button>
+
+            {/* Quick 1-Click Sync to JustShyp for Unsynced Orders */}
+            <button
+              type="button"
+              onClick={() => {
+                const unsynced = orders.filter((o) => !o.provider_awb && !o.provider_order_id && o.delivery_provider !== 'justshyp');
+                if (unsynced.length === 0) {
+                  showToast('All orders are already synced with JustShyp!');
+                  return;
+                }
+                handleBatchSyncJustShyp(unsynced.map((o) => o.id));
+              }}
+              disabled={batchSyncingJs}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50"
+              title="Sync unsynced orders to JustShyp delivery panel"
+            >
+              <Truck className={`w-3.5 h-3.5 ${batchSyncingJs ? 'animate-bounce' : ''}`} />
+              <span>{batchSyncingJs ? 'Syncing to JustShyp...' : '⚡ Sync to JustShyp'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1399,6 +1462,18 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             )}
           </div>
           <div className="flex items-center space-x-2">
+            {/* SYNC TO JUSTSHYP BATCH BUTTON */}
+            <button
+              type="button"
+              onClick={() => handleBatchSyncJustShyp()}
+              disabled={batchSyncingJs}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              title="Sync all selected orders to JustShyp delivery panel"
+            >
+              <Truck className={`w-3.5 h-3.5 ${batchSyncingJs ? 'animate-bounce' : ''}`} />
+              <span>{batchSyncingJs ? 'Syncing to JustShyp...' : `Sync to JustShyp (${selectedOrderIds.length})`}</span>
+            </button>
+
             {/* EMAIL PENDING PAYMENT USERS BUTTON */}
             <button
               type="button"
@@ -1665,75 +1740,43 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     <td className="py-3.5 px-4">
                       {ord.delivery_provider === 'justshyp' && (ord.provider_awb || ord.provider_order_id) ? (
                         <div className="space-y-1">
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
+                            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                             <span>JustShyp #{ord.provider_order_id || ord.order_number}</span>
                           </span>
                           {ord.provider_awb ? (
-                            <div className="text-[10px] font-mono text-blue-700 font-semibold truncate max-w-[130px]" title={ord.provider_awb}>
-                              {ord.provider_awb}
+                            <div className="text-[11px] font-mono text-blue-700 font-bold truncate max-w-[130px]" title={ord.provider_awb}>
+                              AWB: {ord.provider_awb}
                             </div>
                           ) : (
-                            <div className="text-[9px] text-brand-muted">Awaiting AWB</div>
+                            <div className="text-[9.5px] text-blue-600 font-medium">Awaiting AWB</div>
                           )}
-                          <div className="text-[9px] text-brand-muted truncate max-w-[130px]">
-                            {ord.courier_name || 'JustShyp'}
+                          <div className="text-[10px] text-brand-muted truncate max-w-[130px]">
+                            {ord.courier_name || 'JustShyp Partner'}
                           </div>
-                        </div>
-                      ) : ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>SR #{ord.shiprocket_order_id}</span>
-                          </span>
-                          {ord.shiprocket_awb ? (
-                            <div className="text-[10px] font-mono text-brand-primary font-semibold truncate max-w-[130px]">
-                              {ord.shiprocket_awb}
-                            </div>
-                          ) : (
-                            <div className="text-[9px] text-brand-muted">Awaiting AWB</div>
-                          )}
-                          <div className="text-[9px] text-brand-muted truncate max-w-[130px]">
-                            {ord.courier_name || 'Shiprocket'}
-                          </div>
-                        </div>
-                      ) : String(ord.shiprocket_order_id || '').startsWith('SR-ORD-') ? (
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Sandbox dummy ID created before Shiprocket setup">
-                            <span>⚠️ Mock SR</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSyncShiprocket(ord.id)}
-                            disabled={syncingSrId === ord.id}
-                            className="block px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-800 text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
-                          >
-                            {syncingSrId === ord.id ? 'Syncing...' : 'Push to Live'}
-                          </button>
                         </div>
                       ) : (
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                            <span>Not Synced</span>
-                          </span>
-                          <div className="flex flex-col gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleSyncShiprocket(ord.id)}
-                              disabled={syncingSrId === ord.id || syncingJsId === ord.id}
-                              className="block px-2 py-0.5 rounded-md bg-purple-50 hover:bg-brand-primary hover:text-white border border-purple-200 text-brand-primary text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 text-left"
-                            >
-                              {syncingSrId === ord.id ? 'Pushing...' : 'Push SR'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSyncJustShyp(ord.id)}
-                              disabled={syncingSrId === ord.id || syncingJsId === ord.id}
-                              className="block px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 text-blue-700 text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 text-left"
-                            >
-                              {syncingJsId === ord.id ? 'Pushing...' : 'Push JustShyp'}
-                            </button>
-                          </div>
+                        <div className="space-y-1.5 min-w-[125px]">
+                          {ord.shiprocket_order_id && !String(ord.shiprocket_order_id).startsWith('SR-ORD-') ? (
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              <span>SR #{ord.shiprocket_order_id}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                              <span>Ready to Sync</span>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleSyncJustShyp(ord.id)}
+                            disabled={syncingJsId === ord.id || syncingSrId === ord.id}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-bold transition-all shadow-xs flex items-center justify-center space-x-1 cursor-pointer disabled:opacity-50"
+                            title="Sync order directly to JustShyp panel"
+                          >
+                            <Truck className={`w-3.5 h-3.5 ${syncingJsId === ord.id ? 'animate-bounce' : ''}`} />
+                            <span>{syncingJsId === ord.id ? 'Syncing...' : 'Sync to JustShyp'}</span>
+                          </button>
                         </div>
                       )}
                     </td>
@@ -1795,7 +1838,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           </span>
                         </button>
 
-                        {/* Push JustShyp */}
+                        {/* Sync to JustShyp */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1810,21 +1853,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           title={
                             ord.delivery_provider === 'justshyp' && ord.provider_awb
                               ? 'Re-sync with JustShyp live panel'
-                              : 'Push order directly to JustShyp live panel'
+                              : 'Sync order directly to JustShyp live panel'
                           }
-                          className={`px-2 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs border cursor-pointer disabled:opacity-50 ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border cursor-pointer disabled:opacity-50 ${
                             ord.delivery_provider === 'justshyp' && ord.provider_awb
-                              ? 'bg-blue-50 hover:bg-blue-600 hover:text-white border-blue-200 text-blue-700'
-                              : 'bg-white hover:bg-blue-50 border-brand-border text-brand-tertiary'
+                              ? 'bg-blue-50 hover:bg-blue-600 hover:text-white border-blue-300 text-blue-700'
+                              : 'bg-blue-600 hover:bg-blue-700 active:scale-95 text-white border-blue-600 shadow-sm'
                           }`}
                         >
-                          <Truck className={`w-3 h-3 ${syncingJsId === ord.id ? 'animate-bounce text-blue-600' : ''}`} />
-                          <span className="hidden xl:inline">
+                          <Truck className={`w-3.5 h-3.5 ${syncingJsId === ord.id ? 'animate-bounce' : ''}`} />
+                          <span className="font-bold">
                             {syncingJsId === ord.id
                               ? 'Syncing...'
                               : (ord.delivery_provider === 'justshyp' && ord.provider_awb
                                   ? 'JS Synced'
-                                  : 'Push JustShyp')}
+                                  : 'Sync to JustShyp')}
                           </span>
                         </button>
 
@@ -2391,9 +2434,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                               }}
                               disabled={syncingSrId === ord.id || syncingJsId === ord.id}
                               title={`Re-sync order details with ${ord.delivery_provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'} API`}
-                              className="p-1.5 rounded-xl bg-gray-50 hover:bg-gray-200 border border-brand-border text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer disabled:opacity-50"
+                              className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 text-blue-700 text-xs font-semibold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
                             >
-                              <RefreshCw className={`w-3.5 h-3.5 ${(syncingSrId === ord.id || syncingJsId === ord.id) ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-3 h-3 ${(syncingSrId === ord.id || syncingJsId === ord.id) ? 'animate-spin' : ''}`} />
+                              <span>{ord.delivery_provider === 'justshyp' ? 'Re-Sync JustShyp' : 'Re-Sync SR'}</span>
                             </button>
                           </div>
                         </td>
@@ -3243,17 +3287,19 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   type="button"
                   onClick={() => handleSyncJustShyp(selectedOrder.id)}
                   disabled={syncingSrId === selectedOrder.id || syncingJsId === selectedOrder.id}
-                  className="px-3.5 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                  title="Sync this order directly to JustShyp panel"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${syncingJsId === selectedOrder.id ? 'animate-spin' : ''}`} />
                   <span>
                     {syncingJsId === selectedOrder.id
-                      ? 'Pushing to JustShyp...'
+                      ? 'Syncing to JustShyp...'
                       : (selectedOrder.delivery_provider === 'justshyp' && selectedOrder.provider_awb
-                          ? 'Re-Push / Refresh JustShyp'
-                          : 'Push to JustShyp Panel')}
+                          ? 'Re-Sync with JustShyp'
+                          : 'Sync to JustShyp')}
                   </span>
                 </button>
+
 
                 {/* Compare Rates */}
                 <button
