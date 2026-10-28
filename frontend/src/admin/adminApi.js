@@ -299,10 +299,19 @@ export const adminApi = {
     return res.data;
   },
 
-  async syncJustShyp(orderId, courier = null) {
+  async syncJustShyp(orderId, courier = null, courierKeyword = null) {
+    const courierVal = typeof courier === 'object' && courier !== null
+      ? (courier.courier_keyword || courier.keyword || courier.courier_name)
+      : courier;
+    const courierKw = courierKeyword || (typeof courier === 'object' && courier !== null ? (courier.courier_keyword || courier.keyword) : courierVal);
+
     const res = await request('/admin/orders.php?action=sync_justshyp', {
       method: 'POST',
-      body: JSON.stringify({ order_id: orderId, courier }),
+      body: JSON.stringify({
+        order_id: orderId,
+        courier: courierVal,
+        courier_keyword: courierKw,
+      }),
     });
     return res.data;
   },

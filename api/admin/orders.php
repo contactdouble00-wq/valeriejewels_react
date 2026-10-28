@@ -814,6 +814,11 @@ if ($action === 'compare_shipping_rates') {
         'package'        => $pkg,
     ]);
 
+    $comparison['package'] = $pkg;
+    $comparison['drop_pincode'] = $dropPincode;
+    $comparison['pickup_pincode'] = $pickupPincode;
+    $comparison['payment_mode'] = $paymentMode;
+
     ApiResponse::success($comparison);
 }
 

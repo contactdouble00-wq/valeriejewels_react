@@ -32,3 +32,5 @@ try {
     error_log('activity_log.php error: ' . $e->getMessage());
     ApiResponse::error('Failed to retrieve activity logs: ' . $e->getMessage(), 500);
 }
+
+

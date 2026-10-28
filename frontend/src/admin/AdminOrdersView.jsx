@@ -83,11 +83,14 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [syncingJsId, setSyncingJsId] = useState(null);
   const [batchSyncingJs, setBatchSyncingJs] = useState(false);
 
-  // Multi-carrier Rate Comparison State
+  // Multi-carrier Rate Comparison & Dispatch State
   const [rateComparisonModalOpen, setRateComparisonModalOpen] = useState(false);
   const [rateComparisonOrder, setRateComparisonOrder] = useState(null);
   const [rateComparisonData, setRateComparisonData] = useState(null);
   const [loadingRates, setLoadingRates] = useState(false);
+  const [selectedCourierPartner, setSelectedCourierPartner] = useState(null);
+  const [dispatchProviderTab, setDispatchProviderTab] = useState('justshyp');
+  const [isDispatchingShipment, setIsDispatchingShipment] = useState(false);
 
   // Razorpay live sync state
   const [syncingRzpId, setSyncingRzpId] = useState(null);
@@ -776,19 +779,68 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
-  const handleOpenRateComparison = async (order) => {
+  const handleOpenDispatchModal = async (order, defaultProvider = 'justshyp') => {
     setRateComparisonOrder(order);
+    setDispatchProviderTab(defaultProvider);
+    setSelectedCourierPartner(null);
     setRateComparisonModalOpen(true);
     setLoadingRates(true);
     setRateComparisonData(null);
+
     try {
       const mode = (order.payment_type === 'cod' || order.payment_type === 'partial') ? 'COD' : 'PPD';
       const res = await adminApi.compareShippingRates(order.id, order.pincode, mode);
       setRateComparisonData(res);
+
+      if (res?.rates && res.rates.length > 0) {
+        let best = null;
+        if (defaultProvider === 'justshyp') {
+          best = res.justshyp_cheapest || res.rates.find((r) => r.provider === 'justshyp') || res.rates[0];
+        } else if (defaultProvider === 'shiprocket') {
+          best = res.shiprocket_cheapest || res.rates.find((r) => r.provider === 'shiprocket') || res.rates[0];
+        } else {
+          best = res.cheapest_overall || res.rates[0];
+        }
+        setSelectedCourierPartner(best);
+      }
     } catch (err) {
-      showToast(err.message || 'Failed to compare rates');
+      showToast(err.message || 'Failed to fetch courier partner rates');
     } finally {
       setLoadingRates(false);
+    }
+  };
+
+  const handleOpenRateComparison = (order) => handleOpenDispatchModal(order, 'all');
+
+  const handleConfirmDispatchShipment = async () => {
+    if (!rateComparisonOrder || !selectedCourierPartner) {
+      showToast('Please select a delivery partner to dispatch this shipment.');
+      return;
+    }
+
+    try {
+      setIsDispatchingShipment(true);
+      const isJs = selectedCourierPartner.provider === 'justshyp';
+      const orderId = rateComparisonOrder.id;
+
+      if (isJs) {
+        const courierKey = selectedCourierPartner.courier_keyword || selectedCourierPartner.courier_name;
+        const res = await adminApi.syncJustShyp(orderId, courierKey, selectedCourierPartner.courier_keyword);
+        showToast(res?.message || `✓ Order #${rateComparisonOrder.order_number} dispatched via JustShyp (${selectedCourierPartner.courier_name})!`);
+      } else {
+        const res = await adminApi.syncShiprocket(orderId);
+        showToast(res?.message || `✓ Order #${rateComparisonOrder.order_number} dispatched via Shiprocket (${selectedCourierPartner.courier_name})!`);
+      }
+
+      setRateComparisonModalOpen(false);
+      await loadOrders();
+      if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
+        await inspectOrder(orderId);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to dispatch shipment');
+    } finally {
+      setIsDispatchingShipment(false);
     }
   };
 
@@ -1851,13 +1903,13 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                                 return;
                               }
                             }
-                            handleSyncJustShyp(ord.id);
+                            handleOpenDispatchModal(ord, 'justshyp');
                           }}
                           disabled={syncingJsId === ord.id || syncingSrId === ord.id}
                           title={
                             ord.delivery_provider === 'justshyp' && ord.provider_awb
                               ? 'Re-sync with JustShyp live panel'
-                              : 'Sync order directly to JustShyp live panel'
+                              : 'Choose delivery partner and dispatch order via JustShyp'
                           }
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap ${
                             ord.delivery_provider === 'justshyp' && ord.provider_awb
@@ -1878,7 +1930,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                         {/* Rate Comparison Button */}
                         <button
                           type="button"
-                          onClick={() => handleOpenRateComparison(ord)}
+                          onClick={() => handleOpenDispatchModal(ord, 'all')}
                           title="Compare courier rates across Shiprocket and JustShyp"
                           className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white border border-purple-200 text-brand-primary text-xs font-semibold transition-all shadow-2xs cursor-pointer shrink-0"
                         >
@@ -3293,18 +3345,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 {/* Push JustShyp */}
                 <button
                   type="button"
-                  onClick={() => handleSyncJustShyp(selectedOrder.id)}
+                  onClick={() => handleOpenDispatchModal(selectedOrder, 'justshyp')}
                   disabled={syncingSrId === selectedOrder.id || syncingJsId === selectedOrder.id}
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
-                  title="Sync this order directly to JustShyp panel"
+                  title="Choose delivery partner and dispatch via JustShyp"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${syncingJsId === selectedOrder.id ? 'animate-spin' : ''}`} />
+                  <Truck className="w-3.5 h-3.5" />
                   <span>
-                    {syncingJsId === selectedOrder.id
-                      ? 'Syncing to JustShyp...'
-                      : (selectedOrder.delivery_provider === 'justshyp' && selectedOrder.provider_awb
-                          ? 'Re-Sync with JustShyp'
-                          : 'Sync to JustShyp')}
+                    {selectedOrder.delivery_provider === 'justshyp' && selectedOrder.provider_awb
+                      ? 'Re-Dispatch / Change Courier'
+                      : 'Sync to JustShyp'}
                   </span>
                 </button>
 
@@ -3312,7 +3362,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 {/* Compare Rates */}
                 <button
                   type="button"
-                  onClick={() => handleOpenRateComparison(selectedOrder)}
+                  onClick={() => handleOpenDispatchModal(selectedOrder, 'all')}
                   className="px-3.5 py-2 rounded-xl bg-white hover:bg-purple-50 border border-purple-200 text-brand-primary text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5 fill-current" />
@@ -4555,121 +4605,323 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         </div>
       )}
 
-      {/* Multi-Carrier Rate Comparison Modal */}
+      {/* Multi-Carrier & JustShyp Order Dispatch Modal */}
       {rateComparisonModalOpen && rateComparisonOrder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-brand-border shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl border border-brand-border shadow-2xl max-w-3xl w-full p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-brand-border/60 pb-4">
+            <div className="flex items-start justify-between border-b border-brand-border/60 pb-3 shrink-0">
               <div>
                 <div className="flex items-center space-x-2">
-                  <Zap className="w-5 h-5 text-brand-primary fill-current" />
-                  <h3 className="font-editorial text-lg font-bold text-brand-tertiary">
-                    Multi-Carrier Rate Comparison
-                  </h3>
+                  <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-editorial text-lg font-bold text-brand-tertiary">
+                      Dispatch Order #{rateComparisonOrder.order_number}
+                    </h3>
+                    <p className="text-xs text-brand-muted">
+                      Review pre-filled order dossier & select delivery partner for manual dispatch
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-brand-muted mt-1">
-                  Comparing live shipping rates across Shiprocket & JustShyp for Order #{rateComparisonOrder.order_number} to {rateComparisonOrder.city || 'Destination'} ({rateComparisonOrder.pincode})
-                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setRateComparisonModalOpen(false)}
-                className="p-1 rounded-xl hover:bg-gray-100 text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl hover:bg-gray-100 text-brand-muted hover:text-brand-tertiary transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Loading State */}
-            {loadingRates ? (
-              <div className="py-12 text-center space-y-3">
-                <RefreshCw className="w-8 h-8 text-brand-primary animate-spin mx-auto" />
-                <p className="text-xs font-semibold text-brand-tertiary">Querying partner rate engines in parallel...</p>
-                <p className="text-[11px] text-brand-muted">Calculating volumetric weight, zone rules, and courier contracts.</p>
-              </div>
-            ) : rateComparisonData?.rates && rateComparisonData.rates.length > 0 ? (
-              <div className="space-y-4">
-                {/* Summary Banner */}
-                {rateComparisonData.cheapest_overall && (
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-purple-50 border border-emerald-200 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Recommended Cheapest Option</span>
-                      <span className="text-sm font-bold text-brand-tertiary">
-                        {rateComparisonData.cheapest_overall.courier_name} ({rateComparisonData.cheapest_overall.provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'})
+            {/* Scrollable Modal Body */}
+            <div className="overflow-y-auto pr-1 space-y-4 flex-1">
+              {/* Auto-filled Shipment & Consignee Dossier */}
+              <div className="bg-[#FAF9FC] rounded-2xl border border-brand-border/70 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-brand-border/40">
+                  <div className="flex items-center space-x-2">
+                    <Package className="w-4 h-4 text-brand-primary" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-tertiary">
+                      Auto-Filled Order & Packaging Dossier
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold border border-purple-200">
+                    Order #{rateComparisonOrder.order_number}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* Consignee */}
+                  <div className="space-y-1.5 bg-white p-3 rounded-xl border border-brand-border/50 shadow-2xs">
+                    <div className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">
+                      Consignee & Destination
+                    </div>
+                    <div className="font-bold text-brand-tertiary text-sm">
+                      {rateComparisonOrder.customer_name}
+                    </div>
+                    <div className="text-brand-muted flex items-center space-x-2">
+                      <Phone className="w-3.5 h-3.5 text-brand-muted shrink-0" />
+                      <span className="font-mono font-medium text-brand-tertiary">{rateComparisonOrder.customer_phone || 'N/A'}</span>
+                    </div>
+                    {rateComparisonOrder.customer_email && (
+                      <div className="text-brand-muted text-[11px] flex items-center space-x-2 truncate">
+                        <Mail className="w-3.5 h-3.5 text-brand-muted shrink-0" />
+                        <span className="truncate">{rateComparisonOrder.customer_email}</span>
+                      </div>
+                    )}
+                    <div className="text-brand-muted text-[11px] flex items-start space-x-1.5 pt-1 border-t border-brand-border/30">
+                      <MapPin className="w-3.5 h-3.5 text-brand-primary shrink-0 mt-0.5" />
+                      <span className="leading-snug">
+                        {rateComparisonOrder.shipping_address_line1}
+                        {rateComparisonOrder.shipping_address_line2 ? `, ${rateComparisonOrder.shipping_address_line2}` : ''}, {rateComparisonOrder.city}, {rateComparisonOrder.state} - <strong className="text-brand-tertiary font-mono font-bold">{rateComparisonOrder.pincode}</strong>
                       </span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-mono font-bold text-emerald-700">₹{rateComparisonData.cheapest_overall.rate}</span>
-                      <span className="text-[10px] text-brand-muted block">{rateComparisonData.cheapest_overall.etd ? `${rateComparisonData.cheapest_overall.etd} delivery` : 'Express'}</span>
-                    </div>
                   </div>
-                )}
 
-                {/* Rates List */}
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                  {rateComparisonData.rates.map((rate, idx) => {
-                    const isJs = rate.provider === 'justshyp';
-                    return (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-xl border border-brand-border/70 hover:border-brand-primary/50 transition-all flex items-center justify-between bg-[#FAF9FC]/40"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            isJs ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-purple-50 text-purple-800 border-purple-200'
-                          }`}>
-                            {isJs ? 'JustShyp' : 'Shiprocket'}
-                          </span>
-                          <div>
-                            <div className="font-bold text-xs text-brand-tertiary">{rate.courier_name}</div>
-                            <div className="text-[10px] text-brand-muted">
-                              {rate.mode || 'Surface / Air'} {rate.etd ? `• Est. ${rate.etd}` : ''}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                          <span className="font-mono font-bold text-sm text-brand-tertiary">₹{rate.rate}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRateComparisonModalOpen(false);
-                              if (isJs) {
-                                handleSyncJustShyp(rateComparisonOrder.id, rate.courier_keyword || rate.courier_name);
-                              } else {
-                                handleSyncShiprocket(rateComparisonOrder.id);
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer ${
-                              isJs ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-700 hover:bg-purple-800'
-                            }`}
-                          >
-                            Ship with {isJs ? 'JustShyp' : 'Shiprocket'}
-                          </button>
-                        </div>
+                  {/* Package & Payment */}
+                  <div className="space-y-1.5 bg-white p-3 rounded-xl border border-brand-border/50 shadow-2xs">
+                    <div className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">
+                      Package & Billing Specifications
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-brand-muted">Dead / Vol. Weight:</span>
+                      <span className="font-mono font-bold text-brand-tertiary">
+                        {rateComparisonData?.package?.weight ?? 0.5} kg
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-brand-muted">Dimensions (L × B × H):</span>
+                      <span className="font-mono font-semibold text-brand-tertiary">
+                        {rateComparisonData?.package?.length ?? 10} × {rateComparisonData?.package?.breadth ?? 8} × {rateComparisonData?.package?.height ?? 5} cm
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-brand-border/30">
+                      <span className="text-brand-muted">Payment Mode:</span>
+                      <span className="font-semibold text-brand-tertiary">
+                        {rateComparisonOrder.payment_type === 'cod'
+                          ? 'Cash on Delivery (COD)'
+                          : (rateComparisonOrder.payment_type === 'partial' ? 'Partial COD' : 'Prepaid (PPD)')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-brand-muted">Order Total Value:</span>
+                      <span className="font-mono font-bold text-brand-tertiary">
+                        ₹{Number(rateComparisonOrder.total_amount).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    {(rateComparisonOrder.payment_type === 'cod' || rateComparisonOrder.payment_type === 'partial') && (
+                      <div className="flex items-center justify-between text-amber-800 font-semibold pt-0.5">
+                        <span>COD Due to Collect:</span>
+                        <span className="font-mono font-bold text-sm text-amber-700">
+                          ₹{Number(rateComparisonOrder.amount_due_on_delivery || rateComparisonOrder.total_amount).toLocaleString('en-IN')}
+                        </span>
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="py-8 text-center space-y-2">
-                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
-                <p className="text-xs font-semibold text-brand-tertiary">No rates found for pincode {rateComparisonOrder.pincode}</p>
-                <p className="text-[11px] text-brand-muted">Please ensure warehouse and pincodes are valid in delivery partner settings.</p>
+
+              {/* Delivery Partner Selection Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-brand-tertiary flex items-center space-x-1.5">
+                      <span>Select Delivery Partner</span>
+                      <span className="text-brand-muted font-normal">• Click to choose</span>
+                    </h4>
+                  </div>
+
+                  {/* Provider Filter Tabs */}
+                  <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-brand-border/60 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDispatchProviderTab('justshyp');
+                        const jsBest = rateComparisonData?.justshyp_cheapest || rateComparisonData?.rates?.find((r) => r.provider === 'justshyp');
+                        if (jsBest) setSelectedCourierPartner(jsBest);
+                      }}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        dispatchProviderTab === 'justshyp'
+                          ? 'bg-blue-600 text-white shadow-xs font-bold'
+                          : 'text-brand-muted hover:text-brand-tertiary'
+                      }`}
+                    >
+                      JustShyp ({rateComparisonData?.rates?.filter((r) => r.provider === 'justshyp').length || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDispatchProviderTab('shiprocket');
+                        const srBest = rateComparisonData?.shiprocket_cheapest || rateComparisonData?.rates?.find((r) => r.provider === 'shiprocket');
+                        if (srBest) setSelectedCourierPartner(srBest);
+                      }}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        dispatchProviderTab === 'shiprocket'
+                          ? 'bg-purple-700 text-white shadow-xs font-bold'
+                          : 'text-brand-muted hover:text-brand-tertiary'
+                      }`}
+                    >
+                      Shiprocket ({rateComparisonData?.rates?.filter((r) => r.provider === 'shiprocket').length || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDispatchProviderTab('all');
+                        if (rateComparisonData?.cheapest_overall) setSelectedCourierPartner(rateComparisonData.cheapest_overall);
+                      }}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        dispatchProviderTab === 'all'
+                          ? 'bg-brand-primary text-white shadow-xs font-bold'
+                          : 'text-brand-muted hover:text-brand-tertiary'
+                      }`}
+                    >
+                      All ({rateComparisonData?.rates?.length || 0})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Loading State */}
+                {loadingRates ? (
+                  <div className="py-10 text-center space-y-3 bg-[#FAF9FC] rounded-2xl border border-dashed border-brand-border">
+                    <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
+                    <p className="text-xs font-bold text-brand-tertiary">Fetching live delivery partner rates & contracts...</p>
+                    <p className="text-[11px] text-brand-muted">Querying JustShyp and Shiprocket rate engines for pincode {rateComparisonOrder.pincode}</p>
+                  </div>
+                ) : rateComparisonData?.rates && rateComparisonData.rates.length > 0 ? (
+                  <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
+                    {rateComparisonData.rates
+                      .filter((r) => dispatchProviderTab === 'all' || r.provider === dispatchProviderTab)
+                      .map((rate, idx) => {
+                        const isSelected = selectedCourierPartner && (
+                          (selectedCourierPartner.courier_keyword && selectedCourierPartner.courier_keyword === rate.courier_keyword) ||
+                          (selectedCourierPartner.courier_id && selectedCourierPartner.courier_id === rate.courier_id) ||
+                          (selectedCourierPartner.courier_name === rate.courier_name && selectedCourierPartner.provider === rate.provider)
+                        );
+                        const isJs = rate.provider === 'justshyp';
+                        const isLowest = rateComparisonData.cheapest_overall?.rate === rate.rate;
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setSelectedCourierPartner(rate)}
+                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                              isSelected
+                                ? (isJs
+                                    ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/30 shadow-xs'
+                                    : 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500/30 shadow-xs')
+                                : 'border-brand-border/70 hover:border-brand-primary/40 bg-white hover:bg-gray-50/60'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              {/* Radio Selection Indicator */}
+                              <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                                isSelected
+                                  ? (isJs ? 'border-blue-600 bg-blue-600 text-white' : 'border-purple-600 bg-purple-600 text-white')
+                                  : 'border-gray-300 bg-white'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-xs text-brand-tertiary">
+                                    {rate.courier_name}
+                                  </span>
+                                  <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold uppercase border ${
+                                    isJs ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-purple-50 text-purple-800 border-purple-200'
+                                  }`}>
+                                    {isJs ? 'JustShyp' : 'Shiprocket'}
+                                  </span>
+                                  {isLowest && (
+                                    <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                      ★ Lowest Rate
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-brand-muted mt-0.5 flex items-center space-x-2">
+                                  <span>{rate.mode || 'Surface'}</span>
+                                  <span>•</span>
+                                  <span>{rate.etd ? `Est. ${rate.etd} days delivery` : 'Standard Express Delivery'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right pl-3 shrink-0">
+                              <div className={`font-mono font-bold text-sm ${isSelected ? (isJs ? 'text-blue-700' : 'text-purple-700') : 'text-brand-tertiary'}`}>
+                                ₹{rate.rate}
+                              </div>
+                              <div className="text-[10px] text-brand-muted">Freight + GST</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center space-y-2 bg-[#FAF9FC] rounded-2xl border border-brand-border">
+                    <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                    <p className="text-xs font-semibold text-brand-tertiary">No rates found for pincode {rateComparisonOrder.pincode}</p>
+                    <p className="text-[11px] text-brand-muted">Please check warehouse pickup and destination pincodes in settings.</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end pt-3 border-t border-brand-border/60">
-              <button
-                type="button"
-                onClick={() => setRateComparisonModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Close
-              </button>
+            <div className="pt-3 border-t border-brand-border/60 flex items-center justify-between flex-wrap gap-3 shrink-0">
+              <div>
+                {selectedCourierPartner ? (
+                  <div className="text-xs">
+                    <span className="text-brand-muted">Chosen Courier: </span>
+                    <strong className="text-brand-tertiary font-bold">
+                      {selectedCourierPartner.courier_name}
+                    </strong>
+                    <span className="text-brand-muted"> (via {selectedCourierPartner.provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'} · </span>
+                    <strong className="font-mono text-emerald-700 font-bold">₹{selectedCourierPartner.rate}</strong>
+                    <span className="text-brand-muted">)</span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-amber-700">Please choose a delivery partner from the list above.</span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setRateComparisonModalOpen(false)}
+                  disabled={isDispatchingShipment}
+                  className="px-4 py-2 rounded-xl border border-brand-border text-xs font-semibold text-brand-tertiary hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmDispatchShipment}
+                  disabled={!selectedCourierPartner || isDispatchingShipment || loadingRates}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md flex items-center space-x-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${
+                    selectedCourierPartner?.provider === 'justshyp'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-purple-700 hover:bg-purple-800'
+                  }`}
+                >
+                  {isDispatchingShipment ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Booking Shipment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-4 h-4" />
+                      <span>
+                        {selectedCourierPartner
+                          ? `Send Shipment via ${selectedCourierPartner.provider === 'justshyp' ? 'JustShyp' : 'Shiprocket'} (${selectedCourierPartner.courier_name} · ₹${selectedCourierPartner.rate})`
+                          : 'Select Delivery Partner to Send'}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
