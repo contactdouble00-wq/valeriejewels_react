@@ -48,7 +48,9 @@ class JustShypProvider implements DeliveryProviderInterface
             $token   = getenv('JUSTSHYP_ACCESS_TOKEN') ?: (!empty($dbSettings['justshyp_access_token']) ? $dbSettings['justshyp_access_token'] : ($jsConfig['access_token'] ?? ''));
             $email   = getenv('JUSTSHYP_EMAIL') ?: (!empty($dbSettings['justshyp_email']) ? $dbSettings['justshyp_email'] : ($jsConfig['email'] ?? ''));
             $pass    = getenv('JUSTSHYP_PASSWORD') ?: (!empty($dbSettings['justshyp_password']) ? $dbSettings['justshyp_password'] : ($jsConfig['password'] ?? ''));
-            $warehouseId = !empty($dbSettings['justshyp_warehouse_id']) ? $dbSettings['justshyp_warehouse_id'] : ($jsConfig['warehouse_id'] ?? null);
+            $warehouseId = !empty($dbSettings['justshyp_warehouse_id']) 
+                ? (string)$dbSettings['justshyp_warehouse_id'] 
+                : ($jsConfig['warehouse_id'] ?? (getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166'));
 
             self::$settings = [
                 'base_url'      => rtrim($baseUrl, '/'),
@@ -404,20 +406,24 @@ class JustShypProvider implements DeliveryProviderInterface
         $listRes = self::sendRequest('GET', '/api/v3/warehouse-list', null, null, true);
         if ($listRes['success'] && !empty($listRes['data']) && is_array($listRes['data'])) {
             $first = $listRes['data'][0];
-            $wId = (string)($first['warehouse_id'] ?? ($first['pick_address_id'] ?? ''));
+            $wId = (string)($first['warehouse_id'] ?? ($first['id'] ?? ($first['pick_address_id'] ?? ($first['pickup_id'] ?? ''))));
             if (!empty($wId)) {
                 // Cache locally
                 try {
-                    $ins = $pdo->prepare("
-                        INSERT OR REPLACE INTO warehouse_mappings (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
-                        VALUES ('primary_justshyp', 'justshyp', :wid, :title, :addr, :pin, :phone)
-                    ");
+                    $isSqlite = Database::getDriver() === 'sqlite';
+                    $sql = $isSqlite
+                        ? "INSERT OR REPLACE INTO warehouse_mappings (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
+                           VALUES ('primary_justshyp', 'justshyp', :wid, :title, :addr, :pin, :phone)"
+                        : "INSERT INTO warehouse_mappings (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
+                           VALUES ('primary_justshyp', 'justshyp', :wid, :title, :addr, :pin, :phone)
+                           ON DUPLICATE KEY UPDATE provider_warehouse_id = VALUES(provider_warehouse_id), title = VALUES(title), address = VALUES(address), pincode = VALUES(pincode), phone = VALUES(phone)";
+                    $ins = $pdo->prepare($sql);
                     $ins->execute([
                         ':wid'   => $wId,
-                        ':title' => $first['title'] ?? 'Primary Atelier',
-                        ':addr'  => $first['full_address'] ?? 'Plot 12 SEEPZ, Andheri East',
-                        ':pin'   => $first['pincode'] ?? '400096',
-                        ':phone' => $first['phone'] ?? '9820000000',
+                        ':title' => $first['title'] ?? ($first['address_title'] ?? 'Valerie Jewels'),
+                        ':addr'  => $first['full_address'] ?? ($first['address'] ?? 'Valerie Jewels, Jeel Kakadiya, Rajkot, Gujarat'),
+                        ':pin'   => $first['pincode'] ?? '360002',
+                        ':phone' => $first['phone'] ?? '7016347945',
                     ]);
                 } catch (Throwable $e) {}
 
@@ -425,22 +431,8 @@ class JustShypProvider implements DeliveryProviderInterface
             }
         }
 
-        // 3. If no warehouse exists on JustShyp, register default Valerie Jewels atelier warehouse
-        $createRes = $this->syncWarehouse([
-            'title'        => 'Valerie Jewels Atelier',
-            'sender_name'  => 'Valerie Jewels Fulfillment',
-            'full_address' => 'Plot 12, SEEPZ, Andheri East, Mumbai',
-            'phone'        => '9820000000',
-            'pincode'      => '400096',
-            'city'         => 'Mumbai',
-            'state'        => 'Maharashtra',
-        ]);
-
-        if (!empty($createRes['warehouse_id'])) {
-            return (string)$createRes['warehouse_id'];
-        }
-
-        return null;
+        // 3. Fallback to Valerie Jewels default registered warehouse ID (166)
+        return '166';
     }
 
     /**
@@ -449,7 +441,7 @@ class JustShypProvider implements DeliveryProviderInterface
      */
     public function checkServiceability(array $params): array
     {
-        $pickup = $params['pickup_pincode'] ?? '400096';
+        $pickup = $params['pickup_pincode'] ?? '360002';
         $drop   = $params['drop_pincode'] ?? '';
         $mode   = strtoupper($params['payment_mode'] ?? 'PPD');
         if ($mode !== 'COD') $mode = 'PPD';
@@ -490,7 +482,7 @@ class JustShypProvider implements DeliveryProviderInterface
      */
     public function getRates(array $params): array
     {
-        $pickup = $params['pickup_pincode'] ?? '400096';
+        $pickup = $params['pickup_pincode'] ?? '360002';
         $drop   = $params['drop_pincode'] ?? '';
         $mode   = strtoupper($params['payment_mode'] ?? 'PPD');
         if ($mode !== 'COD') $mode = 'PPD';
@@ -1131,11 +1123,13 @@ class JustShypProvider implements DeliveryProviderInterface
     public function syncWarehouse(array $warehouseData): array
     {
         $payload = [
-            'address_title' => $warehouseData['title'] ?? 'Valerie Jewels Atelier',
-            'sender_name'   => $warehouseData['sender_name'] ?? 'Valerie Jewels',
-            'full_address'  => $warehouseData['full_address'] ?? 'Plot 12 SEEPZ, Andheri East, Mumbai',
-            'phone'         => $warehouseData['phone'] ?? '9820000000',
-            'pincode'       => $warehouseData['pincode'] ?? '400096',
+            'address_title' => $warehouseData['title'] ?? 'Valerie Jewels',
+            'sender_name'   => $warehouseData['sender_name'] ?? 'Jeel Kakadiya',
+            'full_address'  => $warehouseData['full_address'] ?? 'Valerie Jewels, Jeel Kakadiya, Rajkot, Gujarat',
+            'phone'         => $warehouseData['phone'] ?? '7016347945',
+            'pincode'       => $warehouseData['pincode'] ?? '360002',
+            'city'          => $warehouseData['city'] ?? 'Rajkot',
+            'state'         => $warehouseData['state'] ?? 'Gujarat',
         ];
 
         $res = self::sendRequest('POST', '/api/v3/create_warehouse', $payload, null, false);
@@ -1148,17 +1142,20 @@ class JustShypProvider implements DeliveryProviderInterface
             ];
         }
 
-        $wId = $res['data']['pick_address_id'] ?? ($res['data']['warehouse_id'] ?? null);
+        $wId = $res['data']['warehouse_id'] ?? ($res['data']['id'] ?? ($res['data']['pick_address_id'] ?? ($res['data']['pickup_id'] ?? null)));
 
         if (!empty($wId)) {
             // Save to warehouse_mappings
             try {
                 $pdo = Database::getConnection();
-                $stmt = $pdo->prepare("
-                    INSERT OR REPLACE INTO warehouse_mappings 
-                    (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
-                    VALUES (:code, 'justshyp', :wid, :title, :addr, :pin, :phone)
-                ");
+                $isSqlite = Database::getDriver() === 'sqlite';
+                $sql = $isSqlite
+                    ? "INSERT OR REPLACE INTO warehouse_mappings (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
+                       VALUES (:code, 'justshyp', :wid, :title, :addr, :pin, :phone)"
+                    : "INSERT INTO warehouse_mappings (internal_code, provider, provider_warehouse_id, title, address, pincode, phone)
+                       VALUES (:code, 'justshyp', :wid, :title, :addr, :pin, :phone)
+                       ON DUPLICATE KEY UPDATE provider_warehouse_id = VALUES(provider_warehouse_id), title = VALUES(title), address = VALUES(address), pincode = VALUES(pincode), phone = VALUES(phone)";
+                $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':code'  => 'justshyp_' . $wId,
                     ':wid'   => (string)$wId,
@@ -1202,14 +1199,14 @@ class JustShypProvider implements DeliveryProviderInterface
             foreach ($rawWarehouses as $w) {
                 if (!is_array($w)) continue;
                 $normalized[] = [
-                    'warehouse_id' => (string)($w['warehouse_id'] ?? ($w['pick_address_id'] ?? '')),
-                    'title'        => $w['title'] ?? ($w['address_title'] ?? ''),
-                    'addressee'    => $w['addressee'] ?? ($w['sender_name'] ?? ''),
-                    'address'      => $w['full_address'] ?? '',
-                    'pincode'      => $w['pincode'] ?? '',
-                    'city'         => $w['ciity'] ?? ($w['city'] ?? ''), // Handles misspelled 'ciity'
-                    'state'        => $w['state'] ?? '',
-                    'phone'        => $w['phone'] ?? '',
+                    'warehouse_id' => (string)($w['warehouse_id'] ?? ($w['id'] ?? ($w['pick_address_id'] ?? ($w['pickup_id'] ?? '')))),
+                    'title'        => $w['title'] ?? ($w['address_title'] ?? ($w['name'] ?? 'Valerie Jewels')),
+                    'addressee'    => $w['addressee'] ?? ($w['sender_name'] ?? ($w['contact_name'] ?? 'Jeel Kakadiya')),
+                    'address'      => $w['full_address'] ?? ($w['address'] ?? 'Rajkot, Gujarat'),
+                    'pincode'      => (string)($w['pincode'] ?? ($w['pin_code'] ?? ($w['pin'] ?? '360002'))),
+                    'city'         => $w['ciity'] ?? ($w['city'] ?? 'Rajkot'), // Handles misspelled 'ciity'
+                    'state'        => $w['state'] ?? 'Gujarat',
+                    'phone'        => (string)($w['phone'] ?? ($w['mobile'] ?? ($w['contact_number'] ?? '7016347945'))),
                 ];
             }
         }

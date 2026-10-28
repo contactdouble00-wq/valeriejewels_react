@@ -73,7 +73,7 @@ export default function AdminPaymentSettingsView() {
     default_delivery_provider: 'shiprocket',
     justshyp_base_url: 'https://backend.justshyp.com',
     justshyp_access_token: '',
-    justshyp_warehouse_id: '',
+    justshyp_warehouse_id: '166',
     justshyp_auto_sync: true,
     checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     exit_intent_enabled: true,
@@ -1571,10 +1571,24 @@ export default function AdminPaymentSettingsView() {
                   type="text"
                   value={settings.justshyp_warehouse_id || ''}
                   onChange={(e) => setSettings({ ...settings, justshyp_warehouse_id: e.target.value })}
-                  placeholder="e.g. 89976 (Leave blank to auto-detect)"
+                  placeholder="e.g. 166 (Default: Valerie Jewels Rajkot)"
                   className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary"
                 />
-                <p className="text-[10.5px] text-brand-muted">Assigned pickup warehouse in JustShyp. Run connection test to auto-detect.</p>
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-brand-muted">Verified Warehouse:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, justshyp_warehouse_id: '166' })}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all cursor-pointer ${
+                      String(settings.justshyp_warehouse_id || '166') === '166'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    📍 Valerie Jewels (Rajkot, Gujarat - 360002) — #166
+                  </button>
+                </div>
+                <p className="text-[10.5px] text-brand-muted">Assigned pickup warehouse in JustShyp dashboard. Defaults to #166.</p>
               </div>
 
               {/* Auto-Sync Toggle & Test Button */}
@@ -1636,7 +1650,7 @@ export default function AdminPaymentSettingsView() {
                     <div className="text-[11px] font-semibold text-emerald-800 mb-1">Detected Warehouses in JustShyp Account (Click to select):</div>
                     <div className="flex flex-wrap gap-1.5">
                       {justshypTestResult.warehouses.map((w, idx) => {
-                        const wid = String(w.warehouse_id || w.pick_address_id || '');
+                        const wid = String(w.warehouse_id || w.id || w.pick_address_id || w.pickup_id || '');
                         return (
                           <button
                             key={idx}

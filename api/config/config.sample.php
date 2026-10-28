@@ -60,6 +60,7 @@ return [
         'access_token' => '',
         'email'        => '',
         'password'     => '',
+        'warehouse_id' => '166',
     ],
 
     'smtp' => [

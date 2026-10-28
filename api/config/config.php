@@ -141,6 +141,7 @@ $config['justshyp'] = [
     'access_token' => $justshypAccessToken,
     'email'        => getenv('JUSTSHYP_EMAIL') ?: ($_ENV['JUSTSHYP_EMAIL'] ?? ''),
     'password'     => getenv('JUSTSHYP_PASSWORD') ?: ($_ENV['JUSTSHYP_PASSWORD'] ?? ''),
+    'warehouse_id' => getenv('JUSTSHYP_WAREHOUSE_ID') ?: ($_ENV['JUSTSHYP_WAREHOUSE_ID'] ?? '166'),
 ];
 
 // 4. SMTP Email Credentials (Environment Variables & Database Overrides)

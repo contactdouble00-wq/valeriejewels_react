@@ -41,7 +41,7 @@ $defaultSettings = [
     'justshyp_access_token'      => getenv('JUSTSHYP_ACCESS_TOKEN') ?: '',
     'justshyp_email'             => getenv('JUSTSHYP_EMAIL') ?: '',
     'justshyp_password'          => getenv('JUSTSHYP_PASSWORD') ?: '',
-    'justshyp_warehouse_id'      => '',
+    'justshyp_warehouse_id'      => getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166',
     'justshyp_auto_sync'         => true,
     'checkout_banner_text'  => '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
     'exit_intent_enabled'   => true,
@@ -157,6 +157,9 @@ try {
         if (empty($settings['fastrr_secret_key'])) {
             $settings['fastrr_secret_key'] = getenv('FASTRR_SECRET_KEY') ?: 'WWlzNX4C6mHwUUVUsGlUb36LCRBR8qe0';
         }
+        if (empty($settings['justshyp_warehouse_id'])) {
+            $settings['justshyp_warehouse_id'] = getenv('JUSTSHYP_WAREHOUSE_ID') ?: '166';
+        }
 
         // Check if admin token is present in Authorization header
         $isAdmin = false;
@@ -232,6 +235,13 @@ try {
             'shiprocket_password'        => !empty($data['shiprocket_password']) ? trim($data['shiprocket_password']) : ($current['shiprocket_password'] ?? ''),
             'shiprocket_pickup_location' => isset($data['shiprocket_pickup_location']) ? trim($data['shiprocket_pickup_location']) : ($current['shiprocket_pickup_location'] ?? 'Primary'),
             'shiprocket_auto_sync'       => isset($data['shiprocket_auto_sync']) ? (bool)$data['shiprocket_auto_sync'] : ($current['shiprocket_auto_sync'] ?? true),
+            'default_delivery_provider'  => in_array($data['default_delivery_provider'] ?? '', ['shiprocket', 'justshyp']) ? $data['default_delivery_provider'] : ($current['default_delivery_provider'] ?? 'shiprocket'),
+            'justshyp_base_url'          => !empty($data['justshyp_base_url']) ? trim($data['justshyp_base_url']) : ($current['justshyp_base_url'] ?? 'https://backend.justshyp.com'),
+            'justshyp_access_token'      => !empty($data['justshyp_access_token']) ? trim($data['justshyp_access_token']) : ($current['justshyp_access_token'] ?? ''),
+            'justshyp_email'             => isset($data['justshyp_email']) ? trim($data['justshyp_email']) : ($current['justshyp_email'] ?? ''),
+            'justshyp_password'          => !empty($data['justshyp_password']) ? trim($data['justshyp_password']) : ($current['justshyp_password'] ?? ''),
+            'justshyp_warehouse_id'      => isset($data['justshyp_warehouse_id']) && trim($data['justshyp_warehouse_id']) !== '' ? trim($data['justshyp_warehouse_id']) : ($current['justshyp_warehouse_id'] ?? '166'),
+            'justshyp_auto_sync'         => isset($data['justshyp_auto_sync']) ? (bool)$data['justshyp_auto_sync'] : ($current['justshyp_auto_sync'] ?? true),
             'checkout_banner_text'  => trim($data['checkout_banner_text'] ?? $current['checkout_banner_text']),
             'exit_intent_enabled'   => isset($data['exit_intent_enabled']) ? (bool)$data['exit_intent_enabled'] : $current['exit_intent_enabled'],
             'exit_intent_title'     => trim($data['exit_intent_title'] ?? $current['exit_intent_title']),
@@ -251,6 +261,11 @@ try {
                 $pdo->exec("DELETE FROM `site_settings` WHERE `key` = 'shiprocket_token_cache'");
             } catch (Throwable $e) {}
         }
+
+        try {
+            require_once dirname(__DIR__) . '/shipping/providers/JustShypProvider.php';
+            JustShypProvider::clearSettingsCache();
+        } catch (Throwable $e) {}
 
         // Log admin activity
         try {
