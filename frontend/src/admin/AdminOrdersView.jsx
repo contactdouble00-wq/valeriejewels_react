@@ -34,7 +34,8 @@ import {
   Settings,
   Lock,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  Zap
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
