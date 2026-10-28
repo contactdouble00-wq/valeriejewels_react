@@ -1,3 +1,4 @@
+// Production Valerie Jewels Admin Portal - Build: 2026-10-28T15:20
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,

@@ -71,6 +71,7 @@ jobs:
           server-dir: domains/valeriejewels.in/public_html/
           protocol: ftps
           dangerous-clean-slate: false
+          timeout: 300000
           exclude: |
             **/.git*
             **/.git*/**

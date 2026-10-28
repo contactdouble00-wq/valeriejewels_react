@@ -45,7 +45,18 @@ import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
 
-const AdminPortal = React.lazy(() => import('./admin/AdminPortal'));
+const AdminPortal = React.lazy(() =>
+  import('./admin/AdminPortal').catch((err) => {
+    const hasReloaded = window.sessionStorage.getItem('retry_admin_chunk_reload');
+    if (!hasReloaded) {
+      window.sessionStorage.setItem('retry_admin_chunk_reload', 'true');
+      window.location.reload();
+      return new Promise(() => {});
+    }
+    window.sessionStorage.removeItem('retry_admin_chunk_reload');
+    throw err;
+  })
+);
 
 function StorefrontContent({
   onOpenAdmin,
