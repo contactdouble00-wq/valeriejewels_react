@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -35,7 +35,10 @@ import {
   Lock,
   AlertCircle,
   CreditCard,
-  Zap
+  Zap,
+  ChevronDown,
+  Calendar,
+  FileSpreadsheet
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -128,6 +131,14 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
   // Bulk Order Selection & Deletion Dialog
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+
+  // Dedicated Orders CSV Export State with Status & Date Range filters
+  const [exportCsvOpen, setExportCsvOpen] = useState(false);
+  const [exportCsvStatus, setExportCsvStatus] = useState('all'); // 'all' | 'confirmed' | 'cancelled_pending' | 'pending' | 'cancelled' | 'processing' | 'delivered'
+  const [exportCsvDatePreset, setExportCsvDatePreset] = useState('all'); // 'all' | 'today' | 'yesterday' | '7days' | '30days' | 'custom'
+  const [exportCsvStartDate, setExportCsvStartDate] = useState('');
+  const [exportCsvEndDate, setExportCsvEndDate] = useState('');
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -656,6 +667,179 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     link.click();
     document.body.removeChild(link);
     showToast(`Exported ${filteredSyncedOrders.length} synced shipment records to CSV`);
+  };
+
+  // Filter orders by status and date range for CSV export
+  const getFilteredOrdersForExport = (sourceOrders = orders) => {
+    return sourceOrders.filter((ord) => {
+      // 1. Status Filter
+      if (exportCsvStatus === 'confirmed') {
+        const isConfirmed = ord.order_status === 'confirmed' || ord.payment_status === 'paid' || ord.payment_status === 'partial_paid';
+        if (!isConfirmed) return false;
+      } else if (exportCsvStatus === 'cancelled_pending') {
+        const isCancelledOrPending = (ord.order_status === 'cancelled' || ord.order_status === 'failed' || ord.order_status === 'pending' || ord.payment_status === 'pending' || ord.payment_status === 'failed' || ord.payment_status === 'unpaid') && ord.payment_status !== 'paid';
+        if (!isCancelledOrPending) return false;
+      } else if (exportCsvStatus === 'pending') {
+        const isPending = (ord.order_status === 'pending' || ord.payment_status === 'pending' || ord.payment_status === 'unpaid') && ord.payment_status !== 'paid';
+        if (!isPending) return false;
+      } else if (exportCsvStatus === 'cancelled') {
+        const isCancelled = ord.order_status === 'cancelled' || ord.payment_status === 'failed' || ord.order_status === 'failed';
+        if (!isCancelled) return false;
+      } else if (exportCsvStatus === 'processing') {
+        if (ord.order_status !== 'processing' && ord.order_status !== 'shipped') return false;
+      } else if (exportCsvStatus === 'delivered') {
+        if (ord.order_status !== 'delivered') return false;
+      }
+
+      // 2. Date Range Filter
+      if (ord.created_at) {
+        const orderDate = new Date(ord.created_at);
+        if (exportCsvDatePreset === 'today') {
+          const today = new Date();
+          if (orderDate.toDateString() !== today.toDateString()) return false;
+        } else if (exportCsvDatePreset === 'yesterday') {
+          const yest = new Date();
+          yest.setDate(yest.getDate() - 1);
+          if (orderDate.toDateString() !== yest.toDateString()) return false;
+        } else if (exportCsvDatePreset === '7days') {
+          const d7 = new Date();
+          d7.setDate(d7.getDate() - 7);
+          d7.setHours(0, 0, 0, 0);
+          if (orderDate < d7) return false;
+        } else if (exportCsvDatePreset === '30days') {
+          const d30 = new Date();
+          d30.setDate(d30.getDate() - 30);
+          d30.setHours(0, 0, 0, 0);
+          if (orderDate < d30) return false;
+        } else if (exportCsvDatePreset === 'custom' || exportCsvStartDate || exportCsvEndDate) {
+          if (exportCsvStartDate) {
+            const start = new Date(exportCsvStartDate + 'T00:00:00');
+            if (orderDate < start) return false;
+          }
+          if (exportCsvEndDate) {
+            const end = new Date(exportCsvEndDate + 'T23:59:59');
+            if (orderDate > end) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  };
+
+  const matchingExportOrders = useMemo(() => {
+    return getFilteredOrdersForExport(orders);
+  }, [orders, exportCsvStatus, exportCsvDatePreset, exportCsvStartDate, exportCsvEndDate]);
+
+  const matchingExportCount = matchingExportOrders.length;
+
+  const handleDownloadOrdersCsv = async () => {
+    setIsExportingCsv(true);
+    try {
+      let targetOrders = orders;
+      if (orders.length === 0 || search || statusFilter || paymentFilter || paymentStatusFilter || riskFilter || jhumkaOnly) {
+        try {
+          const allRes = await adminApi.getOrders({});
+          if (Array.isArray(allRes) && allRes.length > 0) {
+            targetOrders = allRes;
+          }
+        } catch (e) {
+          // fallback to in-memory orders
+        }
+      }
+
+      const filtered = getFilteredOrdersForExport(targetOrders);
+
+      if (filtered.length === 0) {
+        showToast('⚠️ No orders match the selected status and date range');
+        setIsExportingCsv(false);
+        return;
+      }
+
+      const headers = [
+        'Order Number',
+        'Order Date & Time',
+        'Customer Name',
+        'Customer Phone',
+        'Customer Email',
+        'Shipping Address Line 1',
+        'Shipping Address Line 2',
+        'City',
+        'State',
+        'Pincode',
+        'Total Amount (INR)',
+        'Payment Type',
+        'Payment Status',
+        'Advance Paid (INR)',
+        'Due on Delivery (INR)',
+        'Order Status',
+        'Items Count',
+        'Primary Product Name',
+        'Primary Product SKU',
+        'Jhumka Box Order',
+        'Delivery Partner',
+        'AWB Tracking Number',
+        'Courier Partner',
+        'Tracking URL',
+        'Fastrr Risk Tier'
+      ];
+
+      const rows = filtered.map((ord) => {
+        const partner = ord.delivery_provider === 'justshyp' ? 'JustShyp' : (ord.shiprocket_order_id ? 'Shiprocket' : 'None');
+        const awb = ord.delivery_provider === 'justshyp' ? (ord.provider_awb || '') : (ord.shiprocket_awb || '');
+        const courier = ord.courier_name || '';
+        const isJhumka = Number(ord.has_jhumka_box) > 0 ? 'Yes' : 'No';
+
+        return [
+          `"${ord.order_number || ''}"`,
+          `"${ord.created_at || ''}"`,
+          `"${(ord.customer_name || '').replace(/"/g, '""')}"`,
+          `"${(ord.customer_phone || '').replace(/"/g, '""')}"`,
+          `"${(ord.customer_email || '').replace(/"/g, '""')}"`,
+          `"${(ord.shipping_address_line1 || '').replace(/"/g, '""')}"`,
+          `"${(ord.shipping_address_line2 || '').replace(/"/g, '""')}"`,
+          `"${(ord.city || '').replace(/"/g, '""')}"`,
+          `"${(ord.state || '').replace(/"/g, '""')}"`,
+          `"${(ord.pincode || '').replace(/"/g, '""')}"`,
+          ord.total_amount || 0,
+          `"${ord.payment_type || ''}"`,
+          `"${ord.payment_status || ''}"`,
+          ord.amount_paid_upfront || 0,
+          ord.amount_due_on_delivery || 0,
+          `"${ord.order_status || ''}"`,
+          ord.items_count || 1,
+          `"${(ord.first_item_name || '').replace(/"/g, '""')}"`,
+          `"${(ord.first_item_sku || '').replace(/"/g, '""')}"`,
+          `"${isJhumka}"`,
+          `"${partner}"`,
+          `"${awb}"`,
+          `"${courier.replace(/"/g, '""')}"`,
+          `"${(ord.tracking_url || '').replace(/"/g, '""')}"`,
+          `"${ord.fastrr_risk_tier || 'standard'}"`
+        ];
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const statusSlug = exportCsvStatus === 'all' ? 'all_orders' : exportCsvStatus;
+      const dateSlug = exportCsvStartDate && exportCsvEndDate ? `${exportCsvStartDate}_to_${exportCsvEndDate}` : new Date().toISOString().slice(0, 10);
+      link.setAttribute('download', `valerie_jewels_orders_${statusSlug}_${dateSlug}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`✓ Downloaded CSV with ${filtered.length} order records!`);
+      setExportCsvOpen(false);
+    } catch (err) {
+      showToast(`❌ Failed to export CSV: ${err.message}`);
+    } finally {
+      setIsExportingCsv(false);
+    }
   };
 
   useEffect(() => {
@@ -1476,6 +1660,166 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <Truck className={`w-3.5 h-3.5 ${batchSyncingJs ? 'animate-bounce' : ''}`} />
               <span>{batchSyncingJs ? 'Syncing to JustShyp...' : '⚡ Sync to JustShyp'}</span>
             </button>
+
+            {/* Download Orders CSV Button & Dropdown Filter Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setExportCsvOpen((prev) => !prev)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs border border-emerald-400 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white cursor-pointer"
+                title="Download CSV file of customer and order data"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download CSV</span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${exportCsvOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {exportCsvOpen && (
+                <>
+                  {/* Backdrop for easy dismiss on outside click */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setExportCsvOpen(false)}
+                  />
+
+                  {/* Popover Dropdown Filter Card */}
+                  <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-brand-border p-4.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-3 border-b border-brand-border/70">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                          <Download className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-brand-tertiary">Download Orders CSV</h4>
+                          <p className="text-[10px] text-brand-muted">Select status & date range to export</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExportCsvOpen(false)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3.5 pt-3.5">
+                      {/* Order Status Dropdown Filter */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-tertiary mb-1">
+                          Order Status Filter
+                        </label>
+                        <select
+                          value={exportCsvStatus}
+                          onChange={(e) => setExportCsvStatus(e.target.value)}
+                          className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs text-brand-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium cursor-pointer"
+                        >
+                          <option value="all">All Orders (Confirmed, Pending & Cancelled)</option>
+                          <option value="confirmed">✅ Order Confirmed (Paid & Processing)</option>
+                          <option value="cancelled_pending">⚠️ Order Cancelled / Pending (All Incomplete)</option>
+                          <option value="pending">⏳ Order Pending / Unpaid Only</option>
+                          <option value="cancelled">❌ Order Cancelled / Failed Only</option>
+                          <option value="processing">🚚 Shipped / In Transit</option>
+                          <option value="delivered">📦 Delivered</option>
+                        </select>
+                      </div>
+
+                      {/* Date Range Presets */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-tertiary mb-1.5 flex items-center justify-between">
+                          <span>Date Range Filter</span>
+                          <span className="text-[10px] text-brand-muted font-normal">Optional</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5 mb-2">
+                          {[
+                            { id: 'all', label: 'All Time' },
+                            { id: 'today', label: 'Today' },
+                            { id: 'yesterday', label: 'Yesterday' },
+                            { id: '7days', label: 'Last 7 Days' },
+                            { id: '30days', label: 'Last 30 Days' },
+                            { id: 'custom', label: 'Custom Range' },
+                          ].map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                setExportCsvDatePreset(preset.id);
+                                if (preset.id !== 'custom') {
+                                  setExportCsvStartDate('');
+                                  setExportCsvEndDate('');
+                                }
+                              }}
+                              className={`py-1 px-2 rounded-lg text-[10.5px] font-semibold border transition-all text-center cursor-pointer ${
+                                exportCsvDatePreset === preset.id
+                                  ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                                  : 'bg-[#FAF8FC] hover:bg-gray-100 text-brand-tertiary border-brand-border'
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Custom Date Pickers */}
+                        {(exportCsvDatePreset === 'custom' || exportCsvStartDate || exportCsvEndDate) && (
+                          <div className="grid grid-cols-2 gap-2 pt-1 animate-in fade-in">
+                            <div>
+                              <span className="text-[10px] font-medium text-brand-muted block mb-0.5">From Date</span>
+                              <input
+                                type="date"
+                                value={exportCsvStartDate}
+                                onChange={(e) => {
+                                  setExportCsvStartDate(e.target.value);
+                                  setExportCsvDatePreset('custom');
+                                }}
+                                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-2.5 py-1.5 text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-medium text-brand-muted block mb-0.5">To Date</span>
+                              <input
+                                type="date"
+                                value={exportCsvEndDate}
+                                onChange={(e) => {
+                                  setExportCsvEndDate(e.target.value);
+                                  setExportCsvDatePreset('custom');
+                                }}
+                                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-2.5 py-1.5 text-xs text-brand-tertiary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Live Matching Summary Strip */}
+                      <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200/80 flex items-center justify-between text-xs">
+                        <span className="text-brand-muted font-medium text-[11px]">Matching Records:</span>
+                        <span className="font-bold font-mono text-brand-primary">
+                          {matchingExportCount} {matchingExportCount === 1 ? 'Order' : 'Orders'}
+                        </span>
+                      </div>
+
+                      {/* Download Action Button */}
+                      <button
+                        type="button"
+                        onClick={handleDownloadOrdersCsv}
+                        disabled={isExportingCsv || matchingExportCount === 0}
+                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Download className={`w-4 h-4 ${isExportingCsv ? 'animate-bounce' : ''}`} />
+                        <span>
+                          {isExportingCsv
+                            ? 'Generating CSV...'
+                            : matchingExportCount === 0
+                            ? 'No Orders Match Filter'
+                            : `Download CSV (${matchingExportCount} Orders)`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
