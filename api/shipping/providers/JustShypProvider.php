@@ -682,19 +682,9 @@ class JustShypProvider implements DeliveryProviderInterface
             'products' => $formattedProducts,
         ];
 
-        // Courier preference if selected (keyword like dtdc_0.5kg_flat_vc, delhivery_0.5kg_flat_vc, etc.)
-        $chosenCourier = null;
-        if (!empty($options['courier_keyword'])) {
-            $chosenCourier = is_string($options['courier_keyword']) ? trim($options['courier_keyword']) : ($options['courier_keyword']['courier_keyword'] ?? ($options['courier_keyword']['keyword'] ?? null));
-        } elseif (!empty($options['courier'])) {
-            if (is_string($options['courier'])) {
-                $chosenCourier = trim($options['courier']);
-            } elseif (is_array($options['courier'])) {
-                $chosenCourier = $options['courier']['courier_keyword'] ?? ($options['courier']['keyword'] ?? ($options['courier']['courier_name'] ?? null));
-            }
-        }
-        if (!empty($chosenCourier)) {
-            $payload['courier'] = $chosenCourier;
+        // Courier preference if selected
+        if (!empty($options['courier'])) {
+            $payload['courier'] = $options['courier'];
         }
 
         // Send request (canRetry = false for safety)
