@@ -134,7 +134,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
   // Dedicated Orders CSV Export State with Status & Date Range filters
   const [exportCsvOpen, setExportCsvOpen] = useState(false);
-  const [exportCsvStatus, setExportCsvStatus] = useState('all'); // 'all' | 'confirmed' | 'cancelled_pending' | 'pending' | 'cancelled' | 'processing' | 'delivered'
+  const [exportCsvStatus, setExportCsvStatus] = useState('all'); // 'all' | 'confirmed' | 'pending' | 'cancelled' | 'processing' | 'delivered'
   const [exportCsvDatePreset, setExportCsvDatePreset] = useState('all'); // 'all' | 'today' | 'yesterday' | '7days' | '30days' | 'custom'
   const [exportCsvStartDate, setExportCsvStartDate] = useState('');
   const [exportCsvEndDate, setExportCsvEndDate] = useState('');
@@ -676,14 +676,15 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       if (exportCsvStatus === 'confirmed') {
         const isConfirmed = ord.order_status === 'confirmed' || ord.payment_status === 'paid' || ord.payment_status === 'partial_paid';
         if (!isConfirmed) return false;
-      } else if (exportCsvStatus === 'cancelled_pending') {
-        const isCancelledOrPending = (ord.order_status === 'cancelled' || ord.order_status === 'failed' || ord.order_status === 'pending' || ord.payment_status === 'pending' || ord.payment_status === 'failed' || ord.payment_status === 'unpaid') && ord.payment_status !== 'paid';
-        if (!isCancelledOrPending) return false;
       } else if (exportCsvStatus === 'pending') {
-        const isPending = (ord.order_status === 'pending' || ord.payment_status === 'pending' || ord.payment_status === 'unpaid') && ord.payment_status !== 'paid';
+        const isPending = (ord.order_status === 'pending' || ord.payment_status === 'pending' || ord.payment_status === 'unpaid') &&
+          ord.payment_status !== 'paid' &&
+          ord.order_status !== 'cancelled' &&
+          ord.order_status !== 'failed' &&
+          ord.payment_status !== 'failed';
         if (!isPending) return false;
       } else if (exportCsvStatus === 'cancelled') {
-        const isCancelled = ord.order_status === 'cancelled' || ord.payment_status === 'failed' || ord.order_status === 'failed';
+        const isCancelled = ord.order_status === 'cancelled' || ord.order_status === 'failed' || ord.payment_status === 'failed';
         if (!isCancelled) return false;
       } else if (exportCsvStatus === 'processing') {
         if (ord.order_status !== 'processing' && ord.order_status !== 'shipped') return false;
@@ -1714,11 +1715,10 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                           onChange={(e) => setExportCsvStatus(e.target.value)}
                           className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-2 text-xs text-brand-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium cursor-pointer"
                         >
-                          <option value="all">All Orders (Confirmed, Pending & Cancelled)</option>
-                          <option value="confirmed">✅ Order Confirmed (Paid & Processing)</option>
-                          <option value="cancelled_pending">⚠️ Order Cancelled / Pending (All Incomplete)</option>
-                          <option value="pending">⏳ Order Pending / Unpaid Only</option>
-                          <option value="cancelled">❌ Order Cancelled / Failed Only</option>
+                          <option value="all">All Orders</option>
+                          <option value="confirmed">✅ Order Confirmed</option>
+                          <option value="pending">⏳ Order Pending</option>
+                          <option value="cancelled">❌ Order Cancelled</option>
                           <option value="processing">🚚 Shipped / In Transit</option>
                           <option value="delivered">📦 Delivered</option>
                         </select>
