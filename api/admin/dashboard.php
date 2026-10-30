@@ -13,17 +13,20 @@ $pdo = Database::getConnection();
 
 try {
     // 1. Strict definition of Processed & Confirmed Orders:
-    // - Order must be confirmed, shipped, or delivered (never pending, failed, or cancelled)
-    // - Payment must be successful:
+    // - Order must NOT be cancelled, failed, or rto.
+    // - Status must be in active fulfillment pipeline (confirmed, processing, in_transit, out_for_delivery, shipped, delivered)
+    //   OR payment must be secured (paid or partial_paid advance).
+    // - Payment must be valid:
     //   * Prepaid: payment_status = 'paid'
-    //   * Partial COD: payment_status IN ('partial_paid', 'paid') (advance deposit secured)
+    //   * Partial COD: payment_status IN ('partial_paid', 'paid') (advance deposit secured) OR confirmed in fulfillment
     //   * Full COD: confirmed by operations, payment_status != 'failed'
     $confirmedCondition = "
-        (order_status IN ('confirmed', 'shipped', 'delivered')
+        (order_status NOT IN ('cancelled', 'failed', 'rto')
         AND (
-            (payment_type = 'full_prepaid' AND payment_status = 'paid')
-            OR (payment_type = 'partial' AND payment_status IN ('partial_paid', 'paid'))
-            OR (payment_type = 'cod' AND payment_status != 'failed')
+            (payment_type IN ('full_prepaid', 'prepaid') AND payment_status = 'paid')
+            OR (payment_type = 'partial' AND (payment_status IN ('partial_paid', 'paid') OR order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
+            OR (payment_type = 'cod' AND payment_status != 'failed' AND order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
+            OR (order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND payment_status IN ('paid', 'partial_paid'))
         ))
     ";
 
@@ -36,7 +39,7 @@ try {
             COALESCE(AVG(CASE WHEN $confirmedCondition THEN total_amount ELSE NULL END), 0) AS average_order_value,
 
             -- Payment Breakdown strictly among confirmed orders
-            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'full_prepaid' THEN 1 ELSE NULL END) AS prepaid_orders,
+            COUNT(CASE WHEN $confirmedCondition AND payment_type IN ('full_prepaid', 'prepaid') THEN 1 ELSE NULL END) AS prepaid_orders,
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'partial' THEN 1 ELSE NULL END) AS partial_cod_orders,
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'cod' THEN 1 ELSE NULL END) AS cod_orders,
 
@@ -79,11 +82,12 @@ try {
         FROM products p
         LEFT JOIN order_items oi ON oi.product_id = p.id
         LEFT JOIN orders o ON oi.order_id = o.id AND (
-            o.order_status IN ('confirmed', 'shipped', 'delivered')
+            o.order_status NOT IN ('cancelled', 'failed', 'rto')
             AND (
-                (o.payment_type = 'full_prepaid' AND o.payment_status = 'paid')
-                OR (o.payment_type = 'partial' AND o.payment_status IN ('partial_paid', 'paid'))
-                OR (o.payment_type = 'cod' AND o.payment_status != 'failed')
+                (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
+                OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
+                OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
+                OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
             )
         )
         WHERE p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
@@ -125,7 +129,7 @@ try {
                 WHERE oi.order_id = o.id AND (p.sku LIKE 'VJ-JHM%' OR p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1))
             ) AS has_jhumka_box
         FROM orders o
-        WHERE o.order_status IN ('confirmed', 'shipped', 'delivered')
+        WHERE o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')
            OR o.payment_status IN ('paid', 'partial_paid')
         ORDER BY o.id DESC
         LIMIT 10
