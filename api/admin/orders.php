@@ -773,7 +773,7 @@ if ($action === 'compare_shipping_rates') {
 
     $orderId = (int)($_GET['id'] ?? ($_GET['order_id'] ?? ($input['id'] ?? ($input['order_id'] ?? 0))));
     $dropPincode = trim($_GET['drop_pincode'] ?? ($input['drop_pincode'] ?? ''));
-    $pickupPincode = trim($_GET['pickup_pincode'] ?? ($input['pickup_pincode'] ?? '400096'));
+    $pickupPincode = trim($_GET['pickup_pincode'] ?? ($input['pickup_pincode'] ?? '360002'));
     $paymentMode = strtoupper(trim($_GET['payment_mode'] ?? ($input['payment_mode'] ?? 'PPD')));
 
     $pkg = [
