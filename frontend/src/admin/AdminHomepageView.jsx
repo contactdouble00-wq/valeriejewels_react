@@ -97,6 +97,7 @@ const FACTORY_DEFAULTS = {
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
+    featuredProductIds: [],
     guaranteeStrip: {
       enabled: true,
       showPulseDot: true,

@@ -323,12 +323,13 @@ function StorefrontContent({
 
   const reloadData = async () => {
     try {
-      const [cats, bnds, health, bestsellersRes, jBoxesRes] = await Promise.all([
+      const [cats, bnds, health, bestsellersRes, jBoxesRes, allProdsRes] = await Promise.all([
         apiService.getCategories().catch(() => []),
         apiService.getBundles().catch(() => []),
         apiService.getHealth().catch(() => null),
         apiService.getProducts({ bestseller: 1 }).then(res => res.products || []).catch(() => []),
         apiService.getProducts({ category: 'jhumka-boxes' }).then(res => res.products || []).catch(() => []),
+        apiService.getProducts({ limit: 150 }).then(res => res.products || []).catch(() => []),
       ]);
       if (Array.isArray(cats) && cats.length > 0) {
         setCategories(cats);
@@ -338,18 +339,32 @@ function StorefrontContent({
       }
       setBundles(bnds || []);
       setApiHealth(health);
-      // Strictly ensure only genuine Jhumka Box products are shown in the 4 Signature Jhumka Boxes section
-      const isGenuineJhumka = (p) => {
-        if (!p) return false;
-        const name = (p.name || '').toLowerCase();
-        const slug = (p.slug || '').toLowerCase();
-        if (name.includes('mystery') || slug.includes('mystery')) return false;
-        return p.category_slug === 'jhumka-boxes' || (p.sku && p.sku.startsWith('VJ-JHM')) || name.includes('jhumka');
-      };
 
-      const boxes = (jBoxesRes && jBoxesRes.length > 0)
-        ? jBoxesRes.filter(isGenuineJhumka)
-        : (bestsellersRes || []).filter(isGenuineJhumka);
+      // Check if explicit showcase box IDs are selected by the admin
+      const featuredIds = Array.isArray(content?.jhumkaHero?.featuredProductIds)
+        ? content.jhumkaHero.featuredProductIds.map(Number).filter(id => id > 0)
+        : [];
+
+      let boxes = [];
+      if (featuredIds.length > 0 && Array.isArray(allProdsRes)) {
+        const prodMap = new Map(allProdsRes.map(p => [Number(p.id), p]));
+        boxes = featuredIds.map(id => prodMap.get(id)).filter(Boolean);
+      }
+
+      // Fallback: strictly genuine Jhumka Box items (bestsellers treated separately)
+      if (boxes.length === 0) {
+        const isGenuineJhumka = (p) => {
+          if (!p) return false;
+          const name = (p.name || '').toLowerCase();
+          const slug = (p.slug || '').toLowerCase();
+          if (name.includes('mystery') || slug.includes('mystery')) return false;
+          return p.category_slug === 'jhumka-boxes' || (p.sku && p.sku.startsWith('VJ-JHM')) || name.includes('jhumka');
+        };
+
+        boxes = (jBoxesRes && jBoxesRes.length > 0)
+          ? jBoxesRes.filter(isGenuineJhumka)
+          : (bestsellersRes || []).filter(isGenuineJhumka);
+      }
 
       setJhumkaBoxes(boxes);
     } catch (err) {
@@ -361,6 +376,23 @@ function StorefrontContent({
   useEffect(() => {
     reloadData();
   }, []);
+
+  // Synchronize showcase boxes whenever admin updates featuredProductIds in site settings
+  useEffect(() => {
+    const featuredIds = Array.isArray(content?.jhumkaHero?.featuredProductIds)
+      ? content.jhumkaHero.featuredProductIds.map(Number).filter(id => id > 0)
+      : [];
+    if (featuredIds.length > 0) {
+      apiService.getProducts({ limit: 150 }).then(res => {
+        const catalog = res.products || [];
+        const prodMap = new Map(catalog.map(p => [Number(p.id), p]));
+        const customBoxes = featuredIds.map(id => prodMap.get(id)).filter(Boolean);
+        if (customBoxes.length > 0) {
+          setJhumkaBoxes(customBoxes);
+        }
+      }).catch(() => {});
+    }
+  }, [content?.jhumkaHero?.featuredProductIds]);
 
   // Listen for admin changes across tabs or inside the same window
   useEffect(() => {

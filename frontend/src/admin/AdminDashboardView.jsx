@@ -14,13 +14,16 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { adminApi } from './adminApi';
+import ShowcaseBoxesModal from './ShowcaseBoxesModal';
 
 export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showcaseModalOpen, setShowcaseModalOpen] = useState(false);
 
   const loadData = async () => {
     try {
@@ -190,13 +193,23 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             </p>
           </div>
 
-          <button
-            onClick={() => onNavigateTab && onNavigateTab('products')}
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors"
-          >
-            <span>Manage All Products</span>
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowcaseModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary-hover shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-brand-gold fill-current" />
+              <span>Select Showcase Products</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab && onNavigateTab('products')}
+              className="inline-flex items-center space-x-1.5 text-xs font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors px-2 py-1.5 cursor-pointer"
+            >
+              <span>Manage All Products</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* 4 Jhumka Boxes Grid */}
@@ -262,6 +275,26 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
                   </div>
                 </div>
               </div>
+            );
+          })}
+
+          {hero_jhumka_boxes.length < 4 && Array.from({ length: 4 - hero_jhumka_boxes.length }).map((_, placeholderIdx) => {
+            const slotNum = hero_jhumka_boxes.length + placeholderIdx + 1;
+            return (
+              <button
+                key={`empty-slot-${slotNum}`}
+                type="button"
+                onClick={() => setShowcaseModalOpen(true)}
+                className="bg-white/70 hover:bg-white rounded-2xl p-6 border-2 border-dashed border-brand-border hover:border-brand-primary/60 transition-all flex flex-col items-center justify-center text-center space-y-2 group cursor-pointer min-h-[170px]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-purple-50 group-hover:bg-brand-primary/15 flex items-center justify-center text-brand-primary transition-colors">
+                  <Sparkles className="w-4 h-4 text-brand-gold fill-current" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-brand-tertiary">Box #{slotNum} Empty</p>
+                  <p className="text-[11px] text-brand-muted">+ Click to assign product</p>
+                </div>
+              </button>
             );
           })}
         </div>
@@ -402,6 +435,16 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           </div>
         </div>
       </div>
+
+      {/* Modal for selecting and ordering the 4 Showcase Boxes */}
+      {showcaseModalOpen && (
+        <ShowcaseBoxesModal
+          isOpen={showcaseModalOpen}
+          onClose={() => setShowcaseModalOpen(false)}
+          currentBoxIds={data?.featured_box_ids || hero_jhumka_boxes.map(b => b.id)}
+          onSaved={() => loadData()}
+        />
+      )}
     </div>
   );
 }

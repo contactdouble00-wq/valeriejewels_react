@@ -11,6 +11,75 @@ require_once dirname(__DIR__) . '/utils/admin_auth.php';
 $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
 
+// Handle saving custom showcase products
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || ($_GET['action'] ?? '') === 'save_showcase_boxes') {
+    try {
+        $rawInput = file_get_contents('php://input');
+        $payload = json_decode($rawInput, true);
+
+        $productIds = [];
+        if (isset($payload['product_ids']) && is_array($payload['product_ids'])) {
+            $productIds = $payload['product_ids'];
+        } elseif (isset($payload['featured_product_ids']) && is_array($payload['featured_product_ids'])) {
+            $productIds = $payload['featured_product_ids'];
+        } elseif (is_array($payload)) {
+            $productIds = $payload;
+        }
+
+        $cleanIds = array_values(array_filter(array_map('intval', $productIds), fn($id) => $id > 0));
+
+        // Fetch current homepage_content
+        $settingStmt = $pdo->query("SELECT `value` FROM site_settings WHERE `key` = 'homepage_content' LIMIT 1");
+        $currentData = [];
+        if ($settingStmt) {
+            $val = $settingStmt->fetchColumn();
+            if ($val) {
+                $currentData = json_decode($val, true) ?: [];
+            }
+        }
+
+        if (!isset($currentData['jhumkaHero']) || !is_array($currentData['jhumkaHero'])) {
+            $currentData['jhumkaHero'] = [];
+        }
+        $currentData['jhumkaHero']['featuredProductIds'] = $cleanIds;
+
+        $jsonValue = json_encode($currentData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        if ($driver === 'sqlite') {
+            $stmt = $pdo->prepare("
+                INSERT INTO site_settings (key, value, updated_at)
+                VALUES ('homepage_content', ?, datetime('now'))
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+            ");
+            $stmt->execute([$jsonValue]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO `site_settings` (`key`, `value`)
+                VALUES ('homepage_content', ?)
+                ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), `updated_at` = NOW()
+            ");
+            $stmt->execute([$jsonValue]);
+        }
+
+        AdminAuth::logActivity(
+            $adminUser['id'],
+            'save_showcase_boxes',
+            'site_settings',
+            'homepage_content',
+            json_encode(['featured_product_ids' => $cleanIds, 'user' => $adminUser['email']])
+        );
+
+        ApiResponse::success([
+            'featured_product_ids' => $cleanIds
+        ], 'Showcase boxes saved successfully');
+        exit;
+    } catch (Throwable $e) {
+        ApiResponse::error('Failed to save showcase boxes: ' . $e->getMessage(), 500);
+        exit;
+    }
+}
+
 try {
     // 1. Strict definition of Processed & Confirmed Orders:
     // - Order must NOT be cancelled, failed, or rto.
@@ -66,39 +135,104 @@ try {
     $prepaidShare = $totalOrders > 0 ? round(($upfrontPaidOrders / $totalOrders) * 100, 1) : 0;
 
     // 2. HERO AD SPOTLIGHT: 4 Signature Jhumka Boxes Performance (strictly from confirmed orders)
-    $jhumkaStmt = $pdo->query("
-        SELECT 
-            p.id,
-            p.name,
-            p.slug,
-            p.sku,
-            p.price,
-            p.mrp,
-            p.stock_quantity,
-            (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image,
-            COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS units_sold,
-            COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.total_price ELSE 0 END), 0) AS revenue_generated,
-            CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
-        FROM products p
-        LEFT JOIN order_items oi ON oi.product_id = p.id
-        LEFT JOIN orders o ON oi.order_id = o.id AND (
-            o.order_status NOT IN ('cancelled', 'failed', 'rto')
-            AND (
-                (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
-                OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
-                OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
-                OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
+    // Read featured showcase box IDs from site_settings if configured
+    $showcaseIds = [];
+    $settingStmt = $pdo->query("SELECT `value` FROM site_settings WHERE `key` = 'homepage_content' LIMIT 1");
+    if ($settingStmt) {
+        $rawSetting = $settingStmt->fetchColumn();
+        if ($rawSetting) {
+            $parsedSetting = json_decode($rawSetting, true);
+            if (!empty($parsedSetting['jhumkaHero']['featuredProductIds']) && is_array($parsedSetting['jhumkaHero']['featuredProductIds'])) {
+                $showcaseIds = array_values(array_filter(array_map('intval', $parsedSetting['jhumkaHero']['featuredProductIds']), fn($id) => $id > 0));
+            }
+        }
+    }
+
+    $heroJhumkaBoxes = [];
+    if (!empty($showcaseIds)) {
+        // Query explicit products chosen for the showcase, preserving the exact slot ordering
+        $placeholders = implode(',', array_fill(0, count($showcaseIds), '?'));
+        
+        // Build CASE statement for exact slot ordering: CASE p.id WHEN ? THEN 1 WHEN ? THEN 2 ... END
+        $caseClauses = [];
+        $orderParams = [];
+        foreach ($showcaseIds as $idx => $id) {
+            $caseClauses[] = "WHEN ? THEN " . ($idx + 1);
+            $orderParams[] = $id;
+        }
+        $caseOrderSql = "CASE p.id " . implode(' ', $caseClauses) . " ELSE 9999 END ASC";
+
+        $jhumkaSql = "
+            SELECT 
+                p.id,
+                p.name,
+                p.slug,
+                p.sku,
+                p.price,
+                p.mrp,
+                p.stock_quantity,
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image,
+                COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS units_sold,
+                COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.total_price ELSE 0 END), 0) AS revenue_generated,
+                CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
+            FROM products p
+            LEFT JOIN order_items oi ON oi.product_id = p.id
+            LEFT JOIN orders o ON oi.order_id = o.id AND (
+                o.order_status NOT IN ('cancelled', 'failed', 'rto')
+                AND (
+                    (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
+                    OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
+                    OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
+                    OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
+                )
             )
-        )
-        WHERE (p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
-           OR p.sku LIKE 'VJ-JHM%'
-           OR p.name LIKE '%Jhumka%')
-          AND p.slug NOT LIKE '%mystery%'
-          AND p.name NOT LIKE '%Mystery%'
-        GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
-        ORDER BY p.id ASC
-    ");
-    $heroJhumkaBoxes = $jhumkaStmt->fetchAll(PDO::FETCH_ASSOC);
+            WHERE p.id IN ($placeholders)
+            GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
+            ORDER BY $caseOrderSql
+        ";
+        $jhumkaStmt = $pdo->prepare($jhumkaSql);
+        $queryParams = array_merge($showcaseIds, $orderParams);
+        $jhumkaStmt->execute($queryParams);
+        $heroJhumkaBoxes = $jhumkaStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Fallback if no explicit showcase IDs configured or none found
+    if (empty($heroJhumkaBoxes)) {
+        $jhumkaStmt = $pdo->query("
+            SELECT 
+                p.id,
+                p.name,
+                p.slug,
+                p.sku,
+                p.price,
+                p.mrp,
+                p.stock_quantity,
+                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image,
+                COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS units_sold,
+                COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.total_price ELSE 0 END), 0) AS revenue_generated,
+                CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
+            FROM products p
+            LEFT JOIN order_items oi ON oi.product_id = p.id
+            LEFT JOIN orders o ON oi.order_id = o.id AND (
+                o.order_status NOT IN ('cancelled', 'failed', 'rto')
+                AND (
+                    (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
+                    OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
+                    OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
+                    OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
+                )
+            )
+            WHERE (p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
+               OR p.sku LIKE 'VJ-JHM%'
+               OR p.name LIKE '%Jhumka%')
+              AND p.slug NOT LIKE '%mystery%'
+              AND p.name NOT LIKE '%Mystery%'
+            GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
+            ORDER BY p.id ASC
+            LIMIT 4
+        ");
+        $heroJhumkaBoxes = $jhumkaStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // 3. General Low-Stock Inventory Alerts
     $lowStockStmt = $pdo->query("
@@ -160,6 +294,7 @@ try {
             'abandoned_checkouts_count' => (int)$stats['abandoned_orders_count'],
             'abandoned_checkouts_value' => (float)$stats['abandoned_orders_value'],
         ],
+        'featured_box_ids'  => $showcaseIds,
         'hero_jhumka_boxes' => $heroJhumkaBoxes,
         'low_stock_alerts'  => $lowStockAlerts,
         'recent_orders'     => $recentOrders,

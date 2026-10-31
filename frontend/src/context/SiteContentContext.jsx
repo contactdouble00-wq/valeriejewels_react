@@ -49,6 +49,7 @@ const DEFAULT_SITE_CONTENT = {
     pairsBadgeSuffix: 'Pairs Inside',
     showBoxNumber: true,
     showPricePerPair: true,
+    featuredProductIds: [],
     guaranteeStrip: {
       enabled: true,
       showPulseDot: true,

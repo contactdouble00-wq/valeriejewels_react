@@ -132,6 +132,14 @@ export const adminApi = {
     return res.data;
   },
 
+  async saveShowcaseBoxes(productIds) {
+    const res = await request('/admin/dashboard.php?action=save_showcase_boxes', {
+      method: 'POST',
+      body: JSON.stringify({ product_ids: productIds }),
+    });
+    return res.data;
+  },
+
   // Products
   async getProducts(params = {}) {
     const qs = new URLSearchParams(params).toString();

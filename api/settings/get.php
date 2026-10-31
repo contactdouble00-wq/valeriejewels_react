@@ -188,6 +188,7 @@ try {
             'pairsBadgeSuffix' => 'Pairs Inside',
             'showBoxNumber'   => true,
             'showPricePerPair'=> true,
+            'featuredProductIds' => [],
         ],
         'catalogHeader' => [
             'eyebrow' => 'Curated Catalog',
