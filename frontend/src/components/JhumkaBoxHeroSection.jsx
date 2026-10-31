@@ -87,8 +87,14 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
     }
   };
 
-  // Any product passed in as a bestseller
-  const displayProducts = Array.isArray(products) && products.length > 0 ? products : [];
+  // Strictly ensure only genuine Jhumka Box products are displayed (exclude mystery jars or non-jhumka items)
+  const displayProducts = (Array.isArray(products) ? products : []).filter((box) => {
+    if (!box) return false;
+    const name = (box.name || '').toLowerCase();
+    const slug = (box.slug || '').toLowerCase();
+    if (name.includes('mystery') || slug.includes('mystery')) return false;
+    return box.category_slug === 'jhumka-boxes' || (box.sku && box.sku.startsWith('VJ-JHM')) || name.includes('jhumka');
+  });
 
   if (!displayProducts || displayProducts.length === 0) {
     return null;

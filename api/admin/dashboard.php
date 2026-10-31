@@ -90,8 +90,11 @@ try {
                 OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
             )
         )
-        WHERE p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
+        WHERE (p.category_id = (SELECT id FROM categories WHERE slug = 'jhumka-boxes' LIMIT 1)
            OR p.sku LIKE 'VJ-JHM%'
+           OR p.name LIKE '%Jhumka%')
+          AND p.slug NOT LIKE '%mystery%'
+          AND p.name NOT LIKE '%Mystery%'
         GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
         ORDER BY p.id ASC
     ");

@@ -338,8 +338,20 @@ function StorefrontContent({
       }
       setBundles(bnds || []);
       setApiHealth(health);
-      const activeBestsellers = (bestsellersRes && bestsellersRes.length > 0) ? bestsellersRes : (jBoxesRes || []);
-      setJhumkaBoxes(activeBestsellers);
+      // Strictly ensure only genuine Jhumka Box products are shown in the 4 Signature Jhumka Boxes section
+      const isGenuineJhumka = (p) => {
+        if (!p) return false;
+        const name = (p.name || '').toLowerCase();
+        const slug = (p.slug || '').toLowerCase();
+        if (name.includes('mystery') || slug.includes('mystery')) return false;
+        return p.category_slug === 'jhumka-boxes' || (p.sku && p.sku.startsWith('VJ-JHM')) || name.includes('jhumka');
+      };
+
+      const boxes = (jBoxesRes && jBoxesRes.length > 0)
+        ? jBoxesRes.filter(isGenuineJhumka)
+        : (bestsellersRes || []).filter(isGenuineJhumka);
+
+      setJhumkaBoxes(boxes);
     } catch (err) {
       console.warn('Refresh data error:', err);
     }
