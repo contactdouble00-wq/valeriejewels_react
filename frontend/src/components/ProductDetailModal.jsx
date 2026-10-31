@@ -15,6 +15,46 @@ import AmazonTrustBadge from './AmazonTrustBadge';
 import FormattedDescription from './FormattedDescription';
 import { setMysteryJewelleryJarSeo, restorePageSeo } from '../utils/seo';
 
+// Helper to choose the initial default variant for a product.
+// For Mystery Jar products, the "Classic Edition" (₹1,999) is selected by default as requested.
+export function pickDefaultVariant(prod, slug = '') {
+  if (!prod || !Array.isArray(prod.variants) || prod.variants.length === 0) {
+    return null;
+  }
+
+  const isMystery = Boolean(
+    slug === 'mystery-jewellery-jar' ||
+    slug === 'mystery-jar' ||
+    slug === 'valerie-signature-mystery-jar' ||
+    prod.slug === 'mystery-jewellery-jar' ||
+    prod.slug === 'mystery-jar' ||
+    prod.category_slug === 'mystery-jar' ||
+    prod.category_slug === 'mystery-box' ||
+    (prod.category_name || '').toLowerCase().includes('mystery') ||
+    (prod.name || '').toLowerCase().includes('mystery') ||
+    (prod.sku || '').toLowerCase().includes('mjar') ||
+    (prod.slug || '').toLowerCase().includes('mystery') ||
+    (typeof slug === 'string' && slug.toLowerCase().includes('mystery'))
+  );
+
+  if (isMystery) {
+    const byPrice = prod.variants.find((v) => Math.round(Number(v.price || 0)) === 1999);
+    if (byPrice) return byPrice;
+
+    const byTitle = prod.variants.find((v) => {
+      const text = `${v.title || ''} ${v.option1_value || ''}`.toLowerCase();
+      return text.includes('classic');
+    });
+    if (byTitle) return byTitle;
+
+    if (prod.variants.length >= 2) {
+      return prod.variants[1];
+    }
+  }
+
+  return prod.variants[0];
+}
+
 export default function ProductDetailModal({ productSlug, initialProduct, onClose, onAddToCart, onBuyNow }) {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { content: siteContent } = useSiteContent();
@@ -32,7 +72,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState(fallbackProduct?.variants?.[0] || null);
+  const [userSelectedVariantId, setUserSelectedVariantId] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(() => pickDefaultVariant(fallbackProduct, productSlug));
   const [addedNotice, setAddedNotice] = useState(false);
   const [copiedNotice, setCopiedNotice] = useState(false);
 
@@ -111,10 +152,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   // Sync state when productSlug changes or when initialProduct is passed
   useEffect(() => {
     setSelectedMediaIndex(0);
+    setUserSelectedVariantId(null);
     if (initialProduct) {
       setProduct(initialProduct);
       if (initialProduct.variants && initialProduct.variants.length > 0) {
-        setSelectedVariant(initialProduct.variants[0]);
+        setSelectedVariant(pickDefaultVariant(initialProduct, productSlug));
       }
       setLoading(false);
     } else {
@@ -130,7 +172,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
       if (found) {
         setProduct(found);
         if (found.variants && found.variants.length > 0) {
-          setSelectedVariant(found.variants[0]);
+          setSelectedVariant(pickDefaultVariant(found, productSlug));
         }
         setLoading(false);
       }
@@ -148,11 +190,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
             setProduct(data);
             if (data.variants && data.variants.length > 0) {
               setSelectedVariant((prev) => {
-                if (prev) {
-                  const match = data.variants.find((v) => v.id === prev.id);
-                  return match || data.variants[0];
+                if (userSelectedVariantId) {
+                  const match = data.variants.find((v) => v.id === userSelectedVariantId);
+                  if (match) return match;
                 }
-                return data.variants[0];
+                return pickDefaultVariant(data, productSlug);
               });
             }
             setError(null);
@@ -986,7 +1028,10 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         return (
                           <div
                             key={v.id}
-                            onClick={() => setSelectedVariant(v)}
+                            onClick={() => {
+                              setSelectedVariant(v);
+                              setUserSelectedVariantId(v.id);
+                            }}
                             className={`p-3 rounded-2xl border transition-all cursor-pointer select-none text-left relative flex flex-col justify-between ${
                               isSelected
                                 ? 'bg-gradient-to-b from-[#FAF5FF] to-white border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
@@ -1695,7 +1740,10 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                           return (
                             <div
                               key={v.id}
-                              onClick={() => setSelectedVariant(v)}
+                              onClick={() => {
+                                setSelectedVariant(v);
+                                setUserSelectedVariantId(v.id);
+                              }}
                               className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none text-left relative flex flex-col justify-between ${
                                 isSelected
                                   ? 'bg-gradient-to-b from-[#FAF5FF] via-white to-purple-50/50 border-brand-primary ring-2 ring-brand-primary/25 shadow-md -translate-y-0.5'

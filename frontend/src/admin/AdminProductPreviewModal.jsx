@@ -23,6 +23,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { normalizeMediaUrl, isVideoMedia } from '../utils/mediaUtils';
+import { pickDefaultVariant } from '../components/ProductDetailModal';
 import FormattedDescription from '../components/FormattedDescription';
 
 export default function AdminProductPreviewModal({
@@ -46,7 +47,7 @@ export default function AdminProductPreviewModal({
     setIsMuted(true);
     setActionNotice('');
     if (product?.variants && product.variants.length > 0) {
-      setSelectedVariant(product.variants[0]);
+      setSelectedVariant(pickDefaultVariant(product, product?.slug));
     } else {
       setSelectedVariant(null);
     }
