@@ -44,8 +44,13 @@ try {
             $where[] = 'p.category_id = :category_id';
             $params[':category_id'] = (int)$category;
         } else {
-            $where[] = 'c.slug = :category_slug';
-            $params[':category_slug'] = $category;
+            $normalizedCat = strtolower($category);
+            if (in_array($normalizedCat, ['jhumka-boxes', 'jhumkha-box', 'jhumka-box'])) {
+                $where[] = "c.slug IN ('jhumka-boxes', 'jhumkha-box', 'jhumka-box')";
+            } else {
+                $where[] = 'c.slug = :category_slug';
+                $params[':category_slug'] = $category;
+            }
         }
     }
 
@@ -148,7 +153,7 @@ try {
         if (empty($prod['pairs_count'])) {
             if (preg_match('/(\d+)\s*Pair/i', $prod['name'] . ' ' . ($prod['short_description'] ?? ''), $m)) {
                 $prod['pairs_count'] = (int)$m[1];
-            } else if (($prod['category_slug'] ?? '') === 'jhumka-boxes' || str_contains(strtolower($prod['name']), 'jhumka')) {
+            } else if (in_array($prod['category_slug'] ?? '', ['jhumka-boxes', 'jhumkha-box', 'jhumka-box']) || str_contains(strtolower($prod['name']), 'jhumka')) {
                 $prod['pairs_count'] = 6;
             } else {
                 $prod['pairs_count'] = null;

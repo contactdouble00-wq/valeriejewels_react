@@ -357,8 +357,14 @@ function StorefrontContent({
           if (!p) return false;
           const name = (p.name || '').toLowerCase();
           const slug = (p.slug || '').toLowerCase();
+          const cat = (p.category_slug || '').toLowerCase();
+          const sku = (p.sku || '').toUpperCase();
           if (name.includes('mystery') || slug.includes('mystery')) return false;
-          return p.category_slug === 'jhumka-boxes' || (p.sku && p.sku.startsWith('VJ-JHM')) || name.includes('jhumka');
+          return cat === 'jhumka-boxes' || cat === 'jhumkha-box' || cat === 'jhumka-box'
+            || sku.startsWith('VJ-JHM')
+            || sku.includes('OXODISE')
+            || sku.includes('JHUMK')
+            || name.includes('jhumka');
         };
 
         boxes = (jBoxesRes && jBoxesRes.length > 0)
