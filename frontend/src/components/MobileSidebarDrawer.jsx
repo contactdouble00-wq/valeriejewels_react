@@ -34,6 +34,8 @@ export default function MobileSidebarDrawer({
   user = null,
   onOpenPolicy,
   onOpenFaqs,
+  onOpenContact,
+  onOpenShorts,
 }) {
   const { content } = useSiteContent();
   // Close on Escape key
@@ -215,6 +217,27 @@ export default function MobileSidebarDrawer({
                   </span>
                 </button>
               )}
+
+              {/* Shorts & Video Try-Ons */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenShorts) {
+                    onOpenShorts();
+                  } else {
+                    window.location.href = '/shorts';
+                  }
+                }}
+                className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
+              >
+                <div className="flex items-center space-x-2">
+                  <Flame className="w-4 h-4 text-brand-primary" />
+                  <span>Shorts &amp; Video Try-Ons</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-brand-primary-light text-brand-primary border border-brand-primary/20">
+                  REELS
+                </span>
+              </button>
             </div>
 
             {/* 3. Account & Orders Section (Clean D2C Utility List) */}
@@ -352,6 +375,25 @@ export default function MobileSidebarDrawer({
                 <div className="flex items-center space-x-2.5">
                   <HelpCircle className="w-3.5 h-3.5 text-brand-primary" />
                   <span>Frequently Asked Questions</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
+              </button>
+
+              {/* Contact Atelier & Concierge */}
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenContact) {
+                    onOpenContact();
+                  } else {
+                    window.location.href = '/contact-us';
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-xl text-left font-sans text-xs font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Contact Atelier &amp; Support</span>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-brand-muted/50" />
               </button>

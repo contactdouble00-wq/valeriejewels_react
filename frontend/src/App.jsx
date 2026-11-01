@@ -44,6 +44,8 @@ import PolicyPage from './components/PolicyPage';
 import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
+import ContactPage from './components/ContactPage';
+import ReelsShortsPage from './components/ReelsShortsPage';
 
 const AdminPortal = React.lazy(() =>
   import('./admin/AdminPortal').catch((err) => {
@@ -61,9 +63,12 @@ const AdminPortal = React.lazy(() =>
 function StorefrontContent({
   onOpenAdmin,
   initialCategory = 'all',
+  initialSort = 'popular',
   initialSearchQuery = '',
   onOpenPolicy,
   onOpenFaqs,
+  onOpenContact,
+  onOpenShorts,
   isOrderConfirmation = false,
   isOrderFailed = false,
   onNavigateHome,
@@ -187,6 +192,8 @@ function StorefrontContent({
       window.history.back();
     } else if (window.location.hash.startsWith('#product-')) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } else if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/api')) {
+      window.history.replaceState(null, '', '/');
     }
   };
 
@@ -213,7 +220,30 @@ function StorefrontContent({
         const slug = hash.replace('#product-', '');
         setActivePdpSlug(slug);
       } else {
-        setActivePdpSlug(null);
+        // Direct product slug check (e.g. /16-pairs-oxidized-silver-earrings...)
+        const nonProductPaths = [
+          '/', '/shop', '/index.html', '/catalog',
+          '/fashion', '/new-arrivals', '/new-arrival',
+          '/earrings', '/necklaces', '/rings', '/bracelets', '/combos',
+          '/jhumka-boxes', '/jhumka-box', '/jhumkha-box',
+          '/contact-us', '/contact', '/contactus',
+          '/shorts', '/reels', '/videos',
+          '/shipping-policy', '/shipping', '/refund-policy', '/return-policy', '/returns',
+          '/privacy-policy', '/terms-and-conditions', '/terms', '/policies',
+          '/faqs', '/faq', '/admin', '/vj-manage-x1126',
+          '/order-confirmation', '/order-failed', '/track', '/track-order'
+        ];
+        const isExcluded = nonProductPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
+        if (!isExcluded && !pathname.startsWith('/api') && pathname.length > 1) {
+          const cleanSlug = pathname.replace(/^\/(?:products\/|product\/)?/, '').replace(/\/+$/, '');
+          if (cleanSlug && !cleanSlug.includes('.')) {
+            setActivePdpSlug(cleanSlug);
+          } else {
+            setActivePdpSlug(null);
+          }
+        } else {
+          setActivePdpSlug(null);
+        }
       }
 
       const trackingRef = parseTrackingOrderFromUrl();
@@ -383,6 +413,28 @@ function StorefrontContent({
     reloadData();
   }, []);
 
+  // Smooth scroll to catalog grid when visiting category / arrival sitelinks directly
+  useEffect(() => {
+    const path = window.location.pathname.toLowerCase();
+    if (
+      path.includes('new-arrival') ||
+      path.includes('earring') ||
+      path.includes('fashion') ||
+      path.includes('necklace') ||
+      path.includes('ring') ||
+      path.includes('bracelet') ||
+      path.includes('combo')
+    ) {
+      const timer = setTimeout(() => {
+        const catSection = document.getElementById('catalog');
+        if (catSection) {
+          catSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Synchronize showcase boxes whenever admin updates featuredProductIds in site settings
   useEffect(() => {
     const featuredIds = Array.isArray(content?.jhumkaHero?.featuredProductIds)
@@ -444,10 +496,14 @@ function StorefrontContent({
     }
   }, [categories, selectedCategory]);
 
-  // Sync initialCategory & initialSearchQuery if passed from parent
+  // Sync initialCategory, initialSort & initialSearchQuery if passed from parent
   useEffect(() => {
     if (initialCategory) setSelectedCategory(initialCategory);
   }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialSort) setSelectedSort(initialSort);
+  }, [initialSort]);
 
   useEffect(() => {
     if (initialSearchQuery !== undefined) setSearchQuery(initialSearchQuery);
@@ -801,6 +857,28 @@ function StorefrontContent({
                   <span>Festive Offers</span>
                 </a>
               )}
+
+              <a
+                href="/shorts"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenShorts) onOpenShorts();
+                }}
+                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
+              >
+                <span>🎬 Shorts &amp; Try-Ons</span>
+              </a>
+
+              <a
+                href="/contact-us"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenContact) onOpenContact();
+                }}
+                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
+              >
+                <span>Contact Us</span>
+              </a>
 
               <a
                 href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
@@ -1255,6 +1333,8 @@ function StorefrontContent({
         user={user}
         onOpenPolicy={onOpenPolicy}
         onOpenFaqs={onOpenFaqs}
+        onOpenContact={onOpenContact}
+        onOpenShorts={onOpenShorts}
       />
 
       {/* Wishlist Toast Notification */}
@@ -1383,6 +1463,20 @@ function StorefrontContent({
                 Terms of Service
               </a>
               <a
+                href="/contact-us"
+                onClick={(e) => { e.preventDefault(); if (onOpenContact) onOpenContact(); }}
+                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
+              >
+                Contact Atelier &amp; Concierge
+              </a>
+              <a
+                href="/shorts"
+                onClick={(e) => { e.preventDefault(); if (onOpenShorts) onOpenShorts(); }}
+                className="hover:text-brand-primary transition-colors font-semibold text-brand-primary flex items-center gap-1"
+              >
+                <span>🎬 Shorts &amp; Video Try-Ons</span>
+              </a>
+              <a
                 href="/faqs"
                 onClick={(e) => { e.preventDefault(); if (onOpenFaqs) onOpenFaqs(); }}
                 className="hover:text-brand-primary transition-colors font-medium cursor-pointer"
@@ -1505,7 +1599,7 @@ function StorefrontContent({
 export default function App() {
   const evaluateRoute = () => {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
-    const hash = window.location.hash;
+    const hash = window.location.hash || '';
 
     // 1. Admin Route (/admin, #admin, /vj-manage-x1126, or #vj-manage-x1126)
     if (
@@ -1519,30 +1613,56 @@ export default function App() {
       return 'admin';
     }
 
-    // 2. Legal Policy Routes
-    if (rawPath === '/shipping-policy' || rawPath === '/shipping' || hash === '#shipping-policy' || hash === '#shipping') {
+    // 2. Contact Us Route (/contact-us, /contact, /contactus, /pages/contact-us, /pages/contact, #contact-us, #contact)
+    if (
+      rawPath === '/contact-us' ||
+      rawPath === '/contact' ||
+      rawPath === '/contactus' ||
+      rawPath === '/pages/contact-us' ||
+      rawPath === '/pages/contact' ||
+      hash === '#contact-us' ||
+      hash === '#contact'
+    ) {
+      return 'contact';
+    }
+
+    // 3. Shorts & Video Try-Ons Route (/shorts, /reels, /videos, /youtube-shorts, /pages/shorts, /pages/reels, #shorts, #reels)
+    if (
+      rawPath === '/shorts' ||
+      rawPath === '/reels' ||
+      rawPath === '/videos' ||
+      rawPath === '/youtube-shorts' ||
+      rawPath === '/pages/shorts' ||
+      rawPath === '/pages/reels' ||
+      hash === '#shorts' ||
+      hash === '#reels'
+    ) {
+      return 'shorts';
+    }
+
+    // 4. Legal Policy Routes
+    if (rawPath === '/shipping-policy' || rawPath === '/shipping' || rawPath === '/pages/shipping-policy' || rawPath === '/policies/shipping-policy' || hash === '#shipping-policy' || hash === '#shipping') {
       return 'policy-shipping';
     }
-    if (rawPath === '/refund-policy' || rawPath === '/return-and-refund-policy' || rawPath === '/return-policy' || hash === '#refund-policy' || hash === '#return-policy' || hash === '#refund') {
+    if (rawPath === '/refund-policy' || rawPath === '/return-and-refund-policy' || rawPath === '/return-policy' || rawPath === '/returns' || rawPath === '/pages/refund-policy' || rawPath === '/policies/refund-policy' || hash === '#refund-policy' || hash === '#return-policy' || hash === '#refund') {
       return 'policy-refund';
     }
-    if (rawPath === '/privacy-policy' || hash === '#privacy-policy' || hash === '#privacy') {
+    if (rawPath === '/privacy-policy' || rawPath === '/pages/privacy-policy' || rawPath === '/policies/privacy-policy' || hash === '#privacy-policy' || hash === '#privacy') {
       return 'policy-privacy';
     }
-    if (rawPath === '/terms-and-conditions' || rawPath === '/terms' || hash === '#terms-and-conditions' || hash === '#terms') {
+    if (rawPath === '/terms-and-conditions' || rawPath === '/terms' || rawPath === '/pages/terms-and-conditions' || rawPath === '/policies/terms-and-conditions' || hash === '#terms-and-conditions' || hash === '#terms') {
       return 'policy-terms';
     }
     if (rawPath === '/policies' || hash === '#policies') {
       return 'policy-shipping';
     }
 
-    // 3. FAQs Route
-    if (rawPath === '/faqs' || rawPath === '/faq' || hash === '#faqs' || hash === '#faq' || hash === '#faqs-page') {
+    // 5. FAQs Route
+    if (rawPath === '/faqs' || rawPath === '/faq' || rawPath === '/pages/faqs' || rawPath === '/pages/faq' || hash === '#faqs' || hash === '#faq' || hash === '#faqs-page') {
       return 'faqs';
     }
 
-
-    // 3c. Dedicated Order Confirmation Route (Strictly /order-confirmation for Meta tracking)
+    // 6. Dedicated Order Confirmation Route (Strictly /order-confirmation for Meta tracking)
     if (
       rawPath === '/order-confirmation' ||
       rawPath.startsWith('/order-confirmation/') ||
@@ -1551,7 +1671,7 @@ export default function App() {
       return 'order-confirmation';
     }
 
-    // 3d. Dedicated Order Failed Route (Strictly /order-failed for Meta tracking)
+    // 7. Dedicated Order Failed Route (Strictly /order-failed for Meta tracking)
     if (
       rawPath === '/order-failed' ||
       rawPath.startsWith('/order-failed/') ||
@@ -1560,65 +1680,117 @@ export default function App() {
       return 'order-failed';
     }
 
-    // 3e. Mystery Jewellery Jar Clean SEO Route
-    if (
-      rawPath === '/mystery-jewellery-jar' ||
-      rawPath === '/pages/mystery-jewellery-jar' ||
-      rawPath === '/mystery-jar' ||
-      rawPath === '/pages/mystery-jar' ||
-      rawPath === '/valerie-signature-mystery-jar'
-    ) {
-      return 'store';
-    }
-
-    // 4. Explicit 404 hash or trigger
+    // 8. Explicit 404 hash or trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
     }
 
-    // 5. Known valid routes in this Single Page Application
-    const validPaths = [
-      '/', '', '/shop', '/index.html',
-      '/mystery-jewellery-jar', '/pages/mystery-jewellery-jar',
-      '/mystery-jar', '/pages/mystery-jar',
-      '/valerie-signature-mystery-jar',
-      '/jhumka-box', '/pages/jhumka-box',
-      '/jhumkha-box', '/pages/jhumkha-box',
-      '/jhumka-boxes', '/pages/jhumka-boxes',
-      '/order-confirmation',
-      '/order-failed',
-      '/track', '/track-order', '/order-tracking',
-      '/admin', '/vj-manage-x1126',
-      '/shipping-policy', '/shipping',
-      '/refund-policy', '/return-and-refund-policy', '/return-policy',
-      '/privacy-policy',
-      '/terms-and-conditions', '/terms',
-      '/policies',
-      '/faqs', '/faq'
-    ];
-    if (rawPath.startsWith('/order-confirmation/')) {
-      return 'order-confirmation';
-    }
-    if (rawPath.startsWith('/order-failed/')) {
-      return 'order-failed';
-    }
-    if (rawPath.startsWith('/track/')) {
-      return 'store';
-    }
-    if (!validPaths.includes(rawPath) && !rawPath.startsWith('/api')) {
-      return '404';
-    }
-
+    // 9. All other routes are valid Storefront routes (New Arrivals, Earrings, Fashion, Categories, Product PDPs, Mystery Jar, etc.)
     return 'store';
   };
 
+  const resolveInitialCategoryAndSort = () => {
+    const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    const hash = window.location.hash || '';
+
+    // New Arrivals
+    if (
+      rawPath === '/new-arrivals' ||
+      rawPath === '/new-arrival' ||
+      rawPath.startsWith('/collections/new-arrivals') ||
+      rawPath.startsWith('/category/new-arrivals') ||
+      rawPath.startsWith('/pages/new-arrivals') ||
+      hash === '#new-arrivals'
+    ) {
+      return { category: 'all', sort: 'newest' };
+    }
+
+    // Earrings
+    if (
+      rawPath === '/earrings' ||
+      rawPath.startsWith('/collections/earrings') ||
+      rawPath.startsWith('/category/earrings') ||
+      rawPath.startsWith('/pages/earrings') ||
+      hash === '#earrings'
+    ) {
+      return { category: 'earrings', sort: 'popular' };
+    }
+
+    // Fashion / All Collections / Shop / Catalog
+    if (
+      rawPath === '/fashion' ||
+      rawPath.startsWith('/collections/fashion') ||
+      rawPath.startsWith('/category/fashion') ||
+      rawPath.startsWith('/pages/fashion') ||
+      rawPath === '/collections' ||
+      rawPath === '/collections/all' ||
+      rawPath === '/shop' ||
+      rawPath === '/catalog' ||
+      hash === '#fashion' ||
+      hash === '#catalog' ||
+      hash === '#shop'
+    ) {
+      return { category: 'all', sort: 'popular' };
+    }
+
+    // Necklaces
+    if (
+      rawPath === '/necklaces' ||
+      rawPath.startsWith('/collections/necklaces') ||
+      rawPath.startsWith('/category/necklaces')
+    ) {
+      return { category: 'necklaces', sort: 'popular' };
+    }
+
+    // Rings
+    if (
+      rawPath === '/rings' ||
+      rawPath.startsWith('/collections/rings') ||
+      rawPath.startsWith('/category/rings')
+    ) {
+      return { category: 'rings', sort: 'popular' };
+    }
+
+    // Bracelets
+    if (
+      rawPath === '/bracelets' ||
+      rawPath.startsWith('/collections/bracelets') ||
+      rawPath.startsWith('/category/bracelets')
+    ) {
+      return { category: 'bracelets', sort: 'popular' };
+    }
+
+    // Combos
+    if (
+      rawPath === '/combos' ||
+      rawPath.startsWith('/collections/combos') ||
+      rawPath.startsWith('/category/combos')
+    ) {
+      return { category: 'combos', sort: 'popular' };
+    }
+
+    // Jhumka Boxes
+    if (
+      rawPath === '/jhumka-boxes' ||
+      rawPath === '/jhumka-box' ||
+      rawPath === '/jhumkha-box' ||
+      rawPath.startsWith('/collections/jhumka-boxes') ||
+      rawPath.startsWith('/category/jhumka-boxes') ||
+      hash === '#jhumka-boxes'
+    ) {
+      return { category: 'jhumka-boxes', sort: 'popular' };
+    }
+
+    return { category: 'all', sort: 'popular' };
+  };
+
   const [currentRoute, setCurrentRoute] = useState(evaluateRoute);
-  const [initialCategory, setInitialCategory] = useState('all');
-  const [initialSearchQuery, setInitialSearchQuery] = useState('');
+  const [routeCatAndSort, setRouteCatAndSort] = useState(resolveInitialCategoryAndSort);
 
   useEffect(() => {
     const handleRouteChange = () => {
       setCurrentRoute(evaluateRoute());
+      setRouteCatAndSort(resolveInitialCategoryAndSort());
     };
     window.addEventListener('hashchange', handleRouteChange);
     window.addEventListener('popstate', handleRouteChange);
@@ -1627,7 +1799,6 @@ export default function App() {
       window.removeEventListener('popstate', handleRouteChange);
     };
   }, []);
-
 
   const renderRouteContent = () => {
     if (currentRoute === 'admin') {
@@ -1664,6 +1835,59 @@ export default function App() {
             />
           </React.Suspense>
         </ErrorBoundary>
+      );
+    }
+
+    if (currentRoute === 'contact') {
+      return (
+        <ContactPage
+          onReturnToStore={() => {
+            window.history.pushState(null, '', '/');
+            window.location.hash = '';
+            setCurrentRoute('store');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenTracking={(orderNum) => {
+            window.history.pushState(null, '', orderNum ? `/track/${orderNum}` : '/track');
+            setCurrentRoute('store');
+          }}
+          onOpenFaqs={() => {
+            window.history.pushState(null, '', '/faqs');
+            window.location.hash = '#faqs';
+            setCurrentRoute('faqs');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenPolicy={(tab) => {
+            const slugMap = {
+              shipping: 'shipping-policy',
+              refund: 'refund-policy',
+              privacy: 'privacy-policy',
+              terms: 'terms-and-conditions',
+            };
+            const slug = slugMap[tab] || 'shipping-policy';
+            window.history.pushState(null, '', `/${slug}`);
+            window.location.hash = `#${slug}`;
+            setCurrentRoute(`policy-${tab}`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      );
+    }
+
+    if (currentRoute === 'shorts') {
+      return (
+        <ReelsShortsPage
+          onReturnToStore={() => {
+            window.history.pushState(null, '', '/');
+            window.location.hash = '';
+            setCurrentRoute('store');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenPdp={(slug) => {
+            window.history.pushState(null, '', `/${slug}`);
+            setCurrentRoute('store');
+          }}
+        />
       );
     }
 
@@ -1727,16 +1951,16 @@ export default function App() {
           onNavigateHome={() => {
             window.history.pushState(null, '', '/');
             window.location.hash = '';
+            setRouteCatAndSort({ category: 'all', sort: 'popular' });
             setCurrentRoute('store');
           }}
           onSelectCategory={(catSlug) => {
-            setInitialCategory(catSlug);
+            setRouteCatAndSort({ category: catSlug, sort: 'popular' });
             window.history.pushState(null, '', '/');
             window.location.hash = '#catalog';
             setCurrentRoute('store');
           }}
-          onSearch={(query) => {
-            setInitialSearchQuery(query);
+          onSearch={() => {
             window.history.pushState(null, '', '/');
             window.location.hash = '#catalog';
             setCurrentRoute('store');
@@ -1749,6 +1973,8 @@ export default function App() {
       <StorefrontContent
         isOrderConfirmation={currentRoute === 'order-confirmation'}
         isOrderFailed={currentRoute === 'order-failed'}
+        initialCategory={routeCatAndSort.category}
+        initialSort={routeCatAndSort.sort}
         onNavigateOrderConfirmation={(orderNum) => {
           window.history.replaceState(null, '', `/order-confirmation/${orderNum}`);
           setCurrentRoute('order-confirmation');
@@ -1762,11 +1988,22 @@ export default function App() {
         onNavigateHome={() => {
           window.history.pushState(null, '', '/');
           window.location.hash = '';
+          setRouteCatAndSort({ category: 'all', sort: 'popular' });
           setCurrentRoute('store');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        initialCategory={initialCategory}
-        initialSearchQuery={initialSearchQuery}
+        onOpenContact={() => {
+          window.history.pushState(null, '', '/contact-us');
+          window.location.hash = '#contact-us';
+          setCurrentRoute('contact');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onOpenShorts={() => {
+          window.history.pushState(null, '', '/shorts');
+          window.location.hash = '#shorts';
+          setCurrentRoute('shorts');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         onOpenAdmin={() => {
           window.location.hash = '#vj-manage-x1126';
           setCurrentRoute('admin');

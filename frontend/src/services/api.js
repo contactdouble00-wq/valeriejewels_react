@@ -818,6 +818,18 @@ export const apiService = {
     }
     return result.data;
   },
+
+  /**
+   * Submit an atelier contact inquiry
+   */
+  async submitContactInquiry(inquiryData) {
+    const response = await fetch(`${API_BASE_URL}/contact.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inquiryData),
+    });
+    return handleResponse(response);
+  },
 };
 
 export default apiService;

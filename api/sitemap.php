@@ -1,12 +1,12 @@
 <?php
 /**
  * Dynamic XML Sitemap Generator for Google Search Console
- * Automatically indexes homepage, policies, categories, and products.
+ * Automatically indexes homepage, policies, categories, products, and core site links.
  * Also synchronizes static sitemap.xml and sitemap_index.xml to root directory.
  */
 
 header('Content-Type: application/xml; charset=utf-8');
-header('Cache-Control: public, max-age=3600');
+header('Cache-Control: public, max-age=1800');
 
 require_once __DIR__ . '/config/database.php';
 
@@ -25,29 +25,84 @@ $staticPages = [
         'image' => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'
     ],
     [
+        'loc' => $baseUrl . '/jhumka-boxes',
+        'changefreq' => 'daily',
+        'priority' => '1.0',
+    ],
+    [
+        'loc' => $baseUrl . '/new-arrivals',
+        'changefreq' => 'daily',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/earrings',
+        'changefreq' => 'daily',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/fashion',
+        'changefreq' => 'daily',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/shorts',
+        'changefreq' => 'daily',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/necklaces',
+        'changefreq' => 'weekly',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/rings',
+        'changefreq' => 'weekly',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/bracelets',
+        'changefreq' => 'weekly',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/combos',
+        'changefreq' => 'weekly',
+        'priority' => '0.9',
+    ],
+    [
+        'loc' => $baseUrl . '/contact-us',
+        'changefreq' => 'monthly',
+        'priority' => '0.8',
+    ],
+    [
+        'loc' => $baseUrl . '/track-order',
+        'changefreq' => 'weekly',
+        'priority' => '0.8',
+    ],
+    [
         'loc' => $baseUrl . '/faqs',
         'changefreq' => 'weekly',
-        'priority' => '0.8'
+        'priority' => '0.8',
     ],
     [
         'loc' => $baseUrl . '/shipping-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6'
+        'priority' => '0.6',
     ],
     [
         'loc' => $baseUrl . '/refund-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6'
+        'priority' => '0.6',
     ],
     [
         'loc' => $baseUrl . '/privacy-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6'
+        'priority' => '0.6',
     ],
     [
         'loc' => $baseUrl . '/terms-and-conditions',
         'changefreq' => 'monthly',
-        'priority' => '0.6'
+        'priority' => '0.6',
     ],
 ];
 
@@ -56,14 +111,18 @@ $urls = $staticPages;
 try {
     $pdo = Database::getConnection();
 
-    // Query categories
+    // Query active categories
     try {
         $catStmt = $pdo->query("SELECT slug, created_at FROM categories WHERE is_active = 1 OR is_active IS NULL");
         $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($categories as $cat) {
+            $catSlug = trim($cat['slug']);
+            if (empty($catSlug) || in_array($catSlug, ['earrings', 'necklaces', 'rings', 'bracelets', 'combos', 'jhumka-boxes', 'fashion'])) {
+                continue; // Already included with exact clean path
+            }
             $lastmod = !empty($cat['created_at']) ? date('Y-m-d', strtotime($cat['created_at'])) : date('Y-m-d');
             $urls[] = [
-                'loc' => $baseUrl . '/?category=' . rawurlencode($cat['slug']),
+                'loc' => $baseUrl . '/' . rawurlencode($catSlug),
                 'lastmod' => $lastmod,
                 'changefreq' => 'weekly',
                 'priority' => '0.8'
@@ -93,7 +152,7 @@ try {
             }
             $lastmod = !empty($prod['created_at']) ? date('Y-m-d', strtotime($prod['created_at'])) : date('Y-m-d');
             $item = [
-                'loc' => $baseUrl . '/?product=' . rawurlencode($prod['slug']),
+                'loc' => $baseUrl . '/' . rawurlencode($prod['slug']),
                 'lastmod' => $lastmod,
                 'changefreq' => 'daily',
                 'priority' => '0.9'

@@ -3,78 +3,132 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://valeriejewels.in/</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://valeriejewels.in/mystery-jewellery-jar</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&amp;fit=crop&amp;w=800&amp;q=80</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/jhumka-boxes</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/new-arrivals</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/earrings</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/fashion</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/shorts</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/necklaces</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/rings</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/bracelets</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/combos</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/contact-us</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://valeriejewels.in/track-order</loc>
+    <lastmod>2026-11-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://valeriejewels.in/faqs</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/shipping-policy</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/refund-policy</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/privacy-policy</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://valeriejewels.in/terms-and-conditions</loc>
-    <lastmod>2026-10-01</lastmod>
+    <lastmod>2026-11-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?category=jhumka-boxes</loc>
-    <lastmod>2026-09-11</lastmod>
+    <loc>https://valeriejewels.in/mystery-jar</loc>
+    <lastmod>2026-10-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?category=necklaces</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://valeriejewels.in/16-pairs-oxidized-silver-earrings-set-for-women-traditional-indian-ethnic-jhumka-dangle-earrings</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://valeriejewels.in/api/uploads/img_24a8464b38f849eb7ab6a286e7d9782a.png</image:loc>
+    </image:image>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?category=rings</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?category=earrings</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?category=bracelets</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?category=combos</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://valeriejewels.in/?product=aurelia-solitaire-necklace</loc>
+    <loc>https://valeriejewels.in/aurelia-solitaire-necklace</loc>
     <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -83,7 +137,7 @@
     </image:image>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?product=roohani-daily-wear-jhumka-box</loc>
+    <loc>https://valeriejewels.in/roohani-daily-wear-jhumka-box</loc>
     <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -92,7 +146,7 @@
     </image:image>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?product=shahi-kundan-chandbali-box</loc>
+    <loc>https://valeriejewels.in/shahi-kundan-chandbali-box</loc>
     <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -101,7 +155,7 @@
     </image:image>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?product=gulabi-mehal-pastel-jhumka-box</loc>
+    <loc>https://valeriejewels.in/gulabi-mehal-pastel-jhumka-box</loc>
     <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -110,7 +164,7 @@
     </image:image>
   </url>
   <url>
-    <loc>https://valeriejewels.in/?product=royal-noor-jhumka-box</loc>
+    <loc>https://valeriejewels.in/royal-noor-jhumka-box</loc>
     <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
