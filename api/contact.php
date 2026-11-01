@@ -125,3 +125,4 @@ try {
 } catch (Throwable $e) {
     ApiResponse::error('Failed to submit inquiry: ' . $e->getMessage(), 500);
 }
+
