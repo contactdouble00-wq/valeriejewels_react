@@ -1,7 +1,7 @@
 <?php
 /**
  * Dynamic XML Sitemap Generator for Google Search Console
- * Automatically indexes homepage, policies, categories, products, and core site links.
+ * Strictly indexes Homepage, signature Jhumka Boxes, Mystery Jewellery Jar, Contact Us, and verified products.
  * Also synchronizes static sitemap.xml and sitemap_index.xml to root directory.
  */
 
@@ -19,90 +19,50 @@ $staticPages = [
         'priority' => '1.0'
     ],
     [
+        'loc' => $baseUrl . '/jhumka-boxes',
+        'changefreq' => 'daily',
+        'priority' => '1.0',
+    ],
+    [
         'loc' => $baseUrl . '/mystery-jewellery-jar',
         'changefreq' => 'daily',
         'priority' => '1.0',
         'image' => 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'
     ],
     [
-        'loc' => $baseUrl . '/jhumka-boxes',
-        'changefreq' => 'daily',
-        'priority' => '1.0',
-    ],
-    [
-        'loc' => $baseUrl . '/new-arrivals',
-        'changefreq' => 'daily',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/earrings',
-        'changefreq' => 'daily',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/fashion',
-        'changefreq' => 'daily',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/shorts',
-        'changefreq' => 'daily',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/necklaces',
-        'changefreq' => 'weekly',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/rings',
-        'changefreq' => 'weekly',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/bracelets',
-        'changefreq' => 'weekly',
-        'priority' => '0.9',
-    ],
-    [
-        'loc' => $baseUrl . '/combos',
-        'changefreq' => 'weekly',
-        'priority' => '0.9',
-    ],
-    [
         'loc' => $baseUrl . '/contact-us',
-        'changefreq' => 'monthly',
-        'priority' => '0.8',
+        'changefreq' => 'weekly',
+        'priority' => '0.9',
     ],
     [
         'loc' => $baseUrl . '/track-order',
         'changefreq' => 'weekly',
-        'priority' => '0.8',
+        'priority' => '0.5',
     ],
     [
         'loc' => $baseUrl . '/faqs',
-        'changefreq' => 'weekly',
-        'priority' => '0.8',
+        'changefreq' => 'monthly',
+        'priority' => '0.4',
     ],
     [
         'loc' => $baseUrl . '/shipping-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6',
+        'priority' => '0.3',
     ],
     [
         'loc' => $baseUrl . '/refund-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6',
+        'priority' => '0.3',
     ],
     [
         'loc' => $baseUrl . '/privacy-policy',
         'changefreq' => 'monthly',
-        'priority' => '0.6',
+        'priority' => '0.3',
     ],
     [
         'loc' => $baseUrl . '/terms-and-conditions',
         'changefreq' => 'monthly',
-        'priority' => '0.6',
+        'priority' => '0.3',
     ],
 ];
 
@@ -110,27 +70,6 @@ $urls = $staticPages;
 
 try {
     $pdo = Database::getConnection();
-
-    // Query active categories
-    try {
-        $catStmt = $pdo->query("SELECT slug, created_at FROM categories WHERE is_active = 1 OR is_active IS NULL");
-        $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($categories as $cat) {
-            $catSlug = trim($cat['slug']);
-            if (empty($catSlug) || in_array($catSlug, ['earrings', 'necklaces', 'rings', 'bracelets', 'combos', 'jhumka-boxes', 'fashion'])) {
-                continue; // Already included with exact clean path
-            }
-            $lastmod = !empty($cat['created_at']) ? date('Y-m-d', strtotime($cat['created_at'])) : date('Y-m-d');
-            $urls[] = [
-                'loc' => $baseUrl . '/' . rawurlencode($catSlug),
-                'lastmod' => $lastmod,
-                'changefreq' => 'weekly',
-                'priority' => '0.8'
-            ];
-        }
-    } catch (Exception $e) {
-        // Fallback or ignore if table differs
-    }
 
     // Query active products with primary images
     try {
@@ -155,7 +94,7 @@ try {
                 'loc' => $baseUrl . '/' . rawurlencode($prod['slug']),
                 'lastmod' => $lastmod,
                 'changefreq' => 'daily',
-                'priority' => '0.9'
+                'priority' => '0.8'
             ];
             if (!empty($prod['image_url'])) {
                 $imgUrl = $prod['image_url'];
@@ -214,6 +153,8 @@ $indexXml .= '</sitemapindex>' . "\n";
 $rootDir = dirname(__DIR__);
 @file_put_contents($rootDir . '/sitemap.xml', $xml);
 @file_put_contents($rootDir . '/sitemap_index.xml', $indexXml);
+@file_put_contents($rootDir . '/frontend/public/sitemap.xml', $xml);
+@file_put_contents($rootDir . '/frontend/public/sitemap_index.xml', $indexXml);
 
 // Check if request is specifically for sitemap_index.xml
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';

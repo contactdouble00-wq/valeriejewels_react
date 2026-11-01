@@ -35,7 +35,7 @@ export default function MobileSidebarDrawer({
   onOpenPolicy,
   onOpenFaqs,
   onOpenContact,
-  onOpenShorts,
+  onOpenMysteryJar,
 }) {
   const { content } = useSiteContent();
   // Close on Escape key
@@ -218,24 +218,24 @@ export default function MobileSidebarDrawer({
                 </button>
               )}
 
-              {/* Shorts & Video Try-Ons */}
+              {/* Mystery Jewellery Jar Signature Feature */}
               <button
                 onClick={() => {
                   onClose();
-                  if (onOpenShorts) {
-                    onOpenShorts();
+                  if (onOpenMysteryJar) {
+                    onOpenMysteryJar();
                   } else {
-                    window.location.href = '/shorts';
+                    window.location.href = '/mystery-jewellery-jar';
                   }
                 }}
                 className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
               >
                 <div className="flex items-center space-x-2">
-                  <Flame className="w-4 h-4 text-brand-primary" />
-                  <span>Shorts &amp; Video Try-Ons</span>
+                  <Sparkles className="w-4 h-4 text-brand-primary animate-pulse" />
+                  <span>Mystery Jewellery Jar</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-brand-primary-light text-brand-primary border border-brand-primary/20">
-                  REELS
+                  VIRAL BESTSELLER
                 </span>
               </button>
             </div>

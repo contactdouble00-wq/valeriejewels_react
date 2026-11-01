@@ -22,34 +22,46 @@ Options -Indexes
     Require all denied
   </IfModule>
   <IfModule !mod_authz_core.c>
-    Order Deny,Allow
     Deny from all
   </IfModule>
 </FilesMatch>
 
 # ------------------------------------------------------------------------------
-# SPA Routing & API Pass-Through
+# SPA Routing, 301 SEO Consolidation & API Pass-Through
 # ------------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # 1. Direct legacy or root /uploads/ requests directly to /api/uploads/
+  # 1. 301 Permanent Redirects to remove unwanted sitelinks from Google Search
+  RewriteRule ^shorts/?$ / [R=301,L,NC]
+  RewriteRule ^reels/?$ / [R=301,L,NC]
+  RewriteRule ^new-arrivals/?$ / [R=301,L,NC]
+  RewriteRule ^new-arrival/?$ / [R=301,L,NC]
+  RewriteRule ^fashion/?$ / [R=301,L,NC]
+  RewriteRule ^earrings/?$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^collections/new-arrivals/?$ / [R=301,L,NC]
+  RewriteRule ^collections/fashion/?$ / [R=301,L,NC]
+  RewriteRule ^collections/earrings/?$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^pages/shorts/?$ / [R=301,L,NC]
+  RewriteRule ^pages/reels/?$ / [R=301,L,NC]
+
+  # 2. Direct legacy or root /uploads/ requests directly to /api/uploads/
   RewriteRule ^uploads/(.*)$ api/uploads/$1 [L,NC]
 
-  # 1b. XML Sitemap rewrite for Google Search Console (Dynamic generator)
+  # 3. XML Sitemap rewrite for Google Search Console (Always dynamic generator)
   RewriteRule ^sitemap(_index)?\.xml$ api/sitemap.php [L,NC]
 
-  # 2. Pass PHP API requests straight to the backend without rewriting to index.html
+  # 4. Pass PHP API requests straight to the backend without rewriting to index.html
   RewriteCond %{REQUEST_URI} ^/api [NC,OR]
   RewriteCond %{REQUEST_URI} ^.*/api/ [NC]
   RewriteRule ^ - [L]
 
-  # 2. Pass existing static files straight through
+  # 5. Pass existing static files straight through
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # 3. Route all other requests (routes like /faqs, /shipping-policy, /shop, etc.) to index.html
+  # 6. Route all other requests (routes like /jhumka-boxes, /mystery-jewellery-jar, /contact-us) to index.html
   RewriteRule ^ index.html [L]
 </IfModule>
 
@@ -57,10 +69,15 @@ Options -Indexes
 # Caching Headers for Performance
 # ------------------------------------------------------------------------------
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|htm)$">
+  # HTML, PHP, XML, JSON - Always check fresh
+  <FilesMatch "\.(html|php|xml|json)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
   </FilesMatch>
-  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2)$">
-    Header set Cache-Control "max-age=31536000, public, immutable"
+
+  # Static Bundles & Media - Aggressive Caching
+  <FilesMatch "\.(js|css|webp|jpg|jpeg|png|gif|svg|ico|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>

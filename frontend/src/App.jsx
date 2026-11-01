@@ -45,7 +45,6 @@ import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
 import ContactPage from './components/ContactPage';
-import ReelsShortsPage from './components/ReelsShortsPage';
 
 const AdminPortal = React.lazy(() =>
   import('./admin/AdminPortal').catch((err) => {
@@ -68,7 +67,6 @@ function StorefrontContent({
   onOpenPolicy,
   onOpenFaqs,
   onOpenContact,
-  onOpenShorts,
   isOrderConfirmation = false,
   isOrderFailed = false,
   onNavigateHome,
@@ -859,14 +857,31 @@ function StorefrontContent({
               )}
 
               <a
-                href="/shorts"
+                href="/jhumka-boxes"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (onOpenShorts) onOpenShorts();
+                  if (onNavigateHome) onNavigateHome();
+                  setSelectedCategory('jhumka-boxes');
+                  window.history.pushState(null, '', '/jhumka-boxes');
+                  const catEl = document.getElementById('catalog');
+                  if (catEl) catEl.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`transition-colors py-1 whitespace-nowrap hover:text-brand-primary flex items-center gap-1 font-semibold ${
+                  selectedCategory === 'jhumka-boxes' ? 'text-brand-primary font-bold' : 'text-brand-tertiary'
+                }`}
+              >
+                <span>✨ Jhumka Boxes</span>
+              </a>
+
+              <a
+                href="/mystery-jewellery-jar"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openPdp('mystery-jewellery-jar');
                 }}
                 className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
               >
-                <span>🎬 Shorts &amp; Try-Ons</span>
+                <span>🔮 Mystery Jewellery Jar</span>
               </a>
 
               <a
@@ -877,7 +892,7 @@ function StorefrontContent({
                 }}
                 className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
               >
-                <span>Contact Us</span>
+                <span>📞 Contact Us</span>
               </a>
 
               <a
@@ -1334,7 +1349,7 @@ function StorefrontContent({
         onOpenPolicy={onOpenPolicy}
         onOpenFaqs={onOpenFaqs}
         onOpenContact={onOpenContact}
-        onOpenShorts={onOpenShorts}
+        onOpenMysteryJar={() => openPdp('mystery-jewellery-jar')}
       />
 
       {/* Wishlist Toast Notification */}
@@ -1470,11 +1485,28 @@ function StorefrontContent({
                 Contact Atelier &amp; Concierge
               </a>
               <a
-                href="/shorts"
-                onClick={(e) => { e.preventDefault(); if (onOpenShorts) onOpenShorts(); }}
+                href="/jhumka-boxes"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onNavigateHome) onNavigateHome();
+                  setSelectedCategory('jhumka-boxes');
+                  window.history.pushState(null, '', '/jhumka-boxes');
+                  const catEl = document.getElementById('catalog');
+                  if (catEl) catEl.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="hover:text-brand-primary transition-colors font-semibold text-brand-tertiary"
+              >
+                Jhumka Boxes
+              </a>
+              <a
+                href="/mystery-jewellery-jar"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openPdp('mystery-jewellery-jar');
+                }}
                 className="hover:text-brand-primary transition-colors font-semibold text-brand-primary flex items-center gap-1"
               >
-                <span>🎬 Shorts &amp; Video Try-Ons</span>
+                <span>🔮 Mystery Jewellery Jar</span>
               </a>
               <a
                 href="/faqs"
@@ -1601,6 +1633,12 @@ export default function App() {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
     const hash = window.location.hash || '';
 
+    // If visiting /shorts or /reels, immediately replace with clean homepage
+    if (rawPath === '/shorts' || rawPath === '/reels' || rawPath.startsWith('/shorts/') || rawPath.startsWith('/reels/') || hash === '#shorts' || hash === '#reels') {
+      window.history.replaceState(null, '', '/');
+      return 'store';
+    }
+
     // 1. Admin Route (/admin, #admin, /vj-manage-x1126, or #vj-manage-x1126)
     if (
       rawPath === '/admin' ||
@@ -1626,21 +1664,7 @@ export default function App() {
       return 'contact';
     }
 
-    // 3. Shorts & Video Try-Ons Route (/shorts, /reels, /videos, /youtube-shorts, /pages/shorts, /pages/reels, #shorts, #reels)
-    if (
-      rawPath === '/shorts' ||
-      rawPath === '/reels' ||
-      rawPath === '/videos' ||
-      rawPath === '/youtube-shorts' ||
-      rawPath === '/pages/shorts' ||
-      rawPath === '/pages/reels' ||
-      hash === '#shorts' ||
-      hash === '#reels'
-    ) {
-      return 'shorts';
-    }
-
-    // 4. Legal Policy Routes
+    // 3. Legal Policy Routes
     if (rawPath === '/shipping-policy' || rawPath === '/shipping' || rawPath === '/pages/shipping-policy' || rawPath === '/policies/shipping-policy' || hash === '#shipping-policy' || hash === '#shipping') {
       return 'policy-shipping';
     }
@@ -1657,12 +1681,12 @@ export default function App() {
       return 'policy-shipping';
     }
 
-    // 5. FAQs Route
+    // 4. FAQs Route
     if (rawPath === '/faqs' || rawPath === '/faq' || rawPath === '/pages/faqs' || rawPath === '/pages/faq' || hash === '#faqs' || hash === '#faq' || hash === '#faqs-page') {
       return 'faqs';
     }
 
-    // 6. Dedicated Order Confirmation Route (Strictly /order-confirmation for Meta tracking)
+    // 5. Dedicated Order Confirmation Route
     if (
       rawPath === '/order-confirmation' ||
       rawPath.startsWith('/order-confirmation/') ||
@@ -1671,7 +1695,7 @@ export default function App() {
       return 'order-confirmation';
     }
 
-    // 7. Dedicated Order Failed Route (Strictly /order-failed for Meta tracking)
+    // 6. Dedicated Order Failed Route
     if (
       rawPath === '/order-failed' ||
       rawPath.startsWith('/order-failed/') ||
@@ -1680,12 +1704,12 @@ export default function App() {
       return 'order-failed';
     }
 
-    // 8. Explicit 404 hash or trigger
+    // 7. Explicit 404 trigger
     if (hash === '#404' || hash === '#/404' || hash === '#not-found') {
       return '404';
     }
 
-    // 9. All other routes are valid Storefront routes (New Arrivals, Earrings, Fashion, Categories, Product PDPs, Mystery Jar, etc.)
+    // 8. Core Storefront routes (including /jhumka-boxes, /mystery-jewellery-jar, /<product-slug>)
     return 'store';
   };
 
@@ -1693,83 +1717,7 @@ export default function App() {
     const rawPath = window.location.pathname.replace(/\/+$/, '') || '/';
     const hash = window.location.hash || '';
 
-    // New Arrivals
-    if (
-      rawPath === '/new-arrivals' ||
-      rawPath === '/new-arrival' ||
-      rawPath.startsWith('/collections/new-arrivals') ||
-      rawPath.startsWith('/category/new-arrivals') ||
-      rawPath.startsWith('/pages/new-arrivals') ||
-      hash === '#new-arrivals'
-    ) {
-      return { category: 'all', sort: 'newest' };
-    }
-
-    // Earrings
-    if (
-      rawPath === '/earrings' ||
-      rawPath.startsWith('/collections/earrings') ||
-      rawPath.startsWith('/category/earrings') ||
-      rawPath.startsWith('/pages/earrings') ||
-      hash === '#earrings'
-    ) {
-      return { category: 'earrings', sort: 'popular' };
-    }
-
-    // Fashion / All Collections / Shop / Catalog
-    if (
-      rawPath === '/fashion' ||
-      rawPath.startsWith('/collections/fashion') ||
-      rawPath.startsWith('/category/fashion') ||
-      rawPath.startsWith('/pages/fashion') ||
-      rawPath === '/collections' ||
-      rawPath === '/collections/all' ||
-      rawPath === '/shop' ||
-      rawPath === '/catalog' ||
-      hash === '#fashion' ||
-      hash === '#catalog' ||
-      hash === '#shop'
-    ) {
-      return { category: 'all', sort: 'popular' };
-    }
-
-    // Necklaces
-    if (
-      rawPath === '/necklaces' ||
-      rawPath.startsWith('/collections/necklaces') ||
-      rawPath.startsWith('/category/necklaces')
-    ) {
-      return { category: 'necklaces', sort: 'popular' };
-    }
-
-    // Rings
-    if (
-      rawPath === '/rings' ||
-      rawPath.startsWith('/collections/rings') ||
-      rawPath.startsWith('/category/rings')
-    ) {
-      return { category: 'rings', sort: 'popular' };
-    }
-
-    // Bracelets
-    if (
-      rawPath === '/bracelets' ||
-      rawPath.startsWith('/collections/bracelets') ||
-      rawPath.startsWith('/category/bracelets')
-    ) {
-      return { category: 'bracelets', sort: 'popular' };
-    }
-
-    // Combos
-    if (
-      rawPath === '/combos' ||
-      rawPath.startsWith('/collections/combos') ||
-      rawPath.startsWith('/category/combos')
-    ) {
-      return { category: 'combos', sort: 'popular' };
-    }
-
-    // Jhumka Boxes
+    // Jhumka Boxes (Consolidate earrings into signature jhumka-boxes)
     if (
       rawPath === '/jhumka-boxes' ||
       rawPath === '/jhumka-box' ||
@@ -1779,6 +1727,22 @@ export default function App() {
       hash === '#jhumka-boxes'
     ) {
       return { category: 'jhumka-boxes', sort: 'popular' };
+    }
+
+    if (
+      rawPath === '/earrings' ||
+      rawPath.startsWith('/collections/earrings') ||
+      rawPath.startsWith('/category/earrings') ||
+      hash === '#earrings'
+    ) {
+      window.history.replaceState(null, '', '/jhumka-boxes');
+      return { category: 'jhumka-boxes', sort: 'popular' };
+    }
+
+    // Consolidate legacy sitelinks (new-arrivals, fashion) to clean home
+    if (rawPath === '/new-arrivals' || rawPath === '/new-arrival' || rawPath === '/fashion' || rawPath.startsWith('/collections/')) {
+      window.history.replaceState(null, '', '/');
+      return { category: 'all', sort: 'popular' };
     }
 
     return { category: 'all', sort: 'popular' };
@@ -1869,23 +1833,6 @@ export default function App() {
             window.location.hash = `#${slug}`;
             setCurrentRoute(`policy-${tab}`);
             window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      );
-    }
-
-    if (currentRoute === 'shorts') {
-      return (
-        <ReelsShortsPage
-          onReturnToStore={() => {
-            window.history.pushState(null, '', '/');
-            window.location.hash = '';
-            setCurrentRoute('store');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          onOpenPdp={(slug) => {
-            window.history.pushState(null, '', `/${slug}`);
-            setCurrentRoute('store');
           }}
         />
       );
@@ -1996,12 +1943,6 @@ export default function App() {
           window.history.pushState(null, '', '/contact-us');
           window.location.hash = '#contact-us';
           setCurrentRoute('contact');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onOpenShorts={() => {
-          window.history.pushState(null, '', '/shorts');
-          window.location.hash = '#shorts';
-          setCurrentRoute('shorts');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onOpenAdmin={() => {

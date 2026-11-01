@@ -4,6 +4,8 @@ Allow: /
 Disallow: /admin
 Disallow: /vj-manage-x1126
 Disallow: /api/
+Disallow: /shorts
+Disallow: /reels
 
 # Official Sitemap for Google Search Console
 Sitemap: https://valeriejewels.in/sitemap.xml
