@@ -878,9 +878,9 @@ function StorefrontContent({
                   e.preventDefault();
                   if (onOpenContact) onOpenContact();
                 }}
-                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
+                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary"
               >
-                <span>Contact Us</span>
+                Contact Us
               </a>
 
               <a
