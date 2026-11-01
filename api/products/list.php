@@ -47,6 +47,8 @@ try {
             $normalizedCat = strtolower($category);
             if (in_array($normalizedCat, ['jhumka-boxes', 'jhumkha-box', 'jhumka-box'])) {
                 $where[] = "c.slug IN ('jhumka-boxes', 'jhumkha-box', 'jhumka-box')";
+            } elseif (in_array($normalizedCat, ['mystery-jar', 'mystery-jewellery-jar', 'mystery-box'])) {
+                $where[] = "(c.slug IN ('mystery-jar', 'mystery-jewellery-jar') OR p.name LIKE '%mystery%' OR p.slug LIKE '%mystery%')";
             } else {
                 $where[] = 'c.slug = :category_slug';
                 $params[':category_slug'] = $category;

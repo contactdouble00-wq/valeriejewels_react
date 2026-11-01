@@ -483,13 +483,27 @@ function StorefrontContent({
     };
   }, []);
 
-  // Gracefully fallback selectedCategory to 'all' if active category was deleted, renamed, or disabled
+  // Gracefully fallback selectedCategory to 'all' or match alias (e.g. jhumkha-box vs jhumka-boxes)
   useEffect(() => {
     if (
       selectedCategory !== 'all' &&
       categories.length > 0 &&
       !categories.some((c) => c.slug === selectedCategory)
     ) {
+      if (['jhumka-boxes', 'jhumkha-box', 'jhumka-box'].includes(selectedCategory)) {
+        const jMatch = categories.find((c) => ['jhumka-boxes', 'jhumkha-box', 'jhumka-box'].includes(c.slug));
+        if (jMatch) {
+          setSelectedCategory(jMatch.slug);
+          return;
+        }
+      }
+      if (['mystery-jar', 'mystery-jewellery-jar'].includes(selectedCategory)) {
+        const mMatch = categories.find((c) => ['mystery-jar', 'mystery-jewellery-jar'].includes(c.slug));
+        if (mMatch) {
+          setSelectedCategory(mMatch.slug);
+          return;
+        }
+      }
       setSelectedCategory('all');
     }
   }, [categories, selectedCategory]);
@@ -856,33 +870,7 @@ function StorefrontContent({
                 </a>
               )}
 
-              <a
-                href="/jhumka-boxes"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (onNavigateHome) onNavigateHome();
-                  setSelectedCategory('jhumka-boxes');
-                  window.history.pushState(null, '', '/jhumka-boxes');
-                  const catEl = document.getElementById('catalog');
-                  if (catEl) catEl.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className={`transition-colors py-1 whitespace-nowrap hover:text-brand-primary flex items-center gap-1 font-semibold ${
-                  selectedCategory === 'jhumka-boxes' ? 'text-brand-primary font-bold' : 'text-brand-tertiary'
-                }`}
-              >
-                <span>✨ Jhumka Boxes</span>
-              </a>
 
-              <a
-                href="/mystery-jewellery-jar"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openPdp('mystery-jewellery-jar');
-                }}
-                className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
-              >
-                <span>🔮 Mystery Jewellery Jar</span>
-              </a>
 
               <a
                 href="/contact-us"
@@ -1349,7 +1337,6 @@ function StorefrontContent({
         onOpenPolicy={onOpenPolicy}
         onOpenFaqs={onOpenFaqs}
         onOpenContact={onOpenContact}
-        onOpenMysteryJar={() => openPdp('mystery-jewellery-jar')}
       />
 
       {/* Wishlist Toast Notification */}
