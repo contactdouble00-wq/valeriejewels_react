@@ -52,7 +52,7 @@ const AdminPortal = React.lazy(() =>
     if (!hasReloaded) {
       window.sessionStorage.setItem('retry_admin_chunk_reload', 'true');
       window.location.reload();
-      return new Promise(() => {});
+      return new Promise(() => { });
     }
     window.sessionStorage.removeItem('retry_admin_chunk_reload');
     throw err;
@@ -83,7 +83,7 @@ function StorefrontContent({
           return parsed;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return SEED_CATEGORIES;
   });
   const [products, setProducts] = useState([]);
@@ -363,7 +363,7 @@ function StorefrontContent({
         setCategories(cats);
         try {
           localStorage.setItem('valerie_categories_cache', JSON.stringify(cats));
-        } catch (e) {}
+        } catch (e) { }
       }
       setBundles(bnds || []);
       setApiHealth(health);
@@ -446,7 +446,7 @@ function StorefrontContent({
         if (customBoxes.length > 0) {
           setJhumkaBoxes(customBoxes);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [content?.jhumkaHero?.featuredProductIds]);
 
@@ -880,7 +880,7 @@ function StorefrontContent({
                 }}
                 className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-brand-tertiary flex items-center gap-1 font-semibold"
               >
-                <span>📞 Contact Us</span>
+                <span>Contact Us</span>
               </a>
 
               <a
@@ -954,326 +954,326 @@ function StorefrontContent({
               <div className="md:hidden">
                 <MobileHeroSlider
                   slides={content?.mobileSlider?.slides}
-              autoPlay={content?.mobileSlider?.autoPlay ?? true}
-              interval={content?.mobileSlider?.interval ?? 4500}
-              onSelectCategory={setSelectedCategory}
-            />
-          </div>
-        )}
-
-        {/* Desktop View: Fast Fashion Hero Banner */}
-        <section className="hidden md:block relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-
-          {/* Desktop-Only Creatively Faded Hero Photograph */}
-          {Boolean(content?.heroBanner?.rightImageUrl ?? 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png') && (
-            <div className="hidden md:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
-              <img
-                src={content?.heroBanner?.rightImageUrl || 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png'}
-                alt="Valerie Everyday Luxury Jewelry"
-                className="w-full h-full object-cover object-[center_15%]"
-                style={{
-                  maskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
-                  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
-                }}
-                loading="eager"
-              />
-            </div>
-          )}
-
-          <div className="relative z-10 max-w-2xl space-y-5">
-            {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim()) && (
-              <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
-                <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
-                <span className="whitespace-normal leading-tight text-left">{content.heroBanner.badgeText.trim()}</span>
+                  autoPlay={content?.mobileSlider?.autoPlay ?? true}
+                  interval={content?.mobileSlider?.interval ?? 4500}
+                  onSelectCategory={setSelectedCategory}
+                />
               </div>
             )}
 
-            {(Boolean(content?.heroBanner?.headline?.trim()) || Boolean(content?.heroBanner?.accentText?.trim())) && (
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
-                {Boolean(content?.heroBanner?.headline?.trim()) && (
-                  <>{content.heroBanner.headline.trim()} </>
-                )}
-                {Boolean(content?.heroBanner?.headline?.trim()) && Boolean(content?.heroBanner?.accentText?.trim()) && <br />}
-                {Boolean(content?.heroBanner?.accentText?.trim()) && (
-                  <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
-                    {content.heroBanner.accentText.trim()}
-                  </span>
-                )}
-              </h1>
-            )}
+            {/* Desktop View: Fast Fashion Hero Banner */}
+            <section className="hidden md:block relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
-            {Boolean(content?.heroBanner?.subtitle && content.heroBanner.subtitle.trim()) && (
-              <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
-                {content.heroBanner.subtitle.trim()}
-              </p>
-            )}
-
-            {(Boolean(content?.heroBanner?.primaryBtnText?.trim()) || Boolean(content?.heroBanner?.secondaryBtnText?.trim())) && (
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                {Boolean(content?.heroBanner?.primaryBtnText && content.heroBanner.primaryBtnText.trim()) && (
-                  <a
-                    href={content?.heroBanner?.primaryBtnLink || '#jhumka-boxes'}
-                    onClick={() => {
-                      if ((content?.heroBanner?.primaryBtnLink || '#jhumka-boxes') === '#jhumka-boxes') {
-                        setSelectedCategory('jhumka-boxes');
-                      }
+              {/* Desktop-Only Creatively Faded Hero Photograph */}
+              {Boolean(content?.heroBanner?.rightImageUrl ?? 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png') && (
+                <div className="hidden md:block absolute top-0 right-0 w-[65%] lg:w-[60%] xl:w-[56%] h-full pointer-events-none select-none overflow-hidden z-0">
+                  <img
+                    src={content?.heroBanner?.rightImageUrl || 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png'}
+                    alt="Valerie Everyday Luxury Jewelry"
+                    className="w-full h-full object-cover object-[center_15%]"
+                    style={{
+                      maskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
+                      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 4%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.55) 16%, #000 22%, #000 100%)',
                     }}
-                    className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
-                  >
-                    <span>{content.heroBanner.primaryBtnText.trim()}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                {Boolean(content?.heroBanner?.secondaryBtnText && content.heroBanner.secondaryBtnText.trim()) && (
-                  <a
-                    href={content?.heroBanner?.secondaryBtnLink || '#catalog'}
-                    onClick={() => {
-                      if ((content?.heroBanner?.secondaryBtnLink || '#catalog') === '#catalog') {
-                        setSelectedCategory('all');
-                      }
-                    }}
-                    className="px-5 py-3 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-caps tracking-wider uppercase font-semibold transition-colors"
-                  >
-                    {content.heroBanner.secondaryBtnText.trim()}
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* Desktop Hero Trust Reassurance with Original Amazon Logo */}
-            {(() => {
-              const hasTp1 = Boolean(content?.heroBanner?.trustPoint1 && content.heroBanner.trustPoint1.trim());
-              const hasTp2 = Boolean(content?.heroBanner?.trustPoint2 && content.heroBanner.trustPoint2.trim());
-              const hasAmazon = content?.heroBanner?.showAmazon !== false;
-
-              const items = [];
-              if (hasTp1) {
-                items.push(
-                  <span key="tp1" className="flex items-center space-x-1.5">
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-brand-tertiary font-medium">
-                      {content.heroBanner.trustPoint1.trim()}
-                    </span>
-                  </span>
-                );
-              }
-              if (hasTp2) {
-                items.push(
-                  <span key="tp2" className="flex items-center space-x-1.5">
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-brand-tertiary font-medium">
-                      {content.heroBanner.trustPoint2.trim()}
-                    </span>
-                  </span>
-                );
-              }
-              if (hasAmazon) {
-                items.push(
-                  <a
-                    key="amazon"
-                    href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1.5 text-brand-tertiary hover:text-brand-primary font-medium transition-colors group"
-                    title="Also Available on Amazon India (HOUSE OF VJ)"
-                  >
-                    {Boolean(content?.heroBanner?.amazonText && content.heroBanner.amazonText.trim()) && (
-                      <span>{content.heroBanner.amazonText.trim()}</span>
-                    )}
-                    <span className="bg-white px-2 py-0.5 rounded-md border border-brand-border/90 shadow-2xs inline-flex items-center">
-                      <OriginalAmazonLogo className="h-3 w-auto" />
-                    </span>
-                    <ExternalLink className="w-3 h-3 text-brand-muted group-hover:text-brand-primary" />
-                  </a>
-                );
-              }
-
-              if (items.length === 0) return null;
-
-              return (
-                <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-brand-muted font-light">
-                  {items.map((item, idx) => (
-                    <React.Fragment key={idx}>
-                      {idx > 0 && <span className="text-brand-border">•</span>}
-                      {item}
-                    </React.Fragment>
-                  ))}
+                    loading="eager"
+                  />
                 </div>
-              );
-            })()}
-          </div>
-        </section>
+              )}
 
-        {/* Bestseller Spotlight Section (Dynamic based on product bestseller toggle) */}
-        {jhumkaBoxes.length > 0 && (
-          <div id="jhumka-boxes" className="scroll-mt-28">
-            <JhumkaBoxHeroSection
-              products={jhumkaBoxes}
-              onOpenPdp={(slug, box) => openPdp(slug, box)}
-              onOpenCheckout={() => handleTriggerFastrr()}
-            />
-          </div>
-        )}
-
-        {/* Live System Telemetry Strip (Toggleable from Admin) */}
-        {content?.telemetryBanner?.enabled && (
-          <section className="bg-white rounded-2xl p-5 border border-brand-border shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-                  <DbIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary">
-                      {content?.telemetryBanner?.title || 'Phase 4 Authentication & Guest Mode Active'}
-                    </h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Auth Verified
-                    </span>
+              <div className="relative z-10 max-w-2xl space-y-5">
+                {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim()) && (
+                  <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
+                    <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
+                    <span className="whitespace-normal leading-tight text-left">{content.heroBanner.badgeText.trim()}</span>
                   </div>
-                  <p className="text-xs text-brand-muted font-light mt-0.5">
-                    {content?.telemetryBanner?.subtitle || 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.'}
+                )}
+
+                {(Boolean(content?.heroBanner?.headline?.trim()) || Boolean(content?.heroBanner?.accentText?.trim())) && (
+                  <h1 className="text-3xl sm:text-5xl lg:text-6xl font-cormorant font-medium leading-[1.08] text-brand-tertiary tracking-tight">
+                    {Boolean(content?.heroBanner?.headline?.trim()) && (
+                      <>{content.heroBanner.headline.trim()} </>
+                    )}
+                    {Boolean(content?.heroBanner?.headline?.trim()) && Boolean(content?.heroBanner?.accentText?.trim()) && <br />}
+                    {Boolean(content?.heroBanner?.accentText?.trim()) && (
+                      <span className="font-cormorant font-normal text-brand-primary tracking-[0.02em]">
+                        {content.heroBanner.accentText.trim()}
+                      </span>
+                    )}
+                  </h1>
+                )}
+
+                {Boolean(content?.heroBanner?.subtitle && content.heroBanner.subtitle.trim()) && (
+                  <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed max-w-lg">
+                    {content.heroBanner.subtitle.trim()}
                   </p>
-                </div>
+                )}
+
+                {(Boolean(content?.heroBanner?.primaryBtnText?.trim()) || Boolean(content?.heroBanner?.secondaryBtnText?.trim())) && (
+                  <div className="pt-2 flex flex-wrap items-center gap-3">
+                    {Boolean(content?.heroBanner?.primaryBtnText && content.heroBanner.primaryBtnText.trim()) && (
+                      <a
+                        href={content?.heroBanner?.primaryBtnLink || '#jhumka-boxes'}
+                        onClick={() => {
+                          if ((content?.heroBanner?.primaryBtnLink || '#jhumka-boxes') === '#jhumka-boxes') {
+                            setSelectedCategory('jhumka-boxes');
+                          }
+                        }}
+                        className="px-6 py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md hover:shadow-luxury-hover transition-all flex items-center space-x-2"
+                      >
+                        <span>{content.heroBanner.primaryBtnText.trim()}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {Boolean(content?.heroBanner?.secondaryBtnText && content.heroBanner.secondaryBtnText.trim()) && (
+                      <a
+                        href={content?.heroBanner?.secondaryBtnLink || '#catalog'}
+                        onClick={() => {
+                          if ((content?.heroBanner?.secondaryBtnLink || '#catalog') === '#catalog') {
+                            setSelectedCategory('all');
+                          }
+                        }}
+                        className="px-5 py-3 rounded-xl bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary text-xs font-caps tracking-wider uppercase font-semibold transition-colors"
+                      >
+                        {content.heroBanner.secondaryBtnText.trim()}
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Desktop Hero Trust Reassurance with Original Amazon Logo */}
+                {(() => {
+                  const hasTp1 = Boolean(content?.heroBanner?.trustPoint1 && content.heroBanner.trustPoint1.trim());
+                  const hasTp2 = Boolean(content?.heroBanner?.trustPoint2 && content.heroBanner.trustPoint2.trim());
+                  const hasAmazon = content?.heroBanner?.showAmazon !== false;
+
+                  const items = [];
+                  if (hasTp1) {
+                    items.push(
+                      <span key="tp1" className="flex items-center space-x-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-brand-tertiary font-medium">
+                          {content.heroBanner.trustPoint1.trim()}
+                        </span>
+                      </span>
+                    );
+                  }
+                  if (hasTp2) {
+                    items.push(
+                      <span key="tp2" className="flex items-center space-x-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-brand-tertiary font-medium">
+                          {content.heroBanner.trustPoint2.trim()}
+                        </span>
+                      </span>
+                    );
+                  }
+                  if (hasAmazon) {
+                    items.push(
+                      <a
+                        key="amazon"
+                        href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 text-brand-tertiary hover:text-brand-primary font-medium transition-colors group"
+                        title="Also Available on Amazon India (HOUSE OF VJ)"
+                      >
+                        {Boolean(content?.heroBanner?.amazonText && content.heroBanner.amazonText.trim()) && (
+                          <span>{content.heroBanner.amazonText.trim()}</span>
+                        )}
+                        <span className="bg-white px-2 py-0.5 rounded-md border border-brand-border/90 shadow-2xs inline-flex items-center">
+                          <OriginalAmazonLogo className="h-3 w-auto" />
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-brand-muted group-hover:text-brand-primary" />
+                      </a>
+                    );
+                  }
+
+                  if (items.length === 0) return null;
+
+                  return (
+                    <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-brand-muted font-light">
+                      {items.map((item, idx) => (
+                        <React.Fragment key={idx}>
+                          {idx > 0 && <span className="text-brand-border">•</span>}
+                          {item}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
+            </section>
 
-              <button
-                onClick={refreshHealth}
-                disabled={healthLoading}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7FC] text-brand-primary border border-brand-border text-xs font-semibold hover:bg-brand-primary-light transition-all disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
-                <span>{healthLoading ? 'Syncing...' : 'Sync Status'}</span>
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Dynamic Product Catalog Section */}
-        <section id="catalog" className="space-y-8 scroll-mt-28">
-
-          {/* Header & Category Tabs */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
-                <span className="text-xs font-caps uppercase tracking-[0.2em] text-brand-primary font-bold">
-                  {content?.catalogHeader?.eyebrow || 'Curated Catalog'}
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-editorial font-bold text-brand-tertiary mt-1">
-                  {content?.catalogHeader?.title || 'Discover Everyday Fine Jewelry'}
-                </h2>
+            {/* Bestseller Spotlight Section (Dynamic based on product bestseller toggle) */}
+            {jhumkaBoxes.length > 0 && (
+              <div id="jhumka-boxes" className="scroll-mt-28">
+                <JhumkaBoxHeroSection
+                  products={jhumkaBoxes}
+                  onOpenPdp={(slug, box) => openPdp(slug, box)}
+                  onOpenCheckout={() => handleTriggerFastrr()}
+                />
               </div>
+            )}
 
-              {/* Sort Dropdown */}
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-brand-muted font-light">Sort by:</span>
-                <div className="relative">
-                  <select
-                    value={selectedSort}
-                    onChange={(e) => setSelectedSort(e.target.value)}
-                    className="appearance-none bg-white border border-brand-border rounded-xl px-3.5 py-1.5 pr-8 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary cursor-pointer shadow-sm"
-                  >
-                    <option value="popular">Most Popular</option>
-                    <option value="price_low">Price: Low to High</option>
-                    <option value="price_high">Price: High to Low</option>
-                    <option value="newest">Newest First</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-brand-muted absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-            </div>
+            {/* Live System Telemetry Strip (Toggleable from Admin) */}
+            {content?.telemetryBanner?.enabled && (
+              <section className="bg-white rounded-2xl p-5 border border-brand-border shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                      <DbIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-xs font-caps uppercase tracking-wider font-bold text-brand-tertiary">
+                          {content?.telemetryBanner?.title || 'Phase 4 Authentication & Guest Mode Active'}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          Auth Verified
+                        </span>
+                      </div>
+                      <p className="text-xs text-brand-muted font-light mt-0.5">
+                        {content?.telemetryBanner?.subtitle || 'Guest checkout supported • Customer JWT optional • Secure staff role partitioning active.'}
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`px-4 py-2 rounded-xl text-xs font-caps tracking-wider uppercase whitespace-nowrap transition-all ${selectedCategory === 'all'
-                  ? 'bg-brand-primary text-white font-bold shadow-sm'
-                  : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
-                  }`}
-              >
-                All Pieces ({categories.reduce((acc, c) => acc + Number(c.products_count || 0), 0) || products.length})
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.slug)}
-                  className={`px-4 py-2 rounded-xl text-xs font-caps tracking-wider uppercase whitespace-nowrap transition-all ${selectedCategory === cat.slug
-                    ? 'bg-brand-primary text-white font-bold shadow-sm'
-                    : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
-                    }`}
-                >
-                  {cat.name} ({cat.products_count || 0})
-                </button>
-              ))}
-            </div>
-
-            {searchQuery && (
-              <div className="flex items-center space-x-2 pt-1">
-                <span className="text-xs text-brand-muted font-light">Filtered by:</span>
-                <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-medium">
-                  <span>"{searchQuery}"</span>
                   <button
-                    onClick={() => setSearchQuery('')}
-                    className="hover:text-brand-tertiary transition-colors ml-1 font-bold text-sm"
-                    title="Clear search"
+                    onClick={refreshHealth}
+                    disabled={healthLoading}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7FC] text-brand-primary border border-brand-border text-xs font-semibold hover:bg-brand-primary-light transition-all disabled:opacity-50"
                   >
-                    ×
+                    <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
+                    <span>{healthLoading ? 'Syncing...' : 'Sync Status'}</span>
                   </button>
                 </div>
-              </div>
+              </section>
             )}
-          </div>
 
-          {/* Product Grid (2-column on mobile matching Glomo/Everlasting D2C best practice) */}
-          {productsLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="luxury-card rounded-xl sm:rounded-2xl p-3 sm:p-4 space-y-3 sm:space-y-4 animate-pulse">
-                  <div className="aspect-square rounded-lg sm:rounded-xl bg-gray-200"></div>
-                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-2.5 sm:h-3 bg-gray-100 rounded w-1/2"></div>
-                  <div className="h-7 sm:h-8 bg-gray-200 rounded"></div>
+            {/* Dynamic Product Catalog Section */}
+            <section id="catalog" className="space-y-8 scroll-mt-28">
+
+              {/* Header & Category Tabs */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-caps uppercase tracking-[0.2em] text-brand-primary font-bold">
+                      {content?.catalogHeader?.eyebrow || 'Curated Catalog'}
+                    </span>
+                    <h2 className="text-2xl sm:text-4xl font-editorial font-bold text-brand-tertiary mt-1">
+                      {content?.catalogHeader?.title || 'Discover Everyday Fine Jewelry'}
+                    </h2>
+                  </div>
+
+                  {/* Sort Dropdown */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-brand-muted font-light">Sort by:</span>
+                    <div className="relative">
+                      <select
+                        value={selectedSort}
+                        onChange={(e) => setSelectedSort(e.target.value)}
+                        className="appearance-none bg-white border border-brand-border rounded-xl px-3.5 py-1.5 pr-8 text-xs font-medium text-brand-tertiary focus:outline-none focus:border-brand-primary cursor-pointer shadow-sm"
+                      >
+                        <option value="popular">Most Popular</option>
+                        <option value="price_low">Price: Low to High</option>
+                        <option value="price_high">Price: High to Low</option>
+                        <option value="newest">Newest First</option>
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-brand-muted absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-brand-border space-y-3">
-              <p className="font-editorial text-xl font-bold text-brand-tertiary">No jewelry found in this category</p>
-              <p className="text-xs text-brand-muted">Try selecting "All Pieces" to view the full collection.</p>
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className="px-4 py-2 bg-brand-primary text-white text-xs rounded-xl"
-              >
-                Reset Filter
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-              {displayedProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-4 py-2 rounded-xl text-xs font-caps tracking-wider uppercase whitespace-nowrap transition-all ${selectedCategory === 'all'
+                      ? 'bg-brand-primary text-white font-bold shadow-sm'
+                      : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
+                      }`}
+                  >
+                    All Pieces ({categories.reduce((acc, c) => acc + Number(c.products_count || 0), 0) || products.length})
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.slug)}
+                      className={`px-4 py-2 rounded-xl text-xs font-caps tracking-wider uppercase whitespace-nowrap transition-all ${selectedCategory === cat.slug
+                        ? 'bg-brand-primary text-white font-bold shadow-sm'
+                        : 'bg-white border border-brand-border text-brand-tertiary hover:border-brand-primary/40'
+                        }`}
+                    >
+                      {cat.name} ({cat.products_count || 0})
+                    </button>
+                  ))}
+                </div>
+
+                {searchQuery && (
+                  <div className="flex items-center space-x-2 pt-1">
+                    <span className="text-xs text-brand-muted font-light">Filtered by:</span>
+                    <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-medium">
+                      <span>"{searchQuery}"</span>
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="hover:text-brand-tertiary transition-colors ml-1 font-bold text-sm"
+                        title="Clear search"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Product Grid (2-column on mobile matching Glomo/Everlasting D2C best practice) */}
+              {productsLoading ? (
+                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="luxury-card rounded-xl sm:rounded-2xl p-3 sm:p-4 space-y-3 sm:space-y-4 animate-pulse">
+                      <div className="aspect-square rounded-lg sm:rounded-xl bg-gray-200"></div>
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-2.5 sm:h-3 bg-gray-100 rounded w-1/2"></div>
+                      <div className="h-7 sm:h-8 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-brand-border space-y-3">
+                  <p className="font-editorial text-xl font-bold text-brand-tertiary">No jewelry found in this category</p>
+                  <p className="text-xs text-brand-muted">Try selecting "All Pieces" to view the full collection.</p>
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className="px-4 py-2 bg-brand-primary text-white text-xs rounded-xl"
+                  >
+                    Reset Filter
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+                  {displayedProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onQuickView={(p) => openPdp(p.slug, p)}
+                      onAddToCart={(p) => addToCart(p, null, 1, true)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Festival Offer Panel (Grand Celebrations) */}
+            {content?.festivalOffer?.enabled !== false && content?.festivalOffer?.enabled !== 'false' && (
+              <section id="festive-offers" className="scroll-mt-28">
+                <FestivalOfferSection
+                  products={products}
                   onQuickView={(p) => openPdp(p.slug, p)}
                   onAddToCart={(p) => addToCart(p, null, 1, true)}
                 />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Festival Offer Panel (Grand Celebrations) */}
-        {content?.festivalOffer?.enabled !== false && content?.festivalOffer?.enabled !== 'false' && (
-          <section id="festive-offers" className="scroll-mt-28">
-            <FestivalOfferSection
-              products={products}
-              onQuickView={(p) => openPdp(p.slug, p)}
-              onAddToCart={(p) => addToCart(p, null, 1, true)}
-            />
-          </section>
-        )}
+              </section>
+            )}
 
             {/* Trust Badges Strip */}
             <TrustStrip />
