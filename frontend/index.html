@@ -18,6 +18,50 @@
     })(window, document, "clarity", "script", "z5wk332on0");
   </script>
   <!-- End Microsoft Clarity -->
+  <!-- Meta Pixel Code with Manual Advanced Matching -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+
+    (function() {
+      var metaUserData = {};
+      try {
+        var rawUser = localStorage.getItem('valerie_saved_checkout_address') || localStorage.getItem('valerie_meta_user_data');
+        if (rawUser) {
+          var parsed = JSON.parse(rawUser);
+          if (parsed.email || parsed.em) metaUserData.em = String(parsed.email || parsed.em).trim().toLowerCase();
+          if (parsed.phone || parsed.ph) {
+            var digits = String(parsed.phone || parsed.ph).replace(/\D/g, '');
+            if (digits.length === 10) digits = '91' + digits;
+            else if (digits.length === 11 && digits.indexOf('0') === 0) digits = '91' + digits.substring(1);
+            metaUserData.ph = digits;
+          }
+          if (parsed.name || parsed.fn) {
+            var parts = String(parsed.name || parsed.fn).trim().split(/\s+/);
+            metaUserData.fn = parts[0].toLowerCase();
+            if (parts.length > 1) metaUserData.ln = parts.slice(1).join(' ').toLowerCase();
+          }
+          if (parsed.city || parsed.ct) metaUserData.ct = String(parsed.city || parsed.ct).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (parsed.pincode || parsed.zp) metaUserData.zp = String(parsed.pincode || parsed.zp).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          metaUserData.country = 'in';
+        }
+      } catch (e) {}
+
+      if (Object.keys(metaUserData).length > 0) {
+        fbq('init', '1574336098052134', metaUserData);
+      } else {
+        fbq('init', '1574336098052134');
+      }
+      fbq('track', 'PageView');
+    })();
+  </script>
+  <!-- End Meta Pixel Code -->
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -164,6 +208,11 @@
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TR5Q727Z"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
+  <!-- Meta Pixel (noscript) -->
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1574336098052134&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel (noscript) -->
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

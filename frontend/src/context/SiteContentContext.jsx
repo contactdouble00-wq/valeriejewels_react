@@ -139,6 +139,7 @@ const DEFAULT_SITE_CONTENT = {
   seoTracking: {
     googleAnalyticsId: 'G-RCCMMLZFTB',
     googleSearchConsoleTag: '',
+    metaPixelId: '1574336098052134',
   },
 };
 

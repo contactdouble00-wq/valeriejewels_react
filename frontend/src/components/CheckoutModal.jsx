@@ -37,7 +37,7 @@ import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useSiteContent } from '../context/SiteContentContext';
-import { trackGABeginCheckout, trackGAPurchase } from '../utils/analytics';
+import { trackGABeginCheckout, trackGAPurchase, trackPurchase, setMetaAdvancedMatching } from '../utils/analytics';
 
 // Pincode directory lookup helper for instant city/state auto-fill
 const PINCODE_MAP = {
@@ -254,6 +254,16 @@ export default function CheckoutModal({
             if (parsed.state) setState(parsed.state);
             if (parsed.pincode) setPincode(parsed.pincode);
             hasValidSaved = true;
+            try {
+              setMetaAdvancedMatching({
+                name: parsed.name,
+                email: parsed.email,
+                phone: parsed.phone,
+                city: parsed.city,
+                state: parsed.state,
+                pincode: parsed.pincode,
+              });
+            } catch (_) {}
           } else {
             try { localStorage.removeItem('valerie_saved_checkout_address'); } catch (e) {}
           }
@@ -285,16 +295,42 @@ export default function CheckoutModal({
   useEffect(() => {
     if (step === 'confirmed' && placedOrder && !hasTrackedPurchase.current) {
       hasTrackedPurchase.current = true;
+      const orderTotal = Number(placedOrder.total || calcData?.final_total || 0);
+      const orderNum = String(placedOrder.order_number || placedOrder.id || `VJ-${Date.now()}`);
+
+      // 1. GA4 Purchase tracking
       trackGAPurchase({
-        orderId: placedOrder.order_number || placedOrder.id,
-        totalAmount: Number(placedOrder.total || calcData?.final_total || 0),
+        orderId: orderNum,
+        totalAmount: orderTotal,
         items: cartItems,
+      });
+
+      // 2. Official Meta Pixel & GTM CAPI deduplicated Purchase tracking with root value & currency
+      trackPurchase({
+        id: placedOrder.id,
+        order_number: orderNum,
+        total_amount: orderTotal,
+        total: orderTotal,
+        amount_paid_upfront: Number(placedOrder.amount_paid_upfront || 0),
+        payment_type: placedOrder.payment_type || 'prepaid',
+        customer_name: placedOrder.shipping_name || name,
+        customer_email: placedOrder.shipping_email || email,
+        customer_phone: placedOrder.shipping_phone || phone,
+        shipping_city: placedOrder.shipping_city || city,
+        shipping_pincode: placedOrder.shipping_pincode || pincode,
+        items: cartItems.map((it, idx) => ({
+          product_id: it.id || it.productId || `item_${idx + 1}`,
+          product_name: it.name || it.title,
+          unit_price: Number(it.price || 0),
+          quantity: Number(it.quantity || 1),
+          variant_title: it.variantTitle || it.variant,
+        })),
       });
     }
     if (step !== 'confirmed') {
       hasTrackedPurchase.current = false;
     }
-  }, [step, placedOrder, calcData?.final_total]);
+  }, [step, placedOrder, calcData?.final_total, cartItems, name, email, phone, city, pincode]);
 
   // 3. OTP Countdown Timer
   useEffect(() => {
@@ -503,6 +539,16 @@ export default function CheckoutModal({
         pincode: pincode.trim(),
       }));
     } catch (err) {}
+    try {
+      setMetaAdvancedMatching({
+        name: name.trim(),
+        email: email.trim(),
+        phone: cleanP,
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+      });
+    } catch (_) {}
 
     setAddressErrors({});
     setAddressModalError(null);
