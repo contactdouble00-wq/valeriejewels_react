@@ -61,7 +61,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
     <div className="luxury-card rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between group h-full relative">
       <div>
         {/* Product Image Stage: Crisp 1:1 Square Ratio - clicking views product */}
-        <a 
+        <a
           href={productHref}
           onClick={handleStageClick}
           className="relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-[#FAF7FC] cursor-pointer group/stage select-none block"
@@ -91,18 +91,17 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
             }}
             aria-label={wishlisted ? "Remove from saved pieces" : "Save to wishlist"}
             title={wishlisted ? "Saved" : "Add to wishlist"}
-            className={`absolute top-2 right-2 sm:top-3 sm:right-3 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${
-              wishlisted
-                ? 'bg-white text-rose-500 shadow-md scale-105'
-                : 'bg-white/85 backdrop-blur-sm text-brand-tertiary/70 hover:text-rose-500 hover:bg-white hover:scale-110 shadow-sm'
-            }`}
+            className={`absolute top-2 right-2 sm:top-3 sm:right-3 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all ${wishlisted
+              ? 'bg-white text-rose-500 shadow-md scale-105'
+              : 'bg-white/85 backdrop-blur-sm text-brand-tertiary/70 hover:text-rose-500 hover:bg-white hover:scale-110 shadow-sm'
+              }`}
           >
             <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${wishlisted ? 'fill-rose-500 stroke-rose-500' : 'stroke-[1.8]'}`} />
           </button>
         </a>
 
         {/* Product Meta */}
-        <div 
+        <div
           onClick={handleStageClick}
           className="mt-2.5 sm:mt-4 space-y-1 sm:space-y-1.5 cursor-pointer"
         >
@@ -116,9 +115,8 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${
-                      i < Math.round(Number(displayRating)) ? 'fill-current' : 'fill-gray-200 text-gray-200'
-                    }`}
+                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${i < Math.round(Number(displayRating)) ? 'fill-current' : 'fill-gray-200 text-gray-200'
+                      }`}
                   />
                 ))}
                 <span className="text-[10px] sm:text-xs text-brand-muted ml-1 font-medium">
