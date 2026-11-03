@@ -187,7 +187,6 @@ const FACTORY_DEFAULTS = {
   seoTracking: {
     googleAnalyticsId: 'G-RCCMMLZFTB',
     googleSearchConsoleTag: '',
-    metaPixelId: '1574336098052134',
   },
 };
 
@@ -1241,13 +1240,13 @@ export default function AdminHomepageView() {
             </div>
 
             {/* Quick Status Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
                     Google Analytics 4
                   </div>
-                  <div className="text-sm font-bold text-brand-tertiary mt-0.5 truncate max-w-[140px]">
+                  <div className="text-sm font-bold text-brand-tertiary mt-0.5 truncate max-w-[160px]">
                     {formData.seoTracking?.googleAnalyticsId ? formData.seoTracking.googleAnalyticsId : 'Not Configured'}
                   </div>
                 </div>
@@ -1266,25 +1265,10 @@ export default function AdminHomepageView() {
               <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
-                    Meta Pixel &amp; CAPI
-                  </div>
-                  <div className="text-sm font-bold text-brand-tertiary mt-0.5 font-mono truncate max-w-[140px]">
-                    {formData.seoTracking?.metaPixelId || '1574336098052134'}
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
-                  <Check className="w-3 h-3" />
-                  <span>Advanced</span>
-                </span>
-              </div>
-
-              <div className="bg-[#FAF8FC] border border-brand-border rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-muted">
                     Search Console Tag
                   </div>
                   <div className="text-sm font-bold text-brand-tertiary mt-0.5">
-                    {formData.seoTracking?.googleSearchConsoleTag ? 'Tag Injected' : 'Not Added'}
+                    {formData.seoTracking?.googleSearchConsoleTag ? 'Verification Tag Set' : 'Not Added'}
                   </div>
                 </div>
                 {formData.seoTracking?.googleSearchConsoleTag ? (
@@ -1417,60 +1401,6 @@ export default function AdminHomepageView() {
                     Copy the tag, paste it into the field above, click <strong>Save Live Changes</strong> at the top right, then return to Search Console and click <strong>VERIFY</strong>.
                   </li>
                 </ol>
-              </div>
-            </div>
-
-                        {/* 2.5 Meta Pixel & Conversions API (CAPI) */}
-            <div className="bg-white border border-brand-border rounded-2xl p-6 space-y-4 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-brand-tertiary">
-                  <BarChart3 className="w-4 h-4 text-brand-primary" />
-                  <h4 className="text-sm font-bold">2. Meta Pixel &amp; Conversions API (CAPI)</h4>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Manual Advanced Matching Active
-                </span>
-              </div>
-
-              <div className="space-y-1.5 max-w-xl">
-                <label className="text-xs font-semibold text-brand-tertiary flex items-center justify-between">
-                  <span>Meta Pixel ID</span>
-                  <span className="text-[10px] text-brand-muted font-normal">Active Dataset ID</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.seoTracking?.metaPixelId || '1574336098052134'}
-                  onChange={(e) => updateNested('seoTracking', 'metaPixelId', e.target.value.trim())}
-                  placeholder="1574336098052134"
-                  className="w-full px-3.5 py-2.5 bg-[#FAF8FC] border border-brand-border rounded-xl text-xs font-mono text-brand-tertiary focus:outline-none focus:border-brand-primary"
-                />
-                <p className="text-[10px] text-brand-muted">
-                  Meta Pixel ID: <strong>1574336098052134</strong>. All Purchase events transmit valid 3-letter currency (<code>INR</code>) and numeric order values with client-side SHA-256 hashed customer PII for Manual Advanced Matching.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="bg-[#FAF8FC] rounded-xl p-3 border border-brand-border/60">
-                  <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary block">
-                    Currency ISO Standard
-                  </span>
-                  <p className="text-xs font-mono font-bold text-brand-primary mt-1">INR (3-Letter)</p>
-                  <p className="text-[10px] text-brand-muted mt-0.5">Directly set on all Purchase events.</p>
-                </div>
-                <div className="bg-[#FAF8FC] rounded-xl p-3 border border-brand-border/60">
-                  <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary block">
-                    Advanced Matching
-                  </span>
-                  <p className="text-xs font-mono font-bold text-emerald-700 mt-1">em, ph, fn, ln, ct, zp</p>
-                  <p className="text-[10px] text-brand-muted mt-0.5">SHA-256 hashed by Meta Pixel SDK.</p>
-                </div>
-                <div className="bg-[#FAF8FC] rounded-xl p-3 border border-brand-border/60">
-                  <span className="text-[10px] font-caps uppercase tracking-wider font-bold text-brand-tertiary block">
-                    CAPI Deduplication
-                  </span>
-                  <p className="text-xs font-mono font-bold text-indigo-700 mt-1">eventID: order_number</p>
-                  <p className="text-[10px] text-brand-muted mt-0.5">100% matched with backend order ref.</p>
-                </div>
               </div>
             </div>
 
