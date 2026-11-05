@@ -74,8 +74,9 @@ return [
     ],
 
     'meta' => [
-        'dataset_id'   => '1574336098052134',
-        'pixel_id'     => '1574336098052134',
-        'access_token' => 'EAAWMxWFI7M4BS0CmPaNFjF9cDVhnq0RbaZAbJe1cZBDt50NVHlxk0KK2e2DRMyO1M5C40s45QrojVKIZBy5uBJUVyv1eStPwna0FZBZBqtGYi8WE6V0nQ3qQ9CNH4tbi9s9cvGIOktuNPODNijcYxsi7utOtedh5zMQBQyNywnx3ZABXQ4nyda2IGhakbPLQZDZD',
+        'dataset_id'        => '1574336098052134',
+        'pixel_id'          => '1574336098052134',
+        'access_token'      => 'EAAWMxWFI7M4BS0CmPaNFjF9cDVhnq0RbaZAbJe1cZBDt50NVHlxk0KK2e2DRMyO1M5C40s45QrojVKIZBy5uBJUVyv1eStPwna0FZBZBqtGYi8WE6V0nQ3qQ9CNH4tbi9s9cvGIOktuNPODNijcYxsi7utOtedh5zMQBQyNywnx3ZABXQ4nyda2IGhakbPLQZDZD',
+        'test_event_code'   => 'TEST25531',
     ],
 ];

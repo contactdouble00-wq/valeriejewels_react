@@ -49,6 +49,30 @@ class MetaCapiService
     }
 
     /**
+     * Get active Test Event Code (routes event directly to Meta Events Manager Test Events tab)
+     */
+    public static function getTestEventCode(): ?string
+    {
+        $code = getenv('META_TEST_EVENT_CODE') ?: ($_ENV['META_TEST_EVENT_CODE'] ?? null);
+        if (!empty($code)) {
+            return trim($code);
+        }
+
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("SELECT `value` FROM `site_settings` WHERE `key` = 'meta_test_event_code' LIMIT 1");
+            $stmt->execute();
+            $dbCode = $stmt->fetchColumn();
+            if ($dbCode !== false && $dbCode !== null) {
+                $trimmed = trim($dbCode);
+                return $trimmed !== '' ? $trimmed : null;
+            }
+        } catch (Throwable $e) {}
+
+        return 'TEST25531';
+    }
+
+    /**
      * Dispatch Server-Side 'Purchase' event to Meta Conversions API
      * STRICT RULE: ONLY fires when the payment gateway has explicitly confirmed 'Success' or 'Paid' status!
      */
@@ -149,6 +173,11 @@ class MetaCapiService
             $postBody = [
                 'data' => [$eventPayload],
             ];
+
+            $testEventCode = self::getTestEventCode();
+            if (!empty($testEventCode)) {
+                $postBody['test_event_code'] = $testEventCode;
+            }
 
             // 7. Send server-side POST request to Meta Graph API
             $datasetId = self::getDatasetId();
