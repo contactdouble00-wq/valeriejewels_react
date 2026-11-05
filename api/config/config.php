@@ -203,6 +203,17 @@ if (empty($config['smtp']['from_name'])) {
     $config['smtp']['from_name'] = 'Valerie Jewels';
 }
 
+// 5b. Meta Conversions API & Pixel Configuration
+$metaDatasetId = getenv('META_DATASET_ID') ?: (getenv('META_PIXEL_ID') ?: ($_ENV['META_DATASET_ID'] ?? ($_ENV['META_PIXEL_ID'] ?? null)));
+if ($metaDatasetId) {
+    $config['meta']['dataset_id'] = $metaDatasetId;
+    $config['meta']['pixel_id'] = $metaDatasetId;
+}
+$metaToken = getenv('META_ACCESS_TOKEN') ?: ($_ENV['META_ACCESS_TOKEN'] ?? null);
+if ($metaToken) {
+    $config['meta']['access_token'] = $metaToken;
+}
+
 // 6. Set global PHP timezone to Indian Standard Time (Asia/Kolkata)
 date_default_timezone_set($config['app']['timezone'] ?? 'Asia/Kolkata');
 

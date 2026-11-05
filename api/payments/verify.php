@@ -218,6 +218,14 @@ try {
             MailerService::sendOrderConfirmation((int)$order['id']);
         } catch (Throwable $e) {}
 
+        // Meta Conversions API (CAPI): Server-side verified Purchase event
+        try {
+            require_once dirname(__DIR__) . '/utils/meta_capi.php';
+            MetaCapiService::sendPurchaseEvent((int)$order['id']);
+        } catch (Throwable $metaErr) {
+            error_log('[Meta CAPI] Purchase dispatch error on verify: ' . $metaErr->getMessage());
+        }
+
         try {
             require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
             $provider = DeliveryProviderFactory::getDefaultProvider();
@@ -256,6 +264,14 @@ try {
         try {
             MailerService::sendOrderConfirmation((int)$order['id']);
         } catch (Throwable $e) {}
+
+        // Meta Conversions API (CAPI): Server-side verified Purchase event
+        try {
+            require_once dirname(__DIR__) . '/utils/meta_capi.php';
+            MetaCapiService::sendPurchaseEvent((int)$order['id']);
+        } catch (Throwable $metaErr) {
+            error_log('[Meta CAPI] Purchase dispatch error on verify: ' . $metaErr->getMessage());
+        }
 
         try {
             require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';

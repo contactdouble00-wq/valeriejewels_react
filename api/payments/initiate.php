@@ -391,6 +391,14 @@ try {
         } catch (Throwable $me) {
             error_log('[COD Mailer] Error dispatching confirmation email: ' . $me->getMessage());
         }
+
+        // Meta Conversions API (CAPI): Server-side verified Purchase event for confirmed COD
+        try {
+            require_once dirname(__DIR__) . '/utils/meta_capi.php';
+            MetaCapiService::sendPurchaseEvent($orderId);
+        } catch (Throwable $metaErr) {
+            error_log('[COD Meta CAPI] Purchase error: ' . $metaErr->getMessage());
+        }
     }
 
     // Generate Fastrr & Razorpay checkout session payload

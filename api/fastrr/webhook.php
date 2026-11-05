@@ -149,6 +149,14 @@ try {
         error_log("[Fastrr Webhook] Automated confirmation email error: " . $mailEx->getMessage());
     }
 
+    // Meta Conversions API (CAPI): Server-side verified Purchase event
+    try {
+        require_once dirname(__DIR__) . '/utils/meta_capi.php';
+        MetaCapiService::sendPurchaseEvent($newOrderId);
+    } catch (Throwable $metaErr) {
+        error_log("[Fastrr Webhook] Meta CAPI error: " . $metaErr->getMessage());
+    }
+
     http_response_code(200);
     header('Content-Type: application/json');
     echo json_encode(['ok' => true, 'order_number' => $orderNumber, 'order_id' => $newOrderId]);

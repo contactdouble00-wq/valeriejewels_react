@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/utils/mailer.php';
 require_once dirname(__DIR__) . '/utils/auto_recovery.php';
+require_once dirname(__DIR__) . '/utils/meta_capi.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
 handleCors();
@@ -230,6 +231,13 @@ if ($isRazorpayWebhook) {
             error_log('[Razorpay Webhook] Mailer error: ' . $e->getMessage());
         }
 
+        // Meta Conversions API (CAPI): Server-side verified Purchase event
+        try {
+            MetaCapiService::sendPurchaseEvent((int)$order['id']);
+        } catch (Throwable $metaErr) {
+            error_log('[Razorpay Webhook] Meta CAPI error: ' . $metaErr->getMessage());
+        }
+
         // Push confirmed order to default delivery partner panel
         try {
             require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
@@ -372,6 +380,13 @@ try {
         try {
             MailerService::sendOrderConfirmation((int)$order['id']);
         } catch (Throwable $e) {}
+
+        // Meta Conversions API (CAPI): Server-side verified Purchase event
+        try {
+            MetaCapiService::sendPurchaseEvent((int)$order['id']);
+        } catch (Throwable $metaErr) {
+            error_log('[Fastrr Webhook] Meta CAPI error: ' . $metaErr->getMessage());
+        }
 
         try {
             require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';

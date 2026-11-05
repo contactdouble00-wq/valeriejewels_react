@@ -550,6 +550,14 @@ if ($action === 'sync_razorpay') {
             MailerService::sendOrderConfirmation((int)$order['id']);
         } catch (Throwable $e) {}
 
+        // Meta Conversions API (CAPI): Server-side verified Purchase event
+        try {
+            require_once dirname(__DIR__) . '/utils/meta_capi.php';
+            MetaCapiService::sendPurchaseEvent((int)$order['id']);
+        } catch (Throwable $metaErr) {
+            error_log('[Sync Razorpay] Meta CAPI error: ' . $metaErr->getMessage());
+        }
+
         try {
             require_once dirname(__DIR__) . '/shipping/shiprocket.php';
             ShiprocketService::createShipment((int)$order['id']);
@@ -637,6 +645,15 @@ if ($action === 'mark_payment_status') {
         try {
             MailerService::sendOrderConfirmation($orderId);
         } catch (Throwable $e) {}
+    }
+
+    if ($newPaymentStatus === 'paid' || $newPaymentStatus === 'partial_paid') {
+        try {
+            require_once dirname(__DIR__) . '/utils/meta_capi.php';
+            MetaCapiService::sendPurchaseEvent($orderId);
+        } catch (Throwable $metaErr) {
+            error_log('[Mark Payment Status] Meta CAPI error: ' . $metaErr->getMessage());
+        }
     }
 
     if ($newPaymentStatus === 'failed') {
