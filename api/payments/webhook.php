@@ -8,6 +8,7 @@
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
 require_once dirname(__DIR__) . '/utils/mailer.php';
+require_once dirname(__DIR__) . '/utils/auto_recovery.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
 handleCors();
@@ -257,9 +258,9 @@ if ($isRazorpayWebhook) {
 
         $failureReason = $paymentEntity['error_description'] ?? 'Payment authorization failed on Razorpay';
         try {
-            MailerService::sendOrderFailed((int)$order['id'], $failureReason);
+            AutoRecoveryService::sendForOrder((int)$order['id'], $failureReason);
         } catch (Throwable $e) {
-            error_log('[Razorpay Webhook] Mailer payment failed error: ' . $e->getMessage());
+            error_log('[Razorpay Webhook] AutoRecovery error: ' . $e->getMessage());
         }
 
         ApiResponse::success([
@@ -399,9 +400,9 @@ try {
 
         $failureReason = $data['failure_reason'] ?? ($data['data']['failure_reason'] ?? 'Payment was interrupted or declined by bank');
         try {
-            MailerService::sendOrderFailed((int)$order['id'], $failureReason);
+            AutoRecoveryService::sendForOrder((int)$order['id'], $failureReason);
         } catch (Throwable $e) {
-            error_log('Mailer payment failed error: ' . $e->getMessage());
+            error_log('[Fastrr Webhook] AutoRecovery error: ' . $e->getMessage());
         }
 
         ApiResponse::success([

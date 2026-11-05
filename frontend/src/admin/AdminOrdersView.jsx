@@ -1631,16 +1631,16 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <span>Select All Pending ({pendingPaymentOrders.length})</span>
             </button>
 
-            {/* 1-Click Automated Recovery Dispatch to All Unpaid Customers */}
+            {/* Automated Recovery Dispatch Status & Force Run */}
             <button
               type="button"
               onClick={handleRunAutoRecovery}
               disabled={runningRecovery}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-xs border border-purple-300 bg-purple-700 hover:bg-purple-800 text-white cursor-pointer disabled:opacity-50"
-              title="Scan and automatically email luxury product recovery links to all customers with pending or failed payments"
+              title="Autonomous Recovery Active: The system automatically emails all customers with pending or failed orders. Click to trigger an immediate force-sweep."
             >
               <Sparkles className={`w-3.5 h-3.5 ${runningRecovery ? 'animate-spin' : ''}`} />
-              <span>{runningRecovery ? 'Sending...' : '⚡ Auto-Mail Unpaid Customers'}</span>
+              <span>{runningRecovery ? 'Running Auto-Recovery...' : '⚡ Auto-Recovery Active'}</span>
             </button>
 
             {/* Quick 1-Click Sync to JustShyp for Unsynced Orders */}

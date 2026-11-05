@@ -458,6 +458,7 @@ export const apiService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      keepalive: true,
     });
     return handleResponse(response);
   },

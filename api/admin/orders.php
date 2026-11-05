@@ -7,6 +7,7 @@
 
 require_once dirname(__DIR__) . '/utils/admin_auth.php';
 require_once dirname(__DIR__) . '/utils/mailer.php';
+require_once dirname(__DIR__) . '/utils/auto_recovery.php';
 
 $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
@@ -390,6 +391,11 @@ if ($method === 'GET') {
         }
     } catch (Throwable $e) {}
 
+    // Autonomous payment recovery sweep: automatically emails pending (>5 mins) and failed orders
+    try {
+        AutoRecoveryService::runSweep(10, 5, false);
+    } catch (Throwable $sweepEx) {}
+
     $whereSql = implode(' AND ', $where);
 
     $stmt = $pdo->prepare("
@@ -630,6 +636,12 @@ if ($action === 'mark_payment_status') {
     if (!empty($input['notify_customer']) && ($newPaymentStatus === 'paid' || $newPaymentStatus === 'partial_paid')) {
         try {
             MailerService::sendOrderConfirmation($orderId);
+        } catch (Throwable $e) {}
+    }
+
+    if ($newPaymentStatus === 'failed') {
+        try {
+            AutoRecoveryService::sendForOrder($orderId);
         } catch (Throwable $e) {}
     }
 
@@ -1332,88 +1344,26 @@ if ($action === 'bulk_send_payment_reminder' || $action === 'bulk_send_email') {
 
 // Handle Automated Payment Recovery Job Run (1-click trigger from Admin Orders)
 if ($action === 'run_payment_recovery') {
-    // Scan eligible pending/unpaid orders that haven't received recovery email
-    $query = "
-        SELECT o.id, o.order_number, o.customer_name, o.customer_email, o.customer_phone, 
-               o.total_amount, o.payment_type, o.payment_status, o.order_status, o.created_at
-        FROM orders o
-        WHERE (o.payment_status IN ('pending', 'failed', 'unpaid') OR o.order_status IN ('pending', 'failed'))
-          AND o.payment_status NOT IN ('paid', 'partial_paid')
-          AND o.order_status NOT IN ('confirmed', 'shipped', 'delivered', 'cancelled')
-          AND o.customer_email IS NOT NULL
-          AND o.customer_email != ''
-          AND o.customer_email NOT LIKE '%@valerieclient.in'
-          AND NOT EXISTS (
-              SELECT 1 FROM email_logs el 
-              WHERE el.order_id = o.id 
-                AND el.email_type IN ('order_failed', 'payment_reminder')
-          )
-        ORDER BY o.id DESC
-        LIMIT 50
-    ";
+    $sweepResult = AutoRecoveryService::runSweep(50, 0, true);
 
-    $stmt = $pdo->prepare($query);
-    $stmt->execute();
-    $pendingOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $sentOrders = [];
-    $failedOrders = [];
-
-    foreach ($pendingOrders as $ord) {
-        $ordId = (int)$ord['id'];
-        $toEmail = trim($ord['customer_email']);
-
-        if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-            $failedOrders[] = [
-                'order_id'     => $ordId,
-                'order_number' => $ord['order_number'],
-                'error'        => 'Invalid email format: ' . $toEmail,
-            ];
-            continue;
-        }
-
-        try {
-            $res = MailerService::sendOrderFailed($ordId, 'Pending checkout completion — reserved pieces', false);
-            if (!empty($res['success'])) {
-                $sentOrders[] = [
-                    'order_id'       => $ordId,
-                    'order_number'   => $ord['order_number'],
-                    'customer_name'  => $ord['customer_name'],
-                    'customer_email' => $toEmail,
-                    'status'         => $res['status'] ?? 'sent',
-                    'log_id'         => $res['log_id'] ?? null,
-                ];
-            } else {
-                $failedOrders[] = [
-                    'order_id'       => $ordId,
-                    'order_number'   => $ord['order_number'],
-                    'error'          => $res['error_message'] ?? 'Mailer returned false',
-                ];
-            }
-        } catch (Throwable $e) {
-            $failedOrders[] = [
-                'order_id'       => $ordId,
-                'order_number'   => $ord['order_number'],
-                'error'          => $e->getMessage(),
-            ];
-        }
-    }
-
-    $sentCount = count($sentOrders);
-    $failedCount = count($failedOrders);
+    $sentOrders   = $sweepResult['dispatched'] ?? [];
+    $failedOrders = $sweepResult['failed'] ?? [];
+    $sentCount    = $sweepResult['dispatched_count'] ?? count($sentOrders);
+    $failedCount  = $sweepResult['failed_count'] ?? count($failedOrders);
+    $scannedCount = $sweepResult['scanned_count'] ?? 0;
 
     AdminAuth::logActivity($adminUser['id'], 'run_payment_recovery', 'orders', 0, [
-        'scanned_count' => count($pendingOrders),
+        'scanned_count' => $scannedCount,
         'sent_count'    => $sentCount,
         'failed_count'  => $failedCount,
     ]);
 
     $msg = "Payment recovery completed: {$sentCount} " . ($sentCount === 1 ? 'recovery email' : 'recovery emails') . " dispatched.";
     if ($failedCount > 0) $msg .= " ({$failedCount} failed).";
-    if ($sentCount === 0 && $failedCount === 0) $msg = "All pending customers have already received recovery emails. No new emails needed.";
+    if ($sentCount === 0 && $failedCount === 0) $msg = "All pending and failed customers have already received recovery emails. No new emails needed.";
 
     ApiResponse::success([
-        'scanned_count' => count($pendingOrders),
+        'scanned_count' => $scannedCount,
         'sent_count'    => $sentCount,
         'failed_count'  => $failedCount,
         'sent_orders'   => $sentOrders,

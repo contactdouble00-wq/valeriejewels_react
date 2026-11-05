@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/utils/cors.php';
 require_once __DIR__ . '/utils/response.php';
+require_once __DIR__ . '/utils/auto_recovery.php';
 require_once __DIR__ . '/config/database.php';
 
 handleCors();
@@ -15,6 +16,11 @@ $config = file_exists($configFile)
     : require __DIR__ . '/config/config.sample.php';
 
 $dbCheck = Database::checkConnection();
+
+// Auto-run payment recovery sweep if cooldown permits
+try {
+    AutoRecoveryService::runSweep(5, 5, false);
+} catch (Throwable $e) {}
 
 $deployVersionFile = __DIR__ . '/deploy_version.txt';
 $gitCommit = file_exists($deployVersionFile)

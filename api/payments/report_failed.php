@@ -1,13 +1,16 @@
 <?php
 /**
  * VALERIE JEWELS — Instant Payment Failure / Drop-Off Reporter
- * Automatically notifies backend when checkout payment is cancelled or failed on client-side,
- * marks the order, and dispatches the high-converting luxury recovery email with product link.
+ * Automatically marks order as failed and immediately dispatches the luxury recovery email.
+ * Runs with ignore_user_abort to ensure email delivery even if user closes the tab or navigates.
  */
+
+ignore_user_abort(true);
+set_time_limit(60);
 
 require_once dirname(__DIR__) . '/utils/cors.php';
 require_once dirname(__DIR__) . '/utils/response.php';
-require_once dirname(__DIR__) . '/utils/mailer.php';
+require_once dirname(__DIR__) . '/utils/auto_recovery.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
 handleCors();
@@ -38,45 +41,38 @@ try {
     }
 
     // Do not mark failed if order is already paid or confirmed
-    if ($order['payment_status'] === 'paid' || $order['payment_status'] === 'partial_paid' || $order['order_status'] === 'confirmed' || $order['order_status'] === 'shipped') {
-        ApiResponse::success(['order_number' => $orderNumber, 'status' => $order['payment_status']], 'Order is already completed');
+    if ($order['payment_status'] === 'paid' || $order['payment_status'] === 'partial_paid' || 
+        $order['order_status'] === 'confirmed' || $order['order_status'] === 'shipped') {
+        ApiResponse::success([
+            'order_number'   => $orderNumber,
+            'payment_status' => $order['payment_status'],
+            'order_status'   => $order['order_status'],
+        ], 'Order is already completed/confirmed');
     }
 
     // Update order status to failed
+    $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
     $upStmt = $pdo->prepare("
         UPDATE orders 
         SET payment_status = 'failed',
             order_status   = 'failed',
-            updated_at     = :updated_at 
+            updated_at     = $nowSql 
         WHERE id = :id
     ");
-    $upStmt->execute([
-        ':updated_at' => date('Y-m-d H:i:s'),
-        ':id'         => $order['id'],
-    ]);
+    $upStmt->execute([':id' => $order['id']]);
 
-    // Dispatch luxury conversion email (with idempotency locking in email_logs)
-    $emailResult = null;
-    $emailValid = !empty($order['customer_email']) && 
-                  filter_var($order['customer_email'], FILTER_VALIDATE_EMAIL) && 
-                  strpos($order['customer_email'], '@valerieclient.in') === false;
-
-    if ($emailValid) {
-        try {
-            $emailResult = MailerService::sendOrderFailed((int)$order['id'], $reason);
-        } catch (Throwable $me) {
-            error_log("[report_failed] Mailer dispatch failed: " . $me->getMessage());
-        }
-    }
+    // Dispatch luxury conversion email via AutoRecoveryService (strictly idempotent)
+    $emailResult = AutoRecoveryService::sendForOrder((int)$order['id'], $reason);
 
     ApiResponse::success([
         'order_id'       => $order['id'],
         'order_number'   => $order['order_number'],
         'payment_status' => 'failed',
+        'order_status'   => 'failed',
         'email_sent'     => !empty($emailResult['success']),
-        'email_status'   => $emailResult['status'] ?? 'skipped',
+        'email_status'   => $emailResult['status'] ?? 'unknown',
         'log_id'         => $emailResult['log_id'] ?? null,
-    ], 'Payment failure noted and customer recovery dispatched');
+    ], 'Payment failure noted and automatic customer recovery dispatched');
 
 } catch (Throwable $e) {
     ApiResponse::error('Failed to process payment status update: ' . $e->getMessage(), 500);
