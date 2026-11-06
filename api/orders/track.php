@@ -28,10 +28,10 @@ if (empty($orderNumber)) {
 try {
     $pdo = Database::getConnection();
 
-    // Query order
-    $sql = "SELECT * FROM orders WHERE order_number = :order_number LIMIT 1";
+    // Query order by order_number, provider_awb, shiprocket_awb, or provider_order_id
+    $sql = "SELECT * FROM orders WHERE order_number = :ref OR provider_awb = :ref OR shiprocket_awb = :ref OR provider_order_id = :ref LIMIT 1";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':order_number' => $orderNumber]);
+    $stmt->execute([':ref' => $orderNumber]);
     $order = $stmt->fetch();
 
     if (!$order) {
@@ -59,8 +59,70 @@ try {
         require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
         $provider = DeliveryProviderFactory::getProviderForOrder((int)$order['id']);
         $provider->createShipment((int)$order['id']);
-        $stmt->execute([':order_number' => $orderNumber]);
+        $stmt->execute([':ref' => $orderNumber]);
         $order = $stmt->fetch();
+        $activeAwb = $order['provider_awb'] ?? ($order['shiprocket_awb'] ?? null);
+    }
+
+    // Live tracking refresh from shipping carrier (JustShyp or Shiprocket)
+    if (!empty($activeAwb) && !in_array($order['order_status'], ['delivered', 'cancelled'], true)) {
+        try {
+            require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+            $provider = DeliveryProviderFactory::getProviderForOrder((int)$order['id']);
+            $trackRes = $provider->track($activeAwb);
+
+            if (!empty($trackRes['success'])) {
+                $newStatus = $trackRes['normalized_status'] ?? null;
+                $courier = $trackRes['courier_name'] ?? null;
+
+                if (!empty($newStatus) && $newStatus !== $order['order_status']) {
+                    $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+                    $upOrder = $pdo->prepare("UPDATE orders SET order_status = :st, courier_name = COALESCE(NULLIF(:cn, ''), courier_name), updated_at = $nowSql WHERE id = :id");
+                    $upOrder->execute([
+                        ':st' => $newStatus,
+                        ':cn' => $courier,
+                        ':id' => $order['id'],
+                    ]);
+                    $order['order_status'] = $newStatus;
+                    if (!empty($courier)) $order['courier_name'] = $courier;
+                }
+
+                // If provider returned tracking events, sync them into order_tracking_events
+                if (!empty($trackRes['events']) && is_array($trackRes['events'])) {
+                    $existingDescStmt = $pdo->prepare("SELECT description FROM order_tracking_events WHERE order_id = ?");
+                    $existingDescStmt->execute([$order['id']]);
+                    $existingDescs = $existingDescStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+                    $insEv = $pdo->prepare("
+                        INSERT INTO order_tracking_events (order_id, status, title, description, location, courier_partner, awb_code, occurred_at) 
+                        VALUES (:oid, :st, :title, :desc, :loc, :cp, :awb, :occ)
+                    ");
+
+                    foreach ($trackRes['events'] as $ev) {
+                        $desc = trim($ev['activity'] ?? '');
+                        if (empty($desc) || in_array($desc, $existingDescs, true)) continue;
+
+                        $evTime = !empty($ev['date']) ? date('Y-m-d H:i:s', strtotime($ev['date'])) : date('Y-m-d H:i:s');
+                        $title = !empty($ev['activity']) ? ucwords(strtolower(substr($ev['activity'], 0, 60))) : 'In Transit Update';
+                        $loc = !empty($ev['location']) ? $ev['location'] : 'In Transit';
+
+                        $insEv->execute([
+                            ':oid'   => $order['id'],
+                            ':st'    => $newStatus ?: $order['order_status'],
+                            ':title' => $title,
+                            ':desc'  => $desc,
+                            ':loc'   => $loc,
+                            ':cp'    => $courier ?: ($order['courier_name'] ?? 'Courier Express'),
+                            ':awb'   => $activeAwb,
+                            ':occ'   => $evTime,
+                        ]);
+                        $existingDescs[] = $desc;
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            // Non-fatal if provider network is down
+        }
     }
 
     // Fetch order items
@@ -90,6 +152,19 @@ try {
     ");
     $eventStmt->execute([$order['id']]);
     $events = $eventStmt->fetchAll();
+
+    if (empty($events)) {
+        $events = [
+            [
+                'id'          => 1,
+                'status'      => $order['order_status'],
+                'title'       => 'Order Placed & Verified',
+                'description' => 'Your order has been recorded and scheduled for courier dispatch.',
+                'location'    => 'Valerie Atelier',
+                'occurred_at' => $order['created_at'],
+            ]
+        ];
+    }
 
     // Compute standard milestone ladder
     $milestonesOrder = ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'];
@@ -121,7 +196,7 @@ try {
         [
             'key'         => 'shipped',
             'label'       => 'Dispatched via Courier',
-            'description' => 'In transit with ' . ($order['courier_name'] ?: 'Bluedart Express'),
+            'description' => 'In transit with ' . ($order['courier_name'] ?: ($order['delivery_provider'] === 'justshyp' ? 'JustShyp Express Air' : 'Bluedart Express')),
             'is_completed'=> !$isCancelled && $currentIndex >= 2,
             'is_current'  => $currentStatus === 'shipped',
         ],
@@ -167,10 +242,15 @@ try {
             'refund_amount'          => (float)$order['refund_amount'],
             'order_status'           => $order['order_status'],
             'delivery_provider'      => $order['delivery_provider'] ?? 'shiprocket',
-            'courier_name'           => $order['courier_name'] ?: 'Bluedart Express',
-            'shiprocket_awb'         => $order['shiprocket_awb'],
-            'provider_awb'           => $order['provider_awb'] ?? $order['shiprocket_awb'],
-            'tracking_url'           => $order['tracking_url'] ?: ($order['shiprocket_awb'] ? "https://shiprocket.co/tracking/{$order['shiprocket_awb']}" : null),
+            'courier_name'           => $order['courier_name'] ?: ($order['delivery_provider'] === 'justshyp' ? 'JustShyp Express Air' : 'Bluedart Express'),
+            'shiprocket_awb'         => $order['shiprocket_awb'] ?? $activeAwb,
+            'provider_awb'           => $order['provider_awb'] ?? ($order['shiprocket_awb'] ?? $activeAwb),
+            'awb'                    => $activeAwb,
+            'tracking_url'           => $order['tracking_url'] ?: (
+                (($order['delivery_provider'] ?? '') === 'justshyp')
+                    ? ($activeAwb ? "https://backend.justshyp.com/tracking?awb={$activeAwb}" : null)
+                    : ($activeAwb ? "https://shiprocket.co/tracking/{$activeAwb}" : null)
+            ),
             'shipping_label_url'     => $order['shipping_label_url'] ?? null,
             'estimated_delivery_date'=> $order['estimated_delivery_date'] ?: date('Y-m-d', strtotime($order['created_at'] . ' + 4 days')),
             'cancelled_at'           => $order['cancelled_at'],

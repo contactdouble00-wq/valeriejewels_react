@@ -278,7 +278,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
         <div className="bg-[#281636] px-4 py-2.5 text-center shrink-0 shadow-xs flex items-center justify-center space-x-2">
           <Truck className="w-3.5 h-3.5 text-[#D4AF37]" />
           <span className="text-[10px] sm:text-[11.5px] font-bold text-white tracking-widest uppercase">
-            ⚡ LIVE DISPATCH STATUS & SHIPROCKET ORDER TRACKING
+            ⚡ LIVE DISPATCH STATUS & COURIER ORDER TRACKING
           </span>
         </div>
 
@@ -473,18 +473,20 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
                     </span>
                   </div>
 
-                  {order.shiprocket_awb && (
+                  {Boolean(order.provider_awb || order.shiprocket_awb || order.awb) && (
                     <div className="sm:text-right">
                       <span className="text-[10px] font-caps uppercase tracking-wider text-gray-400 font-bold block">
-                        {order.courier_name || 'Shiprocket Express Air'}
+                        {order.courier_name || (order.delivery_provider === 'justshyp' ? 'JustShyp Express Air' : 'Shiprocket Express Air')}
                       </span>
                       <a
-                        href={order.tracking_url || `https://shiprocket.co/tracking/${order.shiprocket_awb}`}
+                        href={order.tracking_url || (order.delivery_provider === 'justshyp' 
+                          ? `https://backend.justshyp.com/tracking?awb=${order.provider_awb || order.awb || order.shiprocket_awb}`
+                          : `https://shiprocket.co/tracking/${order.shiprocket_awb || order.provider_awb || order.awb}`)}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono font-bold text-brand-primary hover:underline inline-flex items-center space-x-1"
                       >
-                        <span>AWB: {order.shiprocket_awb}</span>
+                        <span>AWB: {order.provider_awb || order.shiprocket_awb || order.awb}</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
