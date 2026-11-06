@@ -69,7 +69,7 @@ class MetaCapiService
             }
         } catch (Throwable $e) {}
 
-        return 'TEST25531';
+        return null;
     }
 
     /**
