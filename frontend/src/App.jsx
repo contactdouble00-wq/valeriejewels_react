@@ -939,7 +939,7 @@ function StorefrontContent({
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-12 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 sm:pt-4 lg:pt-4 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
         {(isOrderConfirmation || isOrderFailed) ? (
           <OrderConfirmationPage
@@ -949,20 +949,22 @@ function StorefrontContent({
           />
         ) : (
           <>
-            {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
-            {content?.mobileSlider?.enabled !== false && (
-              <div className="md:hidden">
-                <MobileHeroSlider
-                  slides={content?.mobileSlider?.slides}
-                  autoPlay={content?.mobileSlider?.autoPlay ?? true}
-                  interval={content?.mobileSlider?.interval ?? 4500}
-                  onSelectCategory={setSelectedCategory}
-                />
-              </div>
-            )}
+            {/* Hero Section Container (Mobile Slider or Desktop Banner) */}
+            <div className="!mt-0">
+              {/* Mobile View: Tanishq-Style Luxury Poster Slider (Replaces Curated everyday jewelry banner on mobile) */}
+              {content?.mobileSlider?.enabled !== false && (
+                <div className="md:hidden">
+                  <MobileHeroSlider
+                    slides={content?.mobileSlider?.slides}
+                    autoPlay={content?.mobileSlider?.autoPlay ?? true}
+                    interval={content?.mobileSlider?.interval ?? 4500}
+                    onSelectCategory={setSelectedCategory}
+                  />
+                </div>
+              )}
 
-            {/* Desktop View: Fast Fashion Hero Banner */}
-            <section className="hidden md:block relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-8 sm:p-14">
+              {/* Desktop View: Fast Fashion Hero Banner */}
+              <section className="hidden md:block relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#FAF7FD] via-white to-[#F6F2FA] border border-brand-border p-6 sm:py-9 sm:px-12 lg:py-10 lg:px-14">
               <div className="absolute top-0 right-0 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
               {/* Desktop-Only Creatively Faded Hero Photograph */}
@@ -1104,6 +1106,7 @@ function StorefrontContent({
                 })()}
               </div>
             </section>
+            </div>
 
             {/* Bestseller Spotlight Section (Dynamic based on product bestseller toggle) */}
             {jhumkaBoxes.length > 0 && (
