@@ -24,7 +24,7 @@ const DEFAULT_SITE_CONTENT = {
     slides: DEFAULT_MOBILE_SLIDES,
   },
   heroBanner: {
-    badgeText: 'FASHION JEWELLERY',
+    badgeText: '',
     headline: 'YOUR STYLE,',
     accentText: 'FINISHED BEAUTIFULLY.',
     subtitle: 'Thoughtfully crafted jewellery with timeless silhouettes,\nbeautiful detailing, and an effortless feel.',

@@ -979,7 +979,7 @@ function StorefrontContent({
                 )}
 
                 <div className="relative z-10 max-w-2xl space-y-5">
-                  {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim()) && (
+                  {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim() && content.heroBanner.badgeText.trim().toUpperCase() !== 'FASHION JEWELLERY') && (
                     <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
                       <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
                       <span className="whitespace-normal leading-tight text-left">{content.heroBanner.badgeText.trim()}</span>
