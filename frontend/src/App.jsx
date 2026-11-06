@@ -939,7 +939,7 @@ function StorefrontContent({
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 lg:pt-9 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 lg:pt-11 pb-28 sm:pb-12 space-y-7 sm:space-y-16">
 
         {(isOrderConfirmation || isOrderFailed) ? (
           <OrderConfirmationPage
