@@ -655,13 +655,8 @@ function StorefrontContent({
               </button>
             </div>
 
-            {/* Desktop Left: Luxury Promise & Amazon Storefront Trust */}
-            <div className="hidden lg:flex items-center space-x-2.5 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[260px]">
-              <div className="flex items-center space-x-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
-                <span className="font-caps tracking-[0.14em] uppercase text-[10px] xl:text-[10.5px]">Everyday Luxury</span>
-              </div>
-              <span className="h-3 w-px bg-brand-border/80" />
+            {/* Desktop Left: Amazon Storefront Trust */}
+            <div className="hidden lg:flex items-center space-x-2.5 text-xs text-brand-tertiary/75 tracking-wide shrink-0 min-w-[220px]">
               <a
                 href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
                 target="_blank"
