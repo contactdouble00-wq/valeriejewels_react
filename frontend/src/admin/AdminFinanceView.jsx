@@ -21,7 +21,6 @@ import {
   X,
   ExternalLink,
   ChevronDown,
-  ArrowUpDown,
   Layers,
   BarChart3,
   ShieldCheck,
@@ -69,6 +68,45 @@ function formatDateDisplay(dateStr) {
   return dateStr;
 }
 
+// Universal parser for finance dates (YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, DD-MM-YY, DD-MMYY)
+// Converts any date format to UTC timestamp for reliable latest-date-first sorting
+export function parseDateToTimestamp(raw) {
+  if (!raw || typeof raw !== 'string') return 0;
+  const s = raw.trim();
+  if (!s || s === '-' || s === 'null' || s === 'undefined') return 0;
+
+  // 1. YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (ymdMatch) {
+    const y = parseInt(ymdMatch[1], 10);
+    const m = parseInt(ymdMatch[2], 10) - 1;
+    const d = parseInt(ymdMatch[3], 10);
+    return Date.UTC(y, m, d);
+  }
+
+  // 2. DD-MM-YYYY or DD/MM/YYYY or DD-MM-YY or DD/MM/YY
+  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+  if (dmyMatch) {
+    const d = parseInt(dmyMatch[1], 10);
+    const m = parseInt(dmyMatch[2], 10) - 1;
+    let y = parseInt(dmyMatch[3], 10);
+    if (y < 100) y += 2000;
+    return Date.UTC(y, m, d);
+  }
+
+  // 3. Typo format: DD-MMYY (e.g. '22-1026' -> day 22, month 10, year 2026)
+  const typoMatch = s.match(/^(\d{1,2})[-/](\d{2})(\d{2})$/);
+  if (typoMatch) {
+    const d = parseInt(typoMatch[1], 10);
+    const m = parseInt(typoMatch[2], 10) - 1;
+    let y = parseInt(typoMatch[3], 10) + 2000;
+    return Date.UTC(y, m, d);
+  }
+
+  const parsed = Date.parse(s);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 export default function AdminFinanceView({ currentUser }) {
   // Navigation & View Layout: 'Yash' | 'Dhruvik' | 'Jeel' | 'All 3'
   const [activeTab, setActiveTab] = useState('All 3'); // 'Yash' | 'Dhruvik' | 'Jeel' | 'All 3'
@@ -80,10 +118,6 @@ export default function AdminFinanceView({ currentUser }) {
   const [partners, setPartners] = useState([]);
   const [marketingData, setMarketingData] = useState({ campaigns: [], totals: {} });
   const [settlementData, setSettlementData] = useState(null);
-
-  // Sorting: field, order ('asc' | 'desc')
-  const [sortField, setSortField] = useState('id');
-  const [sortOrder, setSortOrder] = useState('asc');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -190,7 +224,7 @@ export default function AdminFinanceView({ currentUser }) {
     try {
       setLoading(true);
       const [entRes, mktRes, setRes] = await Promise.all([
-        adminApi.getFinanceEntries({ sort_by: sortField, sort_order: sortOrder }),
+        adminApi.getFinanceEntries({ sort_by: 'date', sort_order: 'desc' }),
         adminApi.getMarketingCampaigns(),
         adminApi.getFinanceSettlements(),
       ]);
@@ -222,7 +256,7 @@ export default function AdminFinanceView({ currentUser }) {
     if (isUnlocked) {
       loadFinanceData();
     }
-  }, [isUnlocked, sortField, sortOrder]);
+  }, [isUnlocked]);
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -251,18 +285,6 @@ export default function AdminFinanceView({ currentUser }) {
   const actualCombinedTotal = (entries || [])
     .filter((e) => e && !e.deleted_at)
     .reduce((sum, item) => sum + (parseFloat(item?.amount) || 0), 0);
-
-  // ---------------------------------------------------------------------------
-  // SORT TOGGLE
-  // ---------------------------------------------------------------------------
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder((cur) => (cur === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
 
   // ---------------------------------------------------------------------------
   // AUTO-CATEGORY DETECTION
@@ -613,17 +635,28 @@ export default function AdminFinanceView({ currentUser }) {
         'Description', 'Amount (₹)', 'Status', 'Date'
       ];
 
-      // Pull entries dynamically by partner ID (supports live rename seamlessly)
+      // Pull entries dynamically by partner ID and sort by latest date first
+      const sortPartnerEntries = (arr) => [...arr].sort((a, b) => {
+        const ta = parseDateToTimestamp(a?.date);
+        const tb = parseDateToTimestamp(b?.date);
+        if (tb !== ta) return tb - ta;
+        return (Number(b?.id) || 0) - (Number(a?.id) || 0);
+      });
+
       const ledgersById = backupRes?.ledgers_by_id || {};
-      const p1Entries = (ledgersById[p1.id] && ledgersById[p1.id].length > 0)
+      const p1Raw = (ledgersById[p1.id] && ledgersById[p1.id].length > 0)
         ? ledgersById[p1.id]
         : (entries || []).filter((e) => e && e.partner_id === p1.id && !e.deleted_at);
-      const p2Entries = (ledgersById[p2.id] && ledgersById[p2.id].length > 0)
+      const p2Raw = (ledgersById[p2.id] && ledgersById[p2.id].length > 0)
         ? ledgersById[p2.id]
         : (entries || []).filter((e) => e && e.partner_id === p2.id && !e.deleted_at);
-      const p3Entries = (ledgersById[p3.id] && ledgersById[p3.id].length > 0)
+      const p3Raw = (ledgersById[p3.id] && ledgersById[p3.id].length > 0)
         ? ledgersById[p3.id]
         : (entries || []).filter((e) => e && e.partner_id === p3.id && !e.deleted_at);
+
+      const p1Entries = sortPartnerEntries(p1Raw);
+      const p2Entries = sortPartnerEntries(p2Raw);
+      const p3Entries = sortPartnerEntries(p3Raw);
 
       const maxRows = Math.max(p1Entries.length, p2Entries.length, p3Entries.length, 1);
 
@@ -726,6 +759,13 @@ export default function AdminFinanceView({ currentUser }) {
       if (filterCategory !== 'all' && e.category !== filterCategory) return false;
       if (filterStatus !== 'all' && (e.status || '').toLowerCase() !== String(filterStatus || '').toLowerCase()) return false;
       return true;
+    }).sort((a, b) => {
+      const ta = parseDateToTimestamp(a?.date);
+      const tb = parseDateToTimestamp(b?.date);
+      if (tb !== ta) {
+        return tb - ta; // Latest date on top
+      }
+      return (Number(b?.id) || 0) - (Number(a?.id) || 0); // Tiebreaker: latest id on top
     });
   };
 
@@ -1360,61 +1400,21 @@ export default function AdminFinanceView({ currentUser }) {
                 </th>
 
                 {/* Row No / ID */}
-                <th
-                  onClick={() => handleSort('id')}
-                  className="py-3 px-3 cursor-pointer hover:text-brand-tertiary w-16"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>#</span>
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                </th>
+                <th className="py-3 px-3 font-bold w-16">#</th>
 
                 {activeTab === 'All 3' && <th className="py-3 px-3 font-bold">Partner</th>}
 
                 {/* Description */}
-                <th
-                  onClick={() => handleSort('description')}
-                  className="py-3 px-4 cursor-pointer hover:text-brand-tertiary font-bold"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Description</span>
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                </th>
+                <th className="py-3 px-4 font-bold">Description</th>
 
                 {/* Amount (₹) */}
-                <th
-                  onClick={() => handleSort('amount')}
-                  className="py-3 px-4 cursor-pointer hover:text-brand-tertiary font-bold text-right"
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Amount (₹)</span>
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                </th>
+                <th className="py-3 px-4 font-bold text-right">Amount (₹)</th>
 
                 {/* Status */}
-                <th
-                  onClick={() => handleSort('status')}
-                  className="py-3 px-3 cursor-pointer hover:text-brand-tertiary font-bold text-center"
-                >
-                  <div className="flex items-center justify-center space-x-1">
-                    <span>Status</span>
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                </th>
+                <th className="py-3 px-3 font-bold text-center">Status</th>
 
                 {/* Date */}
-                <th
-                  onClick={() => handleSort('date')}
-                  className="py-3 px-4 cursor-pointer hover:text-brand-tertiary font-bold text-right"
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Date</span>
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                </th>
+                <th className="py-3 px-4 font-bold text-right">Date</th>
 
                 {/* Category */}
                 <th className="py-3 px-3 font-bold">Category</th>

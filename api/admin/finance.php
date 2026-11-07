@@ -18,6 +18,37 @@ $nowSql = $driver === 'sqlite' ? "datetime('now', 'localtime')" : "NOW()";
 
 define('FINANCE_SECURITY_PIN', '1785');
 
+/**
+ * Universal date parser for finance entries.
+ * Accurately parses standard YYYY-MM-DD, Indian DD-MM-YYYY, DD-MM-YY, DD/MM/YYYY,
+ * and ledger typo formats into UTC timestamp for descending date sorting.
+ */
+if (!function_exists('parseFinanceDateToTimestamp')) {
+    function parseFinanceDateToTimestamp(?string $raw): int {
+        if (empty($raw)) return 0;
+        $s = trim($raw);
+        if ($s === '' || $s === '-' || $s === 'null' || $s === 'undefined') return 0;
+
+        // 1. YYYY-MM-DD or YYYY/MM/DD
+        if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/', $s, $m)) {
+            return (int)gmmktime(0, 0, 0, (int)$m[2], (int)$m[3], (int)$m[1]);
+        }
+        // 2. DD-MM-YYYY or DD-MM-YY
+        if (preg_match('/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/', $s, $m)) {
+            $y = (int)$m[3];
+            if ($y < 100) $y += 2000;
+            return (int)gmmktime(0, 0, 0, (int)$m[2], (int)$m[1], $y);
+        }
+        // 3. Typo format DD-MMYY (e.g. 22-1026)
+        if (preg_match('/^(\d{1,2})[-\/](\d{2})(\d{2})$/', $s, $m)) {
+            $y = (int)$m[3] + 2000;
+            return (int)gmmktime(0, 0, 0, (int)$m[2], (int)$m[1], $y);
+        }
+        $t = strtotime($s);
+        return $t !== false ? $t : 0;
+    }
+}
+
 try {
     $action = $_GET['action'] ?? '';
     $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -229,18 +260,6 @@ try {
 
         $whereSql = implode(' AND ', $where);
 
-        $sort = $_GET['sort_by'] ?? 'id';
-        $order = strtolower($_GET['sort_order'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
-        $validSorts = [
-            'id' => 'fe.id',
-            'date' => 'fe.date',
-            'amount' => 'fe.amount',
-            'description' => 'fe.description',
-            'status' => 'fe.status',
-            'category' => 'fe.category',
-        ];
-        $sortCol = $validSorts[$sort] ?? 'fe.id';
-
         $stmt = $pdo->prepare("
             SELECT 
                 fe.*,
@@ -251,10 +270,20 @@ try {
             JOIN finance_partners p ON fe.partner_id = p.id
             LEFT JOIN finance_partners cp ON fe.counterparty_partner_id = cp.id
             WHERE {$whereSql}
-            ORDER BY {$sortCol} {$order}
+            ORDER BY fe.id DESC
         ");
         $stmt->execute($params);
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Strictly sort all member ledger expenses by date descending (latest date on top, tiebreaker latest id)
+        usort($entries, function($a, $b) {
+            $ta = parseFinanceDateToTimestamp($a['date'] ?? '');
+            $tb = parseFinanceDateToTimestamp($b['date'] ?? '');
+            if ($tb !== $ta) {
+                return $tb <=> $ta;
+            }
+            return ((int)($b['id'] ?? 0)) <=> ((int)($a['id'] ?? 0));
+        });
 
         // Also fetch partners metadata for UI selectors
         $partners = $pdo->query("SELECT * FROM finance_partners WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -931,10 +960,15 @@ try {
                 SELECT id, date, description, amount, type, status, category, notes
                 FROM finance_entries
                 WHERE partner_id = ? AND deleted_at IS NULL
-                ORDER BY id ASC
             ");
             $stmt->execute([$pId]);
             $partnerRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            usort($partnerRows, function($a, $b) {
+                $ta = parseFinanceDateToTimestamp($a['date'] ?? '');
+                $tb = parseFinanceDateToTimestamp($b['date'] ?? '');
+                if ($tb !== $ta) return $tb <=> $ta;
+                return ((int)($b['id'] ?? 0)) <=> ((int)($a['id'] ?? 0));
+            });
             $ledgersByPartner[$partner['name']] = $partnerRows;
             $ledgersById[$pId] = $partnerRows;
         }
