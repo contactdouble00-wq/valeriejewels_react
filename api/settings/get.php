@@ -106,6 +106,12 @@ try {
                     'googleSearchConsoleTag' => '',
                 ];
             }
+            if (!isset($data['announcementBanner']) || !is_array($data['announcementBanner'])) {
+                $data['announcementBanner'] = [
+                    'enabled' => true,
+                    'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+                ];
+            }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
             exit;
         }
@@ -155,6 +161,10 @@ try {
                     'isActive'   => true,
                 ],
             ],
+        ],
+        'announcementBanner' => [
+            'enabled' => true,
+            'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
         ],
         'topRibbon' => [
             'enabled'         => true,

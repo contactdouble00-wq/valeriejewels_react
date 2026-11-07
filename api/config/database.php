@@ -886,6 +886,10 @@ class Database {
             $stmt->execute(['homepage_content']);
             if (!$stmt->fetch()) {
                 $defaults = [
+                    'announcementBanner' => [
+                        'enabled' => true,
+                        'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+                    ],
                     'topRibbon' => [
                         'enabled'         => true,
                         'text'            => 'FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS)',

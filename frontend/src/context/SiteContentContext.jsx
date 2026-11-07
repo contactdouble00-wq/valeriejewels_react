@@ -6,6 +6,10 @@ const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v4';
 const CONTENT_CACHE_VERSION = '20261017_v4';
 
 const DEFAULT_SITE_CONTENT = {
+  announcementBanner: {
+    enabled: true,
+    text: '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+  },
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
     faviconUrl: '/v-logo.png',
@@ -163,6 +167,10 @@ export function SiteContentProvider({ children }) {
           return {
             ...DEFAULT_SITE_CONTENT,
             ...parsed,
+            announcementBanner: {
+              ...DEFAULT_SITE_CONTENT.announcementBanner,
+              ...(parsed.announcementBanner || {}),
+            },
             heroBanner: {
               ...DEFAULT_SITE_CONTENT.heroBanner,
               ...(parsed.heroBanner || {}),
@@ -199,6 +207,7 @@ export function SiteContentProvider({ children }) {
             ...DEFAULT_SITE_CONTENT,
             ...res.data,
             siteIdentity: { ...DEFAULT_SITE_CONTENT.siteIdentity, ...(res.data.siteIdentity || {}) },
+            announcementBanner: { ...DEFAULT_SITE_CONTENT.announcementBanner, ...(res.data.announcementBanner || {}) },
             topRibbon: { ...DEFAULT_SITE_CONTENT.topRibbon, ...(res.data.topRibbon || {}) },
             heroBanner: { ...DEFAULT_SITE_CONTENT.heroBanner, ...(res.data.heroBanner || {}) },
             jhumkaHero: {

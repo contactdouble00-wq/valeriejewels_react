@@ -41,6 +41,7 @@ import {
 import { adminApi } from './adminApi';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 import { OriginalAmazonLogo } from '../components/AmazonTrustBadge';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 const FACTORY_DEFAULTS = {
   customerSupport: {
@@ -58,6 +59,10 @@ const FACTORY_DEFAULTS = {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
     faviconUrl: 'https://valeriejewels.in/api/uploads/img_652d52ce8e378f9b8d50c7460e783ef1.png',
     metaDescription: 'Discover affordable luxury jewelry and curated accessories crafted for everyday elegance at Valerie Jewels.',
+  },
+  announcementBanner: {
+    enabled: true,
+    text: '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
   },
   topRibbon: {
     enabled: true,
@@ -224,6 +229,7 @@ export default function AdminHomepageView() {
               ? data.mobileSlider.slides
               : FACTORY_DEFAULTS.mobileSlider.slides,
           },
+          announcementBanner: { ...FACTORY_DEFAULTS.announcementBanner, ...(data.announcementBanner || {}) },
           topRibbon: { ...FACTORY_DEFAULTS.topRibbon, ...(data.topRibbon || {}) },
           heroBanner: { ...FACTORY_DEFAULTS.heroBanner, ...(data.heroBanner || {}) },
           jhumkaHero: {
@@ -548,6 +554,7 @@ export default function AdminHomepageView() {
   }
 
   const sections = [
+    { id: 'announcementBanner', label: 'Festive Announcement Banner', icon: AlertCircle, badge: 'Holiday Alert' },
     { id: 'hero', label: 'Main Hero Banner & Headlines', icon: Sparkles, badge: 'Top Banner' },
     { id: 'trustBadges', label: '100% Anti-Tarnish & Delivery Badges', icon: ShieldCheck, badge: 'Reassurance' },
     { id: 'mobileSlider', label: 'Mobile Poster Slider (Tanishq Style)', icon: Smartphone },
@@ -2091,6 +2098,124 @@ export default function AdminHomepageView() {
                 className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold tracking-wider uppercase shadow-xs hover:bg-brand-primary-hover disabled:opacity-50 transition-all flex items-center space-x-1.5"
               >
                 <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TEMPORARY HOLIDAY & DIWALI ANNOUNCEMENT BANNER */}
+        {activeSection === 'announcementBanner' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border/60 pb-4">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 mb-1">
+                  <span>🪔</span>
+                  <span>Diwali & Festive Notice Controls</span>
+                </div>
+                <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                  Temporary Store Announcement Banner
+                </h3>
+                <p className="text-xs text-brand-muted font-light">
+                  Displays a prominent responsive notice bar across desktop & mobile for holiday delivery schedules, Diwali festive delays, or store announcements.
+                </p>
+              </div>
+
+              {/* Master ON / OFF Toggle */}
+              <label className="flex items-center space-x-3 cursor-pointer p-2.5 rounded-xl border border-brand-border bg-white shadow-xs hover:border-brand-primary transition-all shrink-0">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.announcementBanner?.enabled)}
+                  onChange={(e) => updateNested('announcementBanner', 'enabled', e.target.checked)}
+                  className="rounded text-brand-primary focus:ring-brand-primary h-4 w-4 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-brand-tertiary block">
+                    {formData.announcementBanner?.enabled ? '🟢 Banner Active (Visible)' : '⚪ Banner Turned OFF (Hidden)'}
+                  </span>
+                  <span className="text-[10px] text-brand-muted block">
+                    {formData.announcementBanner?.enabled ? 'Notice is showing on storefront' : 'Notice is hidden from shoppers'}
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Live Storefront Preview */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
+                  Live Storefront Preview:
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${formData.announcementBanner?.enabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500'}`}>
+                  {formData.announcementBanner?.enabled ? 'Status: Active on Storefront' : 'Status: Currently Inactive'}
+                </span>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-brand-border shadow-xs">
+                <AnnouncementBanner previewBanner={formData.announcementBanner} isPreview={true} />
+              </div>
+              {!formData.announcementBanner?.enabled && (
+                <p className="text-[11px] text-amber-700 italic bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                  ℹ️ Note: The banner is currently switched OFF. Toggle the checkbox above to make it visible on the storefront.
+                </p>
+              )}
+            </div>
+
+            {/* Text Editor */}
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold text-brand-tertiary block">
+                Announcement Message Text
+              </label>
+              <textarea
+                rows={3}
+                value={formData.announcementBanner?.text || ''}
+                onChange={(e) => updateNested('announcementBanner', 'text', e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border text-xs focus:outline-none focus:border-brand-primary font-medium leading-relaxed"
+                placeholder="e.g. Due to Diwali festive holidays, order delivery might face delays. We appreciate your patience!"
+              />
+              <p className="text-[10px] text-brand-muted">
+                Tip: You can include emojis like 🪔, ✨, 📦, 🚚, or ⚠️. Keep it concise so it reads clearly on mobile devices.
+              </p>
+            </div>
+
+            {/* Quick Festive Presets */}
+            <div className="space-y-2 pt-1">
+              <span className="text-[10px] font-caps uppercase tracking-wider text-brand-muted font-bold block">
+                Quick 1-Click Message Presets:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateNested('announcementBanner', 'text', '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!')}
+                  className="px-3 py-1.5 rounded-lg border border-brand-border bg-white hover:bg-purple-50 text-[11px] font-medium text-brand-tertiary transition-colors cursor-pointer"
+                >
+                  🪔 Diwali Festive Holidays
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateNested('announcementBanner', 'text', '📦 Festive Delivery Notice: Orders may take 2–3 additional days for delivery due to holiday courier schedules.')}
+                  className="px-3 py-1.5 rounded-lg border border-brand-border bg-white hover:bg-purple-50 text-[11px] font-medium text-brand-tertiary transition-colors cursor-pointer"
+                >
+                  📦 Courier Schedule Delay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateNested('announcementBanner', 'text', '✨ Happy Diwali! Enjoy free express delivery across India on all jewelry orders.')}
+                  className="px-3 py-1.5 rounded-lg border border-brand-border bg-white hover:bg-purple-50 text-[11px] font-medium text-brand-tertiary transition-colors cursor-pointer"
+                >
+                  ✨ Happy Diwali Greeting
+                </button>
+              </div>
+            </div>
+
+            {/* Save Action */}
+            <div className="pt-4 border-t border-brand-border/60 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-bold tracking-wider uppercase shadow-xs hover:bg-brand-primary-hover disabled:opacity-50 transition-all flex items-center space-x-1.5 active:scale-95 cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
                 <span>{saving ? 'Saving...' : 'Save Live Changes'}</span>
               </button>
             </div>

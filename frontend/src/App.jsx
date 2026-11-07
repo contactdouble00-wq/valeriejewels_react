@@ -45,6 +45,7 @@ import FaqPage from './components/FaqPage';
 import MobileHeroSlider from './components/MobileHeroSlider';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
 import ContactPage from './components/ContactPage';
+import AnnouncementBanner from './components/AnnouncementBanner';
 
 const AdminPortal = React.lazy(() =>
   import('./admin/AdminPortal').catch((err) => {
@@ -617,6 +618,9 @@ function StorefrontContent({
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FCFBFE] text-brand-tertiary antialiased">
+
+      {/* Temporary Holiday / Festive Announcement Banner (Admin Controlled) */}
+      <AnnouncementBanner />
 
       {/* Top Editorial Ribbon */}
       {content?.topRibbon?.enabled !== false && (
