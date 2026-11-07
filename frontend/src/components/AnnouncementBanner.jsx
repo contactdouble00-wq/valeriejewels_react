@@ -75,3 +75,4 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
     </div>
   );
 }
+
