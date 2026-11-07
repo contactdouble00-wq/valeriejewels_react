@@ -127,3 +127,34 @@
 .animate-shake {
   animation: shake 0.35s ease-in-out;
 }
+
+/* Festive Announcement Banner Animations */
+@keyframes festiveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-festive-gradient {
+  background-size: 200% 200%;
+  animation: festiveGradient 5s ease-in-out infinite;
+}
+
+@keyframes lightSheen {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  25%, 100% { transform: translateX(250%) skewX(-20deg); }
+}
+
+.animate-light-sheen {
+  animation: lightSheen 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes diyaFlicker {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.6)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.95)); }
+}
+
+.animate-diya {
+  display: inline-block;
+  animation: diyaFlicker 1.8s ease-in-out infinite;
+}

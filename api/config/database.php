@@ -888,7 +888,7 @@ class Database {
                 $defaults = [
                     'announcementBanner' => [
                         'enabled' => true,
-                        'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+                        'text'    => '🪔 Order might get delay due to diwali festive season',
                     ],
                     'topRibbon' => [
                         'enabled'         => true,

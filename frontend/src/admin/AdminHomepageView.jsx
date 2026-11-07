@@ -62,7 +62,7 @@ const FACTORY_DEFAULTS = {
   },
   announcementBanner: {
     enabled: true,
-    text: '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+    text: '🪔 Order might get delay due to diwali festive season',
   },
   topRibbon: {
     enabled: true,
@@ -2185,10 +2185,10 @@ export default function AdminHomepageView() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => updateNested('announcementBanner', 'text', '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!')}
-                  className="px-3 py-1.5 rounded-lg border border-brand-border bg-white hover:bg-purple-50 text-[11px] font-medium text-brand-tertiary transition-colors cursor-pointer"
+                  onClick={() => updateNested('announcementBanner', 'text', '🪔 Order might get delay due to diwali festive season')}
+                  className="px-3 py-1.5 rounded-lg border border-brand-border bg-white hover:bg-amber-50 text-[11px] font-medium text-brand-tertiary transition-colors cursor-pointer"
                 >
-                  🪔 Diwali Festive Holidays
+                  🪔 Diwali Festive Season Delay
                 </button>
                 <button
                   type="button"

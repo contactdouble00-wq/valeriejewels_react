@@ -109,7 +109,7 @@ try {
             if (!isset($data['announcementBanner']) || !is_array($data['announcementBanner'])) {
                 $data['announcementBanner'] = [
                     'enabled' => true,
-                    'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+                    'text'    => '🪔 Order might get delay due to diwali festive season',
                 ];
             }
             ApiResponse::success($data, 'Homepage content retrieved successfully.');
@@ -164,7 +164,7 @@ try {
         ],
         'announcementBanner' => [
             'enabled' => true,
-            'text'    => '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+            'text'    => '🪔 Order might get delay due to diwali festive season',
         ],
         'topRibbon' => [
             'enabled'         => true,

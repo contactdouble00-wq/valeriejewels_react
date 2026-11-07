@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, AlertCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useSiteContent } from '../context/SiteContentContext';
 
 /**
- * Responsive Temporary Announcement Banner
- * Displays storewide notices (e.g. Diwali festive holidays delivery delays).
+ * Responsive Temporary Festive Announcement Banner
+ * Displays animated festive notices (e.g. Diwali festive season delivery delays).
  * Controlled fully via the Admin Panel (ON/OFF toggle and custom text).
  */
 export default function AnnouncementBanner({ previewBanner = null, isPreview = false }) {
@@ -37,25 +37,50 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
   };
 
   const isEnabled = banner?.enabled !== false && banner?.enabled !== 'false' && banner?.enabled !== 0 && banner?.enabled !== '0';
-  const text = banner?.text?.trim();
+  const rawText = banner?.text?.trim() || '';
 
-  if (!isEnabled || !text || isDismissed) {
-    return null;
+  if (!isPreview) {
+    if (!isEnabled || !rawText || isDismissed) {
+      return null;
+    }
+  } else {
+    if (!rawText) {
+      return (
+        <div className="p-3 text-center text-xs text-brand-muted bg-gray-50 italic">
+          No announcement message entered.
+        </div>
+      );
+    }
   }
+
+  // Strip leading diya emoji if present to avoid duplicate diya icons
+  const cleanText = rawText.replace(/^🪔\s*/, '');
 
   return (
     <div
       role="region"
       aria-label="Store announcement"
-      className="relative z-30 bg-gradient-to-r from-[#24133A] via-[#4A1A37] to-[#24133A] text-amber-100 border-b border-amber-400/25 px-4 py-2 sm:py-2.5 transition-all shadow-xs"
+      className={`relative z-30 overflow-hidden bg-gradient-to-r from-[#991B1B] via-[#C2410C] to-[#D97706] text-white border-b border-amber-300/30 px-4 py-2 sm:py-2.5 shadow-md animate-festive-gradient transition-all ${
+        isPreview && !isEnabled ? 'opacity-60 ring-2 ring-dashed ring-amber-400' : ''
+      }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-center text-center">
+      {/* Moving festive light sheen sweep */}
+      <div
+        className="pointer-events-none absolute inset-0 -translate-x-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-light-sheen"
+        aria-hidden="true"
+      />
+
+      <div className="relative max-w-7xl mx-auto flex items-center justify-center text-center">
         <div className="flex items-center justify-center space-x-2 text-[11px] sm:text-xs md:text-[13px] font-medium tracking-wide pr-6 sm:pr-8">
-          <span className="shrink-0 text-sm leading-none" role="img" aria-label="Diwali Diya">
+          <span
+            className="shrink-0 text-sm sm:text-base leading-none animate-diya select-none"
+            role="img"
+            aria-label="Diwali Diya"
+          >
             🪔
           </span>
-          <span className="leading-snug text-amber-100/95 font-medium">
-            {text}
+          <span className="leading-snug text-white font-medium drop-shadow-xs">
+            {cleanText}
           </span>
         </div>
 
@@ -64,7 +89,7 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
           <button
             type="button"
             onClick={handleDismiss}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1 text-amber-200/60 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors cursor-pointer"
             aria-label="Close announcement"
             title="Dismiss notice"
           >
@@ -75,4 +100,3 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
     </div>
   );
 }
-

@@ -2,13 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { apiService } from '../services/api';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
-const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v4';
-const CONTENT_CACHE_VERSION = '20261017_v4';
+const CONTENT_CACHE_KEY = 'valerie_site_content_cache_v5';
+const CONTENT_CACHE_VERSION = '20261107_v5';
 
 const DEFAULT_SITE_CONTENT = {
   announcementBanner: {
     enabled: true,
-    text: '🪔 Due to Diwali festive holidays, order delivery might face slight delays. We appreciate your patience!',
+    text: '🪔 Order might get delay due to diwali festive season',
   },
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
