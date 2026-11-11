@@ -222,4 +222,30 @@ export const DEFAULT_POLICIES = {
       },
     ],
   },
+
+  about: {
+    title: 'About VALERIÉ',
+    badge: 'Our Atelier & Heritage',
+    subtitle: 'Everyday fine jewelry crafted for timeless elegance, effortless beauty, and modern daily wear.',
+    sections: [
+      {
+        id: 'brand-story',
+        heading: '1. The House of VALERIÉ',
+        content:
+          'Rooted in the renowned artisan jewelry heritage of Rajkot, Gujarat, VALERIÉ (Valerie Jewels) is an everyday luxury jewelry atelier. We create anti-tarnish, hypoallergenic, and water-resistant fine jewelry pieces designed to accompany you through every day and milestone moment without compromise.',
+      },
+      {
+        id: 'craftsmanship',
+        heading: '2. Signature Curations & Keepsakes',
+        content:
+          'From our signature Festive Jhumka Keepsake Boxes to surprise Mystery Jewellery Jars and curated everyday zircon collections, every VALERIÉ creation is individually hand-finished, triple-polished, and multi-point inspected before delivery to your doorstep.',
+      },
+      {
+        id: 'guarantee',
+        heading: '3. Our Atelier Promise',
+        content:
+          'We believe in ethical sourcing, transparent pricing, insured pan-India express delivery across 29,000+ pincodes, and dedicated customer concierge care 7 days a week from 8:00 AM to 4:00 PM. Experience modern luxury crafted with heart.',
+      },
+    ],
+  },
 };

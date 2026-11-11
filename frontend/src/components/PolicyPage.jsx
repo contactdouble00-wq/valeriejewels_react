@@ -213,6 +213,7 @@ export default function PolicyPage({
     { id: 'refund', label: 'Return & Refund', icon: RotateCcw, badge: '5–7 Days Window' },
     { id: 'privacy', label: 'Privacy Policy', icon: ShieldCheck, badge: 'DPDP 2023' },
     { id: 'terms', label: 'Terms & Conditions', icon: FileText, badge: 'Legal' },
+    { id: 'about', label: 'About VALERIÉ', icon: Sparkles, badge: 'Our Story' },
   ];
 
   const currentPolicy = policies[activeTab] || DEFAULT_POLICIES[activeTab] || DEFAULT_POLICIES.shipping;

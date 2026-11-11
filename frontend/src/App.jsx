@@ -46,6 +46,7 @@ import MobileHeroSlider from './components/MobileHeroSlider';
 import OrderConfirmationPage from './components/OrderConfirmationPage';
 import ContactPage from './components/ContactPage';
 import AnnouncementBanner from './components/AnnouncementBanner';
+import Footer from './components/Footer';
 
 const AdminPortal = React.lazy(() =>
   import('./admin/AdminPortal').catch((err) => {
@@ -1422,196 +1423,15 @@ function StorefrontContent({
       )}
 
       {/* Global Luxury Footer */}
-      <footer className="bg-white border-t border-brand-border mt-16 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-
-          {/* Brand + Links row */}
-          <div className="flex flex-col md:flex-row items-start justify-between gap-8 pb-8 border-b border-brand-border">
-            <div className="flex flex-col items-center md:items-start">
-              <img src="/valerie.png" alt="VALERIÉ" className="h-7 w-auto object-contain" />
-              <p className="text-xs text-brand-muted mt-2 max-w-sm text-center md:text-left font-light">
-                Curated everyday luxury jewelry crafted for timeless elegance and effortless beauty.
-              </p>
-              <div className="mt-3">
-                <AmazonTrustBadge variant="footer" />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-3 text-xs text-brand-muted font-light">
-              <a
-                href="/shipping-policy"
-                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('shipping'); }}
-                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
-              >
-                Shipping &amp; Delivery (5-7 Days)
-              </a>
-              <a
-                href="/refund-policy"
-                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('refund'); }}
-                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
-              >
-                Returns &amp; Refunds
-              </a>
-              <a
-                href="/privacy-policy"
-                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('privacy'); }}
-                className="hover:text-brand-primary transition-colors"
-              >
-                Privacy Policy (DPDP 2023)
-              </a>
-              <a
-                href="/terms-and-conditions"
-                onClick={(e) => { e.preventDefault(); if (onOpenPolicy) onOpenPolicy('terms'); }}
-                className="hover:text-brand-primary transition-colors"
-              >
-                Terms of Service
-              </a>
-              <a
-                href="/contact-us"
-                onClick={(e) => { e.preventDefault(); if (onOpenContact) onOpenContact(); }}
-                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary"
-              >
-                Contact Atelier &amp; Concierge
-              </a>
-              <a
-                href="/jhumka-boxes"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (onNavigateHome) onNavigateHome();
-                  setSelectedCategory('jhumka-boxes');
-                  window.history.pushState(null, '', '/jhumka-boxes');
-                  const catEl = document.getElementById('catalog');
-                  if (catEl) catEl.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="hover:text-brand-primary transition-colors font-semibold text-brand-tertiary"
-              >
-                Jhumka Boxes
-              </a>
-              <a
-                href="/mystery-jewellery-jar"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openPdp('mystery-jewellery-jar');
-                }}
-                className="hover:text-brand-primary transition-colors font-semibold text-brand-primary flex items-center gap-1"
-              >
-                <span>🔮 Mystery Jewellery Jar</span>
-              </a>
-              <a
-                href="/faqs"
-                onClick={(e) => { e.preventDefault(); if (onOpenFaqs) onOpenFaqs(); }}
-                className="hover:text-brand-primary transition-colors font-medium cursor-pointer"
-              >
-                FAQs
-              </a>
-              <a
-                href="#track-order"
-                onClick={(e) => { e.preventDefault(); openTracking(); }}
-                className="hover:text-brand-primary transition-colors cursor-pointer font-medium text-brand-tertiary"
-              >
-                Track Order
-              </a>
-              <button
-                onClick={(e) => { e.preventDefault(); openWishlist(); }}
-                className="hover:text-brand-primary transition-colors cursor-pointer font-medium text-brand-tertiary"
-              >
-                Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
-              </button>
-              <a
-                href="https://www.instagram.com/valeriejewels.in/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[#bc1888] transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1.5"
-                title="Official Valerie Jewels Instagram Profile (@valeriejewels.in)"
-                aria-label="Official Valerie Jewels Instagram Profile"
-              >
-                <span className="w-4 h-4 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white shrink-0">
-                  <InstagramIcon className="w-2.5 h-2.5" />
-                </span>
-                <span>Instagram (@valeriejewels.in)</span>
-                <ExternalLink className="w-3 h-3 text-brand-muted" />
-              </a>
-              <a
-                href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-brand-primary transition-colors font-medium text-brand-tertiary inline-flex items-center gap-1.5"
-                title={`Valerie Jewels on Amazon (${content?.amazonStore?.storeName || 'HOUSE OF VJ'})`}
-              >
-                <span className="bg-white px-1.5 py-0.5 rounded border border-brand-border/60 flex items-center">
-                  <OriginalAmazonLogo className="h-2.5 w-auto" />
-                </span>
-                <span>Store</span>
-                <ExternalLink className="w-3 h-3 text-brand-muted" />
-              </a>
-            </div>
-          </div>
-
-          {/* Contact Strip — dynamically loaded from site settings */}
-          {(() => {
-            const support = content?.customerSupport || {};
-            const phone = support.phone || '+91 90234 22392';
-            const cleanPhone = phone.replace(/\s+/g, '');
-            const waNum = support.whatsappNumber || '+91 90234 22392';
-            const cleanWa = (waNum || '919023422392').replace(/\D/g, '');
-            const email = support.email || 'orders@valeriejewels.in';
-            const address = support.address || 'Patel Chowk, Rajkot, Gujarat';
-            const hours = support.hours || '7 days a week, 8:00 AM – 4:00 PM';
-            const waMsg = encodeURIComponent(support.whatsappMessage || 'Hello Valerie Jewels, I have an inquiry about my order / jewelry.');
-            const igUrl = support.instagramUrl || 'https://www.instagram.com/valeriejewels.in/';
-            const igHandle = support.instagramHandle || '@valeriejewels.in';
-
-            return (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 py-2 text-xs text-brand-muted">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-brand-tertiary">📍</span>
-                    <span>{address}</span>
-                  </div>
-                  <div className="flex items-center flex-wrap gap-2">
-                    <span className="font-semibold text-brand-tertiary">📞</span>
-                    <a href={`tel:${cleanPhone}`} className="hover:text-brand-primary transition-colors">{phone}</a>
-                    <span className="text-brand-border">·</span>
-                    <a href={`https://wa.me/${cleanWa}?text=${waMsg}`} target="_blank" rel="noreferrer" className="hover:text-brand-primary transition-colors">
-                      WA: {waNum}
-                    </a>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-brand-tertiary">✉️</span>
-                    <a href={`mailto:${email}`} className="hover:text-brand-primary transition-colors">{email}</a>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <InstagramIcon className="w-3.5 h-3.5 text-[#bc1888] shrink-0" />
-                    <a href={igUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#bc1888] transition-colors font-medium">
-                      Instagram: {igHandle}
-                    </a>
-                  </div>
-                </div>
-
-                {/* Rich Semantic Brand Description for Google Search & Google AI (SGE / Gemini) */}
-                <div className="pt-4 border-t border-brand-border text-[11px] text-brand-muted font-light leading-relaxed">
-                  <p>
-                    <strong className="font-medium text-brand-tertiary">Valerie Jewels (VALERIÉ)</strong> is an Indian everyday luxury jewelry atelier offering signature festive jhumka keepsake boxes, surprise mystery jewellery jars, and curated everyday jewellery. Headquartered in Rajkot, Gujarat, India, delivering with insured express shipping across 29,000+ Indian pincodes. Follow our official verified Instagram page <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-tertiary hover:text-[#bc1888] underline decoration-brand-border underline-offset-2">@valeriejewels.in</a> for genuine customer try-on reels, unboxings, jewelry care tips, and exclusive limited drops. You can also shop our verified collections on the <a href={content?.amazonStore?.url || DEFAULT_AMAZON_STORE_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-tertiary hover:text-brand-primary underline decoration-brand-border underline-offset-2">Valerie Jewels Amazon Brand Store</a>.
-                  </p>
-                </div>
-
-                {/* Copyright */}
-                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4 pt-4 border-t border-brand-border">
-                  <div>© {new Date().getFullYear()} VALERIÉ. All rights reserved. Open hours: {hours}.</div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span>Official Social Channel:</span>
-                    <a href="https://www.instagram.com/valeriejewels.in/" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#bc1888] hover:underline flex items-center gap-1">
-                      <InstagramIcon className="w-3 h-3" />
-                      <span>@valeriejewels.in</span>
-                    </a>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-
-        </div>
-      </footer>
+      <Footer
+        onOpenPolicy={onOpenPolicy}
+        onOpenFaqs={onOpenFaqs}
+        onOpenContact={onOpenContact}
+        onNavigateHome={onNavigateHome}
+        setSelectedCategory={setSelectedCategory}
+        openPdp={openPdp}
+        openTracking={openTracking}
+      />
 
     </div>
   );

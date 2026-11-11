@@ -38,10 +38,12 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import InstagramIcon from '../components/InstagramIcon';
 import { adminApi } from './adminApi';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 import { OriginalAmazonLogo } from '../components/AmazonTrustBadge';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import { WhatsAppOutlineIcon } from '../components/Footer';
 
 const FACTORY_DEFAULTS = {
   customerSupport: {
@@ -1940,16 +1942,28 @@ export default function AdminHomepageView() {
                 </div>
               </div>
 
-              {/* Footer Strip Simulation */}
-              <div className="max-w-2xl mx-auto p-3.5 rounded-xl bg-white/80 border border-brand-border/60 text-xs text-brand-muted space-y-1.5">
-                <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70">
-                  Storefront Footer Contact Strip Preview
+              {/* Footer Strip Simulation (Matches Live Footer Design) */}
+              <div className="max-w-4xl mx-auto p-4 rounded-xl bg-white border border-brand-border/80 text-xs text-brand-muted space-y-2.5 shadow-xs">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70 text-center">
+                  Storefront Footer Contact Strip Live Preview
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-[11px]">
-                  <span>📍 {formData.customerSupport?.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
-                  <span>📞 {formData.customerSupport?.phone || '+91 90234 22392'}</span>
-                  <span className="text-emerald-700 font-semibold">💬 WA: {formData.customerSupport?.whatsappNumber || '+91 90234 22392'}</span>
-                  <span>✉️ {formData.customerSupport?.email || 'orders@valeriejewels.in'}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200 text-xs text-neutral-800 py-2.5 border-y border-neutral-200">
+                  <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+                    <MapPin className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+                    <span className="truncate">{formData.customerSupport?.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+                    <WhatsAppOutlineIcon className="w-3.5 h-3.5 text-[#642A7F] shrink-0" />
+                    <span className="truncate">{formData.customerSupport?.whatsappNumber || '+91 90234 22392'} · WhatsApp</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+                    <Mail className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+                    <span className="truncate">{formData.customerSupport?.email || 'orders@valeriejewels.in'}</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+                    <InstagramIcon className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+                    <span className="truncate">Instagram {formData.customerSupport?.instagramHandle || '@valeriejewels.in'}</span>
+                  </div>
                 </div>
               </div>
             </div>

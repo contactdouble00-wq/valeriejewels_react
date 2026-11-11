@@ -14,6 +14,7 @@ import {
   Headphones,
 } from 'lucide-react';
 import InstagramIcon from '../components/InstagramIcon';
+import { WhatsAppOutlineIcon } from '../components/Footer';
 import { adminApi } from './adminApi';
 
 const DEFAULT_SUPPORT = {
@@ -204,17 +205,28 @@ export default function AdminCustomerCareView() {
           </div>
         </div>
 
-        {/* Footer Strip Simulation */}
-        <div className="max-w-2xl mx-auto p-4 rounded-xl bg-white/90 border border-brand-border/70 text-xs text-brand-muted space-y-2">
-          <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70">
-            Storefront Footer Contact Preview
+        {/* Footer Strip Simulation (Matches Live Footer Design) */}
+        <div className="max-w-4xl mx-auto p-4 rounded-xl bg-white border border-brand-border/80 text-xs text-brand-muted space-y-2.5 shadow-xs">
+          <div className="text-[10px] uppercase font-bold tracking-widest text-brand-muted/70 text-center">
+            Storefront Footer Contact Strip Live Preview
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-[11px]">
-            <span>📍 {supportData.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
-            <span>📞 {supportData.phone || '+91 90234 22392'}</span>
-            <span className="text-emerald-700 font-semibold">💬 WA: {supportData.whatsappNumber || '+91 90234 22392'}</span>
-            <span>✉️ {supportData.email || 'orders@valeriejewels.in'}</span>
-            <span className="text-[#bc1888] font-semibold">📸 IG: @valeriejewels.in</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200 text-xs text-neutral-800 py-2.5 border-y border-neutral-200">
+            <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+              <MapPin className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+              <span className="truncate">{supportData.address || 'Patel Chowk, Rajkot, Gujarat'}</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+              <WhatsAppOutlineIcon className="w-3.5 h-3.5 text-[#642A7F] shrink-0" />
+              <span className="truncate">{supportData.whatsappNumber || '+91 90234 22392'} · WhatsApp</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+              <Mail className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+              <span className="truncate">{supportData.email || 'orders@valeriejewels.in'}</span>
+            </div>
+            <div className="flex items-center justify-center space-x-2 py-1 sm:py-0 px-2 text-center">
+              <InstagramIcon className="w-3.5 h-3.5 text-[#642A7F] shrink-0" strokeWidth={1.8} />
+              <span className="truncate">Instagram {supportData.instagramHandle || '@valeriejewels.in'}</span>
+            </div>
           </div>
         </div>
       </div>
