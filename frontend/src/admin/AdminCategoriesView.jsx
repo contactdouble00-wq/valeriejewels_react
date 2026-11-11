@@ -255,8 +255,8 @@ export default function AdminCategoriesView({ currentUser }) {
                           />
                           <span
                             className={`text-[11px] font-semibold transition-colors ${Number(cat.is_active) === 1
-                                ? 'text-emerald-700 font-bold'
-                                : 'text-gray-400 font-medium'
+                              ? 'text-emerald-700 font-bold'
+                              : 'text-gray-400 font-medium'
                               }`}
                           >
                             {Number(cat.is_active) === 1 ? 'Show on Storefront' : 'Hidden'}
@@ -277,8 +277,8 @@ export default function AdminCategoriesView({ currentUser }) {
                             <button
                               onClick={() => handleDelete(cat.id, cat.name, cat.product_count)}
                               className={`p-1.5 rounded-lg transition-colors ${cat.product_count > 0
-                                  ? 'text-gray-300 cursor-not-allowed'
-                                  : 'text-brand-muted hover:text-rose-600 hover:bg-rose-50'
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-brand-muted hover:text-rose-600 hover:bg-rose-50'
                                 }`}
                               title={cat.product_count > 0 ? 'Cannot delete: has products' : 'Delete Category'}
                             >

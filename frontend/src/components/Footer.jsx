@@ -8,6 +8,7 @@ import {
 import InstagramIcon from './InstagramIcon';
 import { useSiteContent } from '../context/SiteContentContext';
 import { OriginalAmazonLogo, DEFAULT_AMAZON_STORE_URL } from './AmazonTrustBadge';
+import valerieTextPng from '../assets/valerie_text.png';
 
 export function WhatsAppOutlineIcon({ className = "w-4 h-4 text-[#642A7F] shrink-0" }) {
   return (
@@ -110,9 +111,11 @@ export default function Footer({
           {/* Column 1: Brand Info */}
           <div className="md:col-span-4 lg:col-span-3.5 border-r border-neutral-200 pr-6 lg:pr-8 flex flex-col justify-between">
             <div className="space-y-3">
-              <span className="font-serif text-2xl lg:text-3xl tracking-[0.06em] text-[#642A7F] font-medium select-none block">
-                VALERIÉ
-              </span>
+              <img
+                src={valerieTextPng}
+                alt="VALERIÉ"
+                className="h-6 lg:h-7 w-auto object-contain select-none"
+              />
               <p className="text-xs text-neutral-600 font-normal leading-relaxed max-w-[260px]">
                 Curated everyday luxury jewelry crafted for timeless elegance and effortless beauty.
               </p>
@@ -312,9 +315,11 @@ export default function Footer({
 
           {/* Centered Brand Block */}
           <div className="text-center pb-6">
-            <span className="font-serif text-3xl tracking-[0.06em] text-[#642A7F] font-medium select-none block">
-              VALERIÉ
-            </span>
+            <img
+              src={valerieTextPng}
+              alt="VALERIÉ"
+              className="h-7 sm:h-8 w-auto object-contain mx-auto select-none"
+            />
             <p className="text-xs text-neutral-600 font-normal leading-relaxed max-w-xs mx-auto mt-2">
               Curated everyday luxury jewelry crafted for timeless elegance and effortless beauty.
             </p>
