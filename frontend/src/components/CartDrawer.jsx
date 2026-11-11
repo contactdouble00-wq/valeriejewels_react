@@ -9,12 +9,16 @@ import {
   Sparkles,
   ShieldCheck,
   ArrowRight,
+  ChevronRight,
   Tag,
   Zap,
   FileText
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { apiService } from '../services/api';
+import googlePayIcon from '../assets/Payment_icons/google-pay.png';
+import phonePeIcon from '../assets/Payment_icons/phone-pe.png';
+import paytmIcon from '../assets/Payment_icons/paytm.png';
 
 export default function CartDrawer({ onProceedToCheckout }) {
   const {
@@ -383,26 +387,49 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 </button>
               </div>
 
-              {/* Primary 1-Click Checkout Action (Valerie Jewels Format - Everlasting Style) */}
+              {/* Primary 1-Click Checkout Action (Fastrr UPI Style Button) */}
               <button
+                type="button"
                 onClick={handleOrderNowClick}
-                className="w-full py-3.5 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-lg transition-all cursor-pointer group"
+                disabled={isInitiatingFastrr}
+                aria-label="Buy Now with 1-Click Checkout"
+                className="w-full min-h-[52px] sm:min-h-[56px] py-3.5 sm:py-4 px-5 sm:px-6 rounded-xl bg-[#372248] hover:bg-[#2c1a38] active:scale-[0.99] text-white flex items-center justify-center gap-3 sm:gap-3.5 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed group select-none"
               >
-                <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
-                  <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
-                  <span>
-                    {paySettings.cod_available
-                      ? 'ORDER NOW - CASH ON DELIVERY'
-                      : paySettings.partial_cod_enabled
-                      ? `ORDER NOW - PARTIAL COD (₹${(Number(paySettings.partial_advance) || 100) * Math.max(1, cartItems?.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0) || Number(itemCount) || 1)})`
-                      : 'ORDER NOW - 1-CLICK PAY ONLINE'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-purple-200 font-medium mt-0.5">
-                  {paySettings.online_payment_enabled !== false
-                    ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + a free gift`
-                    : '◆ Fast 1-Click Doorstep Express Delivery'}
+                <span className="font-bold tracking-wider text-white text-base sm:text-lg uppercase">
+                  {isInitiatingFastrr ? 'Processing...' : 'BUY NOW'}
                 </span>
+
+                <div className="flex items-center -space-x-1.5 sm:-space-x-2">
+                  <div className="relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      src={googlePayIcon}
+                      alt="Google Pay"
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                    />
+                  </div>
+                  <div className="relative z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#5f259f] border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      src={phonePeIcon}
+                      alt="PhonePe"
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                    />
+                  </div>
+                  <div className="relative z-30 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      src={paytmIcon}
+                      alt="Paytm"
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                    />
+                  </div>
+                </div>
+
+                <ChevronRight
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:translate-x-0.5 transition-transform shrink-0"
+                  strokeWidth={3}
+                />
               </button>
 
               {/* Trust badges footer */}
