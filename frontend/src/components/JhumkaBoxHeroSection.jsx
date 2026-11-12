@@ -252,9 +252,15 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
               </button>
 
               {/* Product Image: 1:1 Balanced Square Ratio */}
-              <div
-                onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
-                className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer"
+              <a
+                href={`/${box.slug}`}
+                onClick={(e) => {
+                  if (e && (e.metaKey || e.ctrlKey || e.button === 1)) return;
+                  e.preventDefault();
+                  if (onOpenPdp) onOpenPdp(box.slug, box);
+                }}
+                className="relative aspect-square overflow-hidden bg-brand-primary-light/20 cursor-pointer block"
+                title={`View ${box.name}`}
               >
                 <img
                   src={box.primary_image || 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=800&q=80'}
@@ -278,7 +284,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     <span>View Piece Details</span>
                   </span>
                 </div>
-              </div>
+              </a>
 
               {/* Details & Action */}
               <div className="p-2 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4">
@@ -288,11 +294,20 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                     <span>{box.category_name || 'Curated Signature Set'}</span>
                   </div>
                   <h3
-                    onClick={() => onOpenPdp && onOpenPdp(box.slug, box)}
                     className="font-sans text-xs sm:text-[14.5px] font-semibold text-brand-tertiary line-clamp-2 hover:text-brand-primary cursor-pointer leading-snug"
                     title={box.name}
                   >
-                    {box.name}
+                    <a
+                      href={`/${box.slug}`}
+                      onClick={(e) => {
+                        if (e && (e.metaKey || e.ctrlKey || e.button === 1)) return;
+                        e.preventDefault();
+                        if (onOpenPdp) onOpenPdp(box.slug, box);
+                      }}
+                      className="hover:underline"
+                    >
+                      {box.name}
+                    </a>
                   </h3>
                   <p className="hidden sm:block text-[11px] text-brand-muted line-clamp-2 font-light leading-relaxed">
                     {box.short_description}

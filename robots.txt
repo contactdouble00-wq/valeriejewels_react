@@ -1,12 +1,20 @@
-# Robots.txt for Valerie Jewels
+# Robots.txt for Valerie Jewels (https://valeriejewels.in)
 User-agent: *
 Allow: /
+
+# Disallow internal admin and API paths
 Disallow: /admin
 Disallow: /vj-manage-x1126
 Disallow: /api/
 Disallow: /shorts
 Disallow: /reels
 
-# Official Sitemap for Google Search Console
+# Prevent indexing of legacy WordPress artifacts
+Disallow: /wp-admin/
+Disallow: /wp-content/
+Disallow: /wp-includes/
+Disallow: /xmlrpc.php
+
+# Official XML Sitemaps for Google Search Console
 Sitemap: https://valeriejewels.in/sitemap.xml
 Sitemap: https://valeriejewels.in/sitemap_index.xml

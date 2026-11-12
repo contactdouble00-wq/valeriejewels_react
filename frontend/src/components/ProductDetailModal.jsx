@@ -13,7 +13,7 @@ import { trackGAViewItem } from '../utils/analytics';
 import ProductReviewsSection from './ProductReviewsSection';
 import AmazonTrustBadge from './AmazonTrustBadge';
 import FormattedDescription from './FormattedDescription';
-import { setMysteryJewelleryJarSeo, restorePageSeo } from '../utils/seo';
+import { setProductSeo, restorePageSeo } from '../utils/seo';
 
 // Helper to choose the initial default variant for a product.
 // For Mystery Jar products, the "Classic Edition" (₹1,999) is selected by default as requested.
@@ -59,11 +59,22 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { content: siteContent } = useSiteContent();
 
+  const findSeedProduct = (slug, initial) => {
+    if (initial) return initial;
+    if (!slug) return null;
+    const cleanTarget = slug.toLowerCase().replace(/-6-pair|-5-pair/g, '');
+    const isMystery = cleanTarget === 'mystery-jewellery-jar' || cleanTarget.includes('mystery');
+    return SEED_PRODUCTS.find((p) => {
+      if (p.slug === slug) return true;
+      const cleanP = (p.slug || '').toLowerCase().replace(/-6-pair|-5-pair/g, '');
+      if (cleanP === cleanTarget) return true;
+      if (isMystery && (p.slug === 'mystery-jar' || p.category_slug === 'mystery-jar' || (p.name || '').toLowerCase().includes('mystery'))) return true;
+      return false;
+    }) || null;
+  };
+
   // Find synchronous fallback from seed catalog to prevent empty screen or loading jump
-  const fallbackProduct = initialProduct || SEED_PRODUCTS.find((p) => 
-    p.slug === productSlug || 
-    (productSlug === 'mystery-jewellery-jar' && (p.slug === 'mystery-jar' || p.category_slug === 'mystery-jar' || (p.name || '').toLowerCase().includes('mystery')))
-  ) || null;
+  const fallbackProduct = findSeedProduct(productSlug, initialProduct);
 
   const [product, setProduct] = useState(fallbackProduct);
   const [loading, setLoading] = useState(!fallbackProduct);
@@ -166,8 +177,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
         productSlug === 'valerie-signature-mystery-jar' ||
         (typeof productSlug === 'string' && productSlug.toLowerCase().includes('mystery'));
 
-      const found = SEED_PRODUCTS.find((p) => p.slug === productSlug) ||
-        (isMysterySlug ? SEED_PRODUCTS.find((p) => p.slug === 'mystery-jewellery-jar' || p.category_slug?.includes('mystery')) : null);
+      const found = findSeedProduct(productSlug, null);
 
       if (found) {
         setProduct(found);
@@ -276,7 +286,8 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
   };
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}#product-${product?.slug || productSlug}`;
+    const cleanSlug = (product?.slug || productSlug || '').replace(/^\/+/, '');
+    const shareUrl = `${window.location.origin}/${cleanSlug}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -567,13 +578,13 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   // Dynamic SEO head tags, canonical link, and JSON-LD schema for Google Rich Results
   useEffect(() => {
-    if (isMysteryProduct || productSlug === 'mystery-jewellery-jar') {
-      setMysteryJewelleryJarSeo(product);
+    if (product) {
+      setProductSeo(product, selectedVariant);
     }
     return () => {
       restorePageSeo();
     };
-  }, [isMysteryProduct, productSlug, product]);
+  }, [product, selectedVariant]);
 
   // Helper to format product title into clean Title Case (e.g. "mystery jar" -> "Mystery Jar")
   const formatProductTitle = (str) => {

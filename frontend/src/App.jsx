@@ -157,38 +157,22 @@ function StorefrontContent({
     );
   };
 
-  // Sync PDP opening with clean SEO URL path for Mystery Jar and Hash for other products
+  // Sync PDP opening with clean SEO URL path for all products
   const openPdp = (slug, productObj = null) => {
     const isMystery = isMysteryProductSlug(slug, productObj);
-    const targetSlug = isMystery ? 'mystery-jewellery-jar' : slug;
+    const targetSlug = isMystery ? 'mystery-jewellery-jar' : (slug || '').replace(/^\/+/, '');
     setActivePdpSlug(targetSlug);
     setActivePdpProduct(productObj);
 
-    if (isMystery) {
-      if (window.location.pathname !== '/mystery-jewellery-jar') {
-        window.history.pushState({ pdp: 'mystery-jewellery-jar' }, '', '/mystery-jewellery-jar');
-      }
-    } else {
-      if (window.location.hash !== `#product-${slug}`) {
-        window.history.pushState({ pdp: slug }, '', `#product-${slug}`);
-      }
+    if (window.location.pathname !== `/${targetSlug}`) {
+      window.history.pushState({ pdp: targetSlug }, '', `/${targetSlug}`);
     }
   };
 
   const closePdp = () => {
     setActivePdpSlug(null);
     setActivePdpProduct(null);
-    if (
-      window.location.pathname === '/mystery-jewellery-jar' ||
-      window.location.pathname === '/mystery-jar' ||
-      window.location.pathname === '/valerie-signature-mystery-jar'
-    ) {
-      if (window.history.state?.pdp) {
-        window.history.back();
-      } else {
-        window.history.replaceState(null, '', '/');
-      }
-    } else if (window.history.state?.pdp) {
+    if (window.history.state?.pdp) {
       window.history.back();
     } else if (window.location.hash.startsWith('#product-')) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -231,7 +215,9 @@ function StorefrontContent({
           '/shipping-policy', '/shipping', '/refund-policy', '/return-policy', '/returns',
           '/privacy-policy', '/terms-and-conditions', '/terms', '/policies',
           '/faqs', '/faq', '/admin', '/vj-manage-x1126',
-          '/order-confirmation', '/order-failed', '/track', '/track-order'
+          '/order-confirmation', '/order-failed', '/track', '/track-order',
+          '/product-category', '/category', '/tag', '/product-tag', '/product', '/my-account',
+          '/wp-admin', '/wp-content', '/wp-includes'
         ];
         const isExcluded = nonProductPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
         if (!isExcluded && !pathname.startsWith('/api') && pathname.length > 1) {
@@ -1448,6 +1434,29 @@ export default function App() {
       return 'store';
     }
 
+    // Immediately catch and consolidate legacy WordPress / WooCommerce paths
+    if (
+      rawPath.startsWith('/product-category/') ||
+      rawPath.startsWith('/category/') ||
+      rawPath.startsWith('/tag/') ||
+      rawPath.startsWith('/product-tag/') ||
+      rawPath === '/shop' ||
+      rawPath.startsWith('/shop/') ||
+      rawPath === '/my-account' ||
+      rawPath.startsWith('/my-account/')
+    ) {
+      if (rawPath.includes('jhumka') || rawPath.includes('earring')) {
+        window.history.replaceState(null, '', '/jhumka-boxes');
+        return 'store';
+      }
+      if (rawPath.includes('mystery')) {
+        window.history.replaceState(null, '', '/mystery-jewellery-jar');
+        return 'store';
+      }
+      window.history.replaceState(null, '', '/');
+      return 'store';
+    }
+
     // 1. Admin Route (/admin, #admin, /vj-manage-x1126, or #vj-manage-x1126)
     if (
       rawPath === '/admin' ||
@@ -1572,6 +1581,45 @@ export default function App() {
       window.removeEventListener('popstate', handleRouteChange);
     };
   }, []);
+
+  // Dynamic SEO Canonical & Title Synchronization for Googlebot & Users
+  useEffect(() => {
+    let canonical = 'https://valeriejewels.in/';
+    let title = 'VALERIE JEWELS | WEAR YOUR ELEGANCE';
+
+    if (currentRoute === 'contact') {
+      canonical = 'https://valeriejewels.in/contact-us';
+      title = 'Contact Us | Customer Care & Atelier Concierge | Valerie Jewels';
+    } else if (currentRoute === 'faqs') {
+      canonical = 'https://valeriejewels.in/faqs';
+      title = 'Frequently Asked Questions (FAQs) | Valerie Jewels';
+    } else if (currentRoute === 'policy-shipping') {
+      canonical = 'https://valeriejewels.in/shipping-policy';
+      title = 'Shipping & Delivery Policy (5–7 Days Free) | Valerie Jewels';
+    } else if (currentRoute === 'policy-refund') {
+      canonical = 'https://valeriejewels.in/refund-policy';
+      title = 'Returns & Refund Policy | Valerie Jewels';
+    } else if (currentRoute === 'policy-privacy') {
+      canonical = 'https://valeriejewels.in/privacy-policy';
+      title = 'Privacy Policy (DPDP 2023) | Valerie Jewels';
+    } else if (currentRoute === 'policy-terms') {
+      canonical = 'https://valeriejewels.in/terms-and-conditions';
+      title = 'Terms of Service | Valerie Jewels';
+    } else if (routeCatAndSort?.category === 'jhumka-boxes') {
+      canonical = 'https://valeriejewels.in/jhumka-boxes';
+      title = 'Signature Jhumka Boxes | Festive Ethnic Keepsakes | Valerie Jewels';
+    }
+
+    const canonicalEl = document.getElementById('canonical-url');
+    if (canonicalEl) {
+      canonicalEl.setAttribute('href', canonical);
+    }
+    const ogUrl = document.querySelector("meta[property='og:url']");
+    if (ogUrl) {
+      ogUrl.setAttribute('content', canonical);
+    }
+    document.title = title;
+  }, [currentRoute, routeCatAndSort]);
 
   const renderRouteContent = () => {
     if (currentRoute === 'admin') {

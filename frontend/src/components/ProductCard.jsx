@@ -47,7 +47,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
   const productHref = isMystery
     ? '/mystery-jewellery-jar'
-    : `#product-${product?.slug || product?.id}`;
+    : `/${product?.slug || product?.id}`;
 
   const handleStageClick = (e) => {
     if (e && (e.metaKey || e.ctrlKey || e.button === 1)) return;

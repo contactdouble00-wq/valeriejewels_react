@@ -33,7 +33,46 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
-  # 1. 301 Permanent Redirects to remove unwanted sitelinks from Google Search
+  # 1. HTTP 410 GONE: Instantly purge old WordPress demo theme dummy pages from Google
+  # (Specifically targets test pages like /category/swimwear from old templates)
+  RewriteRule ^category/swimwear/?.*$ - [G,NC,L]
+  RewriteRule ^swimwear/?.*$ - [G,NC,L]
+  RewriteRule ^bikini/?.*$ - [G,NC,L]
+  RewriteRule ^clothing/?.*$ - [G,NC,L]
+  RewriteRule ^dresses/?.*$ - [G,NC,L]
+  RewriteRule ^shoes/?.*$ - [G,NC,L]
+  RewriteRule ^wp-content/.*$ - [G,NC,L]
+  RewriteRule ^wp-includes/.*$ - [G,NC,L]
+  RewriteRule ^wp-admin/.*$ - [G,NC,L]
+  RewriteRule ^xmlrpc\.php$ - [G,NC,L]
+
+  # 2. HTTP 301 MOVED PERMANENTLY: Map legacy WordPress/WooCommerce archives to modern pages
+  RewriteRule ^product-category/jhumka-boxes/?.*$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^product-category/earrings/?.*$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^product-category/mystery-jar/?.*$ /mystery-jewellery-jar [R=301,L,NC]
+  RewriteRule ^category/jhumka-boxes/?.*$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^category/earrings/?.*$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^category/mystery-jar/?.*$ /mystery-jewellery-jar [R=301,L,NC]
+  RewriteRule ^tag/rings/?.*$ / [R=301,L,NC]
+  RewriteRule ^tag/earrings/?.*$ /jhumka-boxes [R=301,L,NC]
+  RewriteRule ^tag/jhumka/?.*$ /jhumka-boxes [R=301,L,NC]
+
+  # Old WooCommerce product URLs (/product/{slug}/ -> /{slug})
+  RewriteRule ^product/([^/]+)/?$ /$1 [R=301,L,NC]
+
+  # Consolidate all remaining legacy category/tag taxonomy archives to homepage
+  RewriteRule ^product-category/.*$ / [R=301,L,NC]
+  RewriteRule ^product-category/?$ / [R=301,L,NC]
+  RewriteRule ^category/.*$ / [R=301,L,NC]
+  RewriteRule ^category/?$ / [R=301,L,NC]
+  RewriteRule ^product-tag/.*$ / [R=301,L,NC]
+  RewriteRule ^product-tag/?$ / [R=301,L,NC]
+  RewriteRule ^tag/.*$ / [R=301,L,NC]
+  RewriteRule ^tag/?$ / [R=301,L,NC]
+  RewriteRule ^shop/?.*$ / [R=301,L,NC]
+  RewriteRule ^my-account/?.*$ / [R=301,L,NC]
+
+  # Legacy marketing sitelinks
   RewriteRule ^shorts/?$ / [R=301,L,NC]
   RewriteRule ^reels/?$ / [R=301,L,NC]
   RewriteRule ^new-arrivals/?$ / [R=301,L,NC]
