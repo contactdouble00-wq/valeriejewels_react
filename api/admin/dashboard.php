@@ -88,7 +88,11 @@ if ($action === 'save_showcase_boxes') {
 }
 
 try {
-    // 1. Strict definition of Processed & Confirmed Orders:
+    // 0. Auto-synchronize live RTO from JustShyp / Shiprocket panels (debounced to 5 mins or on demand)
+    require_once dirname(__DIR__) . '/shipping/RtoSyncService.php';
+    RtoSyncService::sync($pdo, 'all', isset($_GET['force_sync_rto']));
+
+    // 1. Strict definition of Active Processed & Confirmed Orders:
     // - Order must NOT be cancelled, failed, or rto.
     // - Status must be in active fulfillment pipeline (confirmed, processing, in_transit, out_for_delivery, shipped, delivered)
     //   OR payment must be secured (paid or partial_paid advance).
@@ -109,12 +113,12 @@ try {
     // Overall Revenue & Confirmed Orders
     $overallStmt = $pdo->query("
         SELECT 
-            -- Orders Processed & Confirmed Revenue
-            COUNT(CASE WHEN $confirmedCondition THEN id ELSE NULL END) AS total_orders,
-            COALESCE(SUM(CASE WHEN $confirmedCondition THEN total_amount ELSE 0 END), 0) AS total_revenue,
-            COALESCE(AVG(CASE WHEN $confirmedCondition THEN total_amount ELSE NULL END), 0) AS average_order_value,
+            -- Orders Processed & Active Delivered Revenue (strictly excludes RTO orders)
+            COUNT(CASE WHEN $confirmedCondition THEN id ELSE NULL END) AS active_orders_count,
+            COALESCE(SUM(CASE WHEN $confirmedCondition THEN total_amount ELSE 0 END), 0) AS active_delivered_revenue,
+            COALESCE(AVG(CASE WHEN $confirmedCondition THEN total_amount ELSE NULL END), 0) AS active_aov,
 
-            -- Payment Breakdown strictly among confirmed orders
+            -- Payment Breakdown strictly among active confirmed orders
             COUNT(CASE WHEN $confirmedCondition AND payment_type IN ('full_prepaid', 'prepaid') THEN 1 ELSE NULL END) AS prepaid_orders,
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'partial' THEN 1 ELSE NULL END) AS partial_cod_orders,
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'cod' THEN 1 ELSE NULL END) AS cod_orders,
@@ -140,7 +144,7 @@ try {
 
             -- Financial RTO Impact & Advance Deposit Protection
             COALESCE(SUM(CASE WHEN order_status = 'rto' THEN total_amount ELSE 0 END), 0) AS rto_orders_value,
-            COALESCE(SUM(CASE WHEN order_status = 'rto' THEN amount_paid_upfront ELSE 0 END), 0) AS rto_advance_secured_value,
+            COALESCE(SUM(CASE WHEN order_status = 'rto' AND payment_type = 'partial' THEN amount_paid_upfront ELSE 0 END), 0) AS rto_advance_secured_value,
 
             -- Unpaid / Abandoned checkouts (not included in orders processed)
             COUNT(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN 1 ELSE NULL END) AS abandoned_orders_count,
@@ -149,7 +153,19 @@ try {
     ");
     $stats = $overallStmt->fetch(PDO::FETCH_ASSOC);
 
-    $totalOrders = (int)$stats['total_orders'];
+    $activeRevenue     = (float)$stats['active_delivered_revenue'];
+    $rtoOrdersValue    = (float)$stats['rto_orders_value'];
+    $rtoAdvanceSecured = (float)$stats['rto_advance_secured_value'];
+    $rtoNetLoss        = max(0, $rtoOrdersValue - $rtoAdvanceSecured);
+
+    // Total Realized Revenue: Active Delivered & In-Transit Revenue + Retained Advance Deposits on RTOs
+    // (This directly subtracts all uncollected RTO COD balances from the previous gross total!)
+    $totalRevenue       = round($activeRevenue + $rtoAdvanceSecured, 2);
+    $grossBookedRevenue = round($activeRevenue + $rtoOrdersValue, 2);
+
+    $totalOrders = (int)$stats['active_orders_count'];
+    $rtoOrders = (int)$stats['rto_orders'];
+    $grossOrders = $totalOrders + $rtoOrders;
     $cancelledOrders = (int)$stats['cancelled_orders'];
     $totalCompletedAndCancelled = $totalOrders + $cancelledOrders;
 
@@ -157,7 +173,6 @@ try {
 
     // Delivery-specific RTO rates across Multi-Carrier fleet (JustShyp & Shiprocket)
     $dispatchedOrders = (int)$stats['dispatched_orders'];
-    $rtoOrders = (int)$stats['rto_orders'];
     $deliveryRtoRate = $dispatchedOrders > 0 ? round(($rtoOrders / $dispatchedOrders) * 100, 1) : 0;
 
     $jsDispatched = (int)$stats['justshyp_dispatched'];
@@ -332,9 +347,14 @@ try {
 
     ApiResponse::success([
         'kpis' => [
-            'total_revenue'             => (float)$stats['total_revenue'],
+            'total_revenue'             => $totalRevenue,
+            'gross_revenue'             => $grossBookedRevenue,
+            'rto_deducted_value'        => $rtoNetLoss,
+            'rto_orders_value'          => $rtoOrdersValue,
+            'rto_advance_secured'       => $rtoAdvanceSecured,
             'total_orders'              => $totalOrders,
-            'average_order_value'       => round((float)$stats['average_order_value'], 2),
+            'gross_orders'              => $grossOrders,
+            'average_order_value'       => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
             'rto_cancellation_rate'     => $rtoRate,
             'delivery_rto_rate'         => $deliveryRtoRate,
             'rto_orders_count'          => $rtoOrders,
@@ -345,8 +365,11 @@ try {
                 'dispatched_orders'      => $dispatchedOrders,
                 'delivered_orders'       => (int)$stats['delivered_orders'],
                 'pre_dispatch_cancelled' => (int)$stats['pre_dispatch_cancelled'],
-                'rto_orders_value'       => (float)$stats['rto_orders_value'],
-                'rto_advance_secured'    => (float)$stats['rto_advance_secured_value'],
+                'rto_orders_value'       => $rtoOrdersValue,
+                'rto_advance_secured'    => $rtoAdvanceSecured,
+                'rto_net_deduction'      => $rtoNetLoss,
+                'gross_booked_revenue'   => $grossBookedRevenue,
+                'net_realized_revenue'   => $totalRevenue,
                 'justshyp' => [
                     'dispatched' => $jsDispatched,
                     'delivered'  => $jsDelivered,

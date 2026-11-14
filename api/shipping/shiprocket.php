@@ -39,6 +39,7 @@ class ShiprocketService
             self::$settings = [
                 'email'           => getenv('SHIPROCKET_EMAIL') ?: (!empty($settings['shiprocket_email']) ? $settings['shiprocket_email'] : ($srConfig['email'] ?? '')),
                 'password'        => getenv('SHIPROCKET_PASSWORD') ?: (!empty($settings['shiprocket_password']) ? $settings['shiprocket_password'] : ($srConfig['password'] ?? '')),
+                'token'           => getenv('SHIPROCKET_TOKEN') ?: (!empty($settings['shiprocket_token']) ? $settings['shiprocket_token'] : ($srConfig['token'] ?? '')),
                 'pickup_location' => getenv('SHIPROCKET_PICKUP_LOCATION') ?: (!empty($settings['shiprocket_pickup_location']) ? $settings['shiprocket_pickup_location'] : ($srConfig['pickup_location'] ?? 'Primary')),
                 'auto_sync'       => isset($settings['shiprocket_auto_sync']) ? (bool)$settings['shiprocket_auto_sync'] : true,
             ];
@@ -53,6 +54,10 @@ class ShiprocketService
     public static function getAuthToken(): ?string
     {
         $cfg = self::getSettings();
+        if (!empty($cfg['token'])) {
+            return $cfg['token'];
+        }
+
         if (empty($cfg['email']) || empty($cfg['password'])) {
             return null;
         }

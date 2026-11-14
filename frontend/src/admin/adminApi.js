@@ -127,8 +127,10 @@ export const adminApi = {
     }
   },
   // Dashboard
-  async getDashboard() {
-    const res = await request('/admin/dashboard.php');
+  async getDashboard(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const endpoint = `/admin/dashboard.php${qs ? `?${qs}` : ''}`;
+    const res = await request(endpoint);
     return res.data;
   },
 

@@ -30,10 +30,10 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const [syncingRto, setSyncingRto] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
 
-  const loadData = async () => {
+  const loadData = async (forceSync = false) => {
     try {
       setRefreshing(true);
-      const res = await adminApi.getDashboard();
+      const res = await adminApi.getDashboard(forceSync ? { force_sync_rto: 1 } : {});
       setData(res);
       setError('');
     } catch (err) {
@@ -50,7 +50,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
       setSyncFeedback(null);
       const res = await adminApi.syncRtoPanel(provider);
       setSyncFeedback({ type: 'success', message: res?.message || 'RTO sync completed' });
-      await loadData();
+      await loadData(true);
     } catch (err) {
       setSyncFeedback({ type: 'error', message: err.message || 'RTO sync failed' });
     } finally {
@@ -109,9 +109,10 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={refreshing}
             className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-xs font-semibold hover:border-brand-primary transition-colors disabled:opacity-50 shadow-2xs"
+            title="Refresh dashboard KPIs and synchronize live RTO from JustShyp & Shiprocket"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>{refreshing ? 'Syncing...' : 'Live Refresh'}</span>
@@ -125,7 +126,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
         <div className="luxury-card bg-white p-5 rounded-2xl border border-brand-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-bold">
-              Total Revenue
+              Net Realized Revenue
             </span>
             <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
               <DollarSign className="w-4 h-4" />
@@ -134,9 +135,16 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
             ₹{Number(kpis.total_revenue).toLocaleString('en-IN')}
           </div>
-          <div className="text-[11px] text-emerald-700 flex items-center space-x-1">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>AOV: ₹{Number(kpis.average_order_value).toLocaleString('en-IN')}</span>
+          <div className="text-[11px] flex items-center justify-between flex-wrap gap-1">
+            <span className="text-emerald-700 font-medium flex items-center space-x-1">
+              <TrendingUp className="w-3.5 h-3.5 inline mr-0.5" />
+              <span>AOV: ₹{Number(kpis.average_order_value).toLocaleString('en-IN')}</span>
+            </span>
+            {Number(kpis.rto_orders_value || 0) > 0 && (
+              <span className="text-rose-600 font-mono text-[10px] font-semibold" title="RTO orders value deducted from gross total">
+                -₹{Number(kpis.rto_deducted_value || kpis.rto_orders_value).toLocaleString('en-IN')} RTO ({kpis.rto_orders_count || 0})
+              </span>
+            )}
           </div>
         </div>
 
@@ -154,7 +162,11 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             {kpis.total_orders}
           </div>
           <div className="text-[11px] text-brand-muted">
-            {kpis.payment_split?.prepaid || 0} Prepaid • {kpis.payment_split?.partial_cod || 0} Partial COD • {kpis.payment_split?.cod || 0} Full COD
+            {kpis.gross_orders && kpis.gross_orders !== kpis.total_orders ? (
+              <span>{kpis.gross_orders} Gross Received • {kpis.rto_orders_count || 0} RTO</span>
+            ) : (
+              <span>{kpis.payment_split?.prepaid || 0} Prepaid • {kpis.payment_split?.partial_cod || 0} Partial COD • {kpis.payment_split?.cod || 0} Full COD</span>
+            )}
           </div>
         </div>
 
@@ -512,10 +524,16 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
                     {kpis.rto_analytics?.pre_dispatch_cancelled ?? 0} orders
                   </span>
                 </div>
+                <div className="flex items-center justify-between py-1 border-b border-brand-border/60">
+                  <span className="text-brand-muted">RTO Revenue Deducted:</span>
+                  <span className="font-bold font-mono text-rose-600">
+                    -₹{Number(kpis.rto_deducted_value || kpis.rto_orders_value || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between py-1">
                   <span className="text-brand-muted">Advance Secured on RTOs:</span>
                   <span className="font-bold font-mono text-emerald-700">
-                    ₹{Number(kpis.rto_analytics?.advance_secured ?? 0).toLocaleString('en-IN')}
+                    ₹{Number(kpis.rto_analytics?.advance_secured ?? kpis.rto_advance_secured ?? 0).toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
