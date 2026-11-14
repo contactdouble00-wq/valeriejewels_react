@@ -1136,9 +1136,6 @@ export default function CheckoutModal({
     },
   ];
 
-  // Determine if Partial COD should take the #1 primary position on top of UPI payment
-  const isPartialPrimary = paymentSettings.partial_cod_enabled && (paymentType === 'partial' || initialPaymentType === 'partial');
-
   // Render Partial COD Option
   const renderPartialCodOption = () => {
     if (!paymentSettings.partial_cod_enabled) return null;
@@ -2054,7 +2051,7 @@ export default function CheckoutModal({
                 <p className="text-xs text-gray-600 flex items-center gap-1.5 mt-0.5">
                   <Zap className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
                   <span>
-                    {isPartialPrimary && paymentType === 'partial'
+                    {paymentType === 'partial'
                       ? `Pay ₹${partialDeposit} token advance now, balance ₹${partialBalance.toLocaleString('en-IN')} on delivery.`
                       : 'Enjoy fast delivery on all prepaid orders.'}
                   </span>
@@ -2063,74 +2060,37 @@ export default function CheckoutModal({
 
               {/* Unified White Card matching everlasting.shop */}
               <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
-                {isPartialPrimary ? (
+                {/* 1. UPI Payment (1st option by default) */}
+                {renderUpiOption()}
+
+                {/* 2. Partial COD (2nd option directly under UPI) */}
+                {paymentSettings.partial_cod_enabled && (
                   <>
-                    {/* 1. Partial COD on top above UPI payment */}
+                    <div className="border-t border-dashed border-gray-200 mx-4" />
                     {renderPartialCodOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 2. UPI Payment */}
-                    {renderUpiOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 3. Credit/Debit Card */}
-                    {renderCardOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 4. Net Banking */}
-                    {renderNetbankingOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 5. Wallets */}
-                    {renderWalletOption()}
-
-                    {/* 6. Cash on Delivery (Full COD) if available */}
-                    {paymentSettings.cod_available && (
-                      <>
-                        <div className="border-t border-dashed border-gray-200 mx-4" />
-                        {renderFullCodOption()}
-                      </>
-                    )}
                   </>
-                ) : (
+                )}
+
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 3. Credit/Debit Card */}
+                {renderCardOption()}
+
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 4. Net Banking */}
+                {renderNetbankingOption()}
+
+                <div className="border-t border-dashed border-gray-200 mx-4" />
+
+                {/* 5. Wallets */}
+                {renderWalletOption()}
+
+                {/* 6. Cash on Delivery (Full COD) if available */}
+                {paymentSettings.cod_available && (
                   <>
-                    {/* 1. UPI Payment */}
-                    {renderUpiOption()}
-
                     <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 2. Credit/Debit Card */}
-                    {renderCardOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 3. Net Banking */}
-                    {renderNetbankingOption()}
-
-                    <div className="border-t border-dashed border-gray-200 mx-4" />
-
-                    {/* 4. Wallets */}
-                    {renderWalletOption()}
-
-                    {/* 5. Partial COD */}
-                    {paymentSettings.partial_cod_enabled && (
-                      <>
-                        <div className="border-t border-dashed border-gray-200 mx-4" />
-                        {renderPartialCodOption()}
-                      </>
-                    )}
-
-                    {/* 6. Cash on Delivery (Full COD) if available */}
-                    {paymentSettings.cod_available && (
-                      <>
-                        <div className="border-t border-dashed border-gray-200 mx-4" />
-                        {renderFullCodOption()}
-                      </>
-                    )}
+                    {renderFullCodOption()}
                   </>
                 )}
               </div>

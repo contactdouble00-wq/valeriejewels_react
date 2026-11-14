@@ -276,8 +276,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
 
   const handleBuyNow = () => {
     if (!product) return;
-    const isPartial = !paySettings.cod_available && paySettings.partial_cod_enabled;
-    const initialMode = isPartial ? 'partial' : (paySettings.cod_available ? 'cod' : 'full_prepaid');
+    const initialMode = 'full_prepaid';
     if (onBuyNow) {
       onBuyNow(product, selectedVariant, initialMode);
     } else if (onAddToCart) {

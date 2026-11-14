@@ -77,8 +77,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
       try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
     }
 
-    const isPartial = !paySettings.cod_available && paySettings.partial_cod_enabled;
-    const initialMode = isPartial ? 'partial' : (paySettings.cod_available ? 'cod' : 'full_prepaid');
+    const initialMode = 'full_prepaid';
 
     // 1. If active engine is direct Razorpay standard (bypassing Fastrr), launch internal luxury checkout immediately
     if (paySettings?.checkout_engine === 'razorpay_direct' || paySettings?.checkout_engine !== 'shiprocket_fastrr') {
