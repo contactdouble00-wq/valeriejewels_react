@@ -1388,8 +1388,106 @@ if ($action === 'run_payment_recovery') {
     ], $msg);
 }
 
-// Handle Cancel & Refund
-if ($action === 'cancel_refund') {
+// Handle Customer & Delivery Address Update
+if ($action === 'update_address') {
+    $orderId = (int)($input['order_id'] ?? 0);
+    if ($orderId <= 0) {
+        ApiResponse::error('Valid order ID is required', 422);
+    }
+
+    $customerName   = trim($input['customer_name'] ?? '');
+    $customerPhone  = trim($input['customer_phone'] ?? '');
+    $customerEmail  = trim($input['customer_email'] ?? '');
+    $addressLine1   = trim($input['shipping_address_line1'] ?? '');
+    $addressLine2   = trim($input['shipping_address_line2'] ?? '');
+    $city           = trim($input['city'] ?? '');
+    $state          = trim($input['state'] ?? '');
+    $pincode        = trim($input['pincode'] ?? '');
+
+    if (empty($addressLine1) || empty($city) || empty($state) || empty($pincode)) {
+        ApiResponse::error('Shipping address line 1, city, state, and pincode are required', 422);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        ApiResponse::error('Order not found', 404);
+    }
+
+    $now = date('Y-m-d H:i:s');
+    $upd = $pdo->prepare("
+        UPDATE orders SET 
+            customer_name          = COALESCE(NULLIF(:name, ''), customer_name),
+            customer_phone         = COALESCE(NULLIF(:phone, ''), customer_phone),
+            customer_email         = COALESCE(NULLIF(:email, ''), customer_email),
+            shipping_address_line1 = :addr1,
+            shipping_address_line2 = :addr2,
+            city                   = :city,
+            state                  = :state,
+            pincode                = :pincode,
+            updated_at             = :updated_at
+        WHERE id = :id
+    ");
+    $upd->execute([
+        ':name'       => $customerName,
+        ':phone'      => $customerPhone,
+        ':email'      => $customerEmail,
+        ':addr1'      => $addressLine1,
+        ':addr2'      => $addressLine2,
+        ':city'       => $city,
+        ':state'      => $state,
+        ':pincode'    => $pincode,
+        ':updated_at' => $now,
+        ':id'         => $orderId,
+    ]);
+
+    // Tracking event milestone
+    try {
+        $trkStmt = $pdo->prepare("
+            INSERT INTO order_tracking_events (order_id, status, status_milestone, title, description, location, occurred_at)
+            VALUES (?, ?, ?, 'Delivery Address Updated', ?, 'Atelier Concierge', ?)
+        ");
+        $trkStmt->execute([
+            $orderId,
+            $order['order_status'],
+            $order['order_status'],
+            "Shipping address updated by {$adminUser['name']}: {$addressLine1}, {$city}, {$state} - {$pincode}",
+            $now,
+        ]);
+    } catch (Throwable $e) {
+        try {
+            $trkStmt = $pdo->prepare("
+                INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
+                VALUES (?, ?, 'Delivery Address Updated', ?, 'Atelier Concierge', ?)
+            ");
+            $trkStmt->execute([
+                $orderId,
+                $order['order_status'],
+                "Shipping address updated by {$adminUser['name']}: {$addressLine1}, {$city}, {$state} - {$pincode}",
+                $now,
+            ]);
+        } catch (Throwable $e2) {
+            error_log('Tracking event error: ' . $e2->getMessage());
+        }
+    }
+
+    AdminAuth::logActivity($adminUser['id'], 'update_order_address', 'order', $orderId, [
+        'old_address' => "{$order['shipping_address_line1']}, {$order['city']} - {$order['pincode']}",
+        'new_address' => "{$addressLine1}, {$city} - {$pincode}",
+        'customer'    => $customerName ?: $order['customer_name'],
+    ]);
+
+    $fetchStmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+    $fetchStmt->execute([$orderId]);
+    $updatedOrder = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+
+    ApiResponse::success($updatedOrder, 'Customer delivery address updated successfully');
+}
+
+// Handle Cancel & Refund / Cancel without Refund
+if ($action === 'cancel_refund' || $action === 'cancel_order') {
     // CRITICAL SECURITY RULE: Staff cannot issue refunds or cancellations!
     if ($adminUser['role'] !== 'admin') {
         ApiResponse::error('Permission Denied: Only administrators can execute order cancellations and refunds.', 403);
@@ -1397,6 +1495,8 @@ if ($action === 'cancel_refund') {
 
     $orderId = (int)($input['order_id'] ?? 0);
     $reason = trim($input['cancellation_reason'] ?? '');
+    $noRefund = !empty($input['no_refund']) || ($input['refund_type'] ?? '') === 'no_refund';
+    $restock = isset($input['restock']) ? (bool)$input['restock'] : true;
 
     if ($orderId <= 0 || empty($reason)) {
         ApiResponse::error('Order ID and a detailed cancellation reason are required', 422);
@@ -1416,10 +1516,17 @@ if ($action === 'cancel_refund') {
 
     // Calculate refund amount
     $refundAmount = 0.00;
-    if ($order['payment_type'] === 'full_prepaid') {
-        $refundAmount = (float)$order['total_amount'];
-    } elseif ($order['payment_type'] === 'partial') {
-        $refundAmount = (float)$order['amount_paid_upfront'];
+    if (!$noRefund) {
+        if ($order['payment_type'] === 'full_prepaid') {
+            $refundAmount = (float)$order['total_amount'];
+        } elseif ($order['payment_type'] === 'partial') {
+            $refundAmount = (float)$order['amount_paid_upfront'];
+        }
+    }
+
+    $finalReason = $reason;
+    if ($noRefund && stripos($reason, 'no refund') === false) {
+        $finalReason .= ' (No refund on cancellation as per store policy)';
     }
 
     $pdo->beginTransaction();
@@ -1436,42 +1543,56 @@ if ($action === 'cancel_refund') {
         ");
         $upd->execute([
             ':ref'          => $refundAmount,
-            ':reason'       => $reason,
+            ':reason'       => $finalReason,
             ':ref_amt'      => $refundAmount,
             ':cancelled_at' => $now,
             ':id'           => $orderId,
         ]);
 
-        // Restock inventory
-        $itemsStmt = $pdo->prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?");
-        $itemsStmt->execute([$orderId]);
-        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Restock inventory if requested
+        if ($restock) {
+            $itemsStmt = $pdo->prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?");
+            $itemsStmt->execute([$orderId]);
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $restockStmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?");
-        foreach ($items as $item) {
-            $restockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+            $restockStmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?");
+            foreach ($items as $item) {
+                $restockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+            }
         }
 
-        // Add tracking milestone (compatible with MySQL and SQLite columns)
+        // Add tracking milestone
+        $milestoneTitle = $noRefund
+            ? 'Order Cancelled (No Refund — Policy Applied)'
+            : ($refundAmount > 0 ? 'Order Cancelled & Refund Initiated' : 'Order Cancelled');
+
+        $milestoneDesc = $noRefund
+            ? "Admin cancellation: {$reason}. No refund issued as per Valerie Jewels store cancellation policy."
+            : ($refundAmount > 0
+                ? "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund."
+                : "Admin cancellation: {$reason}.");
+
         try {
             $trkStmt = $pdo->prepare("
                 INSERT INTO order_tracking_events (order_id, status, status_milestone, title, description, location, occurred_at)
-                VALUES (?, 'cancelled', 'cancelled', 'Order Cancelled & Refund Initiated', ?, 'Mumbai Admin Hub', ?)
+                VALUES (?, 'cancelled', 'cancelled', ?, ?, 'Mumbai Admin Hub', ?)
             ");
             $trkStmt->execute([
                 $orderId,
-                "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund.",
+                $milestoneTitle,
+                $milestoneDesc,
                 $now,
             ]);
         } catch (Throwable $te) {
             try {
                 $trkStmt = $pdo->prepare("
                     INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at)
-                    VALUES (?, 'cancelled', 'Order Cancelled & Refund Initiated', ?, 'Mumbai Admin Hub', ?)
+                    VALUES (?, 'cancelled', ?, ?, 'Mumbai Admin Hub', ?)
                 ");
                 $trkStmt->execute([
                     $orderId,
-                    "Admin cancellation: {$reason}. ₹{$refundAmount} initiated for refund.",
+                    $milestoneTitle,
+                    $milestoneDesc,
                     $now,
                 ]);
             } catch (Throwable $te2) {
@@ -1481,7 +1602,9 @@ if ($action === 'cancel_refund') {
 
         AdminAuth::logActivity($adminUser['id'], 'admin_cancel_refund', 'order', $orderId, [
             'refund_amount' => $refundAmount,
-            'reason'        => $reason,
+            'no_refund'     => $noRefund,
+            'restock'       => $restock,
+            'reason'        => $finalReason,
         ]);
 
         $pdo->commit();
@@ -1493,15 +1616,22 @@ if ($action === 'cancel_refund') {
             error_log('Mailer error: ' . $e->getMessage());
         }
 
+        $successMsg = $noRefund
+            ? "Order cancelled successfully. No refund issued as per store policy."
+            : ($refundAmount > 0
+                ? "Order cancelled successfully. ₹{$refundAmount} refund processed."
+                : "Order cancelled successfully.");
+
         ApiResponse::success([
             'order_id'      => $orderId,
             'refund_amount' => $refundAmount,
+            'no_refund'     => $noRefund,
             'order_status'  => 'cancelled',
-        ], "Order cancelled successfully. ₹{$refundAmount} refund processed.");
+        ], $successMsg);
 
     } catch (Throwable $e) {
         $pdo->rollBack();
-        ApiResponse::error('Failed to process cancellation & refund: ' . $e->getMessage(), 500);
+        ApiResponse::error('Failed to process cancellation: ' . $e->getMessage(), 500);
     }
 }
 

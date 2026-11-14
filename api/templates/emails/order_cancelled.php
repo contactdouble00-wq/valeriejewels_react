@@ -77,6 +77,13 @@ $refundAmount = (float)($order['refund_amount'] ?? 0);
                     <p style="margin: 0; font-size: 12px; color: #6D5E7A; line-height: 18px;">
                       A full refund for your upfront payment has been initiated. Funds will be credited directly back to your original payment method within <strong>3–5 business banking days</strong>.
                     </p>
+                    <?php elseif (stripos($reason, 'no refund') !== false): ?>
+                    <div style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #D97706; font-weight: 700; margin-bottom: 6px;">
+                      Cancellation Processed — Store Policy
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: #6D5E7A; line-height: 18px;">
+                      In accordance with Valerie Jewels order cancellation policy, this order has been cancelled without a refund.
+                    </p>
                     <?php else: ?>
                     <div style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8F82A0; font-weight: 700; margin-bottom: 6px;">
                       Cash on Delivery Cancellation

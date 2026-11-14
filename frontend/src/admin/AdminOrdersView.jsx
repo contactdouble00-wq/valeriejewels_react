@@ -38,7 +38,8 @@ import {
   Zap,
   ChevronDown,
   Calendar,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Edit3
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import ProductAssuranceModal from './ProductAssuranceModal';
@@ -119,10 +120,26 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [emailModalTab, setEmailModalTab] = useState('history'); // 'history' | 'compose'
   const [resendingEmailId, setResendingEmailId] = useState(null);
 
-  // Cancel & Refund Dialog
+  // Cancel & Refund Dialog with Store Policy Control
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [cancelRefundType, setCancelRefundType] = useState('no_refund'); // 'no_refund' | 'issue_refund'
+  const [cancelRestock, setCancelRestock] = useState(true);
+
+  // Address Editing State in Inspection Drawer
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressFormData, setAddressFormData] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    shipping_address_line1: '',
+    shipping_address_line2: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
 
   // Delete Order Dialog
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -865,6 +882,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       setDrawerLoading(true);
       const fullOrder = await adminApi.getOrder(orderId);
       setSelectedOrder(fullOrder);
+      setIsEditingAddress(false);
       setShipAwb(fullOrder.shiprocket_awb || '');
       setShipCourier(fullOrder.courier_name || 'Bluedart Express Air');
     } catch (err) {
@@ -1408,14 +1426,23 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
+  const openCancelModal = (order) => {
+    if (!order) return;
+    setCancelRefundType('no_refund');
+    setCancelRestock(true);
+    setCancelReason('Customer requested cancellation prior to dispatch (No refund as per store policy)');
+    setCancelModalOpen(true);
+  };
+
   const handleCancelAndRefund = async (e) => {
-    e.preventDefault();
-    if (!selectedOrder || !cancelReason) return;
+    if (e) e.preventDefault();
+    if (!selectedOrder || !cancelReason?.trim()) return;
 
     setCancelling(true);
     try {
-      const res = await adminApi.cancelRefundOrder(selectedOrder.id, cancelReason);
-      showToast(res.message || 'Order cancelled & refund processed');
+      const isNoRefund = cancelRefundType === 'no_refund';
+      const res = await adminApi.cancelRefundOrder(selectedOrder.id, cancelReason.trim(), isNoRefund, cancelRestock);
+      showToast(res.message || (isNoRefund ? 'Order cancelled (No refund applied as per policy)' : 'Order cancelled & refund processed'));
       setCancelModalOpen(false);
       setCancelReason('');
       await inspectOrder(selectedOrder.id);
@@ -1424,6 +1451,42 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Failed to cancel order');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleStartEditAddress = (order) => {
+    if (!order) return;
+    setAddressFormData({
+      customer_name: order.customer_name || '',
+      customer_phone: order.customer_phone || '',
+      customer_email: order.customer_email || '',
+      shipping_address_line1: order.shipping_address_line1 || '',
+      shipping_address_line2: order.shipping_address_line2 || '',
+      city: order.city || '',
+      state: order.state || '',
+      pincode: order.pincode || '',
+    });
+    setIsEditingAddress(true);
+  };
+
+  const handleSaveAddress = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedOrder) return;
+    if (!addressFormData.shipping_address_line1?.trim() || !addressFormData.city?.trim() || !addressFormData.state?.trim() || !addressFormData.pincode?.trim()) {
+      showToast('Address line 1, city, state, and pincode are required');
+      return;
+    }
+    setSavingAddress(true);
+    try {
+      await adminApi.updateOrderAddress(selectedOrder.id, addressFormData);
+      showToast('Customer delivery address updated successfully');
+      setIsEditingAddress(false);
+      await inspectOrder(selectedOrder.id);
+      loadOrders();
+    } catch (err) {
+      showToast(err.message || 'Failed to update address');
+    } finally {
+      setSavingAddress(false);
     }
   };
 
@@ -3421,34 +3484,178 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               </div>
             ) : null}
 
-            {/* Customer & Address Details */}
-            <div className="bg-[#FAF8FC] rounded-2xl p-4 border border-brand-border space-y-3 text-xs">
-              <div className="font-caps tracking-wider uppercase text-[10px] text-brand-muted font-bold">
-                Customer & Delivery Address
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="font-semibold text-brand-tertiary">{selectedOrder.customer_name}</div>
-                  <div className="text-brand-muted flex items-center space-x-1 mt-0.5">
-                    <Phone className="w-3 h-3" />
-                    <span>{selectedOrder.customer_phone}</span>
-                  </div>
-                  <div className="text-brand-muted flex items-center space-x-1 mt-0.5">
-                    <Mail className="w-3 h-3" />
-                    <span>{selectedOrder.customer_email}</span>
-                  </div>
+            {/* Customer & Address Details (With Update Address Option) */}
+            <div className="bg-[#FAF8FC] rounded-2xl p-4 sm:p-5 border border-brand-border space-y-3.5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-brand-border/60">
+                <div className="font-caps tracking-wider uppercase text-[10px] text-brand-muted font-bold flex items-center space-x-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Customer & Delivery Address</span>
                 </div>
+                {!isEditingAddress ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditAddress(selectedOrder)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-brand-border hover:border-brand-primary hover:text-brand-primary text-[11px] font-semibold text-brand-tertiary transition-colors flex items-center space-x-1 cursor-pointer shadow-2xs"
+                    title="Update customer delivery address"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Update Address</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-bold text-brand-primary bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                    Editing Mode
+                  </span>
+                )}
+              </div>
 
-                <div>
-                  <div className="text-brand-tertiary font-medium">
-                    {selectedOrder.shipping_address_line1}
-                    {selectedOrder.shipping_address_line2 ? `, ${selectedOrder.shipping_address_line2}` : ''}
+              {!isEditingAddress ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="font-semibold text-brand-tertiary text-sm">{selectedOrder.customer_name}</div>
+                    <div className="text-brand-muted flex items-center space-x-1.5 mt-0.5">
+                      <Phone className="w-3 h-3 text-brand-primary" />
+                      <span className="font-mono">{selectedOrder.customer_phone}</span>
+                    </div>
+                    <div className="text-brand-muted flex items-center space-x-1.5 mt-0.5">
+                      <Mail className="w-3 h-3 text-brand-primary" />
+                      <span>{selectedOrder.customer_email}</span>
+                    </div>
                   </div>
-                  <div className="text-brand-muted">
-                    {selectedOrder.city}, {selectedOrder.state} - {selectedOrder.pincode}
+
+                  <div className="space-y-1 bg-white p-3 rounded-xl border border-brand-border/80">
+                    <div className="text-brand-tertiary font-medium leading-relaxed">
+                      {selectedOrder.shipping_address_line1}
+                      {selectedOrder.shipping_address_line2 ? `, ${selectedOrder.shipping_address_line2}` : ''}
+                    </div>
+                    <div className="text-brand-muted text-[11px]">
+                      {selectedOrder.city}, {selectedOrder.state} — <strong className="font-mono text-brand-tertiary">{selectedOrder.pincode}</strong>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <form onSubmit={handleSaveAddress} className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">Recipient Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addressFormData.customer_name}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, customer_name: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                        placeholder="Customer Full Name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">Mobile Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={addressFormData.customer_phone}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, customer_phone: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary font-mono"
+                        placeholder="10-digit mobile"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">Customer Email</label>
+                      <input
+                        type="email"
+                        value={addressFormData.customer_email}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, customer_email: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                        placeholder="email@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">Address Line 1 (Flat / House / Building / Street) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={addressFormData.shipping_address_line1}
+                      onChange={(e) => setAddressFormData({ ...addressFormData, shipping_address_line1: e.target.value })}
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                      placeholder="e.g. Flat 402, Royal Palms, MG Road"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">Address Line 2 (Landmark / Area / Colony)</label>
+                    <input
+                      type="text"
+                      value={addressFormData.shipping_address_line2}
+                      onChange={(e) => setAddressFormData({ ...addressFormData, shipping_address_line2: e.target.value })}
+                      className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                      placeholder="e.g. Near City Center, Opposite Bank"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">City *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addressFormData.city}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, city: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                        placeholder="City"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">State *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addressFormData.state}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, state: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
+                        placeholder="State"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-brand-muted tracking-wider">PIN Code *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addressFormData.pincode}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, pincode: e.target.value })}
+                        className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary font-mono"
+                        placeholder="6-digit PIN"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end space-x-2 pt-2 border-t border-brand-border/60">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddress(false)}
+                      className="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingAddress}
+                      className="px-4 py-1.5 rounded-xl bg-brand-primary hover:bg-[#6C3E8A] text-white text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      {savingAddress ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving Address...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Save Updated Address</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Itemized Order List */}
@@ -3860,12 +4067,12 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               )}
             </div>
 
-            {/* Cancel & Refund Action (Admin Only) */}
+            {/* Cancel Order Action (With No Refund Policy Option) */}
             {selectedOrder.order_status !== 'cancelled' && (
               <div className="pt-4 border-t border-brand-border flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-rose-700">Cancel Order & Issue Refund</div>
-                  <div className="text-[10px] text-brand-muted">Restocks inventory & triggers refund email</div>
+                  <div className="text-xs font-semibold text-rose-700">Cancel Order & Policy Options</div>
+                  <div className="text-[10px] text-brand-muted">Policy compliant cancellation with No Refund or Refund options</div>
                 </div>
 
                 {isStaff ? (
@@ -3874,11 +4081,13 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   </span>
                 ) : (
                   <button
-                    onClick={() => setCancelModalOpen(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors flex items-center space-x-1.5"
+                    type="button"
+                    onClick={() => openCancelModal(selectedOrder)}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                    title="Cancel order with No Refund or refund options"
                   >
                     <XCircle className="w-3.5 h-3.5" />
-                    <span>Cancel & Refund</span>
+                    <span>Cancel Order</span>
                   </button>
                 )}
               </div>
@@ -4265,63 +4474,162 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       )}
 
       {/* ========================================================================= */}
-      {/* CANCEL & REFUND CONFIRMATION MODAL */}
+      {/* CANCEL ORDER CONFIRMATION MODAL (WITH NO REFUND POLICY CONTROL) */}
       {/* ========================================================================= */}
       {cancelModalOpen && selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95">
-            <div className="flex items-center space-x-3 text-rose-600">
-              <div className="p-2 bg-rose-50 rounded-xl">
-                <AlertTriangle className="w-5 h-5" />
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-brand-border shadow-luxury space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-border">
+              <div className="flex items-center space-x-3 text-rose-600">
+                <div className="p-2 bg-rose-50 rounded-xl">
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-editorial font-bold text-brand-tertiary">
+                    Cancel Order #{selectedOrder.order_number}
+                  </h3>
+                  <span className="text-[11px] text-brand-muted">Policy compliant cancellation & refund settings</span>
+                </div>
               </div>
-              <h3 className="text-base font-editorial font-bold text-brand-tertiary">
-                Confirm Cancellation & Refund
-              </h3>
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="p-1.5 rounded-lg text-brand-muted hover:text-brand-tertiary hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <p className="text-xs text-brand-muted leading-relaxed">
-              Order #{selectedOrder.order_number} will be cancelled.
-              {selectedOrder.payment_type === 'full_prepaid' && (
-                <span className="font-semibold text-brand-tertiary block mt-1">
-                  Refund Amount: ₹{Number(selectedOrder.total_amount).toLocaleString('en-IN')} (Full Prepaid)
-                </span>
-              )}
-              {selectedOrder.payment_type === 'partial' && (
-                <span className="font-semibold text-brand-tertiary block mt-1">
-                  Refund Amount: ₹{Number(selectedOrder.amount_paid_upfront).toLocaleString('en-IN')} (₹{Number(selectedOrder.amount_paid_upfront).toLocaleString('en-IN')} Upfront Token)
-                </span>
-              )}
-            </p>
+            {/* Refund Mode Selection (No Refund vs Issue Refund) */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
+                Cancellation & Refund Method *
+              </label>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Option 1: No Refund (Store Policy) */}
+                <div
+                  onClick={() => setCancelRefundType('no_refund')}
+                  className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                    cancelRefundType === 'no_refund'
+                      ? 'border-brand-primary bg-purple-50/50 shadow-xs ring-1 ring-brand-primary'
+                      : 'border-brand-border bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-brand-tertiary">No Refund</span>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                      Store Policy
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-brand-muted mt-1 leading-relaxed">
+                    Cancel order with <strong>₹0 refund</strong> as per Valerie Jewels store cancellation policy.
+                  </p>
+                </div>
+
+                {/* Option 2: Issue Refund */}
+                <div
+                  onClick={() => setCancelRefundType('issue_refund')}
+                  className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                    cancelRefundType === 'issue_refund'
+                      ? 'border-brand-primary bg-purple-50/50 shadow-xs ring-1 ring-brand-primary'
+                      : 'border-brand-border bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-brand-tertiary">Issue Refund</span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-mono">
+                      {selectedOrder.payment_type === 'cod'
+                        ? 'COD (₹0)'
+                        : `₹${Number(selectedOrder.payment_type === 'partial' ? (selectedOrder.amount_paid_upfront || 9) : selectedOrder.total_amount).toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-brand-muted mt-1 leading-relaxed">
+                    {selectedOrder.payment_type === 'full_prepaid'
+                      ? `Initiate full refund of ₹${Number(selectedOrder.total_amount).toLocaleString('en-IN')} to source account.`
+                      : selectedOrder.payment_type === 'partial'
+                      ? `Initiate advance token refund of ₹${Number(selectedOrder.amount_paid_upfront || 9).toLocaleString('en-IN')}.`
+                      : 'Cash on delivery order (no upfront money collected).'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Reason Presets */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-caps tracking-wider uppercase text-brand-tertiary font-bold">
-                Mandatory Reason for Activity Log *
+                Cancellation Reason *
               </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Customer requested cancellation (No refund policy applied)',
+                  'Customer requested cancellation before dispatch',
+                  'Address unserviceable / Customer unreachable',
+                  'Duplicate order placed by customer',
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCancelReason(preset)}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-brand-primary hover:text-white text-brand-tertiary transition-colors cursor-pointer text-left"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
               <textarea
                 required
                 rows={3}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="e.g. Customer requested cancellation before dispatch; address unserviceable..."
-                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary focus:outline-none focus:border-brand-primary"
+                placeholder="Enter detailed reason for customer notification & activity log..."
+                className="w-full bg-[#FAF8FC] border border-brand-border rounded-xl p-3 text-xs text-brand-tertiary mt-1 focus:outline-none focus:border-brand-primary"
               ></textarea>
             </div>
 
-            <div className="flex items-center justify-end space-x-2 pt-2">
+            {/* Restock items checkbox */}
+            <div className="flex items-center space-x-2 pt-1">
+              <input
+                type="checkbox"
+                id="cancel-restock-check"
+                checked={cancelRestock}
+                onChange={(e) => setCancelRestock(e.target.checked)}
+                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary border-brand-border cursor-pointer"
+              />
+              <label htmlFor="cancel-restock-check" className="text-xs text-brand-tertiary cursor-pointer font-medium">
+                Restock ordered items back into live catalog inventory
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-brand-border">
               <button
                 type="button"
                 onClick={() => setCancelModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-tertiary text-xs font-semibold cursor-pointer"
               >
                 Go Back
               </button>
               <button
                 type="button"
                 onClick={handleCancelAndRefund}
-                disabled={cancelling || !cancelReason}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
+                disabled={cancelling || !cancelReason?.trim()}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer shadow-sm"
               >
-                {cancelling ? 'Processing Refund...' : 'Execute Refund & Restock'}
+                {cancelling ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing Cancellation...</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>
+                      {cancelRefundType === 'no_refund'
+                        ? 'Confirm Cancellation (No Refund)'
+                        : `Confirm & Refund (₹${Number(selectedOrder.payment_type === 'partial' ? (selectedOrder.amount_paid_upfront || 9) : (selectedOrder.payment_type === 'cod' ? 0 : selectedOrder.total_amount)).toLocaleString('en-IN')})`}
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>

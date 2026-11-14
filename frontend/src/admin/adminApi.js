@@ -451,12 +451,25 @@ export const adminApi = {
     return res.data;
   },
 
-  async cancelRefundOrder(orderId, reason) {
+  async cancelRefundOrder(orderId, reason, noRefund = false, restock = true) {
     const res = await request('/admin/orders.php?action=cancel_refund', {
       method: 'POST',
       body: JSON.stringify({
         order_id: orderId,
         cancellation_reason: reason,
+        no_refund: Boolean(noRefund),
+        restock: Boolean(restock),
+      }),
+    });
+    return res.data;
+  },
+
+  async updateOrderAddress(orderId, addressData) {
+    const res = await request('/admin/orders.php?action=update_address', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id: orderId,
+        ...addressData,
       }),
     });
     return res.data;
