@@ -119,9 +119,28 @@ try {
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'partial' THEN 1 ELSE NULL END) AS partial_cod_orders,
             COUNT(CASE WHEN $confirmedCondition AND payment_type = 'cod' THEN 1 ELSE NULL END) AS cod_orders,
 
-            -- Fulfillment & Cancellations
+            -- Fulfillment & Delivery Breakdown
             COUNT(CASE WHEN order_status = 'delivered' THEN 1 ELSE NULL END) AS delivered_orders,
+            COUNT(CASE WHEN order_status = 'rto' THEN 1 ELSE NULL END) AS rto_orders,
+            COUNT(CASE WHEN order_status = 'cancelled' THEN 1 ELSE NULL END) AS pre_dispatch_cancelled,
             COUNT(CASE WHEN order_status = 'cancelled' OR order_status = 'rto' THEN 1 ELSE NULL END) AS cancelled_orders,
+            COUNT(CASE WHEN order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS dispatched_orders,
+
+            -- JustShyp Specific Metrics (orders assigned to JustShyp or with provider AWB)
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS justshyp_dispatched,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS justshyp_delivered,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'rto' THEN 1 ELSE NULL END) AS justshyp_rto,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS justshyp_active,
+
+            -- Shiprocket Specific Metrics (orders assigned to Shiprocket or with Shiprocket AWB)
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS shiprocket_dispatched,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS shiprocket_delivered,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'rto' THEN 1 ELSE NULL END) AS shiprocket_rto,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS shiprocket_active,
+
+            -- Financial RTO Impact & Advance Deposit Protection
+            COALESCE(SUM(CASE WHEN order_status = 'rto' THEN total_amount ELSE 0 END), 0) AS rto_orders_value,
+            COALESCE(SUM(CASE WHEN order_status = 'rto' THEN amount_paid_upfront ELSE 0 END), 0) AS rto_advance_secured_value,
 
             -- Unpaid / Abandoned checkouts (not included in orders processed)
             COUNT(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN 1 ELSE NULL END) AS abandoned_orders_count,
@@ -135,6 +154,23 @@ try {
     $totalCompletedAndCancelled = $totalOrders + $cancelledOrders;
 
     $rtoRate = $totalCompletedAndCancelled > 0 ? round(($cancelledOrders / $totalCompletedAndCancelled) * 100, 1) : 0;
+
+    // Delivery-specific RTO rates across Multi-Carrier fleet (JustShyp & Shiprocket)
+    $dispatchedOrders = (int)$stats['dispatched_orders'];
+    $rtoOrders = (int)$stats['rto_orders'];
+    $deliveryRtoRate = $dispatchedOrders > 0 ? round(($rtoOrders / $dispatchedOrders) * 100, 1) : 0;
+
+    $jsDispatched = (int)$stats['justshyp_dispatched'];
+    $jsRto = (int)$stats['justshyp_rto'];
+    $jsDelivered = (int)$stats['justshyp_delivered'];
+    $jsActive = (int)$stats['justshyp_active'];
+    $jsRtoRate = $jsDispatched > 0 ? round(($jsRto / $jsDispatched) * 100, 1) : 0;
+
+    $srDispatched = (int)$stats['shiprocket_dispatched'];
+    $srRto = (int)$stats['shiprocket_rto'];
+    $srDelivered = (int)$stats['shiprocket_delivered'];
+    $srActive = (int)$stats['shiprocket_active'];
+    $srRtoRate = $srDispatched > 0 ? round(($srRto / $srDispatched) * 100, 1) : 0;
 
     // Upfront Payment / Token Secured Rate:
     // Both 100% Prepaid and Partial COD advance deposits secure funds upfront to minimize RTO loss
@@ -300,6 +336,32 @@ try {
             'total_orders'              => $totalOrders,
             'average_order_value'       => round((float)$stats['average_order_value'], 2),
             'rto_cancellation_rate'     => $rtoRate,
+            'delivery_rto_rate'         => $deliveryRtoRate,
+            'rto_orders_count'          => $rtoOrders,
+            'dispatched_orders_count'   => $dispatchedOrders,
+            'rto_analytics' => [
+                'delivery_rto_rate'      => $deliveryRtoRate,
+                'rto_orders_count'       => $rtoOrders,
+                'dispatched_orders'      => $dispatchedOrders,
+                'delivered_orders'       => (int)$stats['delivered_orders'],
+                'pre_dispatch_cancelled' => (int)$stats['pre_dispatch_cancelled'],
+                'rto_orders_value'       => (float)$stats['rto_orders_value'],
+                'rto_advance_secured'    => (float)$stats['rto_advance_secured_value'],
+                'justshyp' => [
+                    'dispatched' => $jsDispatched,
+                    'delivered'  => $jsDelivered,
+                    'active'     => $jsActive,
+                    'rto'        => $jsRto,
+                    'rto_rate'   => $jsRtoRate,
+                ],
+                'shiprocket' => [
+                    'dispatched' => $srDispatched,
+                    'delivered'  => $srDelivered,
+                    'active'     => $srActive,
+                    'rto'        => $srRto,
+                    'rto_rate'   => $srRtoRate,
+                ],
+            ],
             'prepaid_share_percent'     => $prepaidShare,
             'total_products'            => $prodCount,
             'total_customers'           => $custCount,

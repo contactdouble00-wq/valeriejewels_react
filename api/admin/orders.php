@@ -256,6 +256,70 @@ if ($method === 'GET') {
         ApiResponse::success($logs, 'Sent email customer logs retrieved successfully');
     }
 
+    // Action: RTO Summary across Multi-Carrier fleet (JustShyp & Shiprocket)
+    if ($action === 'rto_summary') {
+        $rtoStmt = $pdo->query("
+            SELECT 
+                COUNT(CASE WHEN order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS dispatched_orders,
+                COUNT(CASE WHEN order_status = 'delivered' THEN 1 ELSE NULL END) AS delivered_orders,
+                COUNT(CASE WHEN order_status = 'rto' THEN 1 ELSE NULL END) AS rto_orders,
+                COUNT(CASE WHEN order_status = 'cancelled' THEN 1 ELSE NULL END) AS pre_dispatch_cancelled,
+
+                -- JustShyp
+                COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS justshyp_dispatched,
+                COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS justshyp_delivered,
+                COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'rto' THEN 1 ELSE NULL END) AS justshyp_rto,
+                COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS justshyp_active,
+
+                -- Shiprocket
+                COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS shiprocket_dispatched,
+                COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS shiprocket_delivered,
+                COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'rto' THEN 1 ELSE NULL END) AS shiprocket_rto,
+                COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS shiprocket_active,
+
+                COALESCE(SUM(CASE WHEN order_status = 'rto' THEN total_amount ELSE 0 END), 0) AS rto_orders_value,
+                COALESCE(SUM(CASE WHEN order_status = 'rto' THEN amount_paid_upfront ELSE 0 END), 0) AS rto_advance_secured_value
+            FROM orders
+        ");
+        $rtoData = $rtoStmt->fetch(PDO::FETCH_ASSOC);
+
+        $dispatched = (int)$rtoData['dispatched_orders'];
+        $rtoCount = (int)$rtoData['rto_orders'];
+        $overallRate = $dispatched > 0 ? round(($rtoCount / $dispatched) * 100, 1) : 0;
+
+        $jsDisp = (int)$rtoData['justshyp_dispatched'];
+        $jsRto = (int)$rtoData['justshyp_rto'];
+        $jsRate = $jsDisp > 0 ? round(($jsRto / $jsDisp) * 100, 1) : 0;
+
+        $srDisp = (int)$rtoData['shiprocket_dispatched'];
+        $srRto = (int)$rtoData['shiprocket_rto'];
+        $srRate = $srDisp > 0 ? round(($srRto / $srDisp) * 100, 1) : 0;
+
+        ApiResponse::success([
+            'delivery_rto_rate'       => $overallRate,
+            'rto_orders_count'        => $rtoCount,
+            'dispatched_orders_count' => $dispatched,
+            'delivered_orders_count'  => (int)$rtoData['delivered_orders'],
+            'pre_dispatch_cancelled'  => (int)$rtoData['pre_dispatch_cancelled'],
+            'rto_orders_value'        => (float)$rtoData['rto_orders_value'],
+            'rto_advance_secured'     => (float)$rtoData['rto_advance_secured_value'],
+            'justshyp' => [
+                'dispatched' => $jsDisp,
+                'delivered'  => (int)$rtoData['justshyp_delivered'],
+                'active'     => (int)$rtoData['justshyp_active'],
+                'rto'        => $jsRto,
+                'rto_rate'   => $jsRate,
+            ],
+            'shiprocket' => [
+                'dispatched' => $srDisp,
+                'delivered'  => (int)$rtoData['shiprocket_delivered'],
+                'active'     => (int)$rtoData['shiprocket_active'],
+                'rto'        => $srRto,
+                'rto_rate'   => $srRate,
+            ],
+        ], 'RTO summary calculated successfully');
+    }
+
     $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if ($id > 0) {
@@ -725,6 +789,245 @@ if ($action === 'sync_justshyp') {
     } catch (Throwable $e) {
         ApiResponse::error('JustShyp sync error: ' . $e->getMessage(), 500);
     }
+}
+
+// Sync RTO Panel from JustShyp & Shiprocket
+if ($action === 'sync_rto_panel') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    require_once dirname(__DIR__) . '/shipping/shiprocket.php';
+
+    $targetProvider = strtolower(trim($input['provider'] ?? ($_GET['provider'] ?? 'all')));
+    $fromDate       = trim($input['from_date'] ?? ($_GET['from_date'] ?? date('Y-m-d', strtotime('-60 days'))));
+    $toDate         = trim($input['to_date'] ?? ($_GET['to_date'] ?? date('Y-m-d')));
+
+    $syncedJustShyp = 0;
+    $syncedShiprocket = 0;
+    $errors = [];
+    $syncedOrders = [];
+    $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+
+    // 1. Refer JustShyp's RTO Panel
+    if ($targetProvider === 'all' || $targetProvider === 'justshyp') {
+        try {
+            $jsProvider = DeliveryProviderFactory::getProvider('justshyp');
+            $jsRes = $jsProvider->listNdr([
+                'ndr_type'  => 'rto',
+                'from_date' => $fromDate,
+                'to_date'   => $toDate,
+            ]);
+
+            if (!empty($jsRes['success']) && !empty($jsRes['ndr_shipments'])) {
+                $shipments = is_array($jsRes['ndr_shipments']) ? $jsRes['ndr_shipments'] : [];
+                foreach ($shipments as $item) {
+                    $awb = trim($item['awb'] ?? ($item['waybill_number'] ?? ($item['shipment']['awb'] ?? '')));
+                    $clientOrdId = trim($item['client_order_id'] ?? ($item['order_number'] ?? ($item['order_id'] ?? '')));
+                    $reason = trim($item['rto_reason'] ?? ($item['reason'] ?? ($item['ndr_reason'] ?? ($item['remarks'] ?? 'Returned to Origin on JustShyp panel'))));
+                    $courier = trim($item['courier_name'] ?? ($item['courier'] ?? 'JustShyp Express'));
+                    $location = trim($item['location'] ?? ($item['current_location'] ?? ''));
+
+                    if (empty($awb) && empty($clientOrdId)) {
+                        continue;
+                    }
+
+                    $cleanOrdNum = preg_replace('/^RTO-/', '', $clientOrdId);
+
+                    $findStmt = $pdo->prepare("
+                        SELECT id, order_number, order_status, delivery_provider, courier_name, provider_awb 
+                        FROM orders 
+                        WHERE (provider_awb = :awb AND :awb != '') 
+                           OR (shiprocket_awb = :awb AND :awb != '') 
+                           OR order_number = :ord_raw 
+                           OR order_number = :ord_clean 
+                        LIMIT 1
+                    ");
+                    $findStmt->execute([
+                        ':awb'       => $awb,
+                        ':ord_raw'   => $clientOrdId,
+                        ':ord_clean' => $cleanOrdNum,
+                    ]);
+                    $ord = $findStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($ord) {
+                        if ($ord['order_status'] !== 'rto') {
+                            $upStmt = $pdo->prepare("
+                                UPDATE orders 
+                                SET order_status = 'rto',
+                                    delivery_provider = 'justshyp',
+                                    courier_name = COALESCE(NULLIF(:courier, ''), courier_name),
+                                    provider_awb = COALESCE(NULLIF(:awb, ''), provider_awb),
+                                    cancellation_reason = :reason,
+                                    updated_at = $nowSql
+                                WHERE id = :id
+                            ");
+                            $upStmt->execute([
+                                ':courier' => $courier,
+                                ':awb'     => $awb,
+                                ':reason'  => "JustShyp RTO: {$reason}",
+                                ':id'      => $ord['id'],
+                            ]);
+
+                            // Log tracking milestone
+                            $evStmt = $pdo->prepare("
+                                INSERT INTO order_tracking_events (order_id, status, title, description, location, courier_partner, awb_code, occurred_at)
+                                VALUES (:order_id, 'rto', 'RTO Confirmed via JustShyp Panel', :desc, :loc, :courier, :awb, $nowSql)
+                            ");
+                            $evStmt->execute([
+                                ':order_id' => $ord['id'],
+                                ':desc'     => "Shipment flagged as RTO on JustShyp panel. Reason: {$reason}",
+                                ':loc'      => $location ?: 'Transit Atelier Hub',
+                                ':courier'  => $courier,
+                                ':awb'      => $awb ?: ($ord['provider_awb'] ?? ''),
+                            ]);
+
+                            $syncedJustShyp++;
+                            $syncedOrders[] = [
+                                'order_id'     => $ord['id'],
+                                'order_number' => $ord['order_number'],
+                                'provider'     => 'justshyp',
+                                'awb'          => $awb,
+                                'reason'       => $reason,
+                            ];
+                        }
+                    }
+                }
+            } elseif (isset($jsRes['message']) && strpos(strtolower($jsRes['message']), 'no') === false) {
+                $errors['justshyp'] = $jsRes['message'];
+            }
+        } catch (Throwable $e) {
+            $errors['justshyp'] = $e->getMessage();
+        }
+    }
+
+    // 2. Refer Shiprocket NDR/RTO Panel
+    if ($targetProvider === 'all' || $targetProvider === 'shiprocket') {
+        try {
+            $srProvider = DeliveryProviderFactory::getProvider('shiprocket');
+            $srRes = $srProvider->listNdr([]);
+            if (!empty($srRes['success']) && !empty($srRes['ndr_shipments'])) {
+                $srList = is_array($srRes['ndr_shipments']) ? $srRes['ndr_shipments'] : [];
+                foreach ($srList as $item) {
+                    $awb = trim($item['awb'] ?? '');
+                    $status = strtolower(trim($item['status'] ?? ($item['current_status'] ?? '')));
+                    $reason = trim($item['ndr_reason'] ?? ($item['reason'] ?? 'Shiprocket NDR / RTO'));
+                    $courier = trim($item['courier_name'] ?? 'Shiprocket Express');
+
+                    if (empty($awb)) continue;
+
+                    if (strpos($status, 'rto') !== false) {
+                        $findStmt = $pdo->prepare("
+                            SELECT id, order_number, order_status 
+                            FROM orders 
+                            WHERE shiprocket_awb = ? OR provider_awb = ? LIMIT 1
+                        ");
+                        $findStmt->execute([$awb, $awb]);
+                        $ord = $findStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($ord && $ord['order_status'] !== 'rto') {
+                            $upStmt = $pdo->prepare("
+                                UPDATE orders 
+                                SET order_status = 'rto',
+                                    delivery_provider = 'shiprocket',
+                                    cancellation_reason = :reason,
+                                    updated_at = $nowSql
+                                WHERE id = :id
+                            ");
+                            $upStmt->execute([
+                                ':reason' => "Shiprocket RTO: {$reason}",
+                                ':id'     => $ord['id'],
+                            ]);
+
+                            $syncedShiprocket++;
+                            $syncedOrders[] = [
+                                'order_id'     => $ord['id'],
+                                'order_number' => $ord['order_number'],
+                                'provider'     => 'shiprocket',
+                                'awb'          => $awb,
+                                'reason'       => $reason,
+                            ];
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            $errors['shiprocket'] = $e->getMessage();
+        }
+    }
+
+    ApiResponse::success([
+        'justshyp_synced'     => $syncedJustShyp,
+        'shiprocket_synced'   => $syncedShiprocket,
+        'total_synced'        => $syncedJustShyp + $syncedShiprocket,
+        'synced_orders'       => $syncedOrders,
+        'errors'              => $errors,
+    ], sprintf(
+        "RTO panel sync completed: %d from JustShyp, %d from Shiprocket.",
+        $syncedJustShyp,
+        $syncedShiprocket
+    ));
+}
+
+// RTO Summary Breakdown across Multi-Carrier fleet
+if ($action === 'rto_summary') {
+    $rtoStmt = $pdo->query("
+        SELECT 
+            COUNT(CASE WHEN order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS dispatched_orders,
+            COUNT(CASE WHEN order_status = 'delivered' THEN 1 ELSE NULL END) AS delivered_orders,
+            COUNT(CASE WHEN order_status = 'rto' THEN 1 ELSE NULL END) AS rto_orders,
+            COUNT(CASE WHEN order_status = 'cancelled' THEN 1 ELSE NULL END) AS pre_dispatch_cancelled,
+
+            -- JustShyp
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS justshyp_dispatched,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS justshyp_delivered,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status = 'rto' THEN 1 ELSE NULL END) AS justshyp_rto,
+            COUNT(CASE WHEN (delivery_provider = 'justshyp' OR (provider_awb IS NOT NULL AND provider_awb != '')) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS justshyp_active,
+
+            -- Shiprocket
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery', 'delivered', 'rto') THEN 1 ELSE NULL END) AS shiprocket_dispatched,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'delivered' THEN 1 ELSE NULL END) AS shiprocket_delivered,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status = 'rto' THEN 1 ELSE NULL END) AS shiprocket_rto,
+            COUNT(CASE WHEN (delivery_provider = 'shiprocket' OR ((delivery_provider IS NULL OR delivery_provider = '') AND (shiprocket_order_id IS NOT NULL OR shiprocket_awb IS NOT NULL))) AND order_status IN ('shipped', 'in_transit', 'out_for_delivery') THEN 1 ELSE NULL END) AS shiprocket_active,
+
+            COALESCE(SUM(CASE WHEN order_status = 'rto' THEN total_amount ELSE 0 END), 0) AS rto_orders_value,
+            COALESCE(SUM(CASE WHEN order_status = 'rto' THEN amount_paid_upfront ELSE 0 END), 0) AS rto_advance_secured_value
+        FROM orders
+    ");
+    $rtoData = $rtoStmt->fetch(PDO::FETCH_ASSOC);
+
+    $dispatched = (int)$rtoData['dispatched_orders'];
+    $rtoCount = (int)$rtoData['rto_orders'];
+    $overallRate = $dispatched > 0 ? round(($rtoCount / $dispatched) * 100, 1) : 0;
+
+    $jsDisp = (int)$rtoData['justshyp_dispatched'];
+    $jsRto = (int)$rtoData['justshyp_rto'];
+    $jsRate = $jsDisp > 0 ? round(($jsRto / $jsDisp) * 100, 1) : 0;
+
+    $srDisp = (int)$rtoData['shiprocket_dispatched'];
+    $srRto = (int)$rtoData['shiprocket_rto'];
+    $srRate = $srDisp > 0 ? round(($srRto / $srDisp) * 100, 1) : 0;
+
+    ApiResponse::success([
+        'delivery_rto_rate'       => $overallRate,
+        'rto_orders_count'        => $rtoCount,
+        'dispatched_orders_count' => $dispatched,
+        'delivered_orders_count'  => (int)$rtoData['delivered_orders'],
+        'pre_dispatch_cancelled'  => (int)$rtoData['pre_dispatch_cancelled'],
+        'rto_orders_value'        => (float)$rtoData['rto_orders_value'],
+        'rto_advance_secured'     => (float)$rtoData['rto_advance_secured_value'],
+        'justshyp' => [
+            'dispatched' => $jsDisp,
+            'delivered'  => (int)$rtoData['justshyp_delivered'],
+            'active'     => (int)$rtoData['justshyp_active'],
+            'rto'        => $jsRto,
+            'rto_rate'   => $jsRate,
+        ],
+        'shiprocket' => [
+            'dispatched' => $srDisp,
+            'delivered'  => (int)$rtoData['shiprocket_delivered'],
+            'active'     => (int)$rtoData['shiprocket_active'],
+            'rto'        => $srRto,
+            'rto_rate'   => $srRate,
+        ],
+    ], 'RTO summary calculated successfully');
 }
 
 // Handle Dynamic Delivery Partner Sync (Shiprocket | JustShyp)

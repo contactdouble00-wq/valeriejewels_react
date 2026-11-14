@@ -357,6 +357,19 @@ export const adminApi = {
     return res.data;
   },
 
+  async syncRtoPanel(provider = 'all', fromDate = null, toDate = null) {
+    const res = await request('/admin/orders.php?action=sync_rto_panel', {
+      method: 'POST',
+      body: JSON.stringify({ provider, from_date: fromDate, to_date: toDate }),
+    });
+    return res;
+  },
+
+  async getRtoSummary() {
+    const res = await request('/admin/orders.php?action=rto_summary');
+    return res.data;
+  },
+
   async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '', customMessage = '', notifyCustomer = true) {
     const res = await request('/admin/orders.php?action=update_status', {
       method: 'POST',

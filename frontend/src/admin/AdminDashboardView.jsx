@@ -12,7 +12,10 @@ import {
   ExternalLink,
   Star,
   CheckCircle2,
-  Clock
+  Clock,
+  Truck,
+  RotateCcw,
+  ShieldCheck
 } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { adminApi } from './adminApi';
@@ -24,6 +27,8 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showcaseModalOpen, setShowcaseModalOpen] = useState(false);
+  const [syncingRto, setSyncingRto] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState(null);
 
   const loadData = async () => {
     try {
@@ -36,6 +41,21 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleSyncRto = async (provider = 'justshyp') => {
+    try {
+      setSyncingRto(true);
+      setSyncFeedback(null);
+      const res = await adminApi.syncRtoPanel(provider);
+      setSyncFeedback({ type: 'success', message: res?.message || 'RTO sync completed' });
+      await loadData();
+    } catch (err) {
+      setSyncFeedback({ type: 'error', message: err.message || 'RTO sync failed' });
+    } finally {
+      setSyncingRto(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
     }
   };
 
@@ -156,21 +176,23 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           </div>
         </div>
 
-        {/* RTO / Cancellation Rate */}
+        {/* RTO / Delivery Return Rate */}
         <div className="luxury-card bg-white p-5 rounded-2xl border border-brand-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-bold">
-              Cancellation / RTO
+              Delivery RTO Rate
             </span>
-            <div className={`p-2 rounded-xl ${kpis.rto_cancellation_rate > 20 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+            <div className={`p-2 rounded-xl ${(kpis.rto_analytics?.delivery_rto_rate ?? kpis.rto_cancellation_rate) > 15 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
-            {kpis.rto_cancellation_rate}%
+            {kpis.rto_analytics ? `${kpis.rto_analytics.delivery_rto_rate}%` : `${kpis.rto_cancellation_rate}%`}
           </div>
-          <div className="text-[11px] text-brand-muted">
-            Controlled via Smart Partial COD deposit model
+          <div className="text-[11px] text-brand-muted flex items-center justify-between flex-wrap gap-1">
+            <span>JustShyp: <strong className="text-brand-tertiary">{kpis.rto_analytics?.providers?.justshyp?.rto_rate ?? 0}%</strong> ({kpis.rto_analytics?.providers?.justshyp?.rto ?? 0})</span>
+            <span>•</span>
+            <span>Shiprocket: <strong className="text-brand-tertiary">{kpis.rto_analytics?.providers?.shiprocket?.rto_rate ?? 0}%</strong> ({kpis.rto_analytics?.providers?.shiprocket?.rto ?? 0})</span>
           </div>
         </div>
       </div>
@@ -297,6 +319,212 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* MULTI-CARRIER LOGISTICS & RTO TELEMETRY (JUSTSHYP + SHIPROCKET) */}
+      {/* ========================================================================= */}
+      <section className="bg-white rounded-3xl p-6 sm:p-8 border border-brand-border shadow-sm space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-brand-border/60 pb-5">
+          <div className="space-y-1">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-caps uppercase tracking-wider font-bold">
+              <Truck className="w-3.5 h-3.5 text-blue-600" />
+              <span>Multi-Carrier Logistics & RTO Intelligence</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-editorial font-bold text-brand-tertiary">
+              Dual-Carrier Delivery & Return to Origin (RTO) Tracking
+            </h2>
+            <p className="text-xs text-brand-muted">
+              Synchronized with JustShyp NDR/RTO panel and Shiprocket logistics pipelines. Evaluates in-transit RTO returns separately from pre-dispatch customer cancellations.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSyncRto('justshyp')}
+              disabled={syncingRto}
+              className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${syncingRto ? 'animate-spin' : ''}`} />
+              <span>{syncingRto ? 'Syncing JustShyp...' : 'Sync JustShyp RTO Panel'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSyncRto('all')}
+              disabled={syncingRto}
+              className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[#FAF8FC] hover:bg-gray-100 border border-brand-border text-brand-tertiary text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+              title="Query both JustShyp and Shiprocket RTO panels"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingRto ? 'animate-spin' : ''}`} />
+              <span>Sync All Carriers</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab && onNavigateTab('orders')}
+              className="inline-flex items-center space-x-1 text-xs font-semibold text-brand-primary hover:text-brand-primary-hover px-2 py-1.5 cursor-pointer"
+            >
+              <span>View Synced Shipments</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Sync feedback notification banner if active */}
+        {syncFeedback && (
+          <div className={`p-3 rounded-xl text-xs flex items-center space-x-2 animate-in fade-in duration-150 ${
+            syncFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+          }`}>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{syncFeedback.message}</span>
+          </div>
+        )}
+
+        {/* 3 Telemetry Cards: JustShyp Panel, Shiprocket Panel, and Protection & Net Recovery */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* JustShyp Panel Card */}
+          <div className="rounded-2xl p-5 border border-blue-100 bg-gradient-to-br from-blue-50/40 via-white to-blue-50/10 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                <span className="font-bold text-sm text-brand-tertiary">JustShyp Logistics Panel</span>
+              </div>
+              <span className="text-[10px] font-caps tracking-wider uppercase font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                Primary Partner
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">Dispatched</div>
+                <div className="text-xl font-bold font-mono text-brand-tertiary mt-0.5">
+                  {kpis.rto_analytics?.providers?.justshyp?.dispatched ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">Delivered</div>
+                <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
+                  {kpis.rto_analytics?.providers?.justshyp?.delivered ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">In Transit</div>
+                <div className="text-xl font-bold font-mono text-sky-700 mt-0.5">
+                  {kpis.rto_analytics?.providers?.justshyp?.active ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-rose-600 font-bold">RTO Returned</div>
+                <div className="text-xl font-bold font-mono text-rose-600 mt-0.5">
+                  {kpis.rto_analytics?.providers?.justshyp?.rto ?? 0}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-blue-100 flex items-center justify-between text-xs">
+              <span className="text-brand-muted">JustShyp RTO Rate:</span>
+              <span className="font-bold font-mono text-brand-tertiary">
+                {kpis.rto_analytics?.providers?.justshyp?.rto_rate ?? 0}%
+              </span>
+            </div>
+          </div>
+
+          {/* Shiprocket Panel Card */}
+          <div className="rounded-2xl p-5 border border-purple-100 bg-gradient-to-br from-purple-50/40 via-white to-purple-50/10 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+                <span className="font-bold text-sm text-brand-tertiary">Shiprocket Panel</span>
+              </div>
+              <span className="text-[10px] font-caps tracking-wider uppercase font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                Active Partner
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="bg-white p-3 rounded-xl border border-purple-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">Dispatched</div>
+                <div className="text-xl font-bold font-mono text-brand-tertiary mt-0.5">
+                  {kpis.rto_analytics?.providers?.shiprocket?.dispatched ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-purple-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">Delivered</div>
+                <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
+                  {kpis.rto_analytics?.providers?.shiprocket?.delivered ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-purple-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-brand-muted">In Transit</div>
+                <div className="text-xl font-bold font-mono text-sky-700 mt-0.5">
+                  {kpis.rto_analytics?.providers?.shiprocket?.active ?? 0}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-2xs">
+                <div className="text-[10px] font-caps uppercase tracking-wider text-rose-600 font-bold">RTO Returned</div>
+                <div className="text-xl font-bold font-mono text-rose-600 mt-0.5">
+                  {kpis.rto_analytics?.providers?.shiprocket?.rto ?? 0}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-purple-100 flex items-center justify-between text-xs">
+              <span className="text-brand-muted">Shiprocket RTO Rate:</span>
+              <span className="font-bold font-mono text-brand-tertiary">
+                {kpis.rto_analytics?.providers?.shiprocket?.rto_rate ?? 0}%
+              </span>
+            </div>
+          </div>
+
+          {/* RTO Risk & Protection Card */}
+          <div className="rounded-2xl p-5 border border-brand-border bg-[#FAF8FC] space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-brand-tertiary">RTO Risk Protection</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between py-1 border-b border-brand-border/60">
+                  <span className="text-brand-muted">Total Dispatched Across Carriers:</span>
+                  <span className="font-bold font-mono text-brand-tertiary">
+                    {kpis.rto_analytics?.total_dispatched ?? 0} orders
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-brand-border/60">
+                  <span className="text-brand-muted">Total RTO Returns:</span>
+                  <span className="font-bold font-mono text-rose-600">
+                    {kpis.rto_analytics?.total_rto ?? 0} orders
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-brand-border/60">
+                  <span className="text-brand-muted">Pre-Dispatch Cancellations:</span>
+                  <span className="font-bold font-mono text-brand-tertiary">
+                    {kpis.rto_analytics?.pre_dispatch_cancelled ?? 0} orders
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-brand-muted">Advance Secured on RTOs:</span>
+                  <span className="font-bold font-mono text-emerald-700">
+                    ₹{Number(kpis.rto_analytics?.advance_secured ?? 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-brand-border text-[11px] text-brand-muted">
+              💡 Partial COD deposits safeguard reverse shipping overhead on returned parcels.
+            </div>
+          </div>
         </div>
       </section>
 
