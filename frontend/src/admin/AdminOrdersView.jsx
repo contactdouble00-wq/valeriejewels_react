@@ -85,7 +85,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
   const [syncingSrId, setSyncingSrId] = useState(null);
   const [syncingJsId, setSyncingJsId] = useState(null);
   const [batchSyncingJs, setBatchSyncingJs] = useState(false);
-  const [syncingRto, setSyncingRto] = useState(false);
 
   // Multi-carrier Rate Comparison & Dispatch State
   const [rateComparisonModalOpen, setRateComparisonModalOpen] = useState(false);
@@ -691,8 +690,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         if (ord.order_status !== 'processing' && ord.order_status !== 'shipped') return false;
       } else if (exportCsvStatus === 'delivered') {
         if (ord.order_status !== 'delivered') return false;
-      } else if (exportCsvStatus === 'rto') {
-        if (ord.order_status !== 'rto') return false;
       }
 
       // 2. Date Range Filter
@@ -964,19 +961,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       showToast(err.message || 'Batch sync to JustShyp failed');
     } finally {
       setBatchSyncingJs(false);
-    }
-  };
-
-  const handleSyncRtoPanel = async (provider = 'justshyp') => {
-    try {
-      setSyncingRto(true);
-      const res = await adminApi.syncRtoPanel(provider);
-      showToast(res?.message || '✓ Return to Origin (RTO) panel synced successfully!');
-      await loadOrders();
-    } catch (err) {
-      showToast(`❌ Failed to sync RTO panel: ${err.message}`);
-    } finally {
-      setSyncingRto(false);
     }
   };
 
@@ -1326,13 +1310,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
             <span>Cancelled</span>
           </span>
         );
-      case 'rto':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-300 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-            <span>RTO (Returned)</span>
-          </span>
-        );
       case 'pending':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50/80 text-amber-700 border border-amber-200/70 whitespace-nowrap">
@@ -1598,7 +1575,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <option value="confirmed">Confirmed (Ready to Pack)</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
-              <option value="rto">RTO (Returned to Origin)</option>
               <option value="on_hold">On Hold</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -2355,7 +2331,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       {activeOrdersViewMode === 'shiprocket_synced' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Logistics Performance Metrics Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
               <div className="flex items-center justify-between text-brand-muted">
                 <span className="text-[10px] font-caps tracking-wider uppercase font-bold">Total Synced Shipments</span>
@@ -2365,7 +2341,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 {syncedOrders.length}
               </div>
               <div className="text-[10px] text-brand-muted">
-                Pushed to JustShyp / Shiprocket
+                Pushed to Shiprocket with zero mismatch
               </div>
             </div>
 
@@ -2375,7 +2351,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                 <ShieldCheck className="w-4 h-4 text-sky-600" />
               </div>
               <div className="text-2xl font-bold font-mono text-sky-700">
-                {syncedOrders.filter((o) => o.shiprocket_awb || o.provider_awb).length}
+                {syncedOrders.filter((o) => o.shiprocket_awb).length}
               </div>
               <div className="text-[10px] text-brand-muted">
                 Waybill assigned & tracking live
@@ -2392,19 +2368,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               </div>
               <div className="text-[10px] text-brand-muted">
                 Successfully delivered to customers
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-rose-200 shadow-2xs space-y-1">
-              <div className="flex items-center justify-between text-brand-muted">
-                <span className="text-[10px] font-caps tracking-wider uppercase font-bold text-rose-700">RTO Returned</span>
-                <RotateCcw className="w-4 h-4 text-rose-600" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-rose-700">
-                {syncedOrders.filter((o) => o.order_status === 'rto').length}
-              </div>
-              <div className="text-[10px] text-brand-muted">
-                {syncedOrders.filter((o) => o.order_status === 'rto' && String(o.delivery_provider).toLowerCase() === 'justshyp').length} JustShyp • {syncedOrders.filter((o) => o.order_status === 'rto' && String(o.delivery_provider).toLowerCase() !== 'justshyp').length} Shiprocket
               </div>
             </div>
 
@@ -2482,7 +2445,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <option value="confirmed">Confirmed (Ready to Pack)</option>
                   <option value="shipped">Shipped / In Transit</option>
                   <option value="delivered">Delivered</option>
-                  <option value="rto">RTO (Returned to Origin)</option>
                   <option value="on_hold">On Hold</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
@@ -2502,18 +2464,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                     Reset Filters
                   </button>
                 )}
-
-                {/* Sync JustShyp RTO Panel */}
-                <button
-                  type="button"
-                  onClick={() => handleSyncRtoPanel('justshyp')}
-                  disabled={syncingRto}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
-                  title="Scan JustShyp NDR/RTO panel and synchronize returned parcel statuses"
-                >
-                  <RotateCcw className={`w-3.5 h-3.5 text-blue-600 ${syncingRto ? 'animate-spin' : ''}`} />
-                  <span>{syncingRto ? 'Syncing RTO...' : 'Sync JustShyp RTO'}</span>
-                </button>
 
                 {/* Refresh Shipments */}
                 <button
@@ -3832,15 +3782,6 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
                     <span>Mark Delivered</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleStatusChange('rto')}
-                    disabled={updatingStatus}
-                    className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Mark RTO (Returned)</span>
                   </button>
 
                   <button

@@ -127,10 +127,8 @@ export const adminApi = {
     }
   },
   // Dashboard
-  async getDashboard(params = {}) {
-    const qs = new URLSearchParams(params).toString();
-    const endpoint = `/admin/dashboard.php${qs ? `?${qs}` : ''}`;
-    const res = await request(endpoint);
+  async getDashboard() {
+    const res = await request('/admin/dashboard.php');
     return res.data;
   },
 
@@ -356,19 +354,6 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ order_id: orderId }),
     });
-    return res.data;
-  },
-
-  async syncRtoPanel(provider = 'all', fromDate = null, toDate = null) {
-    const res = await request('/admin/orders.php?action=sync_rto_panel', {
-      method: 'POST',
-      body: JSON.stringify({ provider, from_date: fromDate, to_date: toDate }),
-    });
-    return res;
-  },
-
-  async getRtoSummary() {
-    const res = await request('/admin/orders.php?action=rto_summary');
     return res.data;
   },
 
