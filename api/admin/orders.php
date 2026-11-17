@@ -256,6 +256,132 @@ if ($method === 'GET') {
         ApiResponse::success($logs, 'Sent email customer logs retrieved successfully');
     }
 
+    // Action: Fetch Live JustShyp RTO & NDR Shipments
+    if ($action === 'justshyp_rto' || $action === 'rto_shipments') {
+        require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+        try {
+            $provider = DeliveryProviderFactory::getProvider('justshyp');
+            
+            $ndrType = trim($_GET['ndr_type'] ?? 'all'); // 'all' | 'rto' | 'initiated'
+            $fromDate = trim($_GET['from_date'] ?? date('Y-m-d', strtotime('-60 days')));
+            $toDate = trim($_GET['to_date'] ?? date('Y-m-d'));
+
+            $shipments = [];
+            $rtoCount = 0;
+            $initiatedCount = 0;
+
+            // Fetch RTO (returning to origin)
+            if ($ndrType === 'all' || $ndrType === 'rto') {
+                $rtoRes = $provider->listNdr(['ndr_type' => 'rto', 'from_date' => $fromDate, 'to_date' => $toDate]);
+                if (!empty($rtoRes['success']) && is_array($rtoRes['ndr_shipments'])) {
+                    foreach ($rtoRes['ndr_shipments'] as $s) {
+                        $s['stage'] = 'rto';
+                        $s['stage_label'] = 'Confirmed RTO (Returning)';
+                        $shipments[] = $s;
+                        $rtoCount++;
+                    }
+                }
+            }
+
+            // Fetch NDR Initiated (attempted / customer unavailable)
+            if ($ndrType === 'all' || $ndrType === 'initiated') {
+                $initRes = $provider->listNdr(['ndr_type' => 'initiated', 'from_date' => $fromDate, 'to_date' => $toDate]);
+                if (!empty($initRes['success']) && is_array($initRes['ndr_shipments'])) {
+                    foreach ($initRes['ndr_shipments'] as $s) {
+                        $s['stage'] = 'initiated';
+                        $s['stage_label'] = 'NDR Initiated (Action Required)';
+                        $shipments[] = $s;
+                        $initiatedCount++;
+                    }
+                }
+            }
+
+            // Enrich shipments with local orders table details (match on channel_order_id or waybill_number)
+            if (!empty($shipments)) {
+                $orderNums = [];
+                $awbs = [];
+                foreach ($shipments as $s) {
+                    if (!empty($s['channel_order_id'])) $orderNums[] = trim($s['channel_order_id']);
+                    if (!empty($s['waybill_number'])) $awbs[] = trim($s['waybill_number']);
+                }
+                $orderNums = array_unique(array_filter($orderNums));
+                $awbs = array_unique(array_filter($awbs));
+
+                $orderLookup = [];
+                if (!empty($orderNums) || !empty($awbs)) {
+                    $clauses = [];
+                    $lookupParams = [];
+                    if (!empty($orderNums)) {
+                        $placeholders = implode(',', array_fill(0, count($orderNums), '?'));
+                        $clauses[] = "order_number IN ($placeholders)";
+                        $lookupParams = array_merge($lookupParams, array_values($orderNums));
+                    }
+                    if (!empty($awbs)) {
+                        $placeholders = implode(',', array_fill(0, count($awbs), '?'));
+                        $clauses[] = "provider_awb IN ($placeholders) OR shiprocket_awb IN ($placeholders)";
+                        $lookupParams = array_merge($lookupParams, array_values($awbs), array_values($awbs));
+                    }
+                    $whereClause = implode(' OR ', $clauses);
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            id, order_number, customer_name, customer_phone, customer_email,
+                            shipping_address_line1, shipping_address_line2, city, state, pincode,
+                            total_amount, amount_paid_upfront, amount_due_on_delivery, payment_type, payment_status,
+                            order_status, courier_name, provider_awb, shiprocket_awb, created_at,
+                            (SELECT COUNT(*) FROM order_items WHERE order_id = orders.id) AS items_count,
+                            (SELECT product_name FROM order_items WHERE order_id = orders.id ORDER BY id ASC LIMIT 1) AS first_item_name
+                        FROM orders 
+                        WHERE $whereClause
+                    ");
+                    $stmt->execute($lookupParams);
+                    $matchedOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($matchedOrders as $mo) {
+                        if (!empty($mo['order_number'])) $orderLookup['ord_' . $mo['order_number']] = $mo;
+                        if (!empty($mo['provider_awb'])) $orderLookup['awb_' . $mo['provider_awb']] = $mo;
+                        if (!empty($mo['shiprocket_awb'])) $orderLookup['awb_' . $mo['shiprocket_awb']] = $mo;
+                    }
+                }
+
+                $totalRtoValue = 0;
+                foreach ($shipments as &$s) {
+                    $chId = trim($s['channel_order_id'] ?? '');
+                    $wb = trim($s['waybill_number'] ?? '');
+                    $matched = $orderLookup['ord_' . $chId] ?? ($orderLookup['awb_' . $wb] ?? null);
+
+                    $s['order'] = $matched;
+                    $s['customer_name'] = $matched['customer_name'] ?? 'Customer';
+                    $s['customer_phone'] = $matched['customer_phone'] ?? '';
+                    $s['customer_email'] = $matched['customer_email'] ?? '';
+                    $s['city'] = $matched['city'] ?? '';
+                    $s['state'] = $matched['state'] ?? '';
+                    $s['pincode'] = $matched['pincode'] ?? '';
+                    $s['address'] = trim(($matched['shipping_address_line1'] ?? '') . ' ' . ($matched['shipping_address_line2'] ?? ''));
+                    $amt = !empty($matched['total_amount']) ? (float)$matched['total_amount'] : 0;
+                    $s['total_amount'] = $amt;
+                    $totalRtoValue += $amt;
+                    $s['payment_type'] = $matched['payment_type'] ?? 'cod';
+                    $s['payment_status'] = $matched['payment_status'] ?? 'pending';
+                    $s['items_count'] = !empty($matched['items_count']) ? (int)$matched['items_count'] : 1;
+                    $s['first_item_name'] = $matched['first_item_name'] ?? 'Valerie Fine Jewelry';
+                    $s['tracking_url'] = "https://backend.justshyp.com/tracking?awb=" . urlencode($wb);
+                }
+                unset($s);
+            }
+
+            ApiResponse::success([
+                'total_count'     => count($shipments),
+                'rto_count'       => $rtoCount,
+                'initiated_count' => $initiatedCount,
+                'total_rto_value' => $totalRtoValue ?? 0,
+                'shipments'       => $shipments,
+                'provider'        => 'justshyp',
+            ], 'JustShyp RTO/NDR shipments fetched successfully');
+        } catch (Throwable $e) {
+            ApiResponse::error('Failed to fetch RTO from JustShyp: ' . $e->getMessage(), 500);
+        }
+    }
+
     $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if ($id > 0) {
@@ -303,6 +429,11 @@ if ($method === 'GET') {
             $order['email_logs'] = [];
         }
         $order['emails_sent_count'] = count($order['email_logs'] ?? []);
+
+        // Normalize any lingering RTO status on inspected order
+        if ($order['order_status'] === 'rto') {
+            $order['order_status'] = (!empty($order['provider_awb']) || !empty($order['shiprocket_awb'])) ? 'shipped' : ((!empty($order['provider_order_id']) || !empty($order['shiprocket_order_id'])) ? 'processing' : 'confirmed');
+        }
 
         ApiResponse::success($order, 'Order retrieved successfully');
     }
@@ -391,6 +522,24 @@ if ($method === 'GET') {
         }
     } catch (Throwable $e) {}
 
+    // Auto-heal check: ensure no order has 'rto' status in the orders section.
+    // In orders section, status reflects fulfillment lifecycle (pending, confirmed, processing, shipped, delivered, cancelled).
+    // RTO shipments are tracked in the dedicated RTO panel fetched live from JustShyp.
+    try {
+        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
+        $pdo->exec("
+            UPDATE orders 
+            SET order_status = CASE 
+                WHEN (provider_awb IS NOT NULL AND provider_awb != '') OR (shiprocket_awb IS NOT NULL AND shiprocket_awb != '') THEN 'shipped'
+                WHEN (provider_order_id IS NOT NULL AND provider_order_id != '') OR (shiprocket_order_id IS NOT NULL AND shiprocket_order_id != '') THEN 'processing'
+                WHEN payment_status IN ('paid', 'partial_paid') THEN 'confirmed'
+                ELSE 'pending'
+            END,
+            updated_at = $nowSql
+            WHERE order_status = 'rto'
+        ");
+    } catch (Throwable $e) {}
+
     // Autonomous payment recovery sweep: automatically emails pending (>5 mins) and failed orders
     try {
         AutoRecoveryService::runSweep(10, 5, false);
@@ -427,6 +576,14 @@ if ($method === 'GET') {
     ");
     $stmt->execute($params);
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Normalize any lingering RTO status in memory
+    foreach ($orders as &$ord) {
+        if ($ord['order_status'] === 'rto') {
+            $ord['order_status'] = (!empty($ord['provider_awb']) || !empty($ord['shiprocket_awb'])) ? 'shipped' : ((!empty($ord['provider_order_id']) || !empty($ord['shiprocket_order_id'])) ? 'processing' : 'confirmed');
+        }
+    }
+    unset($ord);
 
     ApiResponse::success($orders, 'Orders retrieved successfully');
 }
@@ -727,6 +884,32 @@ if ($action === 'sync_justshyp') {
     }
 }
 
+// Handle JustShyp NDR Action (Reattempt, Update Phone/Address, Confirm RTO)
+if ($action === 'justshyp_ndr_action') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    try {
+        $provider = DeliveryProviderFactory::getProvider('justshyp');
+        $awb = trim($input['awb'] ?? '');
+        $ndrAction = trim($input['action'] ?? 'reattempt'); // reattempt, rto, update_phone, update_address
+        if (empty($awb)) {
+            ApiResponse::error('AWB / Waybill number is required', 422);
+        }
+        $res = $provider->ndrAction([
+            'awb'     => $awb,
+            'action'  => $ndrAction,
+            'phone'   => trim($input['phone'] ?? ''),
+            'address' => trim($input['address'] ?? ''),
+        ]);
+        if (!empty($res['success'])) {
+            ApiResponse::success($res, "JustShyp NDR action '{$ndrAction}' submitted successfully!");
+        } else {
+            ApiResponse::error($res['message'] ?? 'Failed to submit action to JustShyp', 400, $res);
+        }
+    } catch (Throwable $e) {
+        ApiResponse::error('JustShyp NDR action error: ' . $e->getMessage(), 500);
+    }
+}
+
 // Handle Dynamic Delivery Partner Sync (Shiprocket | JustShyp)
 if ($action === 'sync_shipment') {
     require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
@@ -978,7 +1161,7 @@ if ($action === 'update_status') {
     $orderId = (int)($input['order_id'] ?? 0);
     $newStatus = trim($input['order_status'] ?? '');
 
-    $allowedStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'on_hold', 'failed', 'cancelled', 'rto'];
+    $allowedStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'on_hold', 'failed', 'cancelled'];
     if ($orderId <= 0 || !in_array($newStatus, $allowedStatuses, true)) {
         ApiResponse::error('Invalid order ID or status value', 422);
     }

@@ -22,6 +22,7 @@ import {
   BarChart3,
   Wallet,
   Lock,
+  RotateCcw,
 } from 'lucide-react';
 import { adminApi } from './adminApi';
 import AdminLogin from './AdminLogin';
@@ -78,7 +79,7 @@ export default function AdminPortal({ onReturnToStore }) {
     { id: 'reviews', label: 'Product Reviews & Ratings', icon: Star, badge: 'Full Control' },
     { id: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag },
     { id: 'payments', label: 'Fastrr & Payments', icon: Zap, badge: '1-Click' },
-    { id: 'customers', label: 'Customers & RTO', icon: Users },
+    { id: 'customers', label: 'RTO & Customers', icon: RotateCcw, badge: 'JustShyp' },
     { id: 'coupons', label: 'Promotions & Vouchers', icon: Tag },
     { id: 'policies', label: 'Legal & Policies', icon: Scale, badge: 'DPDP / Legal' },
     { id: 'faqs', label: 'Customer FAQs', icon: HelpCircle, badge: 'Live FAQs' },

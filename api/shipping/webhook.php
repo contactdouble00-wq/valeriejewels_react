@@ -64,8 +64,8 @@ try {
         'shipped'            => 'shipped',
         'out_for_delivery'   => 'out_for_delivery',
         'delivered'          => 'delivered',
-        'rto_initiated'      => 'rto',
-        'rto_delivered'      => 'rto',
+        'rto_initiated'      => 'shipped',
+        'rto_delivered'      => 'shipped',
         'cancelled'          => 'cancelled',
     ];
 

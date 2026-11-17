@@ -290,9 +290,19 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         risk_tier: riskFilter,
         jhumka_only: jhumkaOnly ? 1 : 0,
       });
-      setOrders(res || []);
-      if (res && Array.isArray(res)) {
-        const validIds = new Set(res.map((o) => o.id));
+      const rawList = res || [];
+      const sanitized = rawList.map((ord) => {
+        if (ord.order_status === 'rto') {
+          return {
+            ...ord,
+            order_status: (ord.provider_awb || ord.shiprocket_awb) ? 'shipped' : ((ord.provider_order_id || ord.shiprocket_order_id) ? 'processing' : 'confirmed'),
+          };
+        }
+        return ord;
+      });
+      setOrders(sanitized);
+      if (sanitized.length > 0) {
+        const validIds = new Set(sanitized.map((o) => o.id));
         setSelectedOrderIds((prev) => prev.filter((id) => validIds.has(id)));
       }
     } catch (err) {
@@ -1333,6 +1343,21 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50/80 text-amber-700 border border-amber-200/70 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
             <span>Pending</span>
+          </span>
+        );
+      case 'processing':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-800 border border-purple-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+            <span>Processing</span>
+          </span>
+        );
+      case 'rto':
+        // RTO is tracked in its dedicated panel; normalize to Shipped in main orders list
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/80 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+            <span>Shipped</span>
           </span>
         );
       case 'confirmed':

@@ -357,6 +357,20 @@ export const adminApi = {
     return res.data;
   },
 
+  async getJustShypRto(params = {}) {
+    const qs = new URLSearchParams({ action: 'justshyp_rto', ...params }).toString();
+    const res = await request(`/admin/orders.php?${qs}`);
+    return res.data;
+  },
+
+  async submitJustShypNdrAction(params = {}) {
+    const res = await request('/admin/orders.php?action=justshyp_ndr_action', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    return res;
+  },
+
   async updateOrderStatus(orderId, orderStatus, awbCode = '', courierPartner = '', customMessage = '', notifyCustomer = true) {
     const res = await request('/admin/orders.php?action=update_status', {
       method: 'POST',
