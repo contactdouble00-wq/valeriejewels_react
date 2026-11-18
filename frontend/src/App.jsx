@@ -47,6 +47,7 @@ import OrderConfirmationPage from './components/OrderConfirmationPage';
 import ContactPage from './components/ContactPage';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import Footer from './components/Footer';
+import { initPixelWithMatching } from './utils/metaPixel';
 
 const AdminPortal = React.lazy(() =>
   import('./admin/AdminPortal').catch((err) => {
@@ -266,6 +267,25 @@ function StorefrontContent({
     isAuthenticated,
     openAuthModal
   } = useAuth();
+
+  // Meta Pixel Manual Advanced Matching
+  // Re-initializes pixel with matching data as soon as user data becomes available (login, signup, or saved details)
+  useEffect(() => {
+    if (user && (user.email || user.phone)) {
+      initPixelWithMatching(user);
+    } else {
+      // Guest visitor: check if contact details were previously saved in checkout
+      try {
+        const saved = localStorage.getItem('valerie_saved_checkout_address');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.email || parsed.phone)) {
+            initPixelWithMatching(parsed);
+          }
+        }
+      } catch {}
+    }
+  }, [user?.id, user?.email, user?.phone]);
 
   // Dynamic Site Content from context
   const { content } = useSiteContent();

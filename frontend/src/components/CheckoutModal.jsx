@@ -38,6 +38,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { trackGABeginCheckout, trackGAPurchase } from '../utils/analytics';
+import { initPixelWithMatching } from '../utils/metaPixel';
 
 // Pincode directory lookup helper for instant city/state auto-fill
 const PINCODE_MAP = {
@@ -266,6 +267,22 @@ export default function CheckoutModal({
       setIsAddressModalOpen(true);
     }
   }, [user, isOpen]);
+
+  // Meta Pixel Manual Advanced Matching for Checkout
+  useEffect(() => {
+    if (isOpen && (email || phone)) {
+      initPixelWithMatching({
+        name,
+        email,
+        phone,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        pincode,
+      });
+    }
+  }, [isOpen, email, phone, city, state, pincode]);
 
   // InitiateCheckout tracking
   const hasTrackedCheckout = useRef(false);
@@ -504,6 +521,18 @@ export default function CheckoutModal({
       }));
     } catch (err) {}
 
+    // Update Meta Pixel with customer address & contact details
+    initPixelWithMatching({
+      name: name.trim(),
+      email: email.trim(),
+      phone: cleanP,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: pincode.trim(),
+    });
+
     setAddressErrors({});
     setAddressModalError(null);
     setSubmitError(null);
@@ -738,6 +767,18 @@ export default function CheckoutModal({
           pincode: pincode.trim(),
         }));
       } catch (err) {}
+
+      // Refresh Meta Advanced Matching before initiating checkout transaction
+      initPixelWithMatching({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        addressLine1: addressLine1.trim(),
+        addressLine2: addressLine2.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+      });
 
       const formattedItems = cartItems.map((item) => ({
         id: item.productId || item.bundleId || item.id,

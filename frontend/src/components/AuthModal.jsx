@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
+import { initPixelWithMatching } from '../utils/metaPixel';
 
 export default function AuthModal({ onOpenTracking }) {
   const {
@@ -47,12 +48,17 @@ export default function AuthModal({ onOpenTracking }) {
     setErrorMessage(null);
 
     try {
+      let authedUser = null;
       if (authModalMode === 'register') {
-        await register({ name, email, phone, password });
+        authedUser = await register({ name, email, phone, password });
       } else if (authModalMode === 'admin') {
-        await login({ email, password, isAdminPortal: true });
+        authedUser = await login({ email, password, isAdminPortal: true });
       } else {
-        await login({ email, password, isAdminPortal: false });
+        authedUser = await login({ email, password, isAdminPortal: false });
+      }
+
+      if (authedUser && authModalMode !== 'admin') {
+        initPixelWithMatching(authedUser);
       }
     } catch (err) {
       setErrorMessage(err.message || 'Authentication failed. Please check your credentials.');

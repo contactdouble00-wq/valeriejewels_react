@@ -8,6 +8,8 @@
  * - purchase
  */
 
+import { initPixelWithMatching } from './metaPixel';
+
 const TELEMETRY_STORAGE_KEY = 'valerie_live_telemetry_events';
 const MAX_TELEMETRY_ITEMS = 60;
 
@@ -213,8 +215,20 @@ export const trackPurchase = (order) => {
     item_variant: item.variant_title || item.variant || undefined,
   }));
 
-  // GTM dataLayer push
+  // GTM dataLayer push & Meta Pixel Manual Advanced Matching
   if (typeof window !== 'undefined') {
+    // Re-initialize/enrich Meta Pixel Advanced Matching with confirmed order buyer data
+    try {
+      initPixelWithMatching({
+        name: order.customer_name || order.name,
+        email: order.customer_email || order.email,
+        phone: order.customer_phone || order.phone,
+        city: order.shipping_city || order.city,
+        state: order.shipping_state || order.state,
+        pincode: order.shipping_pincode || order.pincode,
+      });
+    } catch (_) {}
+
     window.dataLayer = window.dataLayer || [];
 
     // Step 1: Clear the previous ecommerce object to prevent parameter leakage

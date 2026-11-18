@@ -20,6 +20,7 @@ import {
 import InstagramIcon from './InstagramIcon';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiService } from '../services/api';
+import { initPixelWithMatching } from '../utils/metaPixel';
 
 export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaqs, onOpenPolicy }) {
   const { content } = useSiteContent();
@@ -109,6 +110,13 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
 
     setErrorMsg('');
     setSubmitting(true);
+
+    // Update Meta Advanced Matching with submitted contact details
+    initPixelWithMatching({
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+    });
 
     try {
       const res = await apiService.submitContactInquiry(formData);

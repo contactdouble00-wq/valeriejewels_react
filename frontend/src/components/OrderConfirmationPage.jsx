@@ -27,6 +27,7 @@ import {
 import { apiService } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { trackPurchase } from '../utils/analytics';
+import { initPixelWithMatching } from '../utils/metaPixel';
 
 export default function OrderConfirmationPage({
   orderId: initialOrderId,
@@ -173,7 +174,10 @@ export default function OrderConfirmationPage({
           cartClearedRef.current = true;
         }
 
-        // 2. Fire deduplicated GTM / Meta conversion purchase event
+        // Meta Pixel Manual Advanced Matching
+        initPixelWithMatching(fetchedOrder);
+
+        // 3. Fire deduplicated GTM / Meta conversion purchase event
         trackPurchase({
           ...fetchedOrder,
           items: fetchedItems,
