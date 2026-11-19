@@ -141,6 +141,38 @@ export default function CheckoutModal({
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [showAllCoupons, setShowAllCoupons] = useState(false);
 
+  // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
+  const [paymentType, setPaymentType] = useState(initialPaymentType || 'full_prepaid');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    initialPaymentType === 'partial' ? 'partial_cod' : initialPaymentType === 'cod' ? 'cod' : 'upi'
+  );
+  const [selectedUpiApp, setSelectedUpiApp] = useState('google_pay');
+  const [showUpiInput, setShowUpiInput] = useState(false);
+  const [upiIdInput, setUpiIdInput] = useState('');
+
+  // Server Calculation & Submission States
+  const [calcData, setCalcData] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calcError, setCalcError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+
+  // Coupon Action Handlers
+  const handleApplyCoupon = (code) => {
+    const codeToApply = String(code).trim().toUpperCase();
+    setCouponInput(codeToApply);
+    setCouponCode(codeToApply);
+    setCouponApplied(true);
+    setCouponError('');
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponApplied(false);
+    setCouponInput('');
+    setCouponError('');
+  };
+
   // Load available promotional coupons for direct 1-click application
   useEffect(() => {
     if (isOpen) {
@@ -159,35 +191,12 @@ export default function CheckoutModal({
     }
   }, [calcData?.available_coupons]);
 
-  const handleApplyCoupon = (code) => {
-    const codeToApply = String(code).trim().toUpperCase();
-    setCouponInput(codeToApply);
-    setCouponCode(codeToApply);
-    setCouponApplied(true);
-    setCouponError('');
-  };
-
-  const handleRemoveCoupon = () => {
-    setCouponApplied(false);
-    setCouponInput('');
-    setCouponError('');
-  };
-
   // Keep couponCode in sync if activePromoCode loads dynamically and user hasn't typed anything
   useEffect(() => {
     if (!couponApplied && !couponInput.trim() && activePromoCode) {
       setCouponCode(activePromoCode);
     }
   }, [activePromoCode, couponApplied, couponInput]);
-
-  // Payment Selection: 'full_prepaid' | 'partial' | 'cod'
-  const [paymentType, setPaymentType] = useState(initialPaymentType || 'full_prepaid');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    initialPaymentType === 'partial' ? 'partial_cod' : initialPaymentType === 'cod' ? 'cod' : 'upi'
-  );
-  const [selectedUpiApp, setSelectedUpiApp] = useState('google_pay');
-  const [showUpiInput, setShowUpiInput] = useState(false);
-  const [upiIdInput, setUpiIdInput] = useState('');
 
   // Sync initialPaymentType whenever modal opens or initialPaymentType prop changes
   useEffect(() => {
@@ -204,14 +213,6 @@ export default function CheckoutModal({
       }
     }
   }, [isOpen, initialPaymentType]);
-
-  // Server Calculation & Submission States
-  const [calcData, setCalcData] = useState(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [calcError, setCalcError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [placedOrder, setPlacedOrder] = useState(null);
-  const [submitError, setSubmitError] = useState(null);
 
   // Auto-fallback payment selection if currently selected method is disabled by admin
   useEffect(() => {
