@@ -410,6 +410,72 @@ export const apiService = {
   },
 
   /**
+   * Get available promotional coupons for storefront checkout
+   */
+  async getAvailableCoupons() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/coupons/list.php`, {
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const json = await response.json();
+        if (Array.isArray(json?.data) && json.data.length > 0) {
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn('getAvailableCoupons fetch error:', e);
+    }
+    // High-converting default promo coupons fallback
+    return [
+      {
+        id: 4,
+        code: 'VALERIE10',
+        discount_type: 'fixed',
+        discount_value: 50,
+        min_order_amount: 0,
+        max_discount_amount: 50,
+        title: '₹50 FLAT OFF',
+        description: 'Flat ₹50 discount on your order',
+        terms: 'No minimum order required',
+      },
+      {
+        id: 5,
+        code: 'FESTIVE20',
+        discount_type: 'percentage',
+        discount_value: 20,
+        min_order_amount: 999,
+        max_discount_amount: null,
+        title: '20% OFF',
+        description: 'Save 20% on all handcrafted jewelry',
+        terms: 'Valid on orders above ₹999',
+      },
+      {
+        id: 1,
+        code: 'WELCOME10',
+        discount_type: 'percentage',
+        discount_value: 10,
+        min_order_amount: 999,
+        max_discount_amount: 500,
+        title: '10% OFF',
+        description: 'Get 10% off up to ₹500',
+        terms: 'Valid on orders above ₹999',
+      },
+      {
+        id: 3,
+        code: 'VALERIEVIP',
+        discount_type: 'percentage',
+        discount_value: 15,
+        min_order_amount: 1999,
+        max_discount_amount: 1000,
+        title: '15% OFF',
+        description: 'Get 15% off up to ₹1,000 on luxury sets',
+        terms: 'Valid on orders above ₹1,999',
+      },
+    ];
+  },
+
+  /**
    * Phase 5: Initiate checkout & create order in MySQL
    */
   async initiateCheckout(checkoutPayload, token = null) {

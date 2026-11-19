@@ -172,6 +172,74 @@ try {
     $netSubtotal = round(max(0.0, $subtotal - $discountAmount), 2);
     $totalSavings = round(($totalMrp - $subtotal) + $discountAmount, 2);
 
+    // Fetch active promotional coupons and evaluate dynamic applicability for this cart
+    $availableCoupons = [];
+    try {
+        $cStmt = $pdo->query("
+            SELECT id, code, discount_type, discount_value, min_order_amount, max_discount_amount, usage_limit, used_count
+            FROM coupons 
+            WHERE is_active = 1
+            ORDER BY min_order_amount ASC, discount_value DESC
+        ");
+        $allCoupons = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($allCoupons as $c) {
+            // Check usage limit
+            if ($c['usage_limit'] !== null && (int)$c['usage_limit'] > 0 && (int)$c['used_count'] >= (int)$c['usage_limit']) {
+                continue;
+            }
+
+            $cMin = (float)$c['min_order_amount'];
+            $cVal = (float)$c['discount_value'];
+            $isApplicable = ($subtotal >= $cMin);
+            $shortfall = $isApplicable ? 0.0 : ceil($cMin - $subtotal);
+
+            // Compute potential discount on current cart
+            $potentialSavings = 0.0;
+            if ($c['discount_type'] === 'percentage') {
+                $potentialSavings = ($subtotal * $cVal) / 100.0;
+                if ($c['max_discount_amount'] !== null && (float)$c['max_discount_amount'] > 0) {
+                    $potentialSavings = min($potentialSavings, (float)$c['max_discount_amount']);
+                }
+            } else {
+                $potentialSavings = $cVal;
+                if ($c['max_discount_amount'] !== null && (float)$c['max_discount_amount'] > 0) {
+                    $potentialSavings = min($potentialSavings, (float)$c['max_discount_amount']);
+                }
+            }
+            $potentialSavings = min($potentialSavings, $subtotal);
+            $potentialSavings = round($potentialSavings, 2);
+
+            $title = ($c['discount_type'] === 'percentage')
+                ? round($cVal) . '% OFF'
+                : '₹' . round($cVal) . ' FLAT OFF';
+
+            $description = ($c['discount_type'] === 'percentage')
+                ? ($c['max_discount_amount'] ? ('Get ' . round($cVal) . '% off up to ₹' . round($c['max_discount_amount'])) : ('Save ' . round($cVal) . '% on your order'))
+                : ('Flat ₹' . round($cVal) . ' discount on your order');
+
+            $terms = ($cMin > 0)
+                ? ('Valid on orders above ₹' . number_format($cMin, 0))
+                : 'No minimum order required';
+
+            $availableCoupons[] = [
+                'id'                  => (int)$c['id'],
+                'code'                => $c['code'],
+                'discount_type'       => $c['discount_type'],
+                'discount_value'      => $cVal,
+                'min_order_amount'    => $cMin,
+                'max_discount_amount' => $c['max_discount_amount'] !== null ? (float)$c['max_discount_amount'] : null,
+                'is_applicable'       => $isApplicable,
+                'shortfall'           => $shortfall,
+                'potential_savings'   => $potentialSavings,
+                'title'               => $title,
+                'description'         => $description,
+                'terms'               => $terms,
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('Error loading available coupons: ' . $e->getMessage());
+    }
+
     // Load dynamic payment settings from database if configured
     $payConfig = [
         'online_payment_enabled' => true,
@@ -237,6 +305,7 @@ try {
         'final_total'             => $netSubtotal,
         'applied_coupon'          => $appliedCoupon,
         'coupon_error'            => $couponError,
+        'available_coupons'       => $availableCoupons,
         'payment_splits' => [
             'full_prepaid' => [
                 'enabled'               => (bool)($payConfig['online_payment_enabled'] ?? true),

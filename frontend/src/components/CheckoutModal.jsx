@@ -13,6 +13,7 @@ import {
   Smartphone,
   Banknote,
   Percent,
+  Tag,
   Check,
   ChevronDown,
   ChevronUp,
@@ -137,6 +138,40 @@ export default function CheckoutModal({
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [showAllCoupons, setShowAllCoupons] = useState(false);
+
+  // Load available promotional coupons for direct 1-click application
+  useEffect(() => {
+    if (isOpen) {
+      apiService.getAvailableCoupons().then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setAvailableCoupons(list);
+        }
+      });
+    }
+  }, [isOpen]);
+
+  // Synchronize available coupons with real-time checkout calculation response
+  useEffect(() => {
+    if (calcData?.available_coupons && Array.isArray(calcData.available_coupons) && calcData.available_coupons.length > 0) {
+      setAvailableCoupons(calcData.available_coupons);
+    }
+  }, [calcData?.available_coupons]);
+
+  const handleApplyCoupon = (code) => {
+    const codeToApply = String(code).trim().toUpperCase();
+    setCouponInput(codeToApply);
+    setCouponCode(codeToApply);
+    setCouponApplied(true);
+    setCouponError('');
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponApplied(false);
+    setCouponInput('');
+    setCouponError('');
+  };
 
   // Keep couponCode in sync if activePromoCode loads dynamically and user hasn't typed anything
   useEffect(() => {
@@ -361,9 +396,23 @@ export default function CheckoutModal({
         if (isMounted) {
           // Client-side fallback calculation if offline
           const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-          const disc = (couponApplied && calcData?.applied_coupon?.amount_saved)
-            ? Number(calcData.applied_coupon.amount_saved)
-            : 0;
+          let disc = 0;
+          if (couponApplied) {
+            const foundC = (availableCoupons || []).find(
+              (c) => String(c.code).toUpperCase() === String(couponCode).toUpperCase()
+            );
+            if (foundC && subtotal >= (Number(foundC.min_order_amount) || 0)) {
+              if (foundC.discount_type === 'percentage') {
+                disc = (subtotal * Number(foundC.discount_value)) / 100;
+                if (foundC.max_discount_amount) disc = Math.min(disc, Number(foundC.max_discount_amount));
+              } else {
+                disc = Number(foundC.discount_value);
+              }
+              disc = Math.min(disc, subtotal);
+            } else if (calcData?.applied_coupon?.amount_saved) {
+              disc = Number(calcData.applied_coupon.amount_saved);
+            }
+          }
           const finalTot = Math.max(0, subtotal - disc);
           const maxPrepDisc = Number(paymentSettings.prepaid_discount ?? 50);
           const prepDisc = finalTot > 1 ? Math.min(maxPrepDisc, finalTot - 1) : 0;
@@ -1940,7 +1989,7 @@ export default function CheckoutModal({
           <div className="p-3 sm:p-4 space-y-3 flex-1 flex flex-col pb-28 animate-fade-in">
 
             {/* 1. Promo / Coupon Code Input Card (Screenshot 2) */}
-            <div className="bg-white rounded-2xl border border-gray-200/90 p-3 shadow-2xs">
+            <div id="checkout-coupon-card" className="bg-white rounded-2xl border border-gray-200/90 p-3 shadow-2xs">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Percent className="w-4 h-4 absolute left-3 top-2.5 text-emerald-600" />
@@ -1959,14 +2008,10 @@ export default function CheckoutModal({
                   type="button"
                   onClick={() => {
                     if (couponApplied) {
-                      setCouponApplied(false);
-                      setCouponInput('');
-                      setCouponError('');
+                      handleRemoveCoupon();
                     } else {
                       const codeToApply = (couponInput.trim() || couponCode || activePromoCode || 'VALERIE10').toUpperCase();
-                      setCouponCode(codeToApply);
-                      setCouponApplied(true);
-                      setCouponError('');
+                      handleApplyCoupon(codeToApply);
                     }
                   }}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -2002,6 +2047,151 @@ export default function CheckoutModal({
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{couponError}</span>
                   </p>
+                </div>
+              )}
+
+              {/* 1.1 Available Coupons & Direct Apply List */}
+              {availableCoupons && availableCoupons.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-gray-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
+                      <Tag className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>Available Offers & Coupons</span>
+                      <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-1.5 py-0.2 rounded-full">
+                        {availableCoupons.length}
+                      </span>
+                    </div>
+                    {availableCoupons.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCoupons(!showAllCoupons)}
+                        className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                      >
+                        <span>{showAllCoupons ? 'Show Less' : `View All (${availableCoupons.length})`}</span>
+                        {showAllCoupons ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {(showAllCoupons ? availableCoupons : availableCoupons.slice(0, 2)).map((c) => {
+                      const isCurrentApplied =
+                        couponApplied &&
+                        (calcData?.applied_coupon?.code === c.code || couponCode === c.code);
+                      const minOrder = Number(c.min_order_amount) || 0;
+                      const isApplicable = subtotal >= minOrder;
+                      const shortfall = Math.max(0, Math.ceil(minOrder - subtotal));
+
+                      let potentialSave = c.potential_savings;
+                      if (!potentialSave && isApplicable) {
+                        if (c.discount_type === 'percentage') {
+                          potentialSave = (subtotal * Number(c.discount_value)) / 100;
+                          if (c.max_discount_amount) {
+                            potentialSave = Math.min(potentialSave, Number(c.max_discount_amount));
+                          }
+                        } else {
+                          potentialSave = Number(c.discount_value);
+                        }
+                        potentialSave = Math.round(potentialSave);
+                      }
+
+                      return (
+                        <div
+                          key={c.code || c.id}
+                          className={`p-2.5 rounded-xl border transition-all ${
+                            isCurrentApplied
+                              ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-300/50 shadow-2xs'
+                              : isApplicable
+                              ? 'bg-white border-dashed border-gray-300 hover:border-brand-primary/50 hover:bg-purple-50/20'
+                              : 'bg-gray-50/60 border-gray-200/70 opacity-75'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`font-mono text-xs font-extrabold px-2 py-0.5 rounded border tracking-wider uppercase ${
+                                    isCurrentApplied
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                      : isApplicable
+                                      ? 'bg-purple-100/70 text-brand-primary border-brand-primary/30'
+                                      : 'bg-gray-100 text-gray-500 border-gray-200'
+                                  }`}
+                                >
+                                  {c.code}
+                                </span>
+                                <span className="text-xs font-bold text-gray-900">
+                                  {c.title ||
+                                    (c.discount_type === 'percentage'
+                                      ? `${c.discount_value}% OFF`
+                                      : `₹${c.discount_value} FLAT OFF`)}
+                                </span>
+                              </div>
+
+                              <p className="text-[11px] text-gray-600 mt-1 line-clamp-1">
+                                {c.description ||
+                                  (c.discount_type === 'percentage'
+                                    ? `Get ${c.discount_value}% off on fine jewelry`
+                                    : `Flat ₹${c.discount_value} off on order`)}
+                              </p>
+
+                              <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                {isApplicable ? (
+                                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                                    <Sparkles className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                    {potentialSave
+                                      ? `Save ₹${potentialSave} on this order`
+                                      : (c.terms || 'Applicable now')}
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-700 font-semibold flex items-center gap-1">
+                                    <AlertCircle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                    Add ₹{shortfall.toLocaleString('en-IN')} more to unlock (Min order ₹{minOrder.toLocaleString('en-IN')})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Direct 1-Click Action Button */}
+                            <div className="shrink-0 pt-0.5">
+                              {isCurrentApplied ? (
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg">
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                    Applied
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveCoupon}
+                                    className="text-[10px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ) : isApplicable ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyCoupon(c.code)}
+                                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary hover:text-white border border-brand-primary/30 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                >
+                                  Apply
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  title={`Requires minimum cart value of ₹${minOrder}`}
+                                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-75"
+                                >
+                                  Apply
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -2068,7 +2258,15 @@ export default function CheckoutModal({
                   <span className="text-[10px] font-black text-[#002e6e] px-1.5 py-0.5 rounded bg-sky-50 border border-sky-100">Paytm</span>
                   <div className="w-4 h-4 rounded-full bg-[#5f259f] flex items-center justify-center text-white text-[8px] font-bold">पे</div>
                 </div>
-                <button type="button" className="text-xs font-semibold text-gray-700 hover:text-black flex items-center gap-0.5 cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAllCoupons(true);
+                    const el = document.getElementById('checkout-coupon-card');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="text-xs font-semibold text-gray-700 hover:text-black flex items-center gap-0.5 cursor-pointer"
+                >
                   <span>View all offers</span>
                   <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
                 </button>
