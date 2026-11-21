@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   FileText,
   ArrowLeft,
-  Sparkles,
   Gift,
   Phone,
   Mail,
@@ -213,7 +212,7 @@ export default function PolicyPage({
     { id: 'refund', label: 'Return & Refund', icon: RotateCcw, badge: '5–7 Days Window' },
     { id: 'privacy', label: 'Privacy Policy', icon: ShieldCheck, badge: 'DPDP 2023' },
     { id: 'terms', label: 'Terms & Conditions', icon: FileText, badge: 'Legal' },
-    { id: 'about', label: 'About VALERIÉ', icon: Sparkles, badge: 'Our Story' },
+    { id: 'about', label: 'About VALERIÉ', icon: FileText, badge: 'Our Story' },
   ];
 
   const currentPolicy = policies[activeTab] || DEFAULT_POLICIES[activeTab] || DEFAULT_POLICIES.shipping;
@@ -234,7 +233,7 @@ export default function PolicyPage({
     <div className="min-h-screen bg-[#FCFBFE] text-brand-tertiary antialiased flex flex-col">
       {/* 1. Top Global Announcement Ribbon */}
       <div className="bg-gradient-to-r from-[#26153D] via-[#372248] to-[#26153D] text-white text-[11px] py-2 px-4 text-center font-medium tracking-wider flex items-center justify-center space-x-2">
-        <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+
         <span>
           ALL INDIA FREE EXPRESS DELIVERY (5–7 WORKING DAYS) •{' '}
           <span className="text-amber-300 font-bold">FREE ZIRCON NECKLACE</span> +{' '}
@@ -308,7 +307,7 @@ export default function PolicyPage({
 
           <div className="p-3.5 rounded-2xl bg-white border border-brand-border shadow-xs flex items-center space-x-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-              <Sparkles className="w-4.5 h-4.5" />
+
             </div>
             <div>
               <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted block font-semibold">Shipping Charges</span>
@@ -366,7 +365,7 @@ export default function PolicyPage({
       {/* 6. Main Document Content Body */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Column: Interactive Table of Contents (Sticky on Desktop) */}
           <aside aria-label="Table of contents" className="hidden lg:block lg:col-span-4">
             <div className="sticky top-32 p-5 rounded-2xl bg-white border border-brand-border shadow-xs space-y-4">
@@ -404,7 +403,7 @@ export default function PolicyPage({
 
           {/* Right Column: Detailed Clauses & Formatted Policy Text */}
           <div className="lg:col-span-8 space-y-8">
-            
+
             {/* Specific Visual Callout Box per Policy Tab */}
             {activeTab === 'shipping' && (
               <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 shadow-xs space-y-2">

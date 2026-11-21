@@ -5,7 +5,6 @@ import {
   ShoppingBag,
   Trash2,
   ArrowRight,
-  Sparkles,
   ShieldCheck,
   Check
 } from 'lucide-react';
@@ -53,7 +52,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
   const handleMoveToBag = (item) => {
     setMovingId(item.id);
     addToCart(item, null, 1, false);
-    
+
     // Give user brief visual feedback then remove from wishlist
     setTimeout(() => {
       removeFromWishlist(item.id);
@@ -80,7 +79,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-out">
-          
+
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-brand-border flex items-center justify-between bg-brand-surface/70 backdrop-blur">
             <div className="flex items-center space-x-2.5">
@@ -264,7 +263,7 @@ export default function WishlistDrawer({ onSelectProduct }) {
                 </button>
 
                 <span className="text-[10px] text-brand-muted font-light flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-brand-primary" />
+
                   Free Express Shipping above ₹999
                 </span>
               </div>

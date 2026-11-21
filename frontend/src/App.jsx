@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Sparkles,
   ShoppingBag,
   Heart,
   Search,
@@ -632,7 +631,7 @@ function StorefrontContent({
       {/* Top Editorial Ribbon */}
       {content?.topRibbon?.enabled !== false && (
         <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[10px] sm:text-[11px] font-medium py-1.5 sm:py-2 px-3 sm:px-4 text-center tracking-wider sm:tracking-widest uppercase flex items-center justify-center space-x-1.5 sm:space-x-2">
-          <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-primary shrink-0" />
+
           <span className="truncate sm:overflow-visible">
             {content?.topRibbon?.text && content.topRibbon.text.trim() ? content.topRibbon.text.trim() : (
               !content?.topRibbon?.highlightAmount?.trim() && !content?.topRibbon?.suffix?.trim()
@@ -829,7 +828,7 @@ function StorefrontContent({
                       : 'bg-[#F4ECFA] text-brand-primary font-semibold hover:bg-brand-primary/15'
                       }`}
                   >
-                    <span>✨ {featuredCat.name}</span>
+                    <span> {featuredCat.name}</span>
                   </a>
                 );
               })()}
@@ -871,7 +870,7 @@ function StorefrontContent({
                   href="#festive-offers"
                   className="transition-colors py-1 whitespace-nowrap hover:text-brand-primary text-[#C5A25D] hover:text-[#B38F49] font-semibold flex items-center gap-1"
                 >
-                  <Sparkles className="w-3 h-3 text-[#C5A25D] animate-pulse" />
+
                   <span>Festive Offers</span>
                 </a>
               )}
@@ -992,7 +991,7 @@ function StorefrontContent({
                 <div className="relative z-10 max-w-2xl space-y-5">
                   {Boolean(content?.heroBanner?.badgeText && content.heroBanner.badgeText.trim() && content.heroBanner.badgeText.trim().toUpperCase() !== 'FASHION JEWELLERY') && (
                     <div className="inline-flex max-w-full items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1 rounded-full bg-brand-primary-light border border-brand-primary/20 text-brand-primary text-[10px] sm:text-[11px] font-caps uppercase tracking-wide sm:tracking-[0.18em]">
-                      <Sparkles className="w-3 h-3 text-brand-primary shrink-0" />
+
                       <span className="whitespace-normal leading-tight text-left">{content.heroBanner.badgeText.trim()}</span>
                     </div>
                   )}

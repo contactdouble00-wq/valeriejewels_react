@@ -137,7 +137,7 @@ export const SEED_PRODUCTS = [
     category_slug: 'jhumkha-box',
     name: '16 Pairs Oxidized Silver Earrings Set for Women | Traditional Indian Ethnic Jhumka & Dangle Earrings',
     slug: '16-pairs-oxidized-silver-earrings-set-for-women-traditional-indian-ethnic-jhumka-dangle-earrings',
-    short_description: '16 Pairs. Endless Style. ✨ Traditional Oxidized Earrings for Every Look.',
+    short_description: '16 Pairs. Endless Style.  Traditional Oxidized Earrings for Every Look.',
     description: 'Elevate your everyday and festive style with this 16-Pair Oxidized Earrings Set for Women. Featuring a beautiful collection of traditional Indian and ethnic-inspired designs, this set includes a variety of jhumka, dangle, chandelier, hoop, and statement-style earrings to complement different outfits and occasions.',
     mrp: '1899.00',
     price: '899.00',

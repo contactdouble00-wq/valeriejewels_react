@@ -6,12 +6,10 @@ import {
   Trash2,
   ShoppingBag,
   Truck,
-  Sparkles,
   ShieldCheck,
   ArrowRight,
   ChevronRight,
   Tag,
-  Zap,
   FileText
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -155,7 +153,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
       {/* Slide-out Drawer Panel (100% width on mobile, 440px on desktop) */}
       <div className="fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[440px] max-w-full flex justify-end pointer-events-none">
         <div className="w-full sm:w-[440px] max-w-full h-full max-h-[100dvh] bg-white shadow-2xl flex flex-col border-l border-brand-border animate-in slide-in-from-right duration-300 pointer-events-auto">
-          
+
           {/* 1. Drawer Header */}
           <div className="p-4 sm:p-5 border-b border-brand-border flex items-center justify-between bg-[#FAF7FC] shrink-0">
             <div className="flex items-center space-x-2">
@@ -181,12 +179,12 @@ export default function CartDrawer({ onProceedToCheckout }) {
             <div className="flex items-center justify-between text-xs mb-1.5">
               {isFreeShipping ? (
                 <span className="font-semibold text-emerald-700 flex items-center space-x-1.5 text-[11px] sm:text-xs">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+
                   <span><strong>FREE Express Shipping</strong> on Prepaid & Partial COD!</span>
                 </span>
               ) : (
                 <span className="text-brand-muted font-light text-[11px] sm:text-xs">
-                  Add <strong className="text-brand-primary font-bold">₹{freeShippingRemaining}</strong> more for <strong>FREE Shipping</strong> 🚚
+                  Add <strong className="text-brand-primary font-bold">₹{freeShippingRemaining}</strong> more for <strong>FREE Shipping</strong>
                 </span>
               )}
               <span className="font-bold text-[11px] text-brand-primary shrink-0 ml-2">
@@ -309,12 +307,12 @@ export default function CartDrawer({ onProceedToCheckout }) {
           {/* 4. Drawer Footer / Checkout Summary */}
           {cartItems.length > 0 && (
             <div className="p-4 sm:p-5 border-t border-brand-border bg-white space-y-3 shadow-lg shrink-0 pb-6 sm:pb-5">
-              
+
               {/* Savings Announcement */}
               {totalSavings > 0 && (
                 <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-[11px] sm:text-xs font-medium flex items-center justify-between">
                   <span className="flex items-center space-x-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+
                     <span>Your Total Bag Savings</span>
                   </span>
                   <span className="font-bold">₹{Math.round(totalSavings).toLocaleString('en-IN')}</span>
@@ -444,7 +442,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 </span>
                 <span>•</span>
                 <span className="flex items-center space-x-1">
-                  <Zap className="w-3 h-3 text-amber-500 shrink-0" />
+
                   <span>Fastrr 1-Click</span>
                 </span>
               </div>

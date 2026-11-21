@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ShoppingBag, Eye, Heart, Layers, Sparkles } from 'lucide-react';
+import { Star, ShoppingBag, Eye, Heart, Layers } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 import { normalizeMediaUrl } from '../utils/mediaUtils';
 

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { cleanStorefrontCopy } from '../utils/storefrontCopy';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { DEFAULT_MOBILE_SLIDES } from '../components/MobileHeroSlider';
 
@@ -8,7 +9,7 @@ const CONTENT_CACHE_VERSION = '20261107_v5';
 const DEFAULT_SITE_CONTENT = {
   announcementBanner: {
     enabled: true,
-    text: '🪔 Order might get delay due to diwali festive season',
+    text: ' Order might get delay due to diwali festive season',
   },
   siteIdentity: {
     siteTitle: 'VALERIÉ JEWELS | WEAR YOUR ELEGANCE',
@@ -43,7 +44,7 @@ const DEFAULT_SITE_CONTENT = {
     rightImageUrl: 'https://valeriejewels.in/api/uploads/img_62d3764202c18f8a096bc0bb76e74a47.png',
   },
   jhumkaHero: {
-    badgeText: '🔥 Customer Bestsellers • Most Loved Pieces',
+    badgeText: ' Customer Bestsellers • Most Loved Pieces',
     titleLine1: 'Our Curated',
     titleLine2: 'Bestseller Collection',
     subtitle: 'Our highest rated handcrafted pieces and viral jewelry, curated for everyday luxury and timeless elegance.',
@@ -61,10 +62,10 @@ const DEFAULT_SITE_CONTENT = {
       promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
       couponCode: 'VALERIE10',
       copyButtonText: 'Copy',
-      perk1Text: '✨ Free Luxury Keepsake Box',
+      perk1Text: ' Free Luxury Keepsake Box',
       perk1Enabled: true,
       separator: '•',
-      perk2Text: '🚀 Express Dispatch in 24h',
+      perk2Text: ' Express Dispatch in 24h',
       perk2Enabled: true,
       perk3Text: '',
       perk3Enabled: false,
@@ -81,7 +82,7 @@ const DEFAULT_SITE_CONTENT = {
   },
   festivalOffer: {
     enabled: false,
-    badgeText: '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION',
+    badgeText: ' GRAND FESTIVE CELEBRATION • LIMITED EDITION',
     headline: 'The Royal Festive Edit',
     subtitle: 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.',
     countdownEnabled: true,
@@ -353,8 +354,10 @@ export function SiteContentProvider({ children }) {
     }
   }, [content?.seoTracking]);
 
+  const storefrontContent = useMemo(() => cleanStorefrontCopy(content), [content]);
+
   return (
-    <SiteContentContext.Provider value={{ content, refreshContent: fetchContent, loading, DEFAULT_SITE_CONTENT }}>
+    <SiteContentContext.Provider value={{ content: storefrontContent, refreshContent: fetchContent, loading, DEFAULT_SITE_CONTENT }}>
       {children}
     </SiteContentContext.Provider>
   );

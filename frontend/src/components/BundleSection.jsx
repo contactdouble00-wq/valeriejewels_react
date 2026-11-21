@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Sparkles, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Tag, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useSiteContent } from '../context/SiteContentContext';
 
 export default function BundleSection({ bundles = [], onSelectBundle }) {
@@ -34,7 +34,7 @@ export default function BundleSection({ bundles = [], onSelectBundle }) {
               {/* Header Badge */}
               <div className="flex items-center justify-between pb-4 border-b border-brand-border">
                 <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-caps uppercase tracking-wider font-bold bg-brand-primary text-white shadow-sm">
-                  <Sparkles className="w-3 h-3 text-brand-gold" />
+
                   <span>{bundle.badge_text || 'Curated Bundle'}</span>
                 </span>
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">

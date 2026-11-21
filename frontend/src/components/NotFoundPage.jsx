@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Sparkles,
   ArrowRight,
   Search,
   Compass,
@@ -37,7 +36,7 @@ export default function NotFoundPage({ onNavigateHome, onSelectCategory, onSearc
     <div className="min-h-screen flex flex-col bg-[#FCFBFE] text-brand-tertiary antialiased">
       {/* Top Editorial Luxury Ribbon */}
       <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[11px] font-medium py-2 px-4 text-center tracking-widest uppercase flex items-center justify-center space-x-2">
-        <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+
         <span>Valerie Jewels Concierge • Need Assistance? WhatsApp +91 90234 22392</span>
       </div>
 
@@ -74,7 +73,7 @@ export default function NotFoundPage({ onNavigateHome, onSelectCategory, onSearc
           <div className="relative z-10 w-28 h-28 sm:w-36 sm:h-36 rounded-3xl bg-gradient-to-tr from-[#FAF6FD] via-white to-[#F5EDFD] border-2 border-brand-primary/25 shadow-luxury flex flex-col items-center justify-center space-y-1">
             <Compass className="w-10 h-10 sm:w-12 sm:h-12 text-brand-primary animate-spin-slow" />
             <div className="flex items-center space-x-1">
-              <Sparkles className="w-3.5 h-3.5 text-brand-gold" />
+
               <span className="text-[10px] font-caps uppercase tracking-widest text-brand-muted font-bold">Lost Gem</span>
             </div>
           </div>

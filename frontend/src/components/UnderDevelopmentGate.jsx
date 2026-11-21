@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Lock, ArrowRight, Shield, Clock, MessageCircle } from 'lucide-react';
+import { Lock, ArrowRight, Shield, Clock, MessageCircle } from 'lucide-react';
 
 export default function UnderDevelopmentGate({ onUnlock }) {
   const [showModal, setShowModal] = useState(false);
@@ -53,7 +53,6 @@ export default function UnderDevelopmentGate({ onUnlock }) {
         ),
         React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-10 text-left' },
           React.createElement('div', { className: 'p-4 rounded-xl bg-white/[0.02] border border-white/5 backdrop-blur-md hover:border-[#8366B0]/30 transition-all' },
-            React.createElement(Sparkles, { className: 'w-4 h-4 text-[#C5A880] mb-2' }),
             React.createElement('h4', { className: 'text-xs font-semibold text-white tracking-wide uppercase mb-1' }, 'Anti-Tarnish Polish'),
             React.createElement('p', { className: 'text-[11px] text-white/50 leading-relaxed' }, 'Waterproof, sweatproof, hypoallergenic everyday luxury.')
           ),

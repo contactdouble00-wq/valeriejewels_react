@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   X,
   ChevronRight,
-  Sparkles,
   Heart,
   Truck,
   User,
@@ -90,7 +89,7 @@ export default function MobileSidebarDrawer({
       {/* Slide-out Sidebar Drawer from Left */}
       <div className="fixed inset-y-0 left-0 max-w-full flex pr-10">
         <div className="w-[85vw] max-w-sm bg-white shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-out">
-          
+
           {/* Top Section: Brand Header */}
           <div className="p-4 border-b border-brand-border/70 flex items-center justify-between bg-brand-surface/60">
             <a
@@ -208,7 +207,7 @@ export default function MobileSidebarDrawer({
                   className="w-full px-3 py-2.5 rounded-xl text-left font-sans text-sm font-semibold text-brand-primary hover:bg-brand-primary-light/50 flex items-center justify-between transition-colors group"
                 >
                   <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-[#C5A25D] animate-pulse" />
+
                     <span>Festive Offers & Edit</span>
                   </div>
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FAF5E9] text-[#8C6D2B] border border-[#C5A25D]/40">
@@ -428,7 +427,7 @@ export default function MobileSidebarDrawer({
                 <span>Everyday Luxury</span>
               </div>
               <div className="flex items-center space-x-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+
                 <span>Free Delivery Across India</span>
               </div>
             </div>

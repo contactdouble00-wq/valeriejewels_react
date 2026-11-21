@@ -5,7 +5,6 @@ import {
   MapPin,
   MessageCircle,
   Clock,
-  Sparkles,
   ArrowLeft,
   Send,
   CheckCircle2,
@@ -150,7 +149,7 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
     <div className="min-h-screen bg-[#FCFBFE] text-brand-tertiary antialiased flex flex-col">
       {/* 1. Top Global Announcement Ribbon */}
       <div className="bg-gradient-to-r from-[#26153D] via-[#372248] to-[#26153D] text-white text-[11px] py-2 px-4 text-center font-medium tracking-wider flex items-center justify-center space-x-2">
-        <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+
         <span>
           VALERIE ATELIER CONCIERGE • 7 DAYS A WEEK •{' '}
           <span className="text-amber-300 font-bold">WHATSAPP: {phone}</span>
@@ -188,7 +187,7 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
       <div className="bg-gradient-to-b from-white via-purple-50/20 to-[#FCFBFE] border-b border-brand-border/60 py-10 sm:py-14 px-4 text-center">
         <div className="max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-primary-light text-brand-primary text-xs font-bold font-caps tracking-wider uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
+
             <span>Customer Concierge & Support</span>
           </div>
           <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl font-bold text-brand-tertiary tracking-tight">
@@ -203,10 +202,10 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
 
       {/* 4. Main Body: Contact Cards & Inquiry Form */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 space-y-10">
-        
+
         {/* Direct Channels Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
+
           {/* WhatsApp Instant Chat */}
           <div className="bg-white rounded-2xl p-5 border border-brand-border/80 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-all">
             <div className="space-y-2">
@@ -302,7 +301,7 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
 
         {/* Contact Form & Quick Help Split */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Inquiry Form (7 cols) */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-brand-border shadow-sm space-y-6">
             <div className="space-y-1">
@@ -487,10 +486,10 @@ export default function ContactPage({ onReturnToStore, onOpenTracking, onOpenFaq
 
           {/* Quick Self-Service Hub (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
-            
+
             <div className="bg-white rounded-3xl p-6 border border-brand-border shadow-sm space-y-4">
               <h3 className="font-serif font-bold text-base text-brand-tertiary flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-brand-gold fill-current" />
+
                 <span>Instant Self-Service</span>
               </h3>
               <p className="text-xs text-brand-muted font-light leading-relaxed">

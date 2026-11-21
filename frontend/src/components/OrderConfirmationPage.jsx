@@ -19,8 +19,6 @@ import {
   Check,
   ExternalLink,
   ShoppingBag,
-  Sparkles,
-  Zap,
   Lock,
   Timer,
 } from 'lucide-react';
@@ -428,8 +426,8 @@ export default function OrderConfirmationPage({
               {isFailedRoute ? 'Loading Order Details...' : 'Confirming Your Order...'}
             </h2>
             <p className="text-xs sm:text-sm text-brand-muted font-light leading-relaxed">
-              {isFailedRoute 
-                ? 'Retrieving your order information...' 
+              {isFailedRoute
+                ? 'Retrieving your order information...'
                 : "We're securely communicating with your payment gateway. This usually takes just a few seconds."}
             </p>
           </div>
@@ -463,10 +461,10 @@ export default function OrderConfirmationPage({
 
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-6 animate-in fade-in duration-300">
-        
+
         {/* Payment Failed Card */}
         <div className="rounded-3xl bg-white border border-rose-200 p-6 sm:p-8 space-y-6 shadow-luxury text-center">
-          
+
           {/* Failed Icon */}
           <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center border-2 border-rose-200 shadow-sm">
             <AlertCircle className="w-8 h-8 stroke-[2]" />
@@ -523,7 +521,7 @@ export default function OrderConfirmationPage({
               )}
             </button>
             <p className="text-[11px] text-brand-muted">
-              ⚡ Instant checkout via UPI (GPay, PhonePe, Paytm), Cards &amp; NetBanking
+               Instant checkout via UPI (GPay, PhonePe, Paytm), Cards &amp; NetBanking
             </p>
           </div>
 
@@ -809,7 +807,7 @@ export default function OrderConfirmationPage({
 
           {/* Complimentary Packaging Note */}
           <div className="p-3.5 rounded-2xl bg-[#FAF7FC] border border-brand-border flex items-center space-x-2.5 text-xs text-brand-tertiary">
-            <Sparkles className="w-4 h-4 text-brand-gold shrink-0 animate-pulse" />
+
             <span className="text-[11px] font-light">
               Complimentary luxury velvet gift box & micro-fiber polishing kit included.
             </span>

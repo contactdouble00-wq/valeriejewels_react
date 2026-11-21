@@ -1,3 +1,4 @@
+import { cleanStorefrontCopy } from '../utils/storefrontCopy';
 /**
  * VALERIE JEWELS — API Client Service
  */
@@ -679,7 +680,7 @@ export const apiService = {
       const response = await fetch(`${API_BASE_URL}/faqs/get.php`);
       if (response.ok) {
         const result = await response.json();
-        if (result.data) return result.data;
+        if (result.data) return cleanStorefrontCopy(result.data);
       }
     } catch (err) {
       console.warn('API getFaqs error, falling back to default faqs:', err);
@@ -699,7 +700,7 @@ export const apiService = {
           try {
             localStorage.setItem('valerie_payment_settings_cache_v2', JSON.stringify(result.data));
           } catch (_) {}
-          return result.data;
+          return cleanStorefrontCopy(result.data);
         }
       }
     } catch (err) {
@@ -707,7 +708,7 @@ export const apiService = {
     }
     const cached = localStorage.getItem('valerie_payment_settings_cache_v2');
     if (cached) {
-      try { return JSON.parse(cached); } catch (e) {}
+      try { return cleanStorefrontCopy(JSON.parse(cached)); } catch (e) {}
     }
     return {
       gateway_mode: 'sandbox',
@@ -719,7 +720,7 @@ export const apiService = {
       partial_advance: 49,
       cod_fee: 0,
       cod_available: true,
-      checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
+      checkout_banner_text: ' Prepaid Orders = ₹50 OFF + Free Luxury Gift +  Priority Shipping',
       exit_intent_enabled: true,
       exit_intent_title: 'Wait! Are you sure you want to exit?',
       exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',

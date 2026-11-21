@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Eye, Star, Flame, ShieldCheck, Gift, Check, Copy, Heart, ExternalLink } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -12,10 +12,10 @@ const DEFAULT_STRIP = {
   promoPrefix: 'Buy 2 or More → Extra 10% Off with Code',
   couponCode: 'VALERIE10',
   copyButtonText: 'Copy',
-  perk1Text: '✨ Free Luxury Keepsake Box',
+  perk1Text: ' Free Luxury Keepsake Box',
   perk1Enabled: true,
   separator: '•',
-  perk2Text: '🚀 Express Dispatch in 24h',
+  perk2Text: ' Express Dispatch in 24h',
   perk2Enabled: true,
   perk3Text: '',
   perk3Enabled: false,
@@ -153,7 +153,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
             const mobilePills = [
               hasPill1 ? { icon: Gift, text: jHero.pill1.trim(), iconColor: 'text-brand-primary' } : null,
               hasPill2 ? { icon: ShieldCheck, text: jHero.pill2.trim(), iconColor: 'text-emerald-600' } : null,
-              hasPill3 ? { icon: Sparkles, text: jHero.pill3.trim(), iconColor: 'text-brand-gold' } : null,
+              hasPill3 ? { icon: null, text: jHero.pill3.trim(), iconColor: 'text-brand-gold' } : null,
             ].filter(Boolean);
 
             const gridColsClass = mobilePills.length === 1 ? 'grid-cols-1' : mobilePills.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
@@ -164,7 +164,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
                   const IconComp = pill.icon;
                   return (
                     <div key={pIdx} className="bg-white/90 backdrop-blur-xs px-2 py-1.5 rounded-xl border border-brand-primary/15 text-center shadow-2xs flex flex-col items-center justify-center">
-                      <IconComp className={`w-3.5 h-3.5 ${pill.iconColor} mb-0.5 shrink-0`} />
+                      {IconComp && <IconComp className={`w-3.5 h-3.5 ${pill.iconColor} mb-0.5 shrink-0`} />}
                       <span className="text-[9.5px] font-bold text-brand-tertiary leading-tight line-clamp-2">{pill.text}</span>
                     </div>
                   );
@@ -190,7 +190,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
               )}
               {hasPill3 && (
                 <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-brand-border shadow-2xs">
-                  <Sparkles className="w-4 h-4 text-brand-gold shrink-0" />
+
                   <span>{jHero.pill3.trim()}</span>
                 </div>
               )}
@@ -290,7 +290,7 @@ export default function JhumkaBoxHeroSection({ products = [], onOpenPdp, onOpenC
               <div className="p-2 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4">
                 <div className="space-y-1 sm:space-y-1.5">
                   <div className="text-[8.5px] sm:text-[10px] font-caps tracking-widest uppercase text-brand-primary font-bold flex items-center space-x-1">
-                    <Sparkles className="w-2.5 h-2.5 text-brand-gold shrink-0 sm:hidden" />
+
                     <span>{box.category_name || 'Curated Signature Set'}</span>
                   </div>
                   <h3

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Star, ShieldCheck, Camera, Check, Upload, X, ChevronRight,
-  ChevronLeft, Sparkles, MessageSquare, ThumbsUp, RefreshCw, AlertCircle
+  ChevronLeft, MessageSquare, ThumbsUp, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { apiService } from '../services/api';
 

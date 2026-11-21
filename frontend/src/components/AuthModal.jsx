@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   LogOut,
-  Sparkles,
   ArrowRight,
   Truck,
   Package
@@ -69,7 +68,7 @@ export default function AuthModal({ onOpenTracking }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-brand-border flex flex-col"
       >
@@ -170,15 +169,15 @@ export default function AuthModal({ onOpenTracking }) {
         ) : (
           /* NOT LOGGED IN / SIGN IN / REGISTER FORM */
           <div className="p-6 sm:p-8 space-y-6">
-            
+
             {/* Header branding */}
             <div className="text-center space-y-2 pt-2">
               <img src="/valerie.png" alt="VALERIÉ" className="h-7 mx-auto w-auto object-contain" />
               <p className="text-xs text-brand-muted font-light">
-                {authModalMode === 'register' 
-                  ? 'Create an account for faster checkout and order tracking.' 
-                  : authModalMode === 'admin' 
-                  ? 'Administrator & Staff Portal Authentication' 
+                {authModalMode === 'register'
+                  ? 'Create an account for faster checkout and order tracking.'
+                  : authModalMode === 'admin'
+                  ? 'Administrator & Staff Portal Authentication'
                   : 'Sign in to access your saved wishlist and order history.'}
               </p>
             </div>
@@ -186,7 +185,7 @@ export default function AuthModal({ onOpenTracking }) {
             {/* Non-Mandatory Reassurance Notice */}
             {authModalMode !== 'admin' && (
               <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-[11px] font-medium flex items-center space-x-2">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+
                 <span>
                   <strong>Shopping without an account?</strong> You can always check out freely as a guest!
                 </span>
@@ -227,7 +226,7 @@ export default function AuthModal({ onOpenTracking }) {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              
+
               {/* Name (Register only) */}
               {authModalMode === 'register' && (
                 <div className="space-y-1">
@@ -307,12 +306,12 @@ export default function AuthModal({ onOpenTracking }) {
                 className="w-full mt-2 py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-caps tracking-widest uppercase font-bold shadow-md transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
               >
                 <span>
-                  {loading 
-                    ? 'Verifying...' 
-                    : authModalMode === 'register' 
-                    ? 'Create Account' 
-                    : authModalMode === 'admin' 
-                    ? 'Sign In to Admin Portal' 
+                  {loading
+                    ? 'Verifying...'
+                    : authModalMode === 'register'
+                    ? 'Create Account'
+                    : authModalMode === 'admin'
+                    ? 'Sign In to Admin Portal'
                     : 'Sign In'}
                 </span>
                 {!loading && <ArrowRight className="w-3.5 h-3.5" />}

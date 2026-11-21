@@ -1,3 +1,4 @@
+import { cleanStorefrontText } from '../utils/storefrontCopy';
 import React, { useMemo } from 'react';
 
 /**
@@ -5,6 +6,7 @@ import React, { useMemo } from 'react';
  */
 function renderInlineFormatting(text) {
   if (!text) return null;
+  text = cleanStorefrontText(text);
   // Match **bold** or *italic*
   const regex = /(\*\*|__)(.*?)\1|(\*|_)(.*?)\3/g;
   const parts = [];
@@ -158,9 +160,7 @@ export default function FormattedDescription({ content, className = '' }) {
             <ul key={bIdx} className="space-y-2 pl-0.5 my-1">
               {block.items.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2.5 leading-relaxed text-brand-tertiary/90">
-                  <span className="text-sm shrink-0 leading-none select-none mt-0.5">
-                    {item.emoji}
-                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary/80 mt-1.5 shrink-0" />
                   <span className="flex-1">{renderInlineFormatting(item.text)}</span>
                 </li>
               ))}

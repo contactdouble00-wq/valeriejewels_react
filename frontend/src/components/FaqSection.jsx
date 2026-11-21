@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Truck, RefreshCw, CreditCard, Gift, Shield, Phone, Sparkles, HelpCircle } from 'lucide-react';
+import { ChevronDown, Truck, RefreshCw, CreditCard, Gift, Shield, Phone, HelpCircle } from 'lucide-react';
 import { apiService } from '../services/api';
 
 // ─── Exact FAQs sourced from https://valeriejewels.in/faqs/ ───────────────────
@@ -105,7 +105,7 @@ export default function FaqSection({ limit = 5, onOpenFaqs }) {
     if (cat.includes('care') || cat.includes('qual')) return Shield;
     if (cat.includes('gift') || cat.includes('pack')) return Gift;
     if (cat.includes('support') || cat.includes('contact')) return Phone;
-    return Sparkles;
+    return HelpCircle;
   };
 
   return (

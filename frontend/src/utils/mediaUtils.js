@@ -1,3 +1,4 @@
+import { cleanStorefrontCopy } from './storefrontCopy';
 /**
  * VALERIE JEWELS — Media & Image URL Normalization Utilities
  */
@@ -46,7 +47,7 @@ export function isVideoMedia(item) {
 export function normalizeProductMedia(product) {
   if (!product || typeof product !== 'object') return product;
 
-  const p = { ...product };
+  const p = cleanStorefrontCopy(product);
 
   if (p.video_url) {
     p.video_url = normalizeMediaUrl(p.video_url);

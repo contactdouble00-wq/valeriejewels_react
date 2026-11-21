@@ -54,7 +54,7 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
   }
 
   // Strip leading diya emoji if present to avoid duplicate diya icons
-  const cleanText = rawText.replace(/^🪔\s*/, '');
+  const cleanText = rawText.replace(/^\s*/, '');
 
   return (
     <div
@@ -77,7 +77,7 @@ export default function AnnouncementBanner({ previewBanner = null, isPreview = f
             role="img"
             aria-label="Diwali Diya"
           >
-            🪔
+
           </span>
           <span className="leading-snug text-white font-medium drop-shadow-xs">
             {cleanText}

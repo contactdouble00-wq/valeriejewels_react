@@ -7,7 +7,7 @@ import {
   Phone,
   Mail,
   Truck,
-  Sparkles,
+  CreditCard,
   ShieldCheck,
   RotateCcw,
   Gift,
@@ -73,10 +73,10 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
     const allFaqs = faqsData.faqs || [];
     return allFaqs.filter((item) => {
       if (item.isActive === false) return false;
-      
+
       const matchesCategory =
         selectedCategory === 'All' || item.category === selectedCategory;
-      
+
       if (!matchesCategory) return false;
 
       if (!searchQuery.trim()) return true;
@@ -100,7 +100,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
       case 'Shipping & Delivery':
         return Truck;
       case 'Orders & Payments':
-        return Sparkles;
+        return CreditCard;
       case 'Jewelry Care & Quality':
         return ShieldCheck;
       case 'Returns & Refunds':
@@ -116,7 +116,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
     <div className="min-h-screen flex flex-col bg-[#FCFBFE] text-brand-tertiary antialiased">
       {/* Top Reassurance Ribbon */}
       <div className="bg-[#FAF7FC] border-b border-brand-border text-brand-tertiary text-[10.5px] sm:text-[11px] font-medium py-2 px-4 text-center tracking-wider uppercase flex items-center justify-center space-x-2">
-        <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+
         <span>
           FREE DELIVERY ACROSS ALL INDIA (5-7 WORKING DAYS) • FREE ZIRCON NECKLACE ON PREPAID ORDERS
         </span>
@@ -234,7 +234,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FFF7ED] to-white border border-amber-100 shadow-2xs flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Sparkles className="w-5 h-5" />
+
             </div>
             <div>
               <div className="text-xs font-bold text-brand-tertiary">Free Zircon Necklace Gift</div>

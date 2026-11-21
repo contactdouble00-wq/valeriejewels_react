@@ -2,12 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X,
   ShieldCheck,
-  Zap,
   CheckCircle2,
   Lock,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
   Truck,
   CreditCard,
   Smartphone,
@@ -1097,8 +1095,8 @@ export default function CheckoutModal({
 
   const maxPrepaidDiscount = Number(paymentSettings?.prepaid_discount ?? 50) || 50;
   const prepaidDiscount = Number(
-    prepaidSplit?.incentive_discount !== undefined 
-      ? prepaidSplit.incentive_discount 
+    prepaidSplit?.incentive_discount !== undefined
+      ? prepaidSplit.incentive_discount
       : (finalTotal > 1 ? Math.min(maxPrepaidDiscount, finalTotal - 1) : 0)
   ) || 0;
 
@@ -1316,7 +1314,7 @@ export default function CheckoutModal({
               </span>
             </div>
             <p className="text-[9.5px] text-gray-400 pt-0.5 leading-tight">
-              💡 Pay ₹{partialDeposit} advance securely via Google Pay, PhonePe, Paytm, or Card on the next screen. Remaining ₹{partialBalance.toLocaleString('en-IN')} is paid directly at your doorstep upon delivery.
+               Pay ₹{partialDeposit} advance securely via Google Pay, PhonePe, Paytm, or Card on the next screen. Remaining ₹{partialBalance.toLocaleString('en-IN')} is paid directly at your doorstep upon delivery.
             </p>
           </div>
         )}
@@ -1341,7 +1339,7 @@ export default function CheckoutModal({
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
               <Smartphone className="w-4 h-4 text-gray-700" />
-              <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -1376,7 +1374,7 @@ export default function CheckoutModal({
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg border border-brand-primary/30 flex items-center justify-center bg-brand-primary text-white relative shrink-0 shadow-xs">
               <Smartphone className="w-4 h-4" />
-              <Zap className="w-2.5 h-2.5 text-amber-300 fill-amber-300 absolute -top-1 -right-1" />
+
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -1412,8 +1410,8 @@ export default function CheckoutModal({
           onClick={(e) => handlePayWithFastrr(e)}
           className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
         >
-          <Zap className="w-4 h-4 text-amber-300 fill-amber-300 animate-pulse" />
-          <span>⚡ 1-Click Fastrr UPI (Google Pay • PhonePe • Paytm)</span>
+
+          <span> 1-Click Fastrr UPI (Google Pay • PhonePe • Paytm)</span>
         </button>
 
         {/* 5 UPI Apps Grid (Google Pay, PhonePe, Paytm, BHIM, Others) */}
@@ -1515,7 +1513,7 @@ export default function CheckoutModal({
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
             <CreditCard className="w-4 h-4 text-gray-700" />
-            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+
           </div>
           <div>
             <p className="text-xs font-bold text-gray-900">Credit/Debit Card</p>
@@ -1563,7 +1561,7 @@ export default function CheckoutModal({
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
             <Landmark className="w-4 h-4 text-gray-700" />
-            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+
           </div>
           <div>
             <p className="text-xs font-bold text-gray-900">Net Banking</p>
@@ -1611,7 +1609,7 @@ export default function CheckoutModal({
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center bg-gray-50 relative shrink-0">
             <Wallet className="w-4 h-4 text-gray-700" />
-            <Zap className="w-2.5 h-2.5 text-blue-600 fill-blue-600 absolute -top-1 -right-1" />
+
           </div>
           <div>
             <p className="text-xs font-bold text-gray-900">Wallets</p>
@@ -1692,7 +1690,7 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F4F4F6] flex flex-col font-sans select-none animate-fade-in overflow-hidden">
-      
+
       {/* Centered responsive container (edge-to-edge on mobile, sleek app layout on desktop) */}
       <div className="w-full max-w-lg mx-auto flex-1 flex flex-col h-full bg-[#F4F4F6] relative shadow-sm border-x border-gray-200/60 overflow-hidden">
 
@@ -1744,7 +1742,7 @@ export default function CheckoutModal({
             3. SOFT GREEN SAVINGS RIBBON
         ══════════════════════════════════════════════════════════════ */}
         <div className="bg-[#E6F8EB] px-4 py-2 text-center text-xs font-semibold text-emerald-800 shrink-0 border-b border-emerald-100/80">
-          <span>Yay! You've saved <strong>₹{totalSavings.toLocaleString('en-IN')}.00</strong> so far 🥳</span>
+          <span>Yay! You've saved <strong>₹{totalSavings.toLocaleString('en-IN')}.00</strong> so far </span>
         </div>
 
         {/* Global Error Notice */}
@@ -1778,7 +1776,7 @@ export default function CheckoutModal({
               <form onSubmit={handlePhoneSubmit} className="space-y-4">
                 <div className="flex items-center border border-gray-300 rounded-2xl bg-white shadow-2xs overflow-hidden focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
                   <div className="flex items-center space-x-1.5 px-3.5 py-3.5 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-800 select-none">
-                    <span className="text-base">🇮🇳</span>
+
                     <span>+91</span>
                   </div>
                   <input
@@ -1816,7 +1814,7 @@ export default function CheckoutModal({
                 </p>
                 <p className="text-[10.5px] text-gray-500 flex items-center justify-center gap-1 font-light">
                   <span>Powered by</span>
-                  <strong className="font-bold text-brand-primary">Fastrr ⚡</strong>
+                  <strong className="font-bold text-brand-primary">Fastrr </strong>
                 </p>
               </div>
 
@@ -1848,7 +1846,7 @@ export default function CheckoutModal({
                 <span>Assured delivery</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <Sparkles className="w-4 h-4 text-amber-500" />
+
                 <span>100% Genuine</span>
               </div>
             </div>
@@ -1904,7 +1902,7 @@ export default function CheckoutModal({
                     }}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer active:scale-95 transition-all"
                   >
-                    <span>⚡ 1-Click Auto-Fill & Continue ({demoOtp || '123456'})</span>
+                    <span> 1-Click Auto-Fill & Continue ({demoOtp || '123456'})</span>
                   </button>
                 </div>
               )}
@@ -1979,7 +1977,7 @@ export default function CheckoutModal({
                 We'll fill in your saved addresses automatically.
               </p>
               <p className="text-[10.5px] text-gray-400 flex items-center justify-center gap-1 font-light">
-                <span>Fast2SMS Secured Verification 🔒</span>
+                <span>Fast2SMS Secured Verification </span>
               </p>
             </div>
           </div>
@@ -2039,7 +2037,7 @@ export default function CheckoutModal({
                   </p>
                   {prepaidDiscount > 0 && (
                     <p className="text-[10px] text-emerald-600/90 font-medium pl-5">
-                      💡 Extra ₹{prepaidDiscount} off will be applied if you pay online (Prepaid)!
+                       Extra ₹{prepaidDiscount} off will be applied if you pay online (Prepaid)!
                     </p>
                   )}
                 </div>
@@ -2141,7 +2139,7 @@ export default function CheckoutModal({
                               <div className="mt-1 flex items-center gap-2 text-[10px]">
                                 {isApplicable ? (
                                   <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                                    <Sparkles className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+
                                     {potentialSave
                                       ? `Save ₹${potentialSave} on this order`
                                       : (c.terms || 'Applicable now')}
@@ -2291,7 +2289,7 @@ export default function CheckoutModal({
               <div>
                 <h3 className="text-base font-bold text-gray-900">Pay via</h3>
                 <p className="text-xs text-gray-600 flex items-center gap-1.5 mt-0.5">
-                  <Zap className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
+
                   <span>
                     {paymentType === 'partial'
                       ? `Pay ₹${partialDeposit} token advance now, balance ₹${partialBalance.toLocaleString('en-IN')} on delivery.`
@@ -2339,7 +2337,7 @@ export default function CheckoutModal({
             </div>
 
             {/* 5. Collapsible Account Card (Screenshot 1) */}
-            <div 
+            <div
               onClick={() => setAccountOpen(!accountOpen)}
               className="bg-white rounded-2xl border border-gray-200/90 p-3.5 shadow-2xs flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
             >
@@ -2368,7 +2366,7 @@ export default function CheckoutModal({
 
             {/* 6. Collapsible Order Summary Bar */}
             <div className="bg-white rounded-2xl border border-gray-200/90 overflow-hidden shadow-2xs">
-              <div 
+              <div
                 onClick={() => setOrderSummaryOpen(!orderSummaryOpen)}
                 className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
               >
@@ -2478,7 +2476,7 @@ export default function CheckoutModal({
         {step === 'processing' && (
           <div className="flex-1 p-8 flex flex-col items-center justify-center space-y-5 text-center animate-fade-in">
             <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-brand-primary relative shadow-md">
-              <Zap className="w-8 h-8 animate-pulse text-brand-primary" />
+
               <div className="absolute inset-0 rounded-full border-3 border-brand-primary border-t-transparent animate-spin"></div>
             </div>
             <div className="space-y-1">
@@ -2621,7 +2619,7 @@ export default function CheckoutModal({
       ══════════════════════════════════════════════════════════════ */}
       {isAddressModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2703,7 +2701,7 @@ export default function CheckoutModal({
                       : 'border-gray-300 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20'
                   }`}>
                     <div className="flex items-center space-x-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-800 select-none">
-                      <span className="text-sm">🇮🇳</span>
+
                       <span>+91</span>
                     </div>
                     <input
@@ -2901,7 +2899,7 @@ export default function CheckoutModal({
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-fade-in bg-black/60 backdrop-blur-sm">
           <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl border border-gray-200 space-y-4">
             <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center">
-              <Sparkles className="w-7 h-7" />
+
             </div>
 
             <div className="space-y-1.5">
@@ -2915,7 +2913,7 @@ export default function CheckoutModal({
 
             <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-brand-primary/20 text-xs">
               <span className="font-bold text-brand-primary block">
-                🎁 Free Zircon Necklace Reserved
+                 Free Zircon Necklace Reserved
               </span>
               <span className="text-[11px] text-gray-700">
                 Order within the next 10 minutes to claim your gift!

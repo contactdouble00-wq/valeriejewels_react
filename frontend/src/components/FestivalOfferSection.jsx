@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
   Clock,
   Copy,
   Check,
   Gift,
   Truck,
   Tag,
-  Zap,
   ArrowRight,
   ShoppingBag,
   Eye,
@@ -28,13 +26,13 @@ export default function FestivalOfferSection({
   if (!isEnabled) return null;
 
   // Defaults aligned with Valerie Jewels brand copy
-  const badgeText = fOffer.badgeText || '✨ GRAND FESTIVE CELEBRATION • LIMITED EDITION';
+  const badgeText = fOffer.badgeText || ' GRAND FESTIVE CELEBRATION • LIMITED EDITION';
   const headline = fOffer.headline || 'The Royal Festive Edit';
   const subtitle = fOffer.subtitle || 'Celebrate auspicious traditions with handcrafted fine jewelry. Handcrafted for festivities, weddings, and every luminous moment.';
   const couponCode = fOffer.couponCode || 'FESTIVE20';
   const couponDiscount = fOffer.couponDiscount || 'FLAT 20% OFF';
   const couponDesc = fOffer.couponDescription || 'Applicable on all handcrafted festive jhumka boxes & fine jewelry above ₹999.';
-  
+
   const perk1Title = fOffer.perk1Title || 'Free Velvet Keepsake Box';
   const perk1Desc = fOffer.perk1Desc || 'Luxury royal unboxing packaging included complimentary with all festive orders.';
   const perk2Title = fOffer.perk2Title || 'Extra ₹50 OFF + Free Gift';
@@ -90,25 +88,25 @@ export default function FestivalOfferSection({
 
   return (
     <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-[#C5A25D]/40 bg-gradient-to-br from-[#26153D] via-[#1E0F33] to-[#150A24] text-white p-6 sm:p-10 lg:p-12 animate-fade-in">
-      
+
       {/* Decorative Brand Champagne & Mauve Ambient Halos */}
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#C5A25D]/10 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-[#8366B0]/15 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="relative z-10 space-y-10">
-        
+
         {/* 1. Header & Live Countdown Section */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b border-white/10 pb-8">
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-[11px] font-caps uppercase tracking-widest font-bold bg-[#C5A25D]/15 text-[#E7CF9B] border border-[#C5A25D]/30 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-[#C5A25D] animate-pulse" />
+
               <span>{badgeText}</span>
             </div>
-            
+
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-editorial font-bold text-white tracking-wide">
               {headline}
             </h2>
-            
+
             <p className="text-sm sm:text-base text-[#D8CEE8] font-light leading-relaxed">
               {subtitle}
             </p>
@@ -163,7 +161,7 @@ export default function FestivalOfferSection({
 
         {/* 2. Interactive Festive Voucher Card & 3 Brand Pillars */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          
+
           {/* Festive Voucher Promo Box */}
           <div className="lg:col-span-1 rounded-2xl p-6 bg-gradient-to-br from-[#2E1848] via-[#24123A] to-[#1A0B2C] border border-[#C5A25D]/40 relative overflow-hidden flex flex-col justify-between shadow-xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#C5A25D]/10 rounded-full blur-2xl"></div>
@@ -217,7 +215,7 @@ export default function FestivalOfferSection({
 
           {/* 3 Festive Perks Cards */}
           <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            
+
             {/* Perk 1 */}
             <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-sm flex flex-col justify-between space-y-4 hover:border-[#C5A25D]/40 transition-all">
               <div className="w-10 h-10 rounded-xl bg-[#C5A25D]/15 border border-[#C5A25D]/30 flex items-center justify-center text-[#E7CF9B]">
@@ -237,7 +235,7 @@ export default function FestivalOfferSection({
             {/* Perk 2 */}
             <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-sm flex flex-col justify-between space-y-4 hover:border-[#C5A25D]/40 transition-all">
               <div className="w-10 h-10 rounded-xl bg-[#C5A25D]/15 border border-[#C5A25D]/30 flex items-center justify-center text-[#E7CF9B]">
-                <Zap className="w-5 h-5" />
+
               </div>
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-white">{perk2Title}</h4>
@@ -246,7 +244,7 @@ export default function FestivalOfferSection({
                 </p>
               </div>
               <span className="text-[10px] font-caps uppercase tracking-wider text-emerald-400 font-semibold">
-                ⚡ Fastrr 1-Click
+                 Fastrr 1-Click
               </span>
             </div>
 
@@ -304,7 +302,7 @@ export default function FestivalOfferSection({
                   >
                     <div>
                       {/* Image Frame */}
-                      <div 
+                      <div
                         onClick={() => onQuickView && onQuickView(product)}
                         className="relative aspect-square rounded-xl overflow-hidden bg-black/30 cursor-pointer"
                       >
@@ -313,7 +311,7 @@ export default function FestivalOfferSection({
                           alt={product.name}
                           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                         />
-                        
+
 
 
                         {/* Quick View Button on Hover */}
@@ -329,7 +327,7 @@ export default function FestivalOfferSection({
 
                       {/* Title & Short Details */}
                       <div className="mt-3.5 space-y-1">
-                        <h4 
+                        <h4
                           onClick={() => onQuickView && onQuickView(product)}
                           className="font-medium text-sm text-white hover:text-[#E7CF9B] transition-colors line-clamp-1 cursor-pointer"
                         >

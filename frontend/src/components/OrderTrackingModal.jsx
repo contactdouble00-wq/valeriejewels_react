@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   RotateCcw,
-  Sparkles,
   ArrowRight,
   Check,
   Ban,
@@ -233,7 +232,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F4F4F6] flex flex-col font-sans overflow-y-auto min-h-screen select-none animate-fade-in">
-      
+
       {/* Centered responsive container (edge-to-edge on mobile, sleek app layout on desktop) */}
       <div className="w-full max-w-2xl mx-auto flex-1 flex flex-col bg-[#F4F4F6] min-h-screen relative shadow-sm sm:border-x sm:border-gray-200/80">
 
@@ -278,7 +277,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
         <div className="bg-[#281636] px-4 py-2.5 text-center shrink-0 shadow-xs flex items-center justify-center space-x-2">
           <Truck className="w-3.5 h-3.5 text-[#D4AF37]" />
           <span className="text-[10px] sm:text-[11.5px] font-bold text-white tracking-widest uppercase">
-            ⚡ LIVE DISPATCH STATUS & COURIER ORDER TRACKING
+             LIVE DISPATCH STATUS & COURIER ORDER TRACKING
           </span>
         </div>
 
@@ -336,7 +335,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                   <span className="text-[11px] text-gray-400 font-light">
-                    💡 Check your order confirmation SMS or WhatsApp for your VJ reference.
+                     Check your order confirmation SMS or WhatsApp for your VJ reference.
                   </span>
 
                   <button
@@ -465,9 +464,9 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
                       Estimated Arrival
                     </span>
                     <span className="text-xs sm:text-sm font-bold text-brand-tertiary">
-                      {order.order_status === 'delivered' 
-                        ? 'Delivered to recipient' 
-                        : (order.estimated_delivery_date 
+                      {order.order_status === 'delivered'
+                        ? 'Delivered to recipient'
+                        : (order.estimated_delivery_date
                             ? new Date(order.estimated_delivery_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                             : 'Within 3-5 business days')}
                     </span>
@@ -479,7 +478,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
                         {order.courier_name || (order.delivery_provider === 'justshyp' ? 'JustShyp Express Air' : 'Shiprocket Express Air')}
                       </span>
                       <a
-                        href={order.tracking_url || (order.delivery_provider === 'justshyp' 
+                        href={order.tracking_url || (order.delivery_provider === 'justshyp'
                           ? `https://backend.justshyp.com/tracking?awb=${order.provider_awb || order.awb || order.shiprocket_awb}`
                           : `https://shiprocket.co/tracking/${order.shiprocket_awb || order.provider_awb || order.awb}`)}
                         target="_blank"
@@ -822,7 +821,7 @@ export default function OrderTrackingModal({ isOpen, onClose, initialOrderNumber
               {order.order_status !== 'cancelled' && order.order_status !== 'delivered' && (
                 <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                   <span className="text-purple-900/80 font-light flex items-center space-x-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+
                     <span>Sandbox Demo Tool: Simulate next courier scan & milestone</span>
                   </span>
                   <button
