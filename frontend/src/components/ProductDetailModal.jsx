@@ -15,6 +15,30 @@ import AmazonTrustBadge from './AmazonTrustBadge';
 import FormattedDescription from './FormattedDescription';
 import { setProductSeo, restorePageSeo } from '../utils/seo';
 
+import googlePayIcon from '../assets/Payment_icons/google-pay.png';
+import phonePeIcon from '../assets/Payment_icons/phone-pe.png';
+import paytmIcon from '../assets/Payment_icons/paytm.png';
+
+function OrderNowButtonContent() {
+  return (
+    <>
+      <span className="font-bold tracking-wider text-white text-xs sm:text-lg uppercase whitespace-nowrap">ORDER NOW</span>
+      <span className="flex items-center -space-x-1.5 sm:-space-x-2" aria-hidden="true">
+        <span className="relative z-10 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-white border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+          <img src={googlePayIcon} alt="" className="w-full h-full object-cover" />
+        </span>
+        <span className="relative z-20 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-[#5f259f] border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+          <img src={phonePeIcon} alt="" className="w-full h-full object-cover" />
+        </span>
+        <span className="relative z-30 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-white border-[1.5px] border-white shadow-xs overflow-hidden flex items-center justify-center shrink-0">
+          <img src={paytmIcon} alt="" className="w-full h-full object-cover" />
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" className="w-4 h-4 sm:w-6 sm:h-6 text-white group-hover:translate-x-0.5 transition-transform shrink-0" strokeWidth={3} />
+    </>
+  );
+}
+
 // Helper to choose the initial default variant for a product.
 // For Mystery Jar products, the "Classic Edition" (₹1,999) is selected by default as requested.
 export function pickDefaultVariant(prod, slug = '') {
@@ -1261,25 +1285,13 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
               </button>
 
               <button
-                onClick={handleBuyNow}
-                className="flex-1 py-3 px-4 rounded-xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.98] text-white flex flex-col items-center justify-center shadow-md transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5 font-caps tracking-wider uppercase font-bold text-xs">
-                  <Zap className="w-3.5 h-3.5 text-amber-300 fill-current" />
-                  <span>
-                    {paySettings.cod_available
-                      ? 'ORDER NOW - CASH ON DELIVERY'
-                      : paySettings.partial_cod_enabled
-                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 49})`
-                      : 'ORDER NOW - 1-CLICK PAY ONLINE'}
-                  </span>
-                </div>
-                <span className="text-[9.5px] text-purple-200 font-medium">
-                  {paySettings.online_payment_enabled !== false
-                    ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + free luxury gift`
-                    : '◆ Fastrr 1-Click Doorstep Express Delivery'}
-                </span>
-              </button>
+                    type="button"
+                    onClick={handleBuyNow}
+                    aria-label="Order Now"
+                    className="flex-1 min-w-0 px-2 sm:px-6 min-h-[52px] sm:min-h-[56px] py-3.5 sm:py-4 rounded-xl bg-[#372248] hover:bg-[#2c1a38] active:scale-[0.99] text-white flex items-center justify-center gap-2 sm:gap-3.5 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer group select-none"
+                  >
+                    <OrderNowButtonContent />
+                  </button>
 
               <button
                 onClick={handleAdd}
@@ -1857,24 +1869,12 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                 <div className="pt-2 space-y-3">
                   {/* High-Converting 1-Click Fastrr Button */}
                   <button
+                    type="button"
                     onClick={handleBuyNow}
-                    className="w-full py-4 px-6 rounded-2xl bg-brand-tertiary hover:bg-brand-tertiary-hover active:scale-[0.99] text-white flex flex-col items-center justify-center shadow-luxury transition-all cursor-pointer group"
+                    aria-label="Order Now"
+                    className="w-full px-5 sm:px-6 min-h-[52px] sm:min-h-[56px] py-3.5 sm:py-4 rounded-xl bg-[#372248] hover:bg-[#2c1a38] active:scale-[0.99] text-white flex items-center justify-center gap-2 sm:gap-3.5 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer group select-none"
                   >
-                    <div className="flex items-center gap-2 font-caps tracking-widest uppercase font-bold text-xs sm:text-sm">
-                      <Zap className="w-4 h-4 text-amber-300 fill-current group-hover:scale-110 transition-transform" />
-                      <span>
-                        {paySettings.cod_available
-                          ? 'ORDER NOW - CASH ON DELIVERY'
-                          : paySettings.partial_cod_enabled
-                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 49})`
-                          : 'ORDER NOW - 1-CLICK PAY ONLINE'}
-                      </span>
-                    </div>
-                    <span className="text-[10.5px] text-purple-200 font-medium mt-0.5">
-                      {paySettings.online_payment_enabled !== false
-                        ? `◆ Pay online → save ₹${paySettings.prepaid_discount || 50} + free complimentary gift`
-                        : '◆ Fastrr 1-Click Doorstep Express Delivery'}
-                    </span>
+                    <OrderNowButtonContent />
                   </button>
 
                   <div className="flex items-center gap-3">
