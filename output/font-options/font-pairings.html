@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=DM+Sans:wght@400;500;600&family=Instrument+Serif&family=Jost:wght@400;500&family=Manrope:wght@400;500;600&display=swap">
+<style>
+#valerie-font-options .sample { --ink:light-dark(#2a1939,#eee6f6); --paper:light-dark(#fdfbfe,#211a27); --line:light-dark(#e5dce9,#493e50); color:var(--ink); background:var(--paper); padding:28px; min-height:420px; box-sizing:border-box; }
+#valerie-font-options .navline { display:flex; justify-content:space-between; align-items:center; gap:16px; border-bottom:1px solid var(--line); padding-bottom:18px; }
+#valerie-font-options .brand { font-family:Georgia,serif; letter-spacing:5px; font-size:21px; }
+#valerie-font-options .meta {font:12px/1.5 system-ui,sans-serif; opacity:.78; }
+#valerie-font-options .type-head {font-size:clamp(34px,6vw,52px);line-height:1.05;font-weight:400;margin:28px 0 15px;letter-spacing:-.025em;max-width:560px;}
+#valerie-font-options .copy {font-size:16px;line-height:1.65;margin:0;max-width:490px;}
+#valerie-font-options .bottom {margin-top:30px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+#valerie-font-options .product {font-size:18px;font-weight:500;margin:0 0 8px;}
+#valerie-font-options .price {font-size:18px;font-weight:500;}
+#valerie-font-options .order {display:inline-block;padding:14px 28px;background:light-dark(#372248,#d9c5ec);color:light-dark(#fff,#241331);border-radius:8px;font-size:14px;font-weight:500;letter-spacing:.04em;}
+#valerie-font-options .editorial {font-family:'DM Sans',sans-serif;}
+#valerie-font-options .editorial .type-head {font-family:'Instrument Serif',serif;}
+#valerie-font-options .modern {font-family:Manrope,sans-serif;}
+#valerie-font-options .modern .type-head {font-weight:500;letter-spacing:-.045em;}
+#valerie-font-options .fashion {font-family:Jost,sans-serif;}
+#valerie-font-options .fashion .type-head {font-family:'Bodoni Moda',serif;}
+@media(max-width:450px){#valerie-font-options .sample{padding:20px;min-height:490px;}#valerie-font-options .navline{align-items:flex-start;flex-direction:column;}#valerie-font-options .bottom{gap:16px;}}
+</style>
+<div id="valerie-font-options" class="viz-carousel" aria-label="Valerie font pairing previews">
+  <section data-variant="Quiet editorial" aria-label="Instrument Serif and DM Sans">
+    <div class="sample editorial">
+      <div class="navline"><span class="brand">VALERIÉ</span><span class="meta">Instrument Serif 400 + DM Sans 400 / 500</span></div>
+      <h2 class="type-head">Oxidised jhumka sets.<br>Ready to gift.</h2>
+      <p class="copy">A collection of everyday favourites, thoughtfully arranged in a keepsake box.</p>
+      <div class="bottom"><div><p class="product">The 16-pair earrings box</p><span class="price">₹999</span><span class="meta"> &nbsp; Free delivery across India</span></div><span class="order">Order now →</span></div>
+    </div>
+  </section>
+  <section data-variant="Modern minimal" aria-label="Manrope single-family typography" hidden>
+    <div class="sample modern">
+      <div class="navline"><span class="brand">VALERIÉ</span><span class="meta">Manrope 500 headings + 400 body / 600 buttons</span></div>
+      <h2 class="type-head">Oxidised jhumka sets.<br>Ready to gift.</h2>
+      <p class="copy">A collection of everyday favourites, thoughtfully arranged in a keepsake box.</p>
+      <div class="bottom"><div><p class="product">The 16-pair earrings box</p><span class="price">₹999</span><span class="meta"> &nbsp; Free delivery across India</span></div><span class="order">Order now →</span></div>
+    </div>
+  </section>
+  <section data-variant="Fashion editorial" aria-label="Bodoni Moda and Jost" hidden>
+    <div class="sample fashion">
+      <div class="navline"><span class="brand">VALERIÉ</span><span class="meta">Bodoni Moda 400 + Jost 400 / 500</span></div>
+      <h2 class="type-head">Oxidised jhumka sets.<br>Ready to gift.</h2>
+      <p class="copy">A collection of everyday favourites, thoughtfully arranged in a keepsake box.</p>
+      <div class="bottom"><div><p class="product">The 16-pair earrings box</p><span class="price">₹999</span><span class="meta"> &nbsp; Free delivery across India</span></div><span class="order">Order now →</span></div>
+    </div>
+  </section>
+</div>
+<script>
+const fontPreviewRoot = document.getElementById('valerie-font-options');
+if (globalThis.Tweak) {
+  for (const sample of fontPreviewRoot.querySelectorAll('.sample')) {
+    const settings = { headingSize: 48 };
+    const heading = sample.querySelector('.type-head');
+    const tweak = new Tweak({ container: sample, onChange: () => { heading.style.fontSize = `clamp(30px, 6vw, ${settings.headingSize}px)`; } });
+    tweak.addSlider(settings, 'headingSize', { label: 'Heading size', min: 36, max: 56, unit: 'px' });
+  }
+}
+</script>
