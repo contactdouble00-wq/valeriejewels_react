@@ -320,7 +320,7 @@ export default function ProductAssuranceModal({ isOpen, onClose, item, onEdit })
               {Boolean(Number(isAntiTarnish)) && (
                 <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                   <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>Anti-Tarnish 316L</span>
+                  <span>Anti-Tarnish Oxidized Jewellery</span>
                 </span>
               )}
               {Boolean(Number(isBestseller)) && (

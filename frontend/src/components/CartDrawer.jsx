@@ -46,7 +46,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
     return {
       cod_available: true,
       partial_cod_enabled: true,
-      partial_advance: 100,
+      partial_advance: 49,
       online_payment_enabled: true,
       prepaid_discount: 50,
     };

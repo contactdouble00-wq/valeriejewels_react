@@ -63,7 +63,7 @@ try {
         'razorpay_key_secret'  => 'u8xu0HfY01b0wkwWwiYfEBRN',
         'cod_available'        => true,
         'partial_cod_enabled'  => true,
-        'partial_advance'      => 100,
+        'partial_advance'      => 49,
     ];
 
     try {
@@ -135,7 +135,7 @@ try {
     if ($effectiveType === 'partial') {
         $adv = (float)($order['amount_paid_upfront'] > 0 
             ? $order['amount_paid_upfront'] 
-            : ($payConfig['partial_advance'] ?? 100.0));
+            : ($payConfig['partial_advance'] ?? 49));
         $dueNow = min($adv, $totalAmount);
     }
 

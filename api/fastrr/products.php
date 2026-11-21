@@ -92,7 +92,7 @@ try {
                 'weight'           => 0.05,
                 'weight_unit'      => 'kg',
                 'option_values'    => [
-                    'Material' => ($r['material'] && stripos($r['material'], '18') === false) ? $r['material'] : 'Lightweight Stainless Steel'
+                    'Material' => ($r['material'] && stripos($r['material'], '18') === false) ? $r['material'] : 'Oxidized Jewellery'
                 ]
             ];
         }
@@ -108,14 +108,14 @@ try {
             'created_at'   => $createdAt,
             'handle'       => $r['slug'] ?: ('product-' . $pId),
             'updated_at'   => $createdAt,
-            'tags'         => 'Jewelry, 18K Gold, Anti-Tarnish, Waterproof',
+            'tags'         => 'Jewelry, Oxidized, Anti-Tarnish, Waterproof',
             'status'       => 'active',
             'variants'     => $variants,
             'image'        => ['src' => $primaryImg],
             'options'      => [
                 [
                     'name'   => 'Material',
-                    'values' => ['18K Gold Plated Stainless Steel']
+                    'values' => ['Oxidized Jewellery']
                 ]
             ]
         ];

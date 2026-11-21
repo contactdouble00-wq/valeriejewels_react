@@ -59,8 +59,8 @@ if ($method === 'GET') {
         $items = [
             [
                 'id' => 1,
-                'product_name' => '18K Gold Plated Emerald Clover Necklace',
-                'variant_title' => 'Anti-Tarnish 316L Stainless Steel',
+                'product_name' => 'Oxidized Emerald Clover Necklace',
+                'variant_title' => 'Anti-Tarnish Oxidized Jewellery',
                 'quantity' => 1,
                 'unit_price' => 1299.00,
                 'total_price' => 1299.00,

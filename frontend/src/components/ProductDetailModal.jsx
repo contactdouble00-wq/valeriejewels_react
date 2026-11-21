@@ -96,7 +96,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
     return {
       cod_available: true,
       partial_cod_enabled: true,
-      partial_advance: 100,
+      partial_advance: 49,
       online_payment_enabled: true,
       prepaid_discount: 50,
     };
@@ -1170,11 +1170,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                        !product.material.toLowerCase().includes('18k gold plated') &&
                        !product.material.toLowerCase().includes('18 gold plated')
                         ? product.material
-                        : 'Lightweight Stainless Steel')}
+                        : 'Oxidized Jewellery')}
                 </p>
                 <p className="text-[11px] text-brand-muted font-light leading-relaxed">
                   {isMysteryProduct
-                    ? 'Handcrafted with lightweight stainless steel, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
+                    ? 'Handcrafted with oxidized material, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
                     : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                 </p>
                 {isMysteryProduct && (
@@ -1270,7 +1270,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                     {paySettings.cod_available
                       ? 'ORDER NOW - CASH ON DELIVERY'
                       : paySettings.partial_cod_enabled
-                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
+                      ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 49})`
                       : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                   </span>
                 </div>
@@ -1866,7 +1866,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                         {paySettings.cod_available
                           ? 'ORDER NOW - CASH ON DELIVERY'
                           : paySettings.partial_cod_enabled
-                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 100})`
+                          ? `ORDER NOW - PARTIAL COD (₹${paySettings.partial_advance || 49})`
                           : 'ORDER NOW - 1-CLICK PAY ONLINE'}
                       </span>
                     </div>
@@ -1917,7 +1917,7 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                       }${
                         paySettings.online_payment_enabled !== false && (paySettings.cod_available || paySettings.partial_cod_enabled) ? ' & ' : ''
                       }${
-                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? `Partial COD (₹${paySettings.partial_advance || 100})` : '')
+                        paySettings.cod_available ? 'Cash on Delivery' : (paySettings.partial_cod_enabled ? `Partial COD (₹${paySettings.partial_advance || 49})` : '')
                       } Available`}
                     </span>
                   </p>
@@ -1953,11 +1953,11 @@ export default function ProductDetailModal({ productSlug, initialProduct, onClos
                            !product.material.toLowerCase().includes('18k gold plated') &&
                            !product.material.toLowerCase().includes('18 gold plated')
                             ? product.material
-                            : 'Lightweight Stainless Steel')}
+                            : 'Oxidized Jewellery')}
                     </p>
                     <p className="text-[11.5px] text-brand-muted font-light leading-relaxed">
                       {isMysteryProduct
-                        ? 'Handcrafted with lightweight stainless steel, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
+                        ? 'Handcrafted with oxidized material, crystal beads, and gold-tone charms. Every jar contains a unique, non-repeating mix curated for pure unboxing excitement!'
                         : 'Safe for water, perfume, and daily wear without fading, rusting, or causing green skin marks.'}
                     </p>
                     {isMysteryProduct && (

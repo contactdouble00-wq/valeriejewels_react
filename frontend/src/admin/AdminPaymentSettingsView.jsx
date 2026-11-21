@@ -44,7 +44,7 @@ export default function AdminPaymentSettingsView() {
   // 1-Click Operations state
   const [togglingMethod, setTogglingMethod] = useState(null);
   const [instantSuccessMsg, setInstantSuccessMsg] = useState(null);
-  const [partialAdvanceInput, setPartialAdvanceInput] = useState('199');
+  const [partialAdvanceInput, setPartialAdvanceInput] = useState('49');
   const [updatingPartialAmount, setUpdatingPartialAmount] = useState(false);
 
   // Configuration state
@@ -63,7 +63,7 @@ export default function AdminPaymentSettingsView() {
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
     online_payment_enabled: true,
     partial_cod_enabled: true,
-    partial_advance: 100,
+    partial_advance: 49,
     cod_fee: 0,
     cod_available: true,
     shiprocket_email: '',
@@ -79,7 +79,7 @@ export default function AdminPaymentSettingsView() {
     exit_intent_enabled: true,
     exit_intent_title: 'Wait! Are you sure you want to exit?',
     exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
-    testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+    testimonial_quote: '',
     testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
   });
 
@@ -1688,7 +1688,7 @@ export default function AdminPaymentSettingsView() {
               <div className="p-3 bg-white rounded-lg border border-purple-100 space-y-1">
                 <span className="text-[10.5px] font-bold text-brand-primary uppercase tracking-wide block">1. Advance Paid Online</span>
                 <p className="text-[11px] text-brand-muted leading-tight">
-                  Customer pays token deposit (e.g. ₹{settings.partial_advance || 100}) via UPI. Recorded as upfront payment with Razorpay Transaction ID.
+                  Customer pays token deposit (e.g. ₹{settings.partial_advance || 49}) via UPI. Recorded as upfront payment with Razorpay Transaction ID.
                 </p>
               </div>
 
@@ -1702,7 +1702,7 @@ export default function AdminPaymentSettingsView() {
               <div className="p-3 bg-white rounded-lg border border-purple-100 space-y-1">
                 <span className="text-[10.5px] font-bold text-emerald-700 uppercase tracking-wide block">3. Label & Tax Invoice Notice</span>
                 <p className="text-[11px] text-brand-muted leading-tight">
-                  Shipping label & tax invoice prominently print: <em>"Advance Paid Online: ₹{settings.partial_advance || 100} | COLLECT EXACTLY REMAINING BALANCE ONLY"</em>.
+                  Shipping label & tax invoice prominently print: <em>"Advance Paid Online: ₹{settings.partial_advance || 49} | COLLECT EXACTLY REMAINING BALANCE ONLY"</em>.
                 </p>
               </div>
             </div>

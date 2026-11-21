@@ -4,6 +4,8 @@
  * Industry-standard singleton wrapper with prepared statement enforcement.
  */
 
+require_once dirname(__DIR__) . '/database/storefront_content_migration.php';
+
 class Database {
     private static ?PDO $instance = null;
     private static array $config = [];
@@ -75,13 +77,17 @@ class Database {
                         @file_put_contents($cacheFile, '1');
                     }
                     self::ensureTablesExist(self::$instance);
-                    return self::$instance;
                 } catch (Throwable $e) {
                     if ($isLocalDev) {
                         @file_put_contents($cacheFile, '0');
                     }
                     // MySQL failed, proceed to SQLite fallback
                 }
+            }
+
+            if (self::$instance !== null) {
+                migrateStorefrontContent(self::$instance);
+                return self::$instance;
             }
 
             // SQLite fallback
@@ -119,6 +125,7 @@ class Database {
                 } catch (Throwable $e) {}
                 self::$driver = 'sqlite';
                 self::ensureSqliteTablesExist(self::$instance);
+                migrateStorefrontContent(self::$instance);
             } else {
                 throw new Exception("Database connection failed: MySQL unreachable and SQLite driver not available.");
             }
@@ -279,7 +286,7 @@ class Database {
                     stock_quantity INTEGER NOT NULL DEFAULT 0,
                     pairs_count INTEGER DEFAULT NULL,
                     is_anti_tarnish INTEGER NOT NULL DEFAULT 1,
-                    material TEXT NOT NULL DEFAULT 'Lightweight Stainless Steel',
+                    material TEXT NOT NULL DEFAULT 'Oxidized Jewellery',
                     is_bestseller INTEGER NOT NULL DEFAULT 0,
                     is_active INTEGER NOT NULL DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -900,7 +907,7 @@ class Database {
                         'badgeText'       => 'Everyday Luxury Fine Jewelry',
                         'headline'        => 'Curated everyday jewelry,',
                         'accentText'      => 'designed to shine forever.',
-                        'subtitle'        => 'Waterproof, shower-safe, and hypoallergenic accessories crafted in premium 316L stainless steel and 18K gold. Priced honestly from ₹500 to ₹1,500.',
+                        'subtitle'        => 'Waterproof, shower-safe, and hypoallergenic accessories crafted with an oxidized finish. Priced honestly from ₹500 to ₹1,500.',
                         'primaryBtnText'  => 'Shop 4 Jhumka Boxes',
                         'primaryBtnLink'  => '#jhumka-boxes',
                         'secondaryBtnText'=> 'All Everyday Jewelry',
@@ -911,7 +918,7 @@ class Database {
                         'badgeText'  => '#1 Ad Bestseller Collection • 12,000+ Delivered',
                         'titleLine1' => 'The 4 Signature',
                         'titleLine2' => 'Jhumka Treasure Boxes',
-                        'subtitle'   => 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish micro gold polish and lightweight comfort.',
+                        'subtitle'   => 'Our most viral handcrafted collections. Each box brings 5 to 6 curated jhumka pairs inside a luxury keepsake box with anti-tarnish oxidized finish and lightweight comfort.',
                         'pill1'      => '5–6 Curated Pairs Per Box',
                         'pill2'      => 'Zero Earache • Featherlight',
                         'pill3'      => 'Save up to 50% vs Single Pairs',
@@ -1020,11 +1027,11 @@ class Database {
             $necklaceCatId = (int)$pdo->query("SELECT id FROM categories WHERE slug = 'necklaces'")->fetchColumn() ?: 2;
 
             $products = [
-                [$jhumkaCatId, 'The Royal Noor Jhumka Box (6 Pair Festive Edition)', 'royal-noor-jhumka-box', 'Handcrafted royal temple jhumkas featuring micro-pearl drops, kundan craftsmanship, and antique 18K matte gold finish.', 3499, 1799, 'VJ-BX-001', 50, 1],
+                [$jhumkaCatId, 'The Royal Noor Jhumka Box (6 Pair Festive Edition)', 'royal-noor-jhumka-box', 'Handcrafted royal temple jhumkas featuring micro-pearl drops, kundan craftsmanship, and antique oxidized finish.', 3499, 1799, 'VJ-BX-001', 50, 1],
                 [$jhumkaCatId, 'The Gulabi Mehal Pastel Jhumka Box (6 Pair Artisanal Edition)', 'gulabi-mehal-pastel-jhumka-box', 'Subtle pastel meenakari craftsmanship with mint green, baby pink, and lavender accents.', 3499, 1899, 'VJ-BX-002', 45, 1],
                 [$jhumkaCatId, 'The Shahi Kundan Chandbali & Jhumka Box (5 Pair Heritage Set)', 'shahi-kundan-chandbali-box', 'Heritage bridal box pairing majestic crescent chandbalis with tiered jhumkas.', 3999, 2199, 'VJ-BX-003', 35, 1],
                 [$jhumkaCatId, 'The Roohani Daily Wear Jhumka Box (6 Pair Lightweight Set)', 'roohani-daily-wear-jhumka-box', 'Featherlight anti-tarnish everyday floral and filigree drops for work and college.', 2999, 1499, 'VJ-BX-004', 60, 1],
-                [$necklaceCatId, 'Aurelia 18K Solitaire Pendant Necklace', 'aurelia-solitaire-necklace', 'Minimalist brilliant-cut cubic zirconia solitaire on waterproof 18K gold cable chain.', 1999, 999, 'VJ-NK-001', 100, 1],
+                [$necklaceCatId, 'Aurelia Oxidized Solitaire Pendant Necklace', 'aurelia-solitaire-necklace', 'Minimalist brilliant-cut cubic zirconia solitaire on waterproof oxidized cable chain.', 1999, 999, 'VJ-NK-001', 100, 1],
             ];
 
             $prodStmt = $pdo->prepare("

@@ -183,7 +183,7 @@ try {
         'online_payment_enabled' => true,
         'prepaid_discount'       => 50.0,
         'partial_cod_enabled'    => true,
-        'partial_advance'        => 100.0,
+        'partial_advance'        => 49,
         'cod_available'          => false,
         'cod_fee'                => 0.0,
         'gateway_mode'           => 'live',
@@ -240,7 +240,7 @@ try {
         $shippingFee = 0.0;
         $totalAmount = $netSubtotal;
         $totalItemQuantity = max(1, (int)array_sum(array_column($validatedOrderItems, 'quantity')));
-        $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
+        $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 49));
         $totalRequiredAdvance = $configuredAdvancePerItem * $totalItemQuantity;
         $deposit = ($totalAmount > 0.0) ? round(min($totalRequiredAdvance, $totalAmount), 2) : 0.0;
         $amountPaidUpfront = $deposit;

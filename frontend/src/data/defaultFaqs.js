@@ -58,7 +58,7 @@ export const DEFAULT_FAQS_DATA = {
       id: 'faq-4',
       category: 'Orders & Payments',
       q: 'Do you offer Cash on Delivery (COD)?',
-      a: 'Yes, Cash on Delivery (COD) is available across all serviceable Indian pincodes. You can also choose our Partial COD (Smart Split) option where you pay an advance token of ₹199 via UPI to confirm dispatch, and pay the remaining balance to the courier agent upon doorstep arrival.',
+      a: 'Yes, Cash on Delivery (COD) is available across all serviceable Indian pincodes. You can also choose our Partial COD (Smart Split) option where you pay an advance token of ₹49 via UPI to confirm dispatch, and pay the remaining balance to the courier agent upon doorstep arrival.',
       isActive: true,
       priority: 4
     },
@@ -74,7 +74,7 @@ export const DEFAULT_FAQS_DATA = {
       id: 'faq-6',
       category: 'Jewelry Care & Quality',
       q: 'Are Valerié jewellery pieces anti-tarnish and waterproof?',
-      a: 'Yes! All Valerié pieces are engineered with surgical-grade 316L stainless steel with anti-tarnish protective plating. This makes them 10x more resilient than ordinary electroplating, completely hypoallergenic, water-resistant, and sweat-proof for everyday luxury wear.',
+      a: 'Yes! All Valerié pieces are engineered with oxidized material with anti-tarnish protective plating. This makes them 10x more resilient than ordinary electroplating, completely hypoallergenic, water-resistant, and sweat-proof for everyday luxury wear.',
       isActive: true,
       priority: 6
     },

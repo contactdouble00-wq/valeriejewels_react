@@ -384,7 +384,7 @@ export default function AdminProductPreviewModal({
                     <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0" />
                     <div className="text-[11px] leading-tight text-brand-tertiary">
                       <span className="font-bold block">Anti-Tarnish Lifetime</span>
-                      <span className="text-[10px] text-brand-muted">Lightweight Stainless Steel</span>
+                      <span className="text-[10px] text-brand-muted">Oxidized Jewellery</span>
                     </div>
                   </div>
                 )}

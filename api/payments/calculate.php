@@ -244,7 +244,7 @@ try {
     $payConfig = [
         'online_payment_enabled' => true,
         'prepaid_discount'    => 50.0,
-        'partial_advance'     => 100.0,
+        'partial_advance'     => 49,
         'partial_cod_enabled' => true,
         'cod_fee'             => 0.0,
         'cod_available'       => false,
@@ -283,7 +283,7 @@ try {
     // Free delivery: shipping fee = 0
     // Upfront deposit: ₹100 per item quantity (e.g., 2 items => ₹200 deposit, 3 items => ₹300 deposit)
     $totalItemQuantity = max(1, (int)array_sum(array_column($recalculatedItems, 'quantity')));
-    $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 100.0));
+    $configuredAdvancePerItem = max(1.0, (float)($payConfig['partial_advance'] ?? 49));
     $totalRequiredAdvance = $configuredAdvancePerItem * $totalItemQuantity;
     $partialDeposit = ($netSubtotal > 0.0) ? round(min($totalRequiredAdvance, $netSubtotal), 2) : 0.0;
     $partialDueOnDelivery = round(max(0.0, $netSubtotal - $partialDeposit), 2);

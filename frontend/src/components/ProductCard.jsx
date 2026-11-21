@@ -139,7 +139,7 @@ export default function ProductCard({ product, onQuickView, onAddToCart }) {
 
           {/* Material & Description */}
           <p className="text-[10px] sm:text-xs text-brand-muted line-clamp-1 font-light">
-            {material || short_description || (isMystery ? 'Assorted Surprise Jewelry Mix' : 'Lightweight Stainless Steel')}
+            {material || short_description || (isMystery ? 'Assorted Surprise Jewelry Mix' : 'Oxidized Jewellery')}
           </p>
 
           {/* Pricing Row */}

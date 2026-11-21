@@ -759,7 +759,7 @@ if ($method === 'POST') {
         ':stock'      => $stock,
         ':pairs'      => $pairsCount,
         ':anti'       => !empty($input['is_anti_tarnish']) ? 1 : 0,
-        ':mat'        => !empty($input['material']) ? $input['material'] : 'Lightweight Stainless Steel',
+        ':mat'        => !empty($input['material']) ? $input['material'] : 'Oxidized Jewellery',
         ':best'       => !empty($input['is_bestseller']) ? 1 : 0,
         ':vid'        => $finalVideoUrl,
         ':active'     => isset($input['is_active']) ? (int)$input['is_active'] : 1,

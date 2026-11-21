@@ -29,7 +29,7 @@ $defaultSettings = [
     'prepaid_gift_subtitle' => 'Included complimentary with all prepaid orders',
     'online_payment_enabled'=> true,
     'partial_cod_enabled'   => true,
-    'partial_advance'       => 100,
+    'partial_advance'       => 49,
     'cod_fee'               => 0,
     'cod_available'         => false,
     'shiprocket_email'           => getenv('SHIPROCKET_EMAIL') ?: 'yashpatel6855+api@gmail.com',
@@ -47,7 +47,7 @@ $defaultSettings = [
     'exit_intent_enabled'   => true,
     'exit_intent_title'     => 'Wait! Are you sure you want to exit?',
     'exit_intent_message'   => 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
-    'testimonial_quote'     => '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+    'testimonial_quote'     => '',
     'testimonial_author'    => 'Ananya Sharma, Verified Buyer • New Delhi',
 ];
 

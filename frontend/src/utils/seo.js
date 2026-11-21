@@ -361,7 +361,7 @@ export function setProductSeo(product, selectedVariant = null) {
         sameAs: [OFFICIAL_INSTAGRAM_URL, OFFICIAL_AMAZON_STORE_URL],
       },
       category: `Jewelry > ${catName}`,
-      material: product.material || 'Anti-Tarnish 316L Stainless Steel & Micro Gold Polish',
+      material: product.material || 'Oxidized Jewellery',
       offers: offers.length === 1 ? offers[0] : offers,
       aggregateRating: {
         '@type': 'AggregateRating',
@@ -555,7 +555,7 @@ export function setMysteryJewelleryJarSeo(product = null) {
           ],
         },
         category: 'Jewelry > Mystery Jars & Gift Sets',
-        material: 'Stainless Steel, 18K Gold Plated, Crystal Beads',
+        material: 'Oxidized Jewellery, Crystal Beads',
         offers,
         aggregateRating: {
           '@type': 'AggregateRating',
@@ -608,7 +608,7 @@ export function setMysteryJewelleryJarSeo(product = null) {
             name: 'Is the jewelry inside the Mystery Jar anti-tarnish and waterproof?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes, Valerie pieces are crafted with anti-tarnish stainless steel and premium materials designed for daily wear without rusting or fading.',
+              text: 'Yes, Valerie pieces are crafted with anti-tarnish oxidized jewellery and premium materials designed for daily wear without rusting or fading.',
             },
           },
           {

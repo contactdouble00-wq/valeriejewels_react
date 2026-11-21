@@ -248,7 +248,7 @@ export default function FaqPage({ onReturnToStore, onNavigatePolicy }) {
             </div>
             <div>
               <div className="text-xs font-bold text-brand-tertiary">Anti-Tarnish Assurance</div>
-              <div className="text-[11px] text-brand-muted font-light">Waterproof &amp; Hypoallergenic 316L Steel</div>
+              <div className="text-[11px] text-brand-muted font-light">Waterproof &amp; Hypoallergenic Oxidized Jewellery</div>
             </div>
           </div>
         </div>

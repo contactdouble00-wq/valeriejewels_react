@@ -697,7 +697,7 @@ export const apiService = {
         const result = await response.json();
         if (result.data) {
           try {
-            localStorage.setItem('valerie_payment_settings_cache', JSON.stringify(result.data));
+            localStorage.setItem('valerie_payment_settings_cache_v2', JSON.stringify(result.data));
           } catch (_) {}
           return result.data;
         }
@@ -705,7 +705,7 @@ export const apiService = {
     } catch (err) {
       console.warn('API getPaymentSettings fallback to defaults:', err);
     }
-    const cached = localStorage.getItem('valerie_payment_settings_cache');
+    const cached = localStorage.getItem('valerie_payment_settings_cache_v2');
     if (cached) {
       try { return JSON.parse(cached); } catch (e) {}
     }
@@ -716,14 +716,14 @@ export const apiService = {
       prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
       online_payment_enabled: true,
       partial_cod_enabled: true,
-      partial_advance: 100,
+      partial_advance: 49,
       cod_fee: 0,
       cod_available: true,
       checkout_banner_text: '🎁 Prepaid Orders = ₹50 OFF + Free Luxury Gift + ⚡ Priority Shipping',
       exit_intent_enabled: true,
       exit_intent_title: 'Wait! Are you sure you want to exit?',
       exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
-      testimonial_quote: '“The Korean earrings collection with velvet box is breathtaking! Quality feels like real 18K gold. Absolutely loved the free zircon gift.”',
+      testimonial_quote: '',
       testimonial_author: 'Ananya Sharma, Verified Buyer • New Delhi',
     };
   },

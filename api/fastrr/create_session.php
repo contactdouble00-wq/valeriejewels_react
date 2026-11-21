@@ -50,7 +50,7 @@ try {
 
     // Dynamic payment settings from database
     $partialCodEnabled = isset($settings['partial_cod_enabled']) ? (bool)$settings['partial_cod_enabled'] : true;
-    $partialAdvance    = isset($settings['partial_advance']) ? (int)$settings['partial_advance'] : 100;
+    $partialAdvance    = isset($settings['partial_advance']) ? (int)$settings['partial_advance'] : 49;
     $codAvailable      = isset($settings['cod_available']) ? (bool)$settings['cod_available'] : false;
 
     $formattedItems = [];
