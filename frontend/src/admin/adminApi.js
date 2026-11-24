@@ -127,6 +127,12 @@ export const adminApi = {
     }
   },
   // Dashboard
+  async reconcileCarriers(afterId = 0) {
+    const res = await request('/admin/orders.php?action=reconcile_carriers', {
+      method: 'POST', body: JSON.stringify({ after_id: afterId }),
+    });
+    return res.data;
+  },
   async getDashboard(params = {}) {
     const query = new URLSearchParams(params).toString();
     const res = await request(`/admin/dashboard.php${query ? `?${query}` : ''}`);

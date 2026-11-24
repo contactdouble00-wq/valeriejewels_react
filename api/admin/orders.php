@@ -430,11 +430,6 @@ if ($method === 'GET') {
         }
         $order['emails_sent_count'] = count($order['email_logs'] ?? []);
 
-        // Normalize any lingering RTO status on inspected order
-        if ($order['order_status'] === 'rto') {
-            $order['order_status'] = (!empty($order['provider_awb']) || !empty($order['shiprocket_awb'])) ? 'shipped' : ((!empty($order['provider_order_id']) || !empty($order['shiprocket_order_id'])) ? 'processing' : 'confirmed');
-        }
-
         ApiResponse::success($order, 'Order retrieved successfully');
     }
 
@@ -561,19 +556,31 @@ if ($method === 'GET') {
     $stmt->execute($params);
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Normalize any lingering RTO status in memory
-    foreach ($orders as &$ord) {
-        if ($ord['order_status'] === 'rto') {
-            $ord['order_status'] = (!empty($ord['provider_awb']) || !empty($ord['shiprocket_awb'])) ? 'shipped' : ((!empty($ord['provider_order_id']) || !empty($ord['shiprocket_order_id'])) ? 'processing' : 'confirmed');
-        }
-    }
-    unset($ord);
-
     ApiResponse::success($orders, 'Orders retrieved successfully');
 }
 
 $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 $action = $_GET['action'] ?? ($input['action'] ?? '');
+
+// Track existing AWBs only: this does not book, cancel or return shipments.
+if ($action === 'reconcile_carriers' && $method === 'POST') {
+    require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+    require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
+    $after = max(0, (int)($input['after_id'] ?? 0));
+    $stmt = $pdo->prepare("SELECT id, order_status, delivery_provider, provider_awb, shiprocket_awb FROM orders WHERE id > ? AND (COALESCE(provider_awb, '') != '' OR COALESCE(shiprocket_awb, '') != '') ORDER BY id LIMIT 1");
+    $stmt->execute([$after]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$order) ApiResponse::success(['done' => true, 'after_id' => $after]);
+    $provider = DeliveryProviderFactory::getProviderForOrder((int)$order['id']);
+    $awb = trim($order['provider_awb'] ?: $order['shiprocket_awb']);
+    try {
+        $tracking = $provider->track($awb);
+        $changed = reconcileCarrierOutcome($pdo, $order, $tracking);
+        ApiResponse::success(['done' => false, 'after_id' => (int)$order['id'], 'changed' => $changed, 'failed' => false]);
+    } catch (Throwable $e) {
+        ApiResponse::success(['done' => false, 'after_id' => (int)$order['id'], 'changed' => false, 'failed' => true]);
+    }
+}
 
 // Handle Live Razorpay Payment Sync for an Order
 if ($action === 'sync_razorpay') {

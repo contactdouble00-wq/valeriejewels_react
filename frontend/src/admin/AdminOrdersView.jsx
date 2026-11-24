@@ -291,15 +291,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
         jhumka_only: jhumkaOnly ? 1 : 0,
       });
       const rawList = res || [];
-      const sanitized = rawList.map((ord) => {
-        if (ord.order_status === 'rto') {
-          return {
-            ...ord,
-            order_status: (ord.provider_awb || ord.shiprocket_awb) ? 'shipped' : ((ord.provider_order_id || ord.shiprocket_order_id) ? 'processing' : 'confirmed'),
-          };
-        }
-        return ord;
-      });
+      const sanitized = rawList;
       setOrders(sanitized);
       if (sanitized.length > 0) {
         const validIds = new Set(sanitized.map((o) => o.id));
@@ -1665,6 +1657,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
               <option value="delivered">Delivered</option>
               <option value="on_hold">On Hold</option>
               <option value="cancelled">Cancelled</option>
+              <option value="rto">Return to origin (RTO)</option>
             </select>
 
             {/* Payment Type Filter */}
@@ -2535,6 +2528,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
                   <option value="delivered">Delivered</option>
                   <option value="on_hold">On Hold</option>
                   <option value="cancelled">Cancelled</option>
+              <option value="rto">Return to origin (RTO)</option>
                 </select>
 
                 {/* Clear Filters */}

@@ -30,6 +30,31 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const [activeRange, setActiveRange] = useState({});
   const [filterError, setFilterError] = useState('');
   const requestId = useRef(0);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileMessage, setReconcileMessage] = useState('');
+  const reconcileCarriers = async () => {
+    setReconciling(true);
+    let afterId = 0, checked = 0, changed = 0, failed = 0;
+    try {
+      setReconcileMessage('Checking all stored shipments with JustShyp and Shiprocket…');
+      while (true) {
+        const result = await adminApi.reconcileCarriers(afterId);
+        if (result.done) break;
+        if (result.after_id <= afterId) throw new Error('Carrier reconciliation did not advance.');
+        afterId = result.after_id;
+        checked++;
+        changed += result.changed ? 1 : 0;
+        failed += result.failed ? 1 : 0;
+        setReconcileMessage(`${checked} shipments checked · ${changed} orders corrected · ${failed} could not be verified`);
+      }
+      setReconcileMessage(`Carrier check finished: ${checked} shipments checked, ${changed} orders corrected, ${failed} could not be verified.${failed ? ' Retry to verify unavailable shipments; the rate may still be incomplete.' : ''}`);
+    } catch (err) {
+      setReconcileMessage(`Carrier check incomplete: ${err.message}. ${changed} corrections saved. Retry to finish.`);
+    } finally {
+      await loadData();
+      setReconciling(false);
+    }
+  };
 
   const loadData = async (range = activeRange) => {
     const id = ++requestId.current;
@@ -100,6 +125,9 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
         </div>
 
         <div className="flex items-center space-x-3">
+          <button onClick={reconcileCarriers} disabled={reconciling} className="px-3.5 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold disabled:opacity-50">
+            {reconciling ? 'Checking carriers…' : 'Reconcile carrier statuses'}
+          </button>
           <button
             onClick={() => loadData()}
             disabled={refreshing}
@@ -111,6 +139,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
         </div>
       </div>
 
+      {reconcileMessage && <p role="status" className="text-sm text-brand-tertiary">{reconcileMessage}</p>}
       <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => {
         event.preventDefault();
         if (period === 'custom' && (!startDate || !endDate || startDate > endDate)) {
