@@ -925,10 +925,28 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
     }
   };
 
+  const showJustShypSync = (orderId, result) => {
+    const updateOrder = (order) => {
+      if (!order || String(order.id) !== String(orderId)) return order;
+      return {
+        ...order,
+        delivery_provider: 'justshyp',
+        provider_order_id: result.order_id || order.order_number,
+        provider_shipment_id: result.shipment_id || '',
+        provider_awb: result.awb_code || '',
+        courier_name: result.courier_name || 'JustShyp Partner',
+        tracking_url: result.tracking_url || '',
+      };
+    };
+    setOrders((current) => current.map(updateOrder));
+    setSelectedOrder(updateOrder);
+  };
+
   const handleSyncJustShyp = async (orderId, courier = null) => {
     try {
       setSyncingJsId(orderId);
       const res = await adminApi.syncJustShyp(orderId, courier);
+      showJustShypSync(orderId, res);
       showToast(res?.message || 'Order pushed to JustShyp panel successfully! Shifted to Synced section.');
       await loadOrders();
       if (selectedOrder && (selectedOrder.id === orderId || String(selectedOrder.id) === String(orderId))) {
@@ -959,7 +977,8 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
       for (const id of ids) {
         try {
-          await adminApi.syncJustShyp(id);
+          const res = await adminApi.syncJustShyp(id);
+          showJustShypSync(id, res);
           successCount++;
         } catch (e) {
           failCount++;
@@ -1031,6 +1050,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
       if (isJs) {
         const courierKey = selectedCourierPartner.courier_keyword || selectedCourierPartner.courier_name;
         const res = await adminApi.syncJustShyp(orderId, courierKey, selectedCourierPartner.courier_keyword);
+        showJustShypSync(orderId, res);
         showToast(res?.message || `✓ Order #${rateComparisonOrder.order_number} dispatched via JustShyp (${selectedCourierPartner.courier_name})!`);
       } else {
         const res = await adminApi.syncShiprocket(orderId);
@@ -2221,7 +2241,7 @@ export default function AdminOrdersView({ currentUser, initialSelectedOrderId })
 
                     {/* AWB Code & Delivery Partner Status */}
                     <td className="py-3.5 px-4 align-middle min-w-[170px]">
-                      {ord.delivery_provider === 'justshyp' && (ord.provider_awb || ord.provider_order_id) ? (
+                      {ord.delivery_provider === 'justshyp' ? (
                         <div className="space-y-1">
                           <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
                             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
