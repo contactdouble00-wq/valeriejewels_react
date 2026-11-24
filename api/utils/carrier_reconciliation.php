@@ -64,8 +64,8 @@ function reconcileCarrierOutcome(PDO $pdo, array $order, array $tracking): bool 
         $stmt->execute([$status, $order['id'], $order['order_status'], $order['provider_awb'] ?? '', $order['shiprocket_awb'] ?? '']);
         $changed = $stmt->rowCount() > 0;
         if ($changed) {
-            $stmt = $pdo->prepare('INSERT INTO order_tracking_events (order_id, status, title, description, location, occurred_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
-            $stmt->execute([$order['id'], $status, $tracking['current_status'], 'Verified against current carrier tracking during admin reconciliation.', '',]);
+            $stmt = $pdo->prepare('INSERT INTO order_tracking_events (order_id, status, status_milestone, title, description, location, occurred_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
+            $stmt->execute([$order['id'], $status, $status, $tracking['current_status'], 'Verified against current carrier tracking during admin reconciliation.', '',]);
         }
         $pdo->commit();
         return $changed;

@@ -5,7 +5,7 @@ function expectMetric($actual, $expected, $label) {
 }
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 $pdo->exec('CREATE TABLE orders (id INTEGER PRIMARY KEY, order_status TEXT, payment_type TEXT, payment_status TEXT, total_amount NUMERIC, refund_amount NUMERIC, created_at TEXT);
-CREATE TABLE order_tracking_events (id INTEGER PRIMARY KEY, order_id INTEGER, status TEXT, title TEXT, occurred_at TEXT);');
+CREATE TABLE order_tracking_events (id INTEGER PRIMARY KEY, order_id INTEGER, status TEXT NOT NULL, status_milestone TEXT NOT NULL, title TEXT NOT NULL, occurred_at TEXT);');
 $insert = $pdo->prepare('INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?)');
 $rows = [
     [1, 'confirmed', 'full_prepaid', 'paid', 1000, 0, '2026-11-01 00:00:00'],
@@ -21,11 +21,11 @@ $rows = [
 ];
 foreach ($rows as $row) $insert->execute($row);
 $pdo->exec("INSERT INTO order_tracking_events VALUES
-    (1, 5, 'shipped', 'Rto Initiated', '2026-11-16 10:00:00'),
-    (2, 5, 'shipped', 'Rto Delivered', '2026-11-17 10:00:00'),
-    (3, 9, 'shipped', 'Rto Initiated', '2026-11-16 10:00:00'),
-    (4, 9, 'delivered', 'Delivered', '2026-12-02 10:00:00'),
-    (5, 10, 'shipped', 'RTO In Transit', '2026-11-16 10:00:00');");
+    (1, 5, 'shipped', 'shipped', 'Rto Initiated', '2026-11-16 10:00:00'),
+    (2, 5, 'shipped', 'shipped', 'Rto Delivered', '2026-11-17 10:00:00'),
+    (3, 9, 'shipped', 'shipped', 'Rto Initiated', '2026-11-16 10:00:00'),
+    (4, 9, 'delivered', 'delivered', 'Delivered', '2026-12-02 10:00:00'),
+    (5, 10, 'shipped', 'shipped', 'RTO In Transit', '2026-11-16 10:00:00');");
 $all = dashboardMetrics($pdo, dashboardDateRange([]));
 expectMetric($all['total_orders'], 4, 'Processed excludes failed advances and RTO');
 expectMetric($all['total_revenue'], 3300, 'Revenue excludes cancelled/RTO and deducts refund');
@@ -50,7 +50,7 @@ foreach ([['start_date'=>'2026-02-30','end_date'=>'2026-03-01'], ['start_date'=>
     catch (InvalidArgumentException $expected) {}
 }
 // Reattempts can recover: only the latest carrier event should determine legacy RTO.
-$pdo->exec("INSERT INTO order_tracking_events VALUES (6, 5, 'shipped', 'In Transit', '2026-11-18 10:00:00')");
+$pdo->exec("INSERT INTO order_tracking_events VALUES (6, 5, 'shipped', 'shipped', 'In Transit', '2026-11-18 10:00:00')");
 expectMetric(dashboardMetrics($pdo, dashboardDateRange([]))['rto_orders'], 2, 'Recovered shipment no longer RTO');
 // Exercise the carrier mapping without connecting to a database or courier API.
 require_once __DIR__ . '/../api/shipping/providers/JustShypProvider.php';
@@ -86,6 +86,7 @@ expectMetric($pdo->query('SELECT order_status FROM orders WHERE id = 2')->fetchC
 expectMetric($pdo->query('SELECT order_status FROM orders WHERE id = 3')->fetchColumn(), 'confirmed', 'Provider isolation');
 expectMetric(dashboardMetrics($pdo, dashboardDateRange([]))['rto_orders'], 4, 'Dashboard includes panel feed and existing RTOs once');
 expectMetric($pdo->query("SELECT COUNT(*) FROM order_tracking_events WHERE description LIKE 'Verified against%'")->fetchColumn(), 2, 'One audit event per correction');
+expectMetric($pdo->query("SELECT COUNT(*) FROM order_tracking_events WHERE description LIKE 'Verified against%' AND status = 'rto' AND status_milestone = 'rto'")->fetchColumn(), 2, 'Reconciled RTO events populate both required status fields');
 echo "RTO panel-to-dashboard reconciliation tests passed.\n";
 
 $pdo->exec('CREATE TABLE site_settings (`key` TEXT PRIMARY KEY, `value` TEXT)');
