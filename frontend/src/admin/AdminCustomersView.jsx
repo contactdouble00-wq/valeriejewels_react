@@ -78,6 +78,8 @@ export default function AdminCustomersView() {
           rto_count: res.rto_count || 0,
           initiated_count: res.initiated_count || 0,
           total_rto_value: res.total_rto_value || 0,
+          cached: res.rto_cached,
+          saved_at: res.rto_saved_at,
         });
       }
     } catch (err) {
@@ -323,6 +325,7 @@ export default function AdminCustomersView() {
       {/* ========================================================================= */}
       {activeSubTab === 'rto_panel' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {rtoSummary.cached && <p role="status" className="text-sm text-amber-700">Showing saved RTO panel data from {rtoSummary.saved_at}. Live RTO refresh is unavailable.</p>}
           {/* Performance & Consignment Metric Strip */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">

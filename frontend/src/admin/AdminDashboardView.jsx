@@ -243,10 +243,10 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             </div>
           </div>
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
-            {kpis.rto_orders} <span className="text-lg">({kpis.rto_percentage}%)</span>
+            {kpis.rto_unavailable ? 'Unavailable' : <>{kpis.rto_orders} <span className="text-lg">({kpis.rto_percentage}%)</span></>}
           </div>
           <div className="text-[11px] text-brand-muted">
-            {kpis.rto_orders} RTO orders / {kpis.rto_base_orders} processed and RTO orders.
+            {!kpis.rto_unavailable && <>{kpis.rto_orders} RTO orders / {kpis.rto_base_orders} processed and RTO orders.</>}
             {kpis.rto_sync_warning && <p role="status" className="mt-2 text-amber-700">{kpis.rto_sync_warning}</p>}
           </div>
         </div>

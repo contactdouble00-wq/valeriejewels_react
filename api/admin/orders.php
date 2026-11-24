@@ -272,7 +272,8 @@ if ($method === 'GET') {
 
             // Fetch RTO (returning to origin)
             if ($ndrType === 'all' || $ndrType === 'rto') {
-                $rtoRes = $provider->listNdr(['ndr_type' => 'rto', 'from_date' => $fromDate, 'to_date' => $toDate]);
+                require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
+                $rtoRes = loadJustShypRtoFeed($pdo, $provider, ['from_date' => $fromDate, 'to_date' => $toDate]);
                 if (!empty($rtoRes['success']) && is_array($rtoRes['ndr_shipments'])) {
                     require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
                     reconcileJustShypRtoList($pdo, $rtoRes['ndr_shipments']);
@@ -374,6 +375,8 @@ if ($method === 'GET') {
             ApiResponse::success([
                 'total_count'     => count($shipments),
                 'rto_count'       => $rtoCount,
+                'rto_cached'      => $rtoRes['cached'] ?? false,
+                'rto_saved_at'    => $rtoRes['saved_at'] ?? null,
                 'initiated_count' => $initiatedCount,
                 'total_rto_value' => $totalRtoValue ?? 0,
                 'shipments'       => $shipments,

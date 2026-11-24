@@ -1,5 +1,27 @@
 <?php
 
+function loadJustShypRtoFeed(PDO $pdo, $provider, array $params): array {
+    $key = 'justshyp_rto_panel_snapshot';
+    try {
+        $result = $provider->listNdr(array_merge($params, ['ndr_type' => 'rto']));
+        if (empty($result['success']) || !is_array($result['ndr_shipments'] ?? null)) {
+            throw new RuntimeException('RTO feed unavailable');
+        }
+        $snapshot = ['ndr_shipments' => $result['ndr_shipments'], 'saved_at' => date('Y-m-d H:i:s')];
+        $sql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? 'INSERT INTO site_settings (`key`, `value`) VALUES (?, ?) ON CONFLICT(`key`) DO UPDATE SET `value` = excluded.`value`'
+            : 'INSERT INTO site_settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)';
+        $pdo->prepare($sql)->execute([$key, json_encode($snapshot, JSON_THROW_ON_ERROR)]);
+        return $snapshot + ['success' => true, 'cached' => false];
+    } catch (Throwable $e) {
+        $stmt = $pdo->prepare('SELECT `value` FROM site_settings WHERE `key` = ?');
+        $stmt->execute([$key]);
+        $snapshot = json_decode($stmt->fetchColumn() ?: 'null', true);
+        if (!is_array($snapshot) || !is_array($snapshot['ndr_shipments'] ?? null)) throw $e;
+        return $snapshot + ['success' => true, 'cached' => true];
+    }
+}
+
 // Share the RTO panel's confirmed carrier records with dashboard reporting.
 function reconcileJustShypRtoList(PDO $pdo, array $shipments): int {
     $changed = 0;
@@ -8,9 +30,11 @@ function reconcileJustShypRtoList(PDO $pdo, array $shipments): int {
         $number = trim((string)($shipment['channel_order_id'] ?? ''));
         if ($awb === '' && $number === '') continue;
         $stmt = $pdo->prepare("SELECT id, order_status, provider_awb, shiprocket_awb FROM orders
-            WHERE (delivery_provider = 'justshyp' OR COALESCE(delivery_provider, '') = '')
-            AND ((? != '' AND (provider_awb = ? OR shiprocket_awb = ?))
-                OR (? != '' AND order_number = ? AND COALESCE(provider_awb, '') = '' AND COALESCE(shiprocket_awb, '') = ''))
+            WHERE ((? != '' AND (provider_awb = ? OR shiprocket_awb = ?)
+                    AND (delivery_provider = 'justshyp' OR COALESCE(delivery_provider, '') = ''))
+                OR (? != '' AND order_number = ? AND (
+                    (COALESCE(provider_awb, '') = '' AND COALESCE(shiprocket_awb, '') = '')
+                    OR (delivery_provider = 'shiprocket' AND COALESCE(provider_awb, '') = ''))))
             LIMIT 2");
         $stmt->execute([$awb, $awb, $awb, $number, $number]);
         $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -87,3 +87,23 @@ expectMetric($pdo->query('SELECT order_status FROM orders WHERE id = 3')->fetchC
 expectMetric(dashboardMetrics($pdo, dashboardDateRange([]))['rto_orders'], 4, 'Dashboard includes panel feed and existing RTOs once');
 expectMetric($pdo->query("SELECT COUNT(*) FROM order_tracking_events WHERE description LIKE 'Verified against%'")->fetchColumn(), 2, 'One audit event per correction');
 echo "RTO panel-to-dashboard reconciliation tests passed.\n";
+
+$pdo->exec('CREATE TABLE site_settings (`key` TEXT PRIMARY KEY, `value` TEXT)');
+$provider = new class {
+    public bool $available = true;
+    public function listNdr(array $params): array {
+        return $this->available
+            ? ['success' => true, 'ndr_shipments' => [['waybill_number' => 'JS-CACHED', 'channel_order_id' => 'V2']]]
+            : ['success' => false];
+    }
+};
+$live = loadJustShypRtoFeed($pdo, $provider, []);
+expectMetric($live['cached'], false, 'Panel response saved');
+$provider->available = false;
+$cached = loadJustShypRtoFeed($pdo, $provider, []);
+expectMetric($cached['cached'], true, 'Dashboard falls back to saved panel records');
+expectMetric($cached['ndr_shipments'], $live['ndr_shipments'], 'Failure never replaces saved RTO records with zero');
+$pdo->exec("UPDATE orders SET provider_awb = NULL, shiprocket_awb = 'AUTO-SR', delivery_provider = 'shiprocket' WHERE id = 2");
+expectMetric(reconcileJustShypRtoList($pdo, $cached['ndr_shipments']), 1, 'Panel merchant order ID matches automatic Shiprocket assignment');
+expectMetric(reconcileJustShypRtoList($pdo, $cached['ndr_shipments']), 0, 'Saved panel replay does not double count');
+echo "RTO panel snapshot fallback tests passed.\n";
