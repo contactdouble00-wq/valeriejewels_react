@@ -33,16 +33,18 @@ expectMetric($all['average_order_value'], 825, 'AOV');
 expectMetric($all['prepaid_share_percent'], 50, 'Partial COD is not prepaid');
 expectMetric($all['cancelled_orders'], 1, 'Cancellation and RTO are mutually exclusive');
 expectMetric($all['rto_orders'], 3, 'Legacy tracking RTO counted once per order');
-expectMetric($all['rto_cancellation_rate'], 50, 'Cancellation denominator');
+expectMetric($all['rto_percentage'], 42.9, 'RTO percentage excludes cancellations');
+expectMetric($all['rto_base_orders'], 7, 'Processed plus RTO denominator');
 expectMetric($all['abandoned_checkouts_count'], 2, 'Abandoned excludes confirmed COD');
 expectMetric(array_sum($all['payment_split']), $all['total_orders'], 'Payment breakdown reconciles');
 $nov = dashboardMetrics($pdo, dashboardDateRange(['start_date' => '2026-11-01', 'end_date' => '2026-11-30']));
 expectMetric($nov['total_orders'], 3, 'Inclusive date boundaries');
 expectMetric($nov['total_revenue'], 2400, 'Filtered revenue');
 expectMetric($nov['prepaid_share_percent'], 33.3, 'Filtered prepaid percentage');
+expectMetric($nov['rto_percentage'], 50, 'Filtered RTO percentage');
 $empty = dashboardMetrics($pdo, dashboardDateRange(['start_date' => '2020-01-01', 'end_date' => '2020-01-01']));
 expectMetric($empty['total_orders'], 0, 'Empty range');
-expectMetric($empty['rto_cancellation_rate'], 0, 'Zero denominator');
+expectMetric($empty['rto_percentage'], 0, 'Zero denominator');
 foreach ([['start_date'=>'2026-02-30','end_date'=>'2026-03-01'], ['start_date'=>'2026-11-01'], ['start_date'=>'2026-12-01','end_date'=>'2026-11-01'], ['start_date'=>[], 'end_date'=>'2026-11-01']] as $bad) {
     try { dashboardDateRange($bad); throw new RuntimeException('Invalid range accepted'); }
     catch (InvalidArgumentException $expected) {}
@@ -57,3 +59,31 @@ foreach (['rto', 'rto_initiated', 'RTO In Transit', 'rto-delivered'] as $status)
 }
 expectMetric(JustShypProvider::mapStatus('delivered'), 'delivered', 'Normal carrier delivery unchanged');
 echo "Dashboard metric and date-range tests passed.\n";
+
+require_once __DIR__ . '/../api/utils/carrier_reconciliation.php';
+$pdo->exec("ALTER TABLE orders ADD COLUMN provider_awb TEXT;
+    ALTER TABLE orders ADD COLUMN shiprocket_awb TEXT;
+    ALTER TABLE orders ADD COLUMN delivery_provider TEXT;
+    ALTER TABLE orders ADD COLUMN order_number TEXT;
+    ALTER TABLE orders ADD COLUMN updated_at TEXT;
+    ALTER TABLE order_tracking_events ADD COLUMN description TEXT;
+    ALTER TABLE order_tracking_events ADD COLUMN location TEXT;
+    UPDATE orders SET provider_awb = 'JS-1', delivery_provider = 'justshyp', order_number = 'V1' WHERE id = 1;
+    UPDATE orders SET provider_awb = 'REPLACEMENT', delivery_provider = 'justshyp', order_number = 'V2' WHERE id = 2;
+    UPDATE orders SET provider_awb = 'SR-3', delivery_provider = 'shiprocket', order_number = 'V3' WHERE id = 3;
+    UPDATE orders SET delivery_provider = 'justshyp', order_number = 'V7' WHERE id = 7;");
+$feed = [
+    ['waybill_number' => 'JS-1', 'channel_order_id' => 'V1'],
+    ['waybill_number' => 'JS-1', 'channel_order_id' => 'V1'],
+    ['waybill_number' => 'OLD-2', 'channel_order_id' => 'V2'],
+    ['waybill_number' => 'SR-3', 'channel_order_id' => 'V3'],
+    ['waybill_number' => 'UNSAVED-7', 'channel_order_id' => 'V7'],
+    ['waybill_number' => 'UNKNOWN'],
+];
+expectMetric(reconcileJustShypRtoList($pdo, $feed), 2, 'Confirmed feed reconciles unique matching orders');
+expectMetric(reconcileJustShypRtoList($pdo, $feed), 0, 'Repeated carrier feed is idempotent');
+expectMetric($pdo->query('SELECT order_status FROM orders WHERE id = 2')->fetchColumn(), 'shipped', 'Old AWB cannot mark replacement RTO');
+expectMetric($pdo->query('SELECT order_status FROM orders WHERE id = 3')->fetchColumn(), 'confirmed', 'Provider isolation');
+expectMetric(dashboardMetrics($pdo, dashboardDateRange([]))['rto_orders'], 4, 'Dashboard includes panel feed and existing RTOs once');
+expectMetric($pdo->query("SELECT COUNT(*) FROM order_tracking_events WHERE description LIKE 'Verified against%'")->fetchColumn(), 2, 'One audit event per correction');
+echo "RTO panel-to-dashboard reconciliation tests passed.\n";

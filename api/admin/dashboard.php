@@ -90,7 +90,24 @@ if ($action === 'save_showcase_boxes') {
 
 try {
     $range = dashboardDateRange($_GET);
+    $rtoWarning = null;
+    // Use the same confirmed-RTO feed as the panel, across the store's full history.
+    try {
+        require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
+        require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
+        $firstOrder = $pdo->query('SELECT MIN(created_at) FROM orders')->fetchColumn();
+        if ($firstOrder) {
+            $rtoFeed = DeliveryProviderFactory::getProvider('justshyp')->listNdr([
+                'ndr_type' => 'rto', 'from_date' => substr($firstOrder, 0, 10), 'to_date' => date('Y-m-d'),
+            ]);
+            if (empty($rtoFeed['success'])) throw new RuntimeException('RTO feed unavailable');
+            reconcileJustShypRtoList($pdo, $rtoFeed['ndr_shipments']);
+        }
+    } catch (Throwable $e) {
+        $rtoWarning = 'JustShyp RTO refresh unavailable. Showing saved records; the count may be incomplete.';
+    }
     $kpis = dashboardMetrics($pdo, $range);
+    $kpis['rto_sync_warning'] = $rtoWarning;
     $processed = dashboardConditions()['processed'];
     $dateCondition = $range['sql'];
 

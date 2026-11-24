@@ -232,21 +232,22 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           </div>
         </div>
 
-        {/* RTO / Cancellation Rate */}
+        {/* RTO count and percentage */}
         <div className="luxury-card bg-white p-5 rounded-2xl border border-brand-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-bold">
-              Cancellation / RTO
+              RTO Orders
             </span>
-            <div className={`p-2 rounded-xl ${kpis.rto_cancellation_rate > 20 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+            <div className={`p-2 rounded-xl ${kpis.rto_percentage > 20 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
-            {kpis.rto_cancellation_rate}%
+            {kpis.rto_orders} <span className="text-lg">({kpis.rto_percentage}%)</span>
           </div>
           <div className="text-[11px] text-brand-muted">
-            {kpis.cancelled_orders || 0} cancelled + {kpis.rto_orders || 0} RTO / {kpis.cancellation_base_orders || 0} processed or cancelled/RTO orders.
+            {kpis.rto_orders} RTO orders / {kpis.rto_base_orders} processed and RTO orders.
+            {kpis.rto_sync_warning && <p role="status" className="mt-2 text-amber-700">{kpis.rto_sync_warning}</p>}
           </div>
         </div>
       </div>

@@ -274,6 +274,8 @@ if ($method === 'GET') {
             if ($ndrType === 'all' || $ndrType === 'rto') {
                 $rtoRes = $provider->listNdr(['ndr_type' => 'rto', 'from_date' => $fromDate, 'to_date' => $toDate]);
                 if (!empty($rtoRes['success']) && is_array($rtoRes['ndr_shipments'])) {
+                    require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
+                    reconcileJustShypRtoList($pdo, $rtoRes['ndr_shipments']);
                     foreach ($rtoRes['ndr_shipments'] as $s) {
                         $s['stage'] = 'rto';
                         $s['stage_label'] = 'Confirmed RTO (Returning)';

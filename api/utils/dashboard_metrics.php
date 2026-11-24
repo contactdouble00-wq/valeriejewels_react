@@ -55,14 +55,14 @@ function dashboardMetrics(PDO $pdo, array $range): array {
     $total = (int)$stats['total_orders'];
     $cancelledCount = (int)$stats['cancelled_orders'];
     $rtoCount = (int)$stats['rto_orders'];
-    $denominator = $total + $cancelledCount + $rtoCount;
+    $denominator = $total + $rtoCount;
     return [
         'total_orders' => $total,
         'total_revenue' => round((float)$stats['total_revenue'], 2),
         'average_order_value' => $total ? round((float)$stats['total_revenue'] / $total, 2) : 0,
         'prepaid_share_percent' => $total ? round(100 * (int)$stats['prepaid_orders'] / $total, 1) : 0,
-        'rto_cancellation_rate' => $denominator ? round(100 * ($cancelledCount + $rtoCount) / $denominator, 1) : 0,
-        'cancelled_orders' => $cancelledCount, 'rto_orders' => $rtoCount, 'cancellation_base_orders' => $denominator,
+        'rto_percentage' => $denominator ? round(100 * $rtoCount / $denominator, 1) : 0,
+        'cancelled_orders' => $cancelledCount, 'rto_orders' => $rtoCount, 'rto_base_orders' => $denominator,
         'payment_split' => ['prepaid' => (int)$stats['prepaid_orders'], 'partial_cod' => (int)$stats['partial_cod_orders'], 'cod' => (int)$stats['cod_orders']],
         'abandoned_checkouts_count' => (int)$stats['abandoned_orders_count'],
         'abandoned_checkouts_value' => (float)$stats['abandoned_orders_value'],
