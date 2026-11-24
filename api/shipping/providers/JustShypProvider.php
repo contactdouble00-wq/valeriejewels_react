@@ -315,7 +315,7 @@ class JustShypProvider implements DeliveryProviderInterface
      */
     public static function mapStatus(string $justshypStatus): string
     {
-        $st = strtolower(trim($justshypStatus));
+        $st = preg_replace('/[\s-]+/', '_', strtolower(trim($justshypStatus)));
         $statusMap = [
             'order_created'       => 'processing',
             'created'             => 'processing',
@@ -332,10 +332,10 @@ class JustShypProvider implements DeliveryProviderInterface
             'delivered'           => 'delivered',
             'closed'              => 'delivered',
             'undelivered'         => 'processing',
-            'rto'                 => 'shipped',
-            'rto_initiated'       => 'shipped',
-            'rto_in_transit'      => 'shipped',
-            'rto_delivered'       => 'shipped',
+            'rto'                 => 'rto',
+            'rto_initiated'       => 'rto',
+            'rto_in_transit'      => 'rto',
+            'rto_delivered'       => 'rto',
             'cancelled'           => 'cancelled',
             'lost'                => 'cancelled',
             'destroyed'           => 'cancelled',

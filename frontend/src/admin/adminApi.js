@@ -127,8 +127,9 @@ export const adminApi = {
     }
   },
   // Dashboard
-  async getDashboard() {
-    const res = await request('/admin/dashboard.php');
+  async getDashboard(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await request(`/admin/dashboard.php${query ? `?${query}` : ''}`);
     return res.data;
   },
 

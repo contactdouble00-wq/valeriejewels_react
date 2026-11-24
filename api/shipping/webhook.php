@@ -64,12 +64,14 @@ try {
         'shipped'            => 'shipped',
         'out_for_delivery'   => 'out_for_delivery',
         'delivered'          => 'delivered',
-        'rto_initiated'      => 'shipped',
-        'rto_delivered'      => 'shipped',
+        'rto' => 'rto',
+        'rto_in_transit' => 'rto',
+        'rto_initiated'      => 'rto',
+        'rto_delivered'      => 'rto',
         'cancelled'          => 'cancelled',
     ];
 
-    $mappedStatus = $statusMap[$currentStatus] ?? 'shipped';
+    $mappedStatus = $statusMap[preg_replace('/[\s-]+/', '_', $currentStatus)] ?? 'shipped';
 
     // Locate order
     if (!empty($awbCode)) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   DollarSign,
   ShoppingBag,
@@ -24,18 +24,30 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showcaseModalOpen, setShowcaseModalOpen] = useState(false);
+  const [period, setPeriod] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [activeRange, setActiveRange] = useState({});
+  const [filterError, setFilterError] = useState('');
+  const requestId = useRef(0);
 
-  const loadData = async () => {
+  const loadData = async (range = activeRange) => {
+    const id = ++requestId.current;
+    setActiveRange(range);
     try {
       setRefreshing(true);
-      const res = await adminApi.getDashboard();
+      const res = await adminApi.getDashboard(range);
+      if (id !== requestId.current) return;
       setData(res);
       setError('');
     } catch (err) {
+      if (id !== requestId.current) return;
       setError(err.message || 'Failed to load dashboard metrics');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (id === requestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -63,7 +75,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
         <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
         <p className="text-sm text-rose-600">{error || 'Unable to load dashboard'}</p>
         <button
-          onClick={loadData}
+          onClick={() => loadData()}
           className="px-4 py-2 bg-brand-primary text-white rounded-xl text-xs font-semibold"
         >
           Retry
@@ -89,7 +101,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={loadData}
+            onClick={() => loadData()}
             disabled={refreshing}
             className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white border border-brand-border text-brand-tertiary text-xs font-semibold hover:border-brand-primary transition-colors disabled:opacity-50 shadow-2xs"
           >
@@ -98,6 +110,40 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           </button>
         </div>
       </div>
+
+      <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => {
+        event.preventDefault();
+        if (period === 'custom' && (!startDate || !endDate || startDate > endDate)) {
+          setFilterError('Choose a valid start and end date.');
+          return;
+        }
+        setFilterError('');
+        loadData(period === 'all' ? {} : { start_date: startDate, end_date: endDate });
+      }}>
+        <label className="text-xs text-brand-tertiary space-y-1">
+          <span className="block">Order date range</span>
+          <select value={period} onChange={(event) => {
+            setPeriod(event.target.value);
+            setFilterError('');
+            if (event.target.value === 'all') loadData({});
+          }} className="block rounded-lg border border-brand-border bg-white px-3 py-2">
+            <option value="all">All time</option>
+            <option value="custom">Custom dates</option>
+          </select>
+        </label>
+        {period === 'custom' && <>
+          <label className="text-xs text-brand-tertiary space-y-1"><span className="block">From</span>
+            <input type="date" required value={startDate} max={endDate || undefined} onChange={e => setStartDate(e.target.value)} className="block rounded-lg border border-brand-border px-3 py-2" />
+          </label>
+          <label className="text-xs text-brand-tertiary space-y-1"><span className="block">Through</span>
+            <input type="date" required value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} className="block rounded-lg border border-brand-border px-3 py-2" />
+          </label>
+          <button disabled={refreshing} className="rounded-lg bg-brand-primary text-white px-4 py-2 text-xs disabled:opacity-50">Apply dates</button>
+        </>}
+        <p className="text-xs text-brand-muted" aria-live="polite">{refreshing ? 'Updating…' : data.date_range?.start_date
+          ? `Showing ${data.date_range.start_date} through ${data.date_range.end_date}` : 'Showing all time'} · Based on order creation date. Inventory is current.</p>
+        {filterError && <p role="alert" className="text-xs text-rose-600">{filterError}</p>}
+      </form>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -112,12 +158,13 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             </div>
           </div>
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
-            ₹{Number(kpis.total_revenue).toLocaleString('en-IN')}
+            ₹{Number(kpis.total_revenue).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-emerald-700 flex items-center space-x-1">
             <TrendingUp className="w-3.5 h-3.5" />
             <span>AOV: ₹{Number(kpis.average_order_value).toLocaleString('en-IN')}</span>
           </div>
+          <p className="text-[11px] text-brand-muted">Processed order value less refunds; excludes cancellations/RTO. Includes COD due, not just cash collected.</p>
         </div>
 
         {/* Total Orders */}
@@ -142,7 +189,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
         <div className="luxury-card bg-white p-5 rounded-2xl border border-brand-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-bold">
-              Prepaid / Token Rate
+              Prepaid percentage
             </span>
             <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
               <CheckCircle2 className="w-4 h-4" />
@@ -152,7 +199,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             {kpis.prepaid_share_percent}%
           </div>
           <div className="text-[11px] text-brand-muted">
-            Minimizes return-to-origin loss upfront
+            {kpis.payment_split?.prepaid || 0} fully prepaid / {kpis.total_orders} processed orders. Partial COD excluded.
           </div>
         </div>
 
@@ -170,7 +217,7 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
             {kpis.rto_cancellation_rate}%
           </div>
           <div className="text-[11px] text-brand-muted">
-            Controlled via Smart Partial COD deposit model
+            {kpis.cancelled_orders || 0} cancelled + {kpis.rto_orders || 0} RTO / {kpis.cancellation_base_orders || 0} processed or cancelled/RTO orders.
           </div>
         </div>
       </div>

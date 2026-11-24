@@ -75,7 +75,7 @@ try {
                 $newStatus = $trackRes['normalized_status'] ?? null;
                 $courier = $trackRes['courier_name'] ?? null;
 
-                if (!empty($newStatus) && $newStatus !== $order['order_status'] && $newStatus !== 'rto') {
+                if (!empty($newStatus) && $newStatus !== $order['order_status']) {
                     $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
                     $upOrder = $pdo->prepare("UPDATE orders SET order_status = :st, courier_name = COALESCE(NULLIF(:cn, ''), courier_name), updated_at = $nowSql WHERE id = :id");
                     $upOrder->execute([

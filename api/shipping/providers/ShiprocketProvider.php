@@ -328,11 +328,13 @@ class ShiprocketProvider implements DeliveryProviderInterface
             'shipped'            => 'shipped',
             'out_for_delivery'   => 'out_for_delivery',
             'delivered'          => 'delivered',
-            'rto_initiated'      => 'shipped',
-            'rto_delivered'      => 'shipped',
+            'rto' => 'rto',
+            'rto_in_transit' => 'rto',
+            'rto_initiated'      => 'rto',
+            'rto_delivered'      => 'rto',
             'cancelled'          => 'cancelled',
         ];
-        $normStatus = $statusMap[$rawStatus] ?? 'shipped';
+        $normStatus = $statusMap[preg_replace('/[\s-]+/', '_', trim($rawStatus))] ?? 'shipped';
 
         $scans = $trkData['shipment_track_activities'] ?? [];
         $events = [];

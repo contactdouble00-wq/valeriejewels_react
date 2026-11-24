@@ -2,11 +2,12 @@
 /**
  * VALERIE JEWELS — Admin Dashboard & Reporting Endpoint
  * Includes executive KPIs and hero spotlight for the 4 Signature Jhumka Boxes.
- * Strictly counts confirmed orders with successful payment (full prepaid paid,
- * partial COD advance paid, or confirmed COD).
+ * Uses shared payment/fulfillment eligibility and inclusive order-date filtering.
+ * Revenue is eligible order value less refunds, not cash collected.
  */
 
 require_once dirname(__DIR__) . '/utils/admin_auth.php';
+require_once dirname(__DIR__) . '/utils/dashboard_metrics.php';
 
 $adminUser = AdminAuth::authenticate(['admin', 'staff']);
 $pdo = Database::getConnection();
@@ -88,58 +89,10 @@ if ($action === 'save_showcase_boxes') {
 }
 
 try {
-    // 1. Strict definition of Processed & Confirmed Orders:
-    // - Order must NOT be cancelled, failed, or rto.
-    // - Status must be in active fulfillment pipeline (confirmed, processing, in_transit, out_for_delivery, shipped, delivered)
-    //   OR payment must be secured (paid or partial_paid advance).
-    // - Payment must be valid:
-    //   * Prepaid: payment_status = 'paid'
-    //   * Partial COD: payment_status IN ('partial_paid', 'paid') (advance deposit secured) OR confirmed in fulfillment
-    //   * Full COD: confirmed by operations, payment_status != 'failed'
-    $confirmedCondition = "
-        (order_status NOT IN ('cancelled', 'failed', 'rto')
-        AND (
-            (payment_type IN ('full_prepaid', 'prepaid') AND payment_status = 'paid')
-            OR (payment_type = 'partial' AND (payment_status IN ('partial_paid', 'paid') OR order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
-            OR (payment_type = 'cod' AND payment_status != 'failed' AND order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
-            OR (order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND payment_status IN ('paid', 'partial_paid'))
-        ))
-    ";
-
-    // Overall Revenue & Confirmed Orders
-    $overallStmt = $pdo->query("
-        SELECT 
-            -- Orders Processed & Confirmed Revenue
-            COUNT(CASE WHEN $confirmedCondition THEN id ELSE NULL END) AS total_orders,
-            COALESCE(SUM(CASE WHEN $confirmedCondition THEN total_amount ELSE 0 END), 0) AS total_revenue,
-            COALESCE(AVG(CASE WHEN $confirmedCondition THEN total_amount ELSE NULL END), 0) AS average_order_value,
-
-            -- Payment Breakdown strictly among confirmed orders
-            COUNT(CASE WHEN $confirmedCondition AND payment_type IN ('full_prepaid', 'prepaid') THEN 1 ELSE NULL END) AS prepaid_orders,
-            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'partial' THEN 1 ELSE NULL END) AS partial_cod_orders,
-            COUNT(CASE WHEN $confirmedCondition AND payment_type = 'cod' THEN 1 ELSE NULL END) AS cod_orders,
-
-            -- Fulfillment & Cancellations
-            COUNT(CASE WHEN order_status = 'delivered' THEN 1 ELSE NULL END) AS delivered_orders,
-            COUNT(CASE WHEN order_status = 'cancelled' OR order_status = 'rto' THEN 1 ELSE NULL END) AS cancelled_orders,
-
-            -- Unpaid / Abandoned checkouts (not included in orders processed)
-            COUNT(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN 1 ELSE NULL END) AS abandoned_orders_count,
-            COALESCE(SUM(CASE WHEN order_status = 'pending' OR (payment_type != 'cod' AND payment_status = 'pending') THEN total_amount ELSE 0 END), 0) AS abandoned_orders_value
-        FROM orders
-    ");
-    $stats = $overallStmt->fetch(PDO::FETCH_ASSOC);
-
-    $totalOrders = (int)$stats['total_orders'];
-    $cancelledOrders = (int)$stats['cancelled_orders'];
-    $totalCompletedAndCancelled = $totalOrders + $cancelledOrders;
-
-    $rtoRate = $totalCompletedAndCancelled > 0 ? round(($cancelledOrders / $totalCompletedAndCancelled) * 100, 1) : 0;
-
-    // Upfront Payment / Token Secured Rate:
-    // Both 100% Prepaid and Partial COD advance deposits secure funds upfront to minimize RTO loss
-    $upfrontPaidOrders = (int)$stats['prepaid_orders'] + (int)$stats['partial_cod_orders'];
-    $prepaidShare = $totalOrders > 0 ? round(($upfrontPaidOrders / $totalOrders) * 100, 1) : 0;
+    $range = dashboardDateRange($_GET);
+    $kpis = dashboardMetrics($pdo, $range);
+    $processed = dashboardConditions()['processed'];
+    $dateCondition = $range['sql'];
 
     // 2. HERO AD SPOTLIGHT: 4 Signature Showcase Boxes Performance
     // Check if explicit showcase box IDs are saved in site_settings
@@ -163,7 +116,7 @@ try {
     $heroJhumkaBoxes = [];
     if (!empty($featuredBoxIds)) {
         $idListStr = implode(',', $featuredBoxIds);
-        $jhumkaStmt = $pdo->query("
+        $jhumkaStmt = $pdo->prepare("
             SELECT 
                 p.id,
                 p.name,
@@ -181,18 +134,11 @@ try {
                 CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
             FROM products p
             LEFT JOIN order_items oi ON oi.product_id = p.id
-            LEFT JOIN orders o ON oi.order_id = o.id AND (
-                o.order_status NOT IN ('cancelled', 'failed', 'rto')
-                AND (
-                    (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
-                    OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
-                    OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
-                    OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
-                )
-            )
+            LEFT JOIN orders o ON oi.order_id = o.id AND $processed AND ($dateCondition)
             WHERE p.id IN ($idListStr)
             GROUP BY p.id, p.name, p.slug, p.sku, p.price, p.mrp, p.stock_quantity
         ");
+        $jhumkaStmt->execute($range['params']);
         $fetchedBoxes = $jhumkaStmt->fetchAll(PDO::FETCH_ASSOC);
         $boxMap = [];
         foreach ($fetchedBoxes as $fb) {
@@ -207,7 +153,7 @@ try {
 
     // Fallback if not configured yet
     if (empty($heroJhumkaBoxes)) {
-        $jhumkaStmt = $pdo->query("
+        $jhumkaStmt = $pdo->prepare("
             SELECT 
                 p.id,
                 p.name,
@@ -225,15 +171,7 @@ try {
                 CASE WHEN p.stock_quantity <= 25 THEN 1 ELSE 0 END AS is_low_stock
             FROM products p
             LEFT JOIN order_items oi ON oi.product_id = p.id
-            LEFT JOIN orders o ON oi.order_id = o.id AND (
-                o.order_status NOT IN ('cancelled', 'failed', 'rto')
-                AND (
-                    (o.payment_type IN ('full_prepaid', 'prepaid') AND o.payment_status = 'paid')
-                    OR (o.payment_type = 'partial' AND (o.payment_status IN ('partial_paid', 'paid') OR o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')))
-                    OR (o.payment_type = 'cod' AND o.payment_status != 'failed' AND o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered'))
-                    OR (o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered') AND o.payment_status IN ('paid', 'partial_paid'))
-                )
-            )
+            LEFT JOIN orders o ON oi.order_id = o.id AND $processed AND ($dateCondition)
             WHERE (p.category_id IN (SELECT id FROM categories WHERE slug IN ('jhumka-boxes', 'jhumkha-box', 'jhumka-box'))
                OR p.sku LIKE 'VJ-JHM%'
                OR p.sku IN ('16 PSC OXODISE', 'jhumkhaa')
@@ -244,6 +182,7 @@ try {
             ORDER BY p.id ASC
             LIMIT 4
         ");
+        $jhumkaStmt->execute($range['params']);
         $heroJhumkaBoxes = $jhumkaStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -258,7 +197,7 @@ try {
     $lowStockAlerts = $lowStockStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 4. Recent Orders Feed (Shows verified & confirmed orders)
-    $recentStmt = $pdo->query("
+    $recentStmt = $pdo->prepare("
         SELECT 
             o.id,
             o.order_number,
@@ -283,11 +222,11 @@ try {
                 )
             ) AS has_jhumka_box
         FROM orders o
-        WHERE o.order_status IN ('confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'delivered')
-           OR o.payment_status IN ('paid', 'partial_paid')
+        WHERE $processed AND ($dateCondition)
         ORDER BY o.id DESC
         LIMIT 10
     ");
+    $recentStmt->execute($range['params']);
     $recentOrders = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 5. Total Products Count
@@ -295,28 +234,16 @@ try {
     $custCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role = 'customer'")->fetchColumn();
 
     ApiResponse::success([
-        'kpis' => [
-            'total_revenue'             => (float)$stats['total_revenue'],
-            'total_orders'              => $totalOrders,
-            'average_order_value'       => round((float)$stats['average_order_value'], 2),
-            'rto_cancellation_rate'     => $rtoRate,
-            'prepaid_share_percent'     => $prepaidShare,
-            'total_products'            => $prodCount,
-            'total_customers'           => $custCount,
-            'payment_split' => [
-                'prepaid'     => (int)$stats['prepaid_orders'],
-                'partial_cod' => (int)$stats['partial_cod_orders'],
-                'cod'         => (int)$stats['cod_orders'],
-            ],
-            'abandoned_checkouts_count' => (int)$stats['abandoned_orders_count'],
-            'abandoned_checkouts_value' => (float)$stats['abandoned_orders_value'],
-        ],
+        'kpis' => array_merge($kpis, ['total_products' => $prodCount, 'total_customers' => $custCount]),
+        'date_range' => ['start_date' => $range['start_date'], 'end_date' => $range['end_date']],
         'featured_box_ids'  => !empty($featuredBoxIds) ? $featuredBoxIds : array_map(function($b) { return (int)$b['id']; }, $heroJhumkaBoxes),
         'hero_jhumka_boxes' => $heroJhumkaBoxes,
         'low_stock_alerts'  => $lowStockAlerts,
         'recent_orders'     => $recentOrders,
     ], 'Dashboard telemetry loaded successfully');
 
+} catch (InvalidArgumentException $e) {
+    ApiResponse::error($e->getMessage(), 422);
 } catch (Throwable $e) {
     ApiResponse::error('Failed to generate dashboard reports: ' . $e->getMessage(), 500);
 }

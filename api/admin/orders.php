@@ -522,23 +522,7 @@ if ($method === 'GET') {
         }
     } catch (Throwable $e) {}
 
-    // Auto-heal check: ensure no order has 'rto' status in the orders section.
-    // In orders section, status reflects fulfillment lifecycle (pending, confirmed, processing, shipped, delivered, cancelled).
-    // RTO shipments are tracked in the dedicated RTO panel fetched live from JustShyp.
-    try {
-        $nowSql = Database::getDriver() === 'sqlite' ? "datetime('now')" : "NOW()";
-        $pdo->exec("
-            UPDATE orders 
-            SET order_status = CASE 
-                WHEN (provider_awb IS NOT NULL AND provider_awb != '') OR (shiprocket_awb IS NOT NULL AND shiprocket_awb != '') THEN 'shipped'
-                WHEN (provider_order_id IS NOT NULL AND provider_order_id != '') OR (shiprocket_order_id IS NOT NULL AND shiprocket_order_id != '') THEN 'processing'
-                WHEN payment_status IN ('paid', 'partial_paid') THEN 'confirmed'
-                ELSE 'pending'
-            END,
-            updated_at = $nowSql
-            WHERE order_status = 'rto'
-        ");
-    } catch (Throwable $e) {}
+    // Preserve RTO status for reporting; never rewrite fulfillment facts during a list request.
 
     // Autonomous payment recovery sweep: automatically emails pending (>5 mins) and failed orders
     try {
