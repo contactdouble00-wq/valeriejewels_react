@@ -90,26 +90,20 @@ if ($action === 'save_showcase_boxes') {
 
 try {
     $range = dashboardDateRange($_GET);
-    $rtoWarning = null;
-    // Share the panel's request window and saved response; older reconciled orders stay in reporting.
+    $rtoPanel = ['count' => null, 'feed' => [], 'warning' => 'JustShyp RTO data is unavailable.'];
     try {
         require_once dirname(__DIR__) . '/shipping/DeliveryProviderFactory.php';
         require_once dirname(__DIR__) . '/utils/carrier_reconciliation.php';
-        $firstOrder = $pdo->query('SELECT MIN(created_at) FROM orders')->fetchColumn();
-        if ($firstOrder) {
-            $rtoFeed = loadJustShypRtoFeed($pdo, DeliveryProviderFactory::getProvider('justshyp'), [
-                'ndr_type' => 'rto', 'from_date' => date('Y-m-d', strtotime('-60 days')), 'to_date' => date('Y-m-d'),
-            ]);
-            if (empty($rtoFeed['success'])) throw new RuntimeException('RTO feed unavailable');
-            reconcileJustShypRtoList($pdo, $rtoFeed['ndr_shipments']);
-            if ($rtoFeed['cached']) $rtoWarning = 'Using saved RTO panel data from ' . $rtoFeed['saved_at'] . '. Live refresh unavailable.';
-        }
+        $rtoPanel = dashboardJustShypRtoFeed($pdo, DeliveryProviderFactory::getProvider('justshyp'), [
+            'from_date' => date('Y-m-d', strtotime('-60 days')), 'to_date' => date('Y-m-d'),
+        ]);
+        if ($rtoPanel['count'] !== null) reconcileJustShypRtoList($pdo, $rtoPanel['feed']);
     } catch (Throwable $e) {
-        $rtoWarning = 'JustShyp RTO refresh unavailable. Showing saved records; the count may be incomplete.';
+        if ($rtoPanel['count'] !== null) $rtoPanel['warning'] = 'Carrier records loaded, but local order reconciliation failed.';
     }
     $kpis = dashboardMetrics($pdo, $range);
-    $kpis['rto_sync_warning'] = $rtoWarning;
-    $kpis['rto_unavailable'] = $rtoWarning !== null && !isset($rtoFeed) && $kpis['rto_orders'] === 0;
+    $kpis['justshyp_rto_count'] = $rtoPanel['count'];
+    $kpis['rto_sync_warning'] = $rtoPanel['warning'];
     $processed = dashboardConditions()['processed'];
     $dateCondition = $range['sql'];
 

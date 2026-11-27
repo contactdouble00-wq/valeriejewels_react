@@ -108,3 +108,27 @@ $pdo->exec("UPDATE orders SET provider_awb = NULL, shiprocket_awb = 'AUTO-SR', d
 expectMetric(reconcileJustShypRtoList($pdo, $cached['ndr_shipments']), 1, 'Panel merchant order ID matches automatic Shiprocket assignment');
 expectMetric(reconcileJustShypRtoList($pdo, $cached['ndr_shipments']), 0, 'Saved panel replay does not double count');
 echo "RTO panel snapshot fallback tests passed.\n";
+
+$dashboardPdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$dashboardPdo->exec('CREATE TABLE site_settings (`key` TEXT PRIMARY KEY, `value` TEXT)');
+$panelProvider = new class {
+    public array $shipments = [];
+    public bool $available = true;
+    public function listNdr(array $params): array {
+        if (($params['ndr_type'] ?? '') !== 'rto') throw new RuntimeException('Wrong feed');
+        return $this->available ? ['success' => true, 'ndr_shipments' => $this->shipments] : ['success' => false];
+    }
+};
+$unavailableProvider = clone $panelProvider;
+$unavailableProvider->available = false;
+expectMetric(dashboardJustShypRtoFeed($dashboardPdo, $unavailableProvider, [])['count'], null, 'No carrier feed or snapshot is unavailable, not zero');
+expectMetric(dashboardJustShypRtoFeed($dashboardPdo, $panelProvider, [])['count'], 0, 'An empty live feed is zero');
+$panelProvider->shipments = array_fill(0, 36, ['waybill_number' => 'UNMATCHED']);
+$panelSummary = dashboardJustShypRtoFeed($dashboardPdo, $panelProvider, []);
+expectMetric($panelSummary['count'], 36, 'Dashboard counts every report from the panel, including unmatched records');
+expectMetric($panelSummary['warning'], null, 'Live feed has no stale warning');
+$panelProvider->available = false;
+$panelSummary = dashboardJustShypRtoFeed($dashboardPdo, $panelProvider, []);
+expectMetric($panelSummary['count'], 36, 'Dashboard uses the same saved panel response on failure');
+if (empty($panelSummary['warning'])) throw new RuntimeException('Saved panel response must be identified');
+echo "Dashboard JustShyp RTO feed tests passed.\n";

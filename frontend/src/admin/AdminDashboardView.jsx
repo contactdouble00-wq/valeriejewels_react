@@ -232,21 +232,21 @@ export default function AdminDashboardView({ onNavigateTab, onSelectOrder }) {
           </div>
         </div>
 
-        {/* RTO count and percentage */}
+        {/* JustShyp RTO reports */}
         <div className="luxury-card bg-white p-5 rounded-2xl border border-brand-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-caps tracking-wider uppercase text-brand-muted font-bold">
-              RTO Orders
+              JustShyp RTO Initiated
             </span>
-            <div className={`p-2 rounded-xl ${kpis.rto_percentage > 20 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+            <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-editorial font-bold text-brand-tertiary">
-            {kpis.rto_unavailable ? 'Unavailable' : <>{kpis.rto_orders} <span className="text-lg">({kpis.rto_percentage}%)</span></>}
+            {kpis.justshyp_rto_count == null ? 'Unavailable' : kpis.justshyp_rto_count}
           </div>
           <div className="text-[11px] text-brand-muted">
-            {!kpis.rto_unavailable && <>{kpis.rto_orders} RTO orders / {kpis.rto_base_orders} processed and RTO orders.</>}
+            JustShyp RTO panel reports for the last 60 days, including completed returns. Independent of the order date filter.
             {kpis.rto_sync_warning && <p role="status" className="mt-2 text-amber-700">{kpis.rto_sync_warning}</p>}
           </div>
         </div>

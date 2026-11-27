@@ -22,6 +22,20 @@ function loadJustShypRtoFeed(PDO $pdo, $provider, array $params): array {
     }
 }
 
+// The dashboard card uses the same carrier reports as the RTO panel, including unmatched shipments.
+function dashboardJustShypRtoFeed(PDO $pdo, $provider, array $params): array {
+    try {
+        $feed = loadJustShypRtoFeed($pdo, $provider, $params);
+        return [
+            'count' => count($feed['ndr_shipments']),
+            'feed' => $feed['ndr_shipments'],
+            'warning' => !empty($feed['cached']) ? 'Using saved RTO panel data from ' . $feed['saved_at'] . '. Live refresh unavailable.' : null,
+        ];
+    } catch (Throwable $e) {
+        return ['count' => null, 'feed' => [], 'warning' => 'JustShyp RTO data is unavailable.'];
+    }
+}
+
 // Share the RTO panel's confirmed carrier records with dashboard reporting.
 function reconcileJustShypRtoList(PDO $pdo, array $shipments): int {
     $changed = 0;
