@@ -1105,12 +1105,48 @@ class JustShypProvider implements DeliveryProviderInterface
             ];
         }
 
-        $list = $res['data'] ?? [];
+        $list = $res['data'] ?? null;
+        if (!is_array($list) || !array_is_list($list)) {
+            return ['success' => false, 'provider' => 'justshyp', 'ndr_shipments' => [], 'message' => 'Invalid JustShyp NDR response'];
+        }
         return [
             'success'       => true,
             'provider'      => 'justshyp',
             'ndr_shipments' => is_array($list) ? $list : [],
         ];
+    }
+
+    /** Fetch current shipment status and value without serial carrier requests. */
+    public function getShipmentDetailsBatch(array $awbs): array
+    {
+        $cfg = self::getSettings();
+        $token = self::getAccessToken();
+        if (!$token || !function_exists('curl_multi_init')) return [];
+        $details = [];
+        foreach (array_chunk(array_values(array_unique(array_filter($awbs))), 10) as $chunk) {
+            $multi = curl_multi_init();
+            $handles = [];
+            foreach ($chunk as $awb) {
+                $ch = curl_init($cfg['base_url'] . '/api/v3/shipments-details?' . http_build_query(['awb' => $awb]));
+                curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Accept: application/json', 'access-token: ' . $token], CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 12, CURLOPT_SSL_VERIFYPEER => false]);
+                curl_multi_add_handle($multi, $ch);
+                $handles[$awb] = $ch;
+            }
+            do {
+                $result = curl_multi_exec($multi, $running);
+                if ($running && $result === CURLM_OK) curl_multi_select($multi, 1);
+            } while ($running && $result === CURLM_OK);
+            foreach ($handles as $awb => $ch) {
+                $body = json_decode((string)curl_multi_getcontent($ch), true);
+                if (curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200 && !empty($body['status']) && is_array($body['data'] ?? null)) {
+                    $details[$awb] = $body['data'];
+                }
+                curl_multi_remove_handle($multi, $ch);
+                if (PHP_VERSION_ID < 80500) curl_close($ch);
+            }
+            curl_multi_close($multi);
+        }
+        return $details;
     }
 
     /**

@@ -289,6 +289,9 @@ if ($method === 'GET') {
             // Fetch NDR Initiated (attempted / customer unavailable)
             if ($ndrType === 'all' || $ndrType === 'initiated') {
                 $initRes = $provider->listNdr(['ndr_type' => 'initiated', 'from_date' => $fromDate, 'to_date' => $toDate]);
+                if (empty($initRes['success']) || !is_array($initRes['ndr_shipments'] ?? null)) {
+                    throw new RuntimeException('JustShyp NDR feed unavailable.');
+                }
                 if (!empty($initRes['success']) && is_array($initRes['ndr_shipments'])) {
                     foreach ($initRes['ndr_shipments'] as $s) {
                         $s['stage'] = 'initiated';
@@ -309,6 +312,7 @@ if ($method === 'GET') {
                 }
                 $orderNums = array_unique(array_filter($orderNums));
                 $awbs = array_unique(array_filter($awbs));
+                $carrierDetails = $provider->getShipmentDetailsBatch($awbs);
 
                 $orderLookup = [];
                 if (!empty($orderNums) || !empty($awbs)) {
@@ -347,10 +351,13 @@ if ($method === 'GET') {
                 }
 
                 $totalRtoValue = 0;
+                $missingCarrierDetails = 0;
                 foreach ($shipments as &$s) {
                     $chId = trim($s['channel_order_id'] ?? '');
                     $wb = trim($s['waybill_number'] ?? '');
                     $matched = $orderLookup['ord_' . $chId] ?? ($orderLookup['awb_' . $wb] ?? null);
+                    $detail = $carrierDetails[$wb] ?? null;
+                    if (empty($detail['status']) || !isset($detail['order_amount']) || !is_numeric($detail['order_amount'])) $missingCarrierDetails++;
 
                     $s['order'] = $matched;
                     $s['customer_name'] = $matched['customer_name'] ?? 'Customer';
@@ -360,9 +367,10 @@ if ($method === 'GET') {
                     $s['state'] = $matched['state'] ?? '';
                     $s['pincode'] = $matched['pincode'] ?? '';
                     $s['address'] = trim(($matched['shipping_address_line1'] ?? '') . ' ' . ($matched['shipping_address_line2'] ?? ''));
-                    $amt = !empty($matched['total_amount']) ? (float)$matched['total_amount'] : 0;
+                    $amt = isset($detail['order_amount']) && is_numeric($detail['order_amount']) ? (float)$detail['order_amount'] : null;
                     $s['total_amount'] = $amt;
-                    $totalRtoValue += $amt;
+                    if ($amt !== null) $totalRtoValue += $amt;
+                    $s['carrier_status'] = $detail['status'] ?? null;
                     $s['payment_type'] = $matched['payment_type'] ?? 'cod';
                     $s['payment_status'] = $matched['payment_status'] ?? 'pending';
                     $s['items_count'] = !empty($matched['items_count']) ? (int)$matched['items_count'] : 1;
@@ -379,6 +387,7 @@ if ($method === 'GET') {
                 'rto_saved_at'    => $rtoRes['saved_at'] ?? null,
                 'initiated_count' => $initiatedCount,
                 'total_rto_value' => $totalRtoValue ?? 0,
+                'missing_carrier_details' => $missingCarrierDetails ?? 0,
                 'shipments'       => $shipments,
                 'provider'        => 'justshyp',
             ], 'JustShyp RTO/NDR shipments fetched successfully');

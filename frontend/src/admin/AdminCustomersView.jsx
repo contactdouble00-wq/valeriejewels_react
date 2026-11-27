@@ -42,6 +42,7 @@ export default function AdminCustomersView() {
   const [rtoShipments, setRtoShipments] = useState([]);
   const [rtoSummary, setRtoSummary] = useState({ total_count: 0, rto_count: 0, initiated_count: 0, total_rto_value: 0 });
   const [loadingRto, setLoadingRto] = useState(false);
+  const [rtoError, setRtoError] = useState('');
   const [rtoSearch, setRtoSearch] = useState('');
   const [rtoStageFilter, setRtoStageFilter] = useState('all'); // 'all' | 'rto' | 'initiated'
   const [copiedAwb, setCopiedAwb] = useState(null);
@@ -70,7 +71,8 @@ export default function AdminCustomersView() {
   const loadJustShypRto = async () => {
     try {
       setLoadingRto(true);
-      const res = await adminApi.getJustShypRto({ ndr_type: rtoStageFilter });
+      setRtoError('');
+      const res = await adminApi.getJustShypRto({ ndr_type: 'all' });
       if (res) {
         setRtoShipments(res.shipments || []);
         setRtoSummary({
@@ -78,11 +80,13 @@ export default function AdminCustomersView() {
           rto_count: res.rto_count || 0,
           initiated_count: res.initiated_count || 0,
           total_rto_value: res.total_rto_value || 0,
+          missing_carrier_details: res.missing_carrier_details || 0,
           cached: res.rto_cached,
           saved_at: res.rto_saved_at,
         });
       }
     } catch (err) {
+      setRtoError('JustShyp refresh failed. Any displayed records may be outdated.');
       showToast(err.message || 'Failed to fetch RTO from JustShyp');
     } finally {
       setLoadingRto(false);
@@ -106,11 +110,6 @@ export default function AdminCustomersView() {
     loadJustShypRto();
     loadCustomers();
   }, []);
-
-  // Reload RTO when stage filter changes
-  useEffect(() => {
-    loadJustShypRto();
-  }, [rtoStageFilter]);
 
   // Fetch email preview whenever template changes or modal opens
   const fetchEmailPreview = async (templateType) => {
@@ -191,9 +190,9 @@ export default function AdminCustomersView() {
 
   // Filtered RTO shipments
   const filteredRtoShipments = useMemo(() => {
-    if (!rtoSearch.trim()) return rtoShipments;
     const q = rtoSearch.toLowerCase().trim();
     return rtoShipments.filter((s) => {
+      if (rtoStageFilter !== 'all' && s.stage !== rtoStageFilter) return false;
       const chId = String(s.channel_order_id || '').toLowerCase();
       const wb = String(s.waybill_number || '').toLowerCase();
       const name = String(s.customer_name || '').toLowerCase();
@@ -202,7 +201,7 @@ export default function AdminCustomersView() {
       const reason = String(s.ndr_reason || '').toLowerCase();
       return chId.includes(q) || wb.includes(q) || name.includes(q) || phone.includes(q) || city.includes(q) || reason.includes(q);
     });
-  }, [rtoShipments, rtoSearch]);
+  }, [rtoShipments, rtoSearch, rtoStageFilter]);
 
   const emailTemplates = [
     {
@@ -326,6 +325,8 @@ export default function AdminCustomersView() {
       {activeSubTab === 'rto_panel' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {rtoSummary.cached && <p role="status" className="text-sm text-amber-700">Showing saved RTO panel data from {rtoSummary.saved_at}. Live RTO refresh is unavailable.</p>}
+          {rtoError && <p role="alert" className="text-sm text-rose-700">{rtoError}</p>}
+          {rtoSummary.missing_carrier_details > 0 && <p role="status" className="text-sm text-amber-700">Current status or value is unavailable from JustShyp for {rtoSummary.missing_carrier_details} shipment(s). The value total is incomplete.</p>}
           {/* Performance & Consignment Metric Strip */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
@@ -337,20 +338,20 @@ export default function AdminCustomersView() {
                 {rtoSummary.total_count}
               </div>
               <div className="text-[10px] text-brand-muted">
-                Live carrier reports retrieved from JustShyp
+                JustShyp reports from the last 60 days
               </div>
             </div>
 
             <div className="bg-white rounded-2xl p-4 border border-rose-200 shadow-2xs space-y-1">
               <div className="flex items-center justify-between text-brand-muted">
-                <span className="text-[10px] font-caps tracking-wider uppercase font-bold text-rose-700">Confirmed RTO (Returning)</span>
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold text-rose-700">RTO Initiated</span>
                 <RotateCcw className="w-4 h-4 text-rose-600" />
               </div>
               <div className="text-2xl font-bold font-mono text-rose-700">
                 {rtoSummary.rto_count}
               </div>
               <div className="text-[10px] text-brand-muted">
-                Parcels returning to seller warehouse
+                Includes returns already delivered to the seller
               </div>
             </div>
 
@@ -369,14 +370,14 @@ export default function AdminCustomersView() {
 
             <div className="bg-white rounded-2xl p-4 border border-brand-border shadow-2xs space-y-1">
               <div className="flex items-center justify-between text-brand-muted">
-                <span className="text-[10px] font-caps tracking-wider uppercase font-bold text-brand-primary">Consignment Value at Risk</span>
+                <span className="text-[10px] font-caps tracking-wider uppercase font-bold text-brand-primary">JustShyp Order Value</span>
                 <Sparkles className="w-4 h-4 text-amber-500" />
               </div>
               <div className="text-2xl font-bold font-mono text-brand-primary">
                 ₹{Number(rtoSummary.total_rto_value || 0).toLocaleString('en-IN')}
               </div>
               <div className="text-[10px] text-brand-muted">
-                Secured via token advances on Partial COD
+                {rtoSummary.missing_carrier_details ? 'Partial total; some values unavailable' : 'Sum of reported RTO and NDR order values'}
               </div>
             </div>
           </div>
@@ -403,7 +404,7 @@ export default function AdminCustomersView() {
                   className="bg-[#FAF8FC] border border-brand-border rounded-xl px-3 py-1.5 text-xs text-brand-tertiary font-semibold"
                 >
                   <option value="all">All JustShyp Reports ({rtoSummary.total_count})</option>
-                  <option value="rto">Confirmed RTO Returning ({rtoSummary.rto_count})</option>
+                  <option value="rto">RTO Initiated ({rtoSummary.rto_count})</option>
                   <option value="initiated">NDR Action Required ({rtoSummary.initiated_count})</option>
                 </select>
 
@@ -457,7 +458,7 @@ export default function AdminCustomersView() {
                       const cleanPhone = String(s.customer_phone || '').replace(/\D/g, '').slice(-10);
                       const isInitiated = s.stage === 'initiated';
                       const waText = encodeURIComponent(
-                        `Hi ${s.customer_name || 'there'}, this is Valerie Jewels customer concierge regarding your order #${s.channel_order_id}. Our courier attempted delivery (Waybill: ${s.waybill_number}), but reported: "${s.ndr_reason || 'Undelivered'}". Would you like us to schedule a delivery reattempt or update your address?`
+                        `Hi ${s.customer_name || 'there'}, this is Valerie Jewels customer concierge regarding your order #${s.channel_order_id}. Our courier attempted delivery (Waybill: ${s.waybill_number})${s.ndr_reason ? ` and reported: "${s.ndr_reason}"` : ''}. Would you like us to schedule a delivery reattempt or update your address?`
                       );
 
                       return (
@@ -534,7 +535,7 @@ export default function AdminCustomersView() {
                           <td className="py-3.5 px-4 align-top max-w-xs">
                             <div className="text-xs text-gray-800 font-medium bg-[#FAF8FC] p-2 rounded-xl border border-brand-border/60">
                               <p className="line-clamp-3 leading-snug">
-                                {s.ndr_reason || (isInitiated ? 'Customer unavailable / Delivery attempted' : 'Parcel undeliverable, returning to origin')}
+                                {s.ndr_reason || 'Reason not supplied by JustShyp API'}
                               </p>
                               {s.ndr_time && (
                                 <p className="text-[10px] text-brand-muted mt-1 flex items-center space-x-1">
@@ -550,12 +551,12 @@ export default function AdminCustomersView() {
                             {isInitiated ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap">
                                 <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                <span>Action Required (NDR)</span>
+                                <span>Action Required (NDR){s.carrier_status ? ` · ${String(s.carrier_status).replace(/[_-]+/g, ' ').toUpperCase()}` : ' · status unavailable'}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300 whitespace-nowrap">
                                 <RotateCcw className="w-3 h-3 text-rose-600" />
-                                <span>Confirmed RTO</span>
+                                <span>{s.carrier_status ? String(s.carrier_status).replace(/[_-]+/g, ' ').toUpperCase() : 'RTO initiated · status unavailable'}</span>
                               </span>
                             )}
                           </td>
@@ -564,7 +565,7 @@ export default function AdminCustomersView() {
                           <td className="py-3.5 px-4 align-top text-right space-y-1.5">
                             <div className="flex items-center justify-end space-x-1.5">
                               {/* 1-Click WhatsApp Concierge */}
-                              {cleanPhone && (
+                              {isInitiated && cleanPhone && (
                                 <a
                                   href={`https://wa.me/91${cleanPhone}?text=${waText}`}
                                   target="_blank"
@@ -578,14 +579,14 @@ export default function AdminCustomersView() {
                               )}
 
                               {/* Take Action on JustShyp NDR */}
-                              <button
+                              {isInitiated && <button
                                 type="button"
                                 onClick={() => handleOpenActionModal(s)}
                                 className="px-2.5 py-1 rounded-xl bg-[#26153D] hover:bg-[#3b235c] text-white text-[11px] font-semibold flex items-center space-x-1 shadow-2xs cursor-pointer"
                                 title="Submit action to JustShyp (Reattempt / Update Address / RTO)"
                               >
                                 <span>NDR Action</span>
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>
