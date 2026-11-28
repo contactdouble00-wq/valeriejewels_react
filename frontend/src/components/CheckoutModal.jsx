@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   ShieldCheck,
@@ -81,14 +82,14 @@ export default function CheckoutModal({
   const [paymentSettings, setPaymentSettings] = useState({
     gateway_mode: 'live',
     prepaid_discount: 50,
-    prepaid_gift_title: 'Free Zircon Necklace',
+    prepaid_gift_title: 'Free Zircon Bracelet',
     prepaid_gift_subtitle: 'Included complimentary with all prepaid orders',
     online_payment_enabled: true,
     partial_cod_enabled: true,
     partial_advance: 49,
     cod_fee: 0,
     cod_available: false,
-    checkout_banner_text: 'GET A FREE ZIRCON NECKLACE WORTH RS.1499 WHEN YOU PAY ONLINE',
+    checkout_banner_text: 'GET A FREE ZIRCON BRACELET WORTH ₹399 WHEN YOU PAY ONLINE',
     exit_intent_enabled: true,
     exit_intent_title: 'Wait! Are you sure you want to exit?',
     exit_intent_message: 'High-demand handcrafted pieces in your bag might sell out before your next visit.',
@@ -132,6 +133,7 @@ export default function CheckoutModal({
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
+  const [showPrepaidReminder, setShowPrepaidReminder] = useState(false);
   const [couponCode, setCouponCode] = useState(activePromoCode || 'VALERIE10');
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
@@ -147,6 +149,12 @@ export default function CheckoutModal({
   const [selectedUpiApp, setSelectedUpiApp] = useState('google_pay');
   const [showUpiInput, setShowUpiInput] = useState(false);
   const [upiIdInput, setUpiIdInput] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || paymentType !== 'partial' || step !== 'details_payment') {
+      setShowPrepaidReminder(false);
+    }
+  }, [isOpen, paymentType, step]);
 
   // Server Calculation & Submission States
   const [calcData, setCalcData] = useState(null);
@@ -1143,7 +1151,8 @@ export default function CheckoutModal({
   ) || 0;
 
   // Dynamic calculation for green savings banner (e.g. ₹900.00 saved so far)
-  const totalSavings = Math.max(0, (totalMrp - dueNow) + (Number(calcData?.discount_amount) || 0));
+  const totalSavings = Math.max(0, totalMrp - dueNow - dueOnDelivery);
+  const isPrepaidReminderVisible = showPrepaidReminder && paymentType === 'partial' && step === 'details_payment';
 
   // Everlasting UPI Apps Grid (Exact 5 Apps matching everlasting.shop)
   const UPI_APPS = [
@@ -1234,6 +1243,7 @@ export default function CheckoutModal({
       <div
         key="payment-method-partial-cod"
         onClick={() => {
+          if (paymentType === 'full_prepaid') setShowPrepaidReminder(true);
           setPaymentType('partial');
           setSelectedPaymentMethod('partial_cod');
         }}
@@ -1690,6 +1700,50 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F4F4F6] flex flex-col font-sans select-none animate-fade-in overflow-hidden">
+      {createPortal(
+        <aside
+          aria-label="Prepaid offer reminder"
+          aria-hidden={!isPrepaidReminderVisible}
+          inert={!isPrepaidReminderVisible}
+          className={`fixed top-[10px] left-[10px] right-[10px] z-[9999] flex items-center gap-2 rounded-[14px] border border-[#F3D4D4] bg-[#FDF2F2] p-2.5 font-sans transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            isPrepaidReminderVisible ? 'translate-y-0' : '-translate-y-[calc(100%+20px)] pointer-events-none'
+          }`}
+        >
+          <img
+            src="/images/prepaid-zircon-bracelet.jpg"
+            alt="Gold chain multicolor zircon bracelet"
+            width="48"
+            height="48"
+            className="h-12 w-12 shrink-0 rounded-[10px] object-cover"
+          />
+          <div className="min-w-0 flex-1 whitespace-normal break-words" role="status" aria-live="polite" aria-atomic="true">
+            <p className="text-[12.5px] font-bold leading-[1.3] text-[#18181B]">You're losing the free bracelet worth ₹399!</p>
+            <p className="mt-1 text-[11px] leading-[1.35] text-[#52525B]">Pay online (Prepaid) to keep it free + ₹50 instant off</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentType('full_prepaid');
+                setSelectedPaymentMethod('upi');
+                setShowPrepaidReminder(false);
+              }}
+              className="rounded-full bg-[#72549B] px-[13px] py-[7px] text-[11.5px] font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#72549B]"
+            >
+              Switch
+            </button>
+            <button
+              type="button"
+              aria-label="Dismiss prepaid offer reminder"
+              onClick={() => setShowPrepaidReminder(false)}
+              className="flex h-8 w-6 items-center justify-center rounded-full text-xl leading-none text-[#71717A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#72549B]"
+            >
+              ×
+            </button>
+          </div>
+        </aside>,
+        document.body
+      )}
 
       {/* Centered responsive container (edge-to-edge on mobile, sleek app layout on desktop) */}
       <div className="w-full max-w-lg mx-auto flex-1 flex flex-col h-full bg-[#F4F4F6] relative shadow-sm border-x border-gray-200/60 overflow-hidden">
@@ -1734,7 +1788,7 @@ export default function CheckoutModal({
         ══════════════════════════════════════════════════════════════ */}
         <div className="bg-[#281636] px-4 py-2.5 text-center shrink-0 shadow-xs">
           <span className="text-[10px] sm:text-[11.5px] font-bold text-white tracking-widest uppercase">
-            {paymentSettings.checkout_banner_text || 'GET A FREE ZIRCON NECKLACE WORTH RS.1499 WHEN YOU PAY ONLINE'}
+            {paymentSettings.checkout_banner_text || 'GET A FREE ZIRCON BRACELET WORTH ₹399 WHEN YOU PAY ONLINE'}
           </span>
         </div>
 
@@ -2435,6 +2489,12 @@ export default function CheckoutModal({
                         <span className="text-gray-400 italic">₹0 (Prepaid discount not applicable on COD)</span>
                       </div>
                     )}
+                    {paymentType === 'full_prepaid' && (
+                      <div className="flex justify-between gap-3 text-emerald-700">
+                        <span>Free Zircon Bracelet <span className="text-gray-500">(worth ₹399)</span></span>
+                        <span className="font-bold">FREE</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-emerald-700">
                       <span>Shipping Fee</span>
                       <span className="font-bold uppercase text-[10px]">
@@ -2911,14 +2971,14 @@ export default function CheckoutModal({
               </p>
             </div>
 
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-brand-primary/20 text-xs">
+            {paymentType === 'full_prepaid' && <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-brand-primary/20 text-xs">
               <span className="font-bold text-brand-primary block">
-                 Free Zircon Necklace Reserved
+                 Free Zircon Bracelet Reserved
               </span>
               <span className="text-[11px] text-gray-700">
                 Order within the next 10 minutes to claim your gift!
               </span>
-            </div>
+            </div>}
 
             <div className="space-y-2 pt-1">
               <button
